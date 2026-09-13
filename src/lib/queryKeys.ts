@@ -5,7 +5,9 @@
 export const qk = {
   venues: {
     all: ["venues"] as const,
+    /** Le sedi aperte del titolare. Una lista: un account può averne più di una. */
     mine: (ownerId: string) => ["venues", "mine", ownerId] as const,
+    closed: (ownerId: string) => ["venues", "closed", ownerId] as const,
   },
   profile: {
     mine: (userId: string) => ["profile", "mine", userId] as const,
@@ -43,8 +45,12 @@ export const qk = {
   },
   documents: {
     all: ["documents"] as const,
-    byStaffMember: (staffMemberId: string) =>
-      ["documents", "byStaffMember", staffMemberId] as const,
+    // Per persona e non per scheda: chi lavora in due sedi dello stesso titolare
+    // ha una sola cartella di documenti (20260913100100).
+    byPerson: (personId: string) =>
+      ["documents", "byPerson", personId] as const,
+    /** Le cartelle del professionista: una per datore di lavoro. */
+    scopes: (waiterId: string) => ["documents", "scopes", waiterId] as const,
   },
   roles: {
     all: ["roles"] as const,
@@ -55,6 +61,11 @@ export const qk = {
   staff: {
     all: ["staff"] as const,
     byVenue: (venueId: string) => ["staff", "byVenue", venueId] as const,
+    /**
+     * Le persone del titolare, attraverso le sedi. Sotto il prefisso `staff.all`,
+     * quindi ogni invalidazione dell'organico già esistente la copre.
+     */
+    people: (ownerId: string) => ["staff", "people", ownerId] as const,
     invites: (waiterId: string) => ["staff", "invites", waiterId] as const,
     employers: (waiterId: string) => ["staff", "employers", waiterId] as const,
     hours: (venueId: string, month: string) =>

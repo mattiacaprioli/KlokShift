@@ -194,6 +194,7 @@ export type Database = {
           bio: string | null
           city: string | null
           created_at: string
+          deleted_at: string | null
           full_name: string | null
           id: string
           intro_seen: boolean
@@ -209,6 +210,7 @@ export type Database = {
           bio?: string | null
           city?: string | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id: string
           intro_seen?: boolean
@@ -224,6 +226,7 @@ export type Database = {
           bio?: string | null
           city?: string | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id?: string
           intro_seen?: boolean
@@ -492,8 +495,8 @@ export type Database = {
           id: string
           mime_type: string | null
           name: string
+          person_id: string
           size_bytes: number | null
-          staff_member_id: string
           storage_path: string
           updated_at: string
           uploaded_by: string | null
@@ -504,8 +507,8 @@ export type Database = {
           id?: string
           mime_type?: string | null
           name: string
+          person_id: string
           size_bytes?: number | null
-          staff_member_id: string
           storage_path: string
           updated_at?: string
           uploaded_by?: string | null
@@ -516,18 +519,18 @@ export type Database = {
           id?: string
           mime_type?: string | null
           name?: string
+          person_id?: string
           size_bytes?: number | null
-          staff_member_id?: string
           storage_path?: string
           updated_at?: string
           uploaded_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "staff_documents_staff_member_id_fkey"
-            columns: ["staff_member_id"]
+            foreignKeyName: "staff_documents_person_id_fkey"
+            columns: ["person_id"]
             isOneToOne: false
-            referencedRelation: "staff_members"
+            referencedRelation: "staff_people"
             referencedColumns: ["id"]
           },
           {
@@ -580,17 +583,19 @@ export type Database = {
           id: string
           link_status: Database["public"]["Enums"]["staff_link_status"]
           note: string | null
+          person_id: string
           phone: string | null
           venue_id: string
           waiter_id: string | null
         }
         Insert: {
           created_at?: string
-          display_name: string
+          display_name?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
           link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
+          person_id: string
           phone?: string | null
           venue_id: string
           waiter_id?: string | null
@@ -602,11 +607,19 @@ export type Database = {
           id?: string
           link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
+          person_id?: string
           phone?: string | null
           venue_id?: string
           waiter_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "staff_members_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "staff_people"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "staff_members_venue_id_fkey"
             columns: ["venue_id"]
@@ -616,6 +629,54 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_members_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_people: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          note: string | null
+          owner_id: string
+          phone: string | null
+          updated_at: string
+          waiter_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          note?: string | null
+          owner_id: string
+          phone?: string | null
+          updated_at?: string
+          waiter_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+          phone?: string | null
+          updated_at?: string
+          waiter_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_people_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_people_waiter_id_fkey"
             columns: ["waiter_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -662,6 +723,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          closed_at: string | null
           created_at: string
           cuisine_type: string | null
           description: string | null
@@ -673,6 +735,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          closed_at?: string | null
           created_at?: string
           cuisine_type?: string | null
           description?: string | null
@@ -684,6 +747,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          closed_at?: string | null
           created_at?: string
           cuisine_type?: string | null
           description?: string | null
@@ -812,8 +876,8 @@ export type Database = {
       }
     }
     Functions: {
-      can_access_staff_documents: {
-        Args: { p_staff_member: string }
+      can_access_staff_person_documents: {
+        Args: { p_person: string }
         Returns: boolean
       }
       chat_counterpart: {

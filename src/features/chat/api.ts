@@ -11,9 +11,15 @@ export type MessageCursor = { created_at: string; id: string };
 
 /**
  * Controparte della conversazione. La RLS di `profiles` non permette il join
- * diretto tra i partecipanti: l'identità del cameriere arriva dalla view
- * `waiter_public_cards`, quella del ristoratore dal suo locale (`venues`,
- * public read) — che è anche la UX giusta: si chatta con "Trattoria da Mario".
+ * diretto tra i partecipanti: il nome lo risolve `chat_counterpart` (DEFINER),
+ * che è anche l'unica fonte usata dal trigger delle notifiche — così la lista
+ * chat e la notifica non mostrano due mittenti diversi per lo stesso messaggio.
+ *
+ * Lato professionista viene da `get_waiter_public_card`. Lato gestore dipende da
+ * quante sedi ha (20260913100200): con **una** è il nome del locale — si chatta
+ * con "Trattoria da Mario", che è la UX giusta — con **più di una** è il nome del
+ * titolare, perché il thread è uno per coppia e vale per tutte le sue sedi:
+ * intestarlo a una delle tre sarebbe sbagliato due volte su tre.
  */
 export type ChatCounterpart = {
   name: string;

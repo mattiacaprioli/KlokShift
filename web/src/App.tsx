@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { RealtimeSync } from "@/features/realtime/RealtimeSync";
+import { ActiveVenueProvider } from "@/features/venues/ActiveVenue";
 import { Spinner } from "./ui/primitives";
 import { AppLayout } from "./AppLayout";
 import { NotificationsWatcher } from "./NotificationsWatcher";
@@ -19,6 +20,7 @@ import { StaffPage } from "./pages/Staff";
 import { RuoliPage } from "./pages/Ruoli";
 import { ProfessionistaPage } from "./pages/Professionista";
 import { LocalePage } from "./pages/Locale";
+import { LocaleNuovoPage } from "./pages/LocaleNuovo";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 
 export function App() {
@@ -53,7 +55,9 @@ export function App() {
   if (!profile) return <Spinner label="Caricamento profilo…" />;
 
   return (
-    <>
+    // Sopra tutto il resto: `RealtimeSync` deve sapere quale sede ascoltare, e
+    // `AppLayout` quale mostrare nello switcher.
+    <ActiveVenueProvider>
       {/* Stesso listener dell'app: la dashboard si aggiorna sola quando il
           gestore tocca qualcosa dal telefono. */}
       <RealtimeSync userId={session.user.id} role={profile.role} />
@@ -69,7 +73,6 @@ export function App() {
           <Route path="/ore" element={<OrePage />} />
           <Route path="/staff" element={<StaffPage />} />
           <Route path="/ruoli" element={<RuoliPage />} />
-          <Route path="/ruoli" element={<RuoliPage />} />
           {/* Profilo pubblico: si arriva dall'organico o dal dettaglio di un
               turno, non c'è una voce di menu (non è una lista da sfogliare). */}
           <Route
@@ -81,10 +84,11 @@ export function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:id" element={<ChatPage />} />
           <Route path="/locale" element={<LocalePage />} />
+          <Route path="/locale/nuovo" element={<LocaleNuovoPage />} />
           <Route path="/impostazioni" element={<ImpostazioniPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </>
+    </ActiveVenueProvider>
   );
 }

@@ -10,10 +10,9 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
-import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { PlanCard } from "@/features/plan/ProLock";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import type { Venue } from "@/features/venues/api";
 
 function InfoLine({ label, value }: { label: string; value: string }) {
@@ -21,6 +20,86 @@ function InfoLine({ label, value }: { label: string; value: string }) {
     <View className="gap-0.5">
       <Mono>{label}</Mono>
       <Text className="text-sm text-t2">{value}</Text>
+    </View>
+  );
+}
+
+/**
+ * Le sedi del titolare: qui si **gestiscono** (si apre, si modifica, si aggiunge),
+ * mentre lo switcher in home serve a *passare* da una all'altra.
+ *
+ * Sempre visibile, anche con una sede sola: è da qui che si scopre di poterne
+ * aggiungere una seconda, e un titolare con tre locali non deve indovinare dove
+ * andare a cercarle.
+ */
+function VenuesCard({
+  venues,
+  activeId,
+  onSelect,
+  onEdit,
+  onAdd,
+}: {
+  venues: Venue[];
+  activeId: string | undefined;
+  onSelect: (id: string) => void;
+  onEdit: (id: string) => void;
+  onAdd: () => void;
+}) {
+  return (
+    <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
+      <Mono>
+        {venues.length === 1 ? "Il tuo locale" : `I tuoi locali · ${venues.length}`}
+      </Mono>
+
+      {venues.map((v) => {
+        const active = v.id === activeId;
+        return (
+          <View key={v.id} className="flex-row items-center gap-2">
+            {/* Toccare la riga attiva la sede; la chevron la apre in modifica.
+                Due bersagli distinti perché sono due intenzioni distinte. */}
+            <Pressable
+              onPress={() => onSelect(v.id)}
+              className={cn(
+                "flex-1 flex-row items-center gap-3 rounded-2xl border px-4 py-3",
+                active ? "border-gold/40 bg-gold/10" : "border-border bg-bg-1"
+              )}
+            >
+              <Avatar uri={v.logo_url ?? undefined} name={v.name} size={32} />
+              <View className="flex-1">
+                <Text
+                  className={cn(
+                    "text-sm",
+                    active
+                      ? "font-sans-semibold text-gold"
+                      : "font-sans-medium text-t1"
+                  )}
+                >
+                  {v.name}
+                </Text>
+                {v.city ? (
+                  <Text className="mt-0.5 text-xs text-t3">{v.city}</Text>
+                ) : null}
+              </View>
+              {active ? <Icon name="check" size={16} color="#EAB54C" /> : null}
+            </Pressable>
+            <Pressable
+              onPress={() => onEdit(v.id)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Modifica ${v.name}`}
+              className="p-2"
+            >
+              <Icon name="chevR" size={18} color="#8C8579" />
+            </Pressable>
+          </View>
+        );
+      })}
+
+      <Pressable onPress={onAdd} className="items-center pt-1">
+        <Text className="text-sm font-sans-semibold text-t2">
+          + Aggiungi locale
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -76,11 +155,9 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
 export default function ManagerProfiloScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
-  const userId = session!.user.id;
 
-  const venueQuery = useMyVenue(userId);
-  const venue = venueQuery.data ?? null;
+  const venueQuery = useActiveVenue();
+  const venue = venueQuery.venue;
 
   return (
     <ScrollView
@@ -116,7 +193,7 @@ export default function ManagerProfiloScreen() {
           <GoldButton
             className="mt-2"
             label="Configura locale"
-            onPress={() => router.push("/(manager)/venue")}
+            onPress={() => router.push("/(manager)/venue/new")}
           />
         </View>
       ) : (
@@ -147,14 +224,22 @@ export default function ManagerProfiloScreen() {
 
           <GoldButton
             label="Modifica locale"
-            onPress={() => router.push("/(manager)/venue")}
+            onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
+          />
+
+          <VenuesCard
+            venues={venueQuery.venues}
+            activeId={venue.id}
+            onSelect={venueQuery.setActiveVenue}
+            onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
+            onAdd={() => router.push("/(manager)/venue/new")}
           />
 
           <PlanCard />
 
           <CompletenessCard
             venue={venue}
-            onEdit={() => router.push("/(manager)/venue")}
+            onEdit={() => router.push(`/(manager)/venue/${venue.id}`)}
           />
 
           {venue.cuisine_type || venue.address || venue.description ? (

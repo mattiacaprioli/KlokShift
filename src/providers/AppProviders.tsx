@@ -5,27 +5,33 @@ import { ErrorBoundary } from "react-error-boundary";
 import * as Sentry from "@sentry/react-native";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider } from "@/lib/auth";
+import { ActiveVenueProvider } from "@/features/venues/ActiveVenue";
 import { ToastProvider } from "@/providers/Toast";
 import { ErrorFallback } from "@/providers/ErrorFallback";
 
 /**
  * Composes the global providers. Order matters: Query + Auth must wrap the
- * navigator (screens read both); Toast wraps so any screen can fire toasts;
- * ErrorBoundary is innermost so its fallback can still use the providers above.
+ * navigator (screens read both); ActiveVenue sits inside Auth because it reads
+ * `useAuth()`, and outside the navigator so `RealtimeSync` (mounted in
+ * `app/_layout.tsx`, not inside the `(manager)` group) can follow the active
+ * venue too; Toast wraps so any screen can fire toasts; ErrorBoundary is
+ * innermost so its fallback can still use the providers above.
  */
 export function AppProviders({ children }: PropsWithChildren) {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <ToastProvider>
-            <ErrorBoundary
-              FallbackComponent={ErrorFallback}
-              onError={(error) => Sentry.captureException(error)}
-            >
-              {children}
-            </ErrorBoundary>
-          </ToastProvider>
+          <ActiveVenueProvider>
+            <ToastProvider>
+              <ErrorBoundary
+                FallbackComponent={ErrorFallback}
+                onError={(error) => Sentry.captureException(error)}
+              >
+                {children}
+              </ErrorBoundary>
+            </ToastProvider>
+          </ActiveVenueProvider>
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

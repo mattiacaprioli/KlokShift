@@ -19,6 +19,7 @@ import {
   useRemoveStaffMember,
   useStaffMember,
   useUpdateStaffMember,
+  useUpdateStaffPerson,
 } from "@/features/staff/hooks";
 import { StaffHoursSection } from "@/features/assignments/StaffHoursSection";
 import { StaffPerformanceSection } from "@/features/assignments/StaffPerformanceSection";
@@ -47,11 +48,16 @@ function StaffEditForm({
   const { session } = useAuth();
   const managerId = session!.user.id;
   const isPro = useIsPro();
+  const updatePerson = useUpdateStaffPerson();
   const update = useUpdateStaffMember();
   const setRoles = useSetStaffMemberRoles();
   const remove = useRemoveStaffMember();
   const startConversation = useStartConversation();
-  const busy = update.isPending || setRoles.isPending || remove.isPending;
+  const busy =
+    updatePerson.isPending ||
+    update.isPending ||
+    setRoles.isPending ||
+    remove.isPending;
 
   const [name, setName] = useState(member.display_name);
   const [roleIds, setRoleIds] = useState<string[]>(initialRoleIds);
@@ -63,37 +69,54 @@ function StaffEditForm({
   const [confirmVisible, setConfirmVisible] = useState(false);
   const waiterId = member.waiter_id;
 
-  function onSave() {
+  /**
+   * Un gesto, tre scritture, tre livelli diversi:
+   *
+   *   · nome/telefono/note → la **persona**, quindi valgono in tutte le sedi in
+   *     cui lavora (`staff_people`);
+   *   · tipo di impiego    → questa **sede** (`staff_members`): si può essere
+   *     fissi a Roma e a chiamata a Milano;
+   *   · ruoli              → questa sede, tabella a parte.
+   *
+   * In quest'ordine di proposito: se una cade, quelle già passate sono salvate e
+   * il messaggio dice **quale** pezzo è rimasto indietro, invece di un generico
+   * "salvataggio non riuscito" dopo il quale non si sa cosa riaprire.
+   */
+  async function onSave() {
     if (!name.trim()) return;
-    update.mutate(
-      {
-        id: member.id,
+    try {
+      await updatePerson.mutateAsync({
+        id: member.person_id,
         fields: {
-          display_name: name.trim(),
-          employment_type: empType,
+          full_name: name.trim(),
           phone: phone.trim() || null,
           note: note.trim() || null,
         },
-      },
-      {
-        // I ruoli stanno in una tabella a parte: due scritture, un solo gesto.
-        // Se la seconda fallisce la scheda è comunque salvata, quindi l'errore
-        // parla di ruoli e non di "salvataggio non riuscito".
-        onSuccess: () =>
-          setRoles.mutate(
-            { staffMemberId: member.id, roleIds },
-            {
-              onSuccess: () => {
-                toast.show("Scheda aggiornata");
-                router.back();
-              },
-              onError: () =>
-                toast.show("Ruoli non salvati. Riprova.", "error"),
-            }
-          ),
-        onError: () => toast.show("Impossibile salvare. Riprova.", "error"),
-      }
-    );
+      });
+    } catch {
+      toast.show("Impossibile salvare. Riprova.", "error");
+      return;
+    }
+
+    try {
+      await update.mutateAsync({
+        id: member.id,
+        fields: { employment_type: empType },
+      });
+    } catch {
+      toast.show("Tipo di impiego non salvato. Riprova.", "error");
+      return;
+    }
+
+    try {
+      await setRoles.mutateAsync({ staffMemberId: member.id, roleIds });
+    } catch {
+      toast.show("Ruoli non salvati. Riprova.", "error");
+      return;
+    }
+
+    toast.show("Scheda aggiornata");
+    router.back();
   }
 
   function onMessage() {
@@ -185,11 +208,11 @@ function StaffEditForm({
         )}
 
         <DocumentsSection
-          staffMemberId={member.id}
+          personId={member.person_id}
           onAdd={() =>
             router.push({
               pathname: "/(manager)/staff/documento/new",
-              params: { staffId: member.id },
+              params: { personId: member.person_id },
             })
           }
         />

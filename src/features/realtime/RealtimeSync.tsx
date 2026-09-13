@@ -3,7 +3,7 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { qk } from "@/lib/queryKeys";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenueId } from "@/features/venues/ActiveVenue";
 
 type Row = Record<string, unknown>;
 type Payload = RealtimePostgresChangesPayload<Row>;
@@ -81,6 +81,14 @@ function useBurstInvalidate(qc: QueryClient, ms = 300) {
  * 2. **Invalidare stretto.** Si invalidano le chiavi del locale/utente
  *    interessato, in una sola raffica raggruppata, invece di far cadere dalla
  *    cache ogni intervallo del planning, lo storico e ogni dettaglio turno.
+ *
+ * 3. **Si ascolta la sede attiva, non tutte.** Un titolare con tre sedi ha un
+ *    canale solo: `venueId` viene dallo switcher, e le dipendenze dell'effetto
+ *    smontano il canale della sede precedente e ne aprono uno sulla nuova da sé.
+ *    Sottoscriverne tre moltiplicherebbe per tre la valutazione RLS di ogni riga
+ *    cambiata — esattamente ciò che ha esaurito il Disk IO budget la prima volta.
+ *    Chi torna su una sede vede subito la cache (le chiavi non sono state
+ *    invalidate, solo lasciate stale) e il refetch gira in background.
  */
 export function RealtimeSync({
   userId,
@@ -93,10 +101,10 @@ export function RealtimeSync({
   const invalidate = useBurstInvalidate(qc);
   const isManager = role === "manager";
 
-  // Query condivisa con le schermate del ristoratore: è un hit di cache, non
-  // una lettura in più. Per il professionista resta spenta.
-  const { data: venue } = useMyVenue(isManager ? userId : "");
-  const venueId = venue?.id;
+  // Stessa sorgente delle schermate del ristoratore: è un context, non una
+  // lettura in più. Per il professionista è `undefined` — lo sa il provider, non
+  // serve spegnerlo da qui.
+  const venueId = useActiveVenueId();
 
   useEffect(() => {
     if (!isManager || !venueId) return;

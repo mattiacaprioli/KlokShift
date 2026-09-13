@@ -31,16 +31,61 @@ export async function updateVenueLogo(
   if (error) throw new Error(error.message);
 }
 
-export async function getMyVenue(ownerId: string): Promise<Venue | null> {
+/**
+ * Tutte le sedi **aperte** del titolare, la più vecchia prima.
+ *
+ * Sostituisce il vecchio `getMyVenue`, che faceva `.limit(1).maybeSingle()` e
+ * scartava in silenzio le altre sedi: un hotel o un catering con più sedi — il
+ * pubblico per cui esiste la dashboard — ne vedeva una sola.
+ *
+ * Due ordinamenti e non uno: `created_at` decide chi è la sede di default, e `id`
+ * è il tie-break perché due sedi create nello stesso istante non devono poter
+ * invertirsi tra due caricamenti (la sede attiva ballerebbe da sola).
+ */
+export async function getMyVenues(ownerId: string): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")
     .select("*")
     .eq("owner_id", ownerId)
+    // I locali chiusi restano consultabili, ma non sono posti in cui si lavora:
+    // fuori dallo switcher e fuori da ogni query operativa.
+    .is("closed_at", null)
     .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("id", { ascending: true });
   if (error) throw new Error(error.message);
-  return data ?? null;
+  return data ?? [];
+}
+
+/** I locali archiviati, per la sezione "Locali chiusi". */
+export async function getMyClosedVenues(ownerId: string): Promise<Venue[]> {
+  const { data, error } = await supabase
+    .from("venues")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .not("closed_at", "is", null)
+    .order("closed_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Archivia (o riapre) una sede.
+ *
+ * **Chiudere e non eliminare**, di proposito: un `delete` su `venues` cascata su
+ * `shifts`, `staff_members`, `shift_assignments`, `venue_roles` e — via il trigger
+ * degli orfani — sui documenti delle persone rimaste senza sedi. Si distruggerebbe
+ * lo storico di ore di altre persone per chiudere un ristorante. Chiudere lo
+ * toglie dalla circolazione e lo lascia consultabile.
+ */
+export async function setVenueClosed(
+  venueId: string,
+  closed: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from("venues")
+    .update({ closed_at: closed ? new Date().toISOString() : null })
+    .eq("id", venueId);
+  if (error) throw new Error(error.message);
 }
 
 export async function saveVenue(

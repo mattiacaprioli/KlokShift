@@ -27,7 +27,7 @@ export async function exportHoursPdf(
     await Sharing.shareAsync(uri, {
       UTI: "com.adobe.pdf",
       mimeType: "application/pdf",
-      dialogTitle: `Ore ${monthLabel}`,
+      dialogTitle: `Ore ${venueName} · ${monthLabel}`,
     });
   }
 }
@@ -39,7 +39,7 @@ export async function exportHoursCsv(
   rows: StaffHoursRow[]
 ): Promise<void> {
   const csv = buildHoursCsv(rows);
-  const uri = `${FileSystem.cacheDirectory}${hoursFileName(monthLabel, "csv")}`;
+  const uri = `${FileSystem.cacheDirectory}${hoursFileName(venueName, monthLabel, "csv")}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,
   });
@@ -47,7 +47,7 @@ export async function exportHoursCsv(
     await Sharing.shareAsync(uri, {
       UTI: "public.comma-separated-values-text",
       mimeType: "text/csv",
-      dialogTitle: `Ore ${monthLabel}`,
+      dialogTitle: `Ore ${venueName} · ${monthLabel}`,
     });
   }
 }

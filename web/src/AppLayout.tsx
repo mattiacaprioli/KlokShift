@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { cn } from "@/lib/cn";
 import { Button, Placeholder, QueryError, Spinner } from "./ui/primitives";
 import { VenueContext } from "./lib/venue";
+import { VenueSwitcher } from "./VenueSwitcher";
 
 type NavItem = { to: string; label: string; badge?: "chat" | "notifiche" };
 
@@ -23,8 +24,10 @@ const NAV: NavItem[] = [
 ];
 
 export function AppLayout() {
-  const { session, profile, signOut } = useAuth();
-  const venueQuery = useMyVenue(session!.user.id);
+  // `profile` non serve più qui: l'identità dell'utente la mostra VenueSwitcher,
+  // che è anche il posto da cui si cambia sede.
+  const { session, signOut } = useAuth();
+  const { venue, isPending, isError, error } = useActiveVenue();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   // Aggiornati in tempo reale da RealtimeSync (invalida chat.unreadAll) e dal
@@ -32,25 +35,17 @@ export function AppLayout() {
   const chatUnread = useChatUnreadCount(session!.user.id).data ?? 0;
   const notifUnread = useUnreadCount(session!.user.id).data ?? 0;
 
-  // "Locale" è l'unico posto da cui crearne uno, e "Impostazioni" deve restare
-  // raggiungibile comunque (uscire, cancellare l'account): entrambe passano il
-  // gate anche senza locale.
-  const VENUE_FREE = ["/locale", "/impostazioni"];
-  const needsVenue = !venueQuery.data && !VENUE_FREE.includes(pathname);
+  // Da "Locale" (e da "/locale/nuovo") si crea un locale, e "Impostazioni" deve
+  // restare raggiungibile comunque (uscire, cancellare l'account): passano il
+  // gate anche senza nessuna sede.
+  const VENUE_FREE = ["/locale", "/locale/nuovo", "/impostazioni"];
+  const needsVenue = !venue && !VENUE_FREE.includes(pathname);
 
   return (
     <div className="flex min-h-dvh">
       {/* Navigazione: sul foglio non serve, e ruberebbe un quarto di pagina. */}
       <aside className="flex w-56 shrink-0 flex-col border-r border-border-2 bg-bg-card p-4 print:hidden">
-        <div className="mb-6 px-2">
-          <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
-          <p className="font-serif text-lg leading-tight text-t1">
-            {venueQuery.data?.name ?? "topWaitr"}
-          </p>
-          <p className="mt-0.5 truncate text-xs text-t4">
-            {profile?.full_name ?? session?.user.email}
-          </p>
-        </div>
+        <VenueSwitcher />
 
         <nav className="flex flex-col gap-0.5">
           {NAV.map((item) => {
@@ -94,10 +89,10 @@ export function AppLayout() {
       </aside>
 
       <main className="min-w-0 flex-1 p-8 print:p-0">
-        {venueQuery.isPending ? (
+        {isPending ? (
           <Spinner />
-        ) : venueQuery.isError ? (
-          <QueryError error={venueQuery.error} />
+        ) : isError ? (
+          <QueryError error={error} />
         ) : needsVenue ? (
           // Senza locale non esiste nulla da gestire: ogni query di questa
           // dashboard è ancorata a venue_id.
@@ -105,18 +100,18 @@ export function AppLayout() {
             title="Nessun locale collegato a questo account"
             detail="Crea il locale per iniziare a programmare i turni."
             action={
-              <Button variant="gold" onClick={() => navigate("/locale")}>
+              <Button variant="gold" onClick={() => navigate("/locale/nuovo")}>
                 Crea il locale
               </Button>
             }
           />
         ) : (
-          <VenueContext.Provider value={venueQuery.data ?? null}>
+          <VenueContext.Provider value={venue}>
             {/* Solo in stampa: senza la sidebar il foglio sarebbe anonimo, e un
                 turnario appeso in bacheca deve dire di chi è e di quando. */}
             <div className="mb-4 hidden items-baseline justify-between gap-4 border-b border-border-2 pb-2 print:flex">
               <span className="font-serif text-base text-t1">
-                {venueQuery.data?.name}
+                {venue?.name}
               </span>
               <span className="font-mono text-xs text-t3">
                 stampato il {new Date().toLocaleDateString("it-IT")}

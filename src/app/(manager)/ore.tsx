@@ -11,11 +11,10 @@ import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { formatHours, todayString } from "@/lib/format";
 import { exportHoursCsv, exportHoursPdf } from "@/lib/export";
 import { useToast } from "@/providers/Toast";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import { useVenueHoursSummary } from "@/features/assignments/hooks";
 
 const monthFmt = new Intl.DateTimeFormat("it-IT", {
@@ -45,9 +44,7 @@ function monthLabel(month: string): string {
 export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const { session } = useAuth();
-  const userId = session!.user.id;
-  const venue = useMyVenue(userId).data ?? null;
+  const venue = useActiveVenue().venue;
 
   const [month, setMonth] = useState(currentMonth());
   const atCurrentMonth = month >= currentMonth();

@@ -80,7 +80,26 @@ export function buildHoursCsv(rows: StaffHoursRow[]): string {
   return "﻿" + [header, ...lines].join("\r\n");
 }
 
-/** Nome file condiviso mobile/web: "ore-settembre-2026.csv". */
-export function hoursFileName(monthLabel: string, ext: string): string {
-  return `ore-${monthLabel.toLowerCase().replace(/\s+/g, "-")}.${ext}`;
+/**
+ * Nome file condiviso mobile/web: "ore-osteria-milano-settembre-2026.csv".
+ *
+ * Il nome della sede è dentro di proposito. Un titolare con tre locali esporta tre
+ * volte lo stesso mese, e tre file "ore-settembre-2026.csv" nella cartella
+ * Download sono indistinguibili — è l'allegato che va al commercialista, e sono
+ * tre buste paga diverse.
+ */
+export function hoursFileName(
+  venueName: string,
+  monthLabel: string,
+  ext: string
+): string {
+  const slug = (v: string) =>
+    v
+      .toLowerCase()
+      .normalize("NFD")
+      // Via gli accenti: un nome file con "è" o "à" viaggia male tra sistemi.
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  return `ore-${slug(venueName)}-${slug(monthLabel)}.${ext}`;
 }

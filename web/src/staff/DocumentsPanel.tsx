@@ -22,20 +22,20 @@ function canPreview(mime: string | null): boolean {
 }
 
 /**
- * I documenti di una scheda dell'organico, dalla scrivania.
+ * I documenti di una persona dell'organico, dalla scrivania.
  *
  * È qui che la feature paga: la programmazione e i controlli di conformità si
  * fanno da desktop, e un HACCP scaduto è più facile vederlo in una tabella che
  * su un telefono.
  */
-export function DocumentsPanel({ staffMemberId }: { staffMemberId: string }) {
+export function DocumentsPanel({ personId }: { personId: string }) {
   const { session } = useAuth();
   const toast = useToast();
-  const { data, isPending } = useStaffDocuments(staffMemberId);
+  const { data, isPending } = useStaffDocuments(personId);
   const docs = data ?? [];
 
-  const create = useCreateStaffDocument(staffMemberId);
-  const remove = useDeleteStaffDocument(staffMemberId);
+  const create = useCreateStaffDocument(personId);
+  const remove = useDeleteStaffDocument(personId);
   const signedUrl = useDocumentUrl();
 
   const fileRef = useRef<HTMLInputElement>(null);

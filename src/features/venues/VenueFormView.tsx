@@ -1,46 +1,62 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { AvatarPickerField } from "@/components/ui/AvatarPickerField";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import {
-  deleteAvatarByUrl,
-  uploadAvatar,
-} from "@/features/account/api";
+import { deleteAvatarByUrl, uploadAvatar } from "@/features/account/api";
 import { pickAvatar } from "@/features/account/avatarPicker";
-import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import {
-  useMyVenue,
-  useSaveVenue,
-  useUpdateVenueLogo,
-} from "@/features/venues/hooks";
-import { venueSchema, type VenueForm } from "@/features/venues/schema";
+import { useSaveVenue, useUpdateVenueLogo } from "./hooks";
+import { venueSchema, type VenueForm } from "./schema";
+import type { Venue } from "./api";
 
-export default function VenueScreen() {
-  const { session } = useAuth();
-  const router = useRouter();
+/**
+ * Il modulo di un locale, in creazione o in modifica.
+ *
+ * Estratto da `(manager)/venue.tsx` quando un account ha smesso di avere un solo
+ * locale: ora lo usano `venue/new` e `venue/[id]`, come `ShiftFormView` fa per
+ * `shift/new` e `shift/edit/[id]`.
+ */
+export function VenueFormView({
+  venue,
+  ownerId,
+  eyebrow = "Locale",
+  title,
+  intro,
+  onSaved,
+  footer,
+}: {
+  /** `null` = creazione. */
+  venue: Venue | null;
+  ownerId: string;
+  eyebrow?: string;
+  title?: string;
+  intro?: string;
+  onSaved: (venue: Venue) => void;
+  /** Sotto il pulsante: "Chiudi locale" sulla modifica, niente in creazione. */
+  footer?: ReactNode;
+}) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const userId = session!.user.id;
-
-  const venueQuery = useMyVenue(userId);
-  const venue = venueQuery.data ?? null;
-  const save = useSaveVenue(userId);
-  const saveLogo = useUpdateVenueLogo(userId);
+  const save = useSaveVenue(ownerId);
+  const saveLogo = useUpdateVenueLogo(ownerId);
   const [logoBusy, setLogoBusy] = useState(false);
 
   const { control, handleSubmit, reset } = useForm<VenueForm>({
     resolver: zodResolver(venueSchema),
-    defaultValues: { name: "", city: "", address: "", cuisine_type: "", description: "" },
+    defaultValues: {
+      name: "",
+      city: "",
+      address: "",
+      cuisine_type: "",
+      description: "",
+    },
   });
 
   useEffect(() => {
@@ -57,7 +73,7 @@ export default function VenueScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await save.mutateAsync({
+      const saved = await save.mutateAsync({
         input: {
           name: values.name,
           city: values.city || null,
@@ -67,8 +83,8 @@ export default function VenueScreen() {
         },
         venueId: venue?.id,
       });
-      toast.show("Locale salvato");
-      router.back();
+      toast.show(venue ? "Locale salvato" : "Locale creato");
+      onSaved(saved);
     } catch {
       toast.show("Impossibile salvare. Riprova.", "error");
     }
@@ -76,12 +92,12 @@ export default function VenueScreen() {
 
   /**
    * Stesso ordine della foto profilo: prima il locale punta al file nuovo, poi
-   * si cancella il vecchio. Al contrario, un errore a metà lascerebbe il
-   * locale a puntare a un file che non c'è più.
+   * si cancella il vecchio. Al contrario, un errore a metà lascerebbe il locale
+   * a puntare a un file che non c'è più.
    *
-   * Il file va sotto la cartella dell'**utente** e non del locale: la policy
-   * del bucket `avatars` accetta scritture solo in `<auth.uid()>/…`, e il
-   * titolare è comunque l'unico che può caricarlo.
+   * Il file va sotto la cartella dell'**utente** e non del locale: la policy del
+   * bucket `avatars` accetta scritture solo in `<auth.uid()>/…`, e il titolare è
+   * comunque l'unico che può caricarlo.
    */
   async function onLogo() {
     if (logoBusy) return;
@@ -94,7 +110,7 @@ export default function VenueScreen() {
       const picked = await pickAvatar();
       if (!picked) return; // annullato
       setLogoBusy(true);
-      const url = await uploadAvatar(userId, picked.bytes, {
+      const url = await uploadAvatar(ownerId, picked.bytes, {
         contentType: picked.contentType,
       });
       await saveLogo.mutateAsync({ venueId: venue.id, logoUrl: url });
@@ -122,21 +138,8 @@ export default function VenueScreen() {
     }
   }
 
-  if (venueQuery.isLoading) return <View className="flex-1 bg-bg-0" />;
-
-  if (venueQuery.isError) {
-    return (
-      <View className="flex-1 justify-center bg-bg-0 px-6">
-        <QueryError onRetry={() => venueQuery.refetch()} />
-      </View>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior="padding"
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <ScrollView
         className="flex-1 bg-bg-0"
         contentContainerStyle={{
@@ -147,10 +150,14 @@ export default function VenueScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenHeader eyebrow="Locale" title="Il tuo locale" />
+        <ScreenHeader
+          eyebrow={eyebrow}
+          title={title ?? (venue ? venue.name : "Nuovo locale")}
+        />
 
         <Text className="text-base text-t2">
-          Queste informazioni saranno visibili ai professionisti sui tuoi turni.
+          {intro ??
+            "Queste informazioni saranno visibili ai professionisti sui tuoi turni."}
         </Text>
 
         {/* Il logo si può caricare solo su un locale già creato: prima non c'è
@@ -207,10 +214,18 @@ export default function VenueScreen() {
 
         <GoldButton
           className="mt-2"
-          label={save.isPending ? "Salvataggio…" : "Salva locale"}
+          label={
+            save.isPending
+              ? "Salvataggio…"
+              : venue
+                ? "Salva locale"
+                : "Crea locale"
+          }
           disabled={save.isPending}
           onPress={onSubmit}
         />
+
+        {footer ? <View className="mt-4">{footer}</View> : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

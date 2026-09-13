@@ -123,8 +123,11 @@ function EmployerCard({
 
       <ConfirmModal
         visible={confirmVisible}
-        title="Lasciare questo locale?"
-        message={`Non farai più parte dello staff di ${venueName}.`}
+        title={`Lasciare ${venueName}?`}
+        // Il nome della sede nel titolo, non "questo locale": un datore di lavoro
+        // può averne più di una, e chi si dimette da Milano deve vedere scritto
+        // "Milano" prima di confermare.
+        message={`Non farai più parte dello staff di ${venueName}. Se lavori in altre sedi dello stesso datore di lavoro, quelle restano — e con loro i tuoi documenti.`}
         confirmLabel="Lascia"
         destructive
         pending={leave.isPending}

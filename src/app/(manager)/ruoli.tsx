@@ -11,10 +11,9 @@ import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import {
   useArchiveVenueRole,
   useCreateVenueRole,
@@ -93,9 +92,8 @@ function RoleRow({
 export default function VenueRolesScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const { session } = useAuth();
-  const venueQuery = useMyVenue(session!.user.id);
-  const venue = venueQuery.data ?? null;
+  const venueQuery = useActiveVenue();
+  const venue = venueQuery.venue;
 
   const rolesQuery = useVenueRoles(venue?.id);
   const roles = rolesQuery.data ?? [];

@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import {
-  useAddStaffMember,
+  useAddPersonToVenue,
+  useAddStaffToVenue,
   useFindWaiterByEmail,
   useVenueStaff,
 } from "@/features/staff/hooks";
+import { usePeopleFromOtherVenues } from "@/features/staff/usePeopleFromOtherVenues";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import type { WaiterLookup } from "@/features/staff/api";
@@ -14,19 +17,31 @@ import { useVenue } from "../lib/venue";
 import { Button, Card, Field, Input, Pill, Select } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
-type Mode = "manuale" | "invita";
+type Mode = "esistente" | "manuale" | "invita";
 
 /**
- * I due modi di aggiungere una persona all'organico, come nell'app: una scheda
- * manuale (per chi non ha un account) o un invito via email a chi è già su
- * topWaitr.
+ * I modi di aggiungere una persona all'organico, come nell'app: una persona che
+ * il titolare ha già in un'altra sede, una scheda manuale (per chi non ha un
+ * account) o un invito via email a chi è già su topWaitr.
+ *
+ * Il primo esiste solo per chi ha più di una sede, ed è il primo in elenco perché
+ * per un titolare con tre locali è il caso più frequente.
  */
 export function AddStaffPanel({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<Mode>("manuale");
+  const { venues } = useActiveVenue();
+  const multiVenue = venues.length > 1;
+  const [mode, setMode] = useState<Mode>(multiVenue ? "esistente" : "manuale");
 
   return (
     <Card className="mb-5">
       <div className="mb-4 flex gap-2">
+        {multiVenue ? (
+          <ModeTab
+            active={mode === "esistente"}
+            onClick={() => setMode("esistente")}
+            label="Dalle tue sedi"
+          />
+        ) : null}
         <ModeTab
           active={mode === "manuale"}
           onClick={() => setMode("manuale")}
@@ -39,9 +54,118 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
         />
       </div>
 
+      {mode === "esistente" ? <ExistingPersonForm onDone={onClose} /> : null}
       {mode === "manuale" ? <ManualForm onDone={onClose} /> : null}
       {mode === "invita" ? <InviteForm onDone={onClose} /> : null}
     </Card>
+  );
+}
+
+/**
+ * Una persona che il titolare ha in un'altra sede entra qui **senza invito**:
+ * l'accordo esiste già e l'account, se c'è, è collegato all'anagrafica. Ruoli e
+ * tipo di impiego sono invece di questa sede.
+ */
+function ExistingPersonForm({ onDone }: { onDone: () => void }) {
+  const venue = useVenue();
+  const add = useAddPersonToVenue();
+  const setRoles = useSetStaffMemberRoles();
+  const toast = useToast();
+  const reusable = usePeopleFromOtherVenues(venue.owner_id, venue.id);
+  const [personId, setPersonId] = useState("");
+  const [roleIds, setRoleIds] = useState<string[]>([]);
+  const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
+
+  if (reusable.isPending) {
+    return <p className="text-sm text-t3">Caricamento…</p>;
+  }
+
+  if (reusable.people.length === 0) {
+    return (
+      <p className="text-sm text-t3">
+        Tutte le persone che hai nelle altre sedi fanno già parte di questo
+        organico. Usa <b className="text-t1">Scheda manuale</b> o{" "}
+        <b className="text-t1">Invita via email</b> per aggiungerne una nuova.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p className="mb-3 text-xs text-t3">
+        Aggiungerle qui non richiede un nuovo invito: anagrafica e documenti
+        restano quelli che hai già.
+      </p>
+
+      <div className="grid grid-cols-3 items-end gap-3">
+        <Field label="Persona">
+          <Select
+            value={personId}
+            onChange={(e) => setPersonId(e.target.value)}
+          >
+            <option value="">Scegli…</option>
+            {reusable.people.map(({ person, venuesLabel }) => (
+              <option key={person.id} value={person.id}>
+                {person.full_name} — {venuesLabel}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Impiego in questa sede">
+          <Select
+            value={empType}
+            onChange={(e) =>
+              setEmpType(e.target.value as Enums<"employment_type">)
+            }
+          >
+            <option value="fisso">Fisso</option>
+            <option value="a_chiamata">A chiamata</option>
+          </Select>
+        </Field>
+      </div>
+
+      <div className="mt-3">
+        <Field label="Ruoli in questa sede">
+          <RoleCheckboxes
+            venueId={venue.id}
+            value={roleIds}
+            onChange={setRoleIds}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4">
+        <Button
+          variant="gold"
+          disabled={!personId || add.isPending}
+          onClick={() =>
+            add.mutate(
+              {
+                venue_id: venue.id,
+                person_id: personId,
+                employment_type: empType,
+              },
+              {
+                onSuccess: (member) =>
+                  setRoles.mutate(
+                    { staffMemberId: member.id, roleIds },
+                    {
+                      onSuccess: () => {
+                        toast.show("Aggiunto a questa sede");
+                        onDone();
+                      },
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
+                    }
+                  ),
+                onError: (e) => toast.show(userErrorMessage(e), "error"),
+              }
+            )
+          }
+        >
+          {add.isPending ? "Aggiunta…" : "Aggiungi a questa sede"}
+        </Button>
+      </div>
+    </>
   );
 }
 
@@ -71,7 +195,7 @@ function ModeTab({
 
 function ManualForm({ onDone }: { onDone: () => void }) {
   const venue = useVenue();
-  const add = useAddStaffMember();
+  const add = useAddStaffToVenue();
   const setRoles = useSetStaffMemberRoles();
   const toast = useToast();
   const [name, setName] = useState("");
@@ -122,9 +246,10 @@ function ManualForm({ onDone }: { onDone: () => void }) {
           onClick={() =>
             add.mutate(
               {
-                venue_id: venue.id,
-                display_name: name.trim(),
-                employment_type: empType,
+                ownerId: venue.owner_id,
+                venueId: venue.id,
+                fullName: name.trim(),
+                employmentType: empType,
                 phone: phone.trim() || null,
               },
               {
@@ -160,7 +285,7 @@ function ManualForm({ onDone }: { onDone: () => void }) {
 function InviteForm({ onDone }: { onDone: () => void }) {
   const venue = useVenue();
   const find = useFindWaiterByEmail();
-  const add = useAddStaffMember();
+  const add = useAddStaffToVenue();
   const toast = useToast();
   const [email, setEmail] = useState("");
   const [found, setFound] = useState<WaiterLookup | null>(null);
@@ -172,6 +297,15 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const existing = found
     ? staff.find((s) => s.waiter_id === found.id)
     : undefined;
+
+  // Già nel tuo organico, ma in un'ALTRA sede. Senza questo avviso l'invito
+  // partirebbe davvero e creerebbe una seconda scheda della stessa persona —
+  // inutile, perché l'accordo con lei esiste già: basta aggiungerla a questa sede.
+  const reusable = usePeopleFromOtherVenues(venue.owner_id, venue.id);
+  const elsewhere =
+    found && !existing
+      ? reusable.people.find((r) => r.person.waiter_id === found.id)
+      : undefined;
 
   function onSearch() {
     const e = email.trim();
@@ -238,6 +372,13 @@ function InviteForm({ onDone }: { onDone: () => void }) {
                 ? "In attesa di risposta"
                 : "Già nel tuo staff"}
             </Pill>
+          ) : elsewhere ? (
+            <p className="min-w-52 flex-1 text-xs text-t2">
+              È già nel tuo organico a{" "}
+              <b className="text-t1">{elsewhere.venuesLabel}</b>. Aggiungilo a
+              questa sede da <b className="text-t1">Dalle tue sedi</b>: niente
+              invito da rifare, e tiene anagrafica e documenti che ha già.
+            </p>
           ) : (
             <>
               <Select
@@ -257,11 +398,12 @@ function InviteForm({ onDone }: { onDone: () => void }) {
                 onClick={() =>
                   add.mutate(
                     {
-                      venue_id: venue.id,
-                      display_name: found.full_name ?? email.trim(),
-                      employment_type: inviteType,
-                      waiter_id: found.id,
-                      link_status: "pending",
+                      ownerId: venue.owner_id,
+                      venueId: venue.id,
+                      fullName: found.full_name ?? email.trim(),
+                      employmentType: inviteType,
+                      waiterId: found.id,
+                      linkStatus: "pending",
                     },
                     {
                       onSuccess: () => {

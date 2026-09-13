@@ -1,6 +1,6 @@
 # topWaitr — Tasks & Roadmap
 
-Tracker delle attività. Aggiornato: **2026-09-12**.
+Tracker delle attività. Aggiornato: **2026-09-13**.
 
 > ⚠️ **Regola**: questo file è il tracker autorevole, ma il 2026-09-09 si è scoperto che tre voci del backlog erano già state implementate senza che nessuno le spuntasse (modifica turni interni, entry point chat da EmployerCard, paginazione candidature). **Aggiornare questo file nello stesso commit della feature**, altrimenti il backlog manda a lavorare su cose già fatte.
 
@@ -250,9 +250,33 @@ Decisione dell'utente: concentrare il prodotto su **una** cosa — il locale org
 - **Copy riscritte, e queste NON tornano indietro da sole** riaccendendo il flag: le 3 slide del professionista in `introContent.ts` (erano 2 su 3 fra recensioni e QR, ora turni / ore / avvisi+chat), la schermata di fine onboarding, e `(auth)/welcome.tsx`.
 - Le rotte `(waiter)/qr` e `(waiter)/recensioni` **restano registrate**: nessuno le raggiunge più dall'interfaccia, ma non sono state tolte.
 
+### Sessione 2026-09-13 — Più sedi per titolare ✅ (3 migration applicate)
+
+Il vincolo era `getMyVenue` con `.limit(1).maybeSingle()`: un account vedeva **un** locale, e le altre sedi venivano scartate in silenzio. Ma il pubblico della dashboard (hotel, catering, gruppi) ne ha più di una — Giuseppe ha Roma, Milano e Como — e **gli stessi dipendenti lavorano in più di una**.
+
+Il DB già lo permetteva: nessun unique su `venues.owner_id`, tutte le RLS già per sede concreta, tutte le query key già scopate per `venueId`. Il lavoro vero era lo staff.
+
+**La regola del modello**: *persona* = anagrafica, telefono, account collegato, documenti. *Appartenenza* = sede, tipo di impiego, stato invito, ruoli, turni, ore. Marco è una persona con tre appartenenze: carica l'HACCP una volta, ma le sue ore di ottobre a Roma restano separate da quelle di Milano (sono due buste paga).
+
+- **`20260913100000_staff_people.sql`** — nuova tabella `staff_people` (scopata su `owner_id`); `staff_members` diventa l'appartenenza persona×sede. Backfill con **fusione** delle schede che condividono `waiter_id` tra sedi dello stesso titolare (le schede *senza* account NON si fondono per nome: unirebbe due storici di ore per un indovinello). Unique `(owner_id, waiter_id)` su `staff_people` + `(venue_id, person_id)` su `staff_members` sostituiscono il vecchio `staff_members_venue_waiter_uq`.
+  - ⚠️ **`display_name`/`waiter_id`/`phone`/`note` restano su `staff_members` come colonne DERIVATE**, riscritte da un trigger. Non è duplicazione: è ciò che tiene invariati ~30 punti di lettura (embed PostgREST caldi, la RPC `get_venue_hours_summary`), tutte le RLS che passano da `sm.waiter_id = auth.uid()`, e il realtime con filtro server `venue_id=eq.` senza toccare la publication. Si toglierà quando ogni lettore leggerà la persona.
+  - ⚠️ **La sincronizzazione va in UNA direzione**: persona → appartenenze. Un trigger che propagasse anche all'indietro toccherebbe la riga mentre è dentro il proprio `BEFORE` → "tuple concurrently updated". Di conseguenza **il client scrive l'anagrafica su `staff_people`**: `updateStaffPerson` (nome/telefono/note) è separato da `updateStaffMember` (tipo di impiego).
+  - Trigger: `sync_staff_member_from_person` (guardiano — persona e sede dello **stesso** titolare — + mirror), `sync_staff_members_on_person_change`, `delete_orphan_staff_person` (una persona senza appartenenze non esiste).
+- **`20260913100100_staff_documents_person.sql`** — `staff_documents` passa da `staff_member_id` a `person_id`, nuova `can_access_staff_person_documents` (un salto invece di due). ⚠️ **Le righe esistenti sono state cancellate** (1 documento di test, "Diploma Mattia"): il path nello Storage deve cominciare con l'id di chi possiede il file, e i file non si spostano da SQL. Le alternative (doppio prefisso in un `or` permanente nell'unica funzione che protegge i documenti; allentare `staff_documents_path_owner_ck`) erano peggiori. **Un blob orfano di 2 MB resta nel bucket** — irraggiungibile, ma da togliere dalla dashboard Storage.
+- **`20260913100200_chat_counterpart_owner.sql`** — il ramo gestore faceva `limit 1` su `venues` **senza `order by`**: con due sedi nome e logo in chat potevano cambiare tra due letture. Ora: 1 sede → nome e logo della sede (zero regressione); >1 → `profiles.full_name` del titolare + logo della sede più vecchia. Decisione di prodotto: **un thread per coppia (dipendente, titolare)**, non per sede — nessuna migration su `conversations`. Ripristinata la toppa `'Utente eliminato'` che `20260910120100` aveva perso (bug vivo: la controparte di un account cancellato tornava senza nome).
+- **App + dashboard**: `getMyVenues`/`getMyClosedVenues`/`setVenueClosed`; nuovo `ActiveVenueProvider` condiviso (`src/features/venues/ActiveVenue.tsx`, senza import Expo) con la sede attiva persistita — SecureStore sull'app, `localStorage` sul web via alias `@/features/venues/activeVenueStorage`. `VenueSwitcher` in home (app) e in sidebar (web): **con una sede sola rende il markup identico a prima**. `venue.tsx` si è diviso in `venue/new` + `venue/[id]` (`VenueFormView`/`VenueFormCard` condivisi) e sul web è nata `/locale/nuovo`. "Chiudi locale" e non "elimina": un delete cascaterebbe su turni, organico, ore e documenti.
+- **Terzo modo di aggiungere staff — "Dalle tue sedi"**: elenca le persone che il titolare ha altrove e non sono ancora in questa sede; l'invito per email avvisa «è già nel tuo organico a Roma» invece di creare un doppione. Il `StaffPicker` della chat web passa da `useVenueStaff` a `useOwnerPeople`, altrimenti dalla pagina di Roma non si potrebbe scrivere a chi si ha solo a Milano.
+- **`hoursFileName(venueName, monthLabel, ext)`** → `ore-osteria-milano-settembre-2026.csv`: tre file `ore-settembre-2026.csv` nella cartella Download sono indistinguibili, ed è l'allegato che va al commercialista.
+- Tolta la `<Route path="/ruoli">` duplicata in `web/src/App.tsx`.
+- ⚠️ **`src/types/database.ts` è stato patchato a mano** (`SUPABASE_ACCESS_TOKEN` non disponibile in sessione): rilanciare `yarn db:types` per rigenerarlo davvero. Aggiunti anche `profiles.deleted_at` e `venues.closed_at`, che mancavano da prima. Anche `supabase/schema.sql` è stale: serve `yarn db:dump`.
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati
+
+- [ ] **`yarn db:types` + `yarn db:dump`** dopo le tre migration del 13/09 (i tipi sono patchati a mano, lo schema dump è stale).
+- [ ] **Togliere il blob orfano** dal bucket `staff-documents` (dashboard → Storage): la riga è stata cancellata, il file no. Supabase blocca il `delete from storage.objects` via SQL.
+- [ ] **Provare il multi-sede dal vivo** a due account: creare la seconda sede, "Dalle tue sedi", documento condiviso, export ore per sede, chiusura sede. Il modello è verificato in SQL sotto RLS, non ancora sull'interfaccia.
 
 - [x] ~~**Deploy `web-review/`**~~ ✅ (19/07) — **online su GitHub Pages**: `https://mattiacaprioli.github.io/topWaitr`. Workflow `.github/workflows/deploy-web-review.yml` (carica la cartella statica come artifact Pages a ogni push su main che tocca `web-review/**`). Pages abilitato via `gh api` (`build_type=workflow`). `EXPO_PUBLIC_REVIEW_SITE_URL` aggiornato **senza slash finale** sia in `.env` sia su EAS (tutti gli ambienti). ⚠️ **Il QR nell'APK `preview`/`dev` già installato punta ancora a `localhost`** (il valore è compilato a build-time): serve un **rebuild** perché il QR nell'app usi l'URL live. Il dev client via Metro invece prende il nuovo `.env` al riavvio. Test: `…/topWaitr/?w=<waiterId>`.
 - [x] ~~**`yarn db:types`**~~ — rigenerati il 15/07 sera (aggiunti `is_my_assigned_shift` + `mark_conversation_read`).
@@ -262,6 +286,16 @@ Decisione dell'utente: concentrare il prodotto su **una** cosa — il locale org
 - [x] ~~Verifica live a due account~~ — in larga parte coperta dai test manuali del 14-15/07 (Giuseppe/Mattia: staff, inviti, turni, ore, notifiche); resta da provare dal vivo la notifica `shift_cancelled`, la nuova `shift_unassigned` (in particolare la guardia sull'auto-rimozione, non testabile via MCP perché `auth.uid()` è `null`) e l'export su dispositivo.
 
 ## 🧭 Backlog / Roadmap
+
+### Multi-sede — cosa resta fuori (13/09)
+
+Deciso di lasciarli fuori dal lavoro del 13/09, con la strada già aperta:
+
+- [ ] **Più gestori per lo stesso locale** (il responsabile di sala che gestisce solo la sua sede). È la richiesta naturale *dopo* il multi-sede, e non è bloccata: le ~15 policy che inlineano `venues.owner_id = (select auth.uid())` andrebbero dietro una `can_manage_venue(venue_id)`, e quella diventerebbe l'unico punto da cambiare. Oggi la sede appartiene a un solo `owner_id`.
+- [ ] **Viste consolidate su tutte le sedi**: home con KPI sommati e una riga per sede, ore di gruppo. Serve una RPC che aggreghi su `venue_id in (...)`; oggi ogni numero è della **sede attiva**, ed è lo switcher sopra i numeri a dirlo. `getTodayAssignments` è per sede per la stessa ragione.
+- [ ] **Fusione manuale di due schede senza account** riconosciute come la stessa persona (il backfill non le ha fuse di proposito: unire per nome unirebbe due storici di ore su un indovinello). Oggi la strada è: rimuovi una scheda, aggiungi la persona alla seconda sede.
+- [ ] **Gate a pagamento sulla seconda sede**: il punto è già isolato in `src/features/venues/gate.ts` (`canCreateVenue`, oggi senza limite). ⚠️ `profiles.plan` è **scrivibile dal client**, quindi un gate solo lì sarebbe cosmetico: servirebbe anche un trigger o una RPC DEFINER sulla creazione. E il conteggio va fatto sulle sedi **aperte**, altrimenti chiudi-e-riapri aggira il limite.
+- [ ] **(fase 7, opzionale)** togliere il mirror `display_name`/`waiter_id`/`phone`/`note` da `staff_members` quando tutti i lettori leggeranno la persona.
 
 ### Dashboard web — cosa manca (audit 10/09, in ordine di valore)
 Le pagine ci sono tutte; quello che manca è ciò che rende la scrivania **più veloce del telefono**, che è l'unica ragione per cui la dashboard esiste. I primi tre punti sono quasi solo UI: il data layer c'è già.

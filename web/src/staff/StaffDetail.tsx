@@ -6,6 +6,7 @@ import { useStartConversation } from "@/features/chat/hooks";
 import {
   useRemoveStaffMember,
   useUpdateStaffMember,
+  useUpdateStaffPerson,
 } from "@/features/staff/hooks";
 import {
   useStaffPerformance,
@@ -81,7 +82,7 @@ export function StaffDetail({
         </header>
 
         <Anagrafica member={member} />
-        <DocumentsPanel staffMemberId={member.id} />
+        <DocumentsPanel personId={member.person_id} />
         <Performance
           staffMemberId={member.id}
           waiterId={member.waiter_id ?? null}
@@ -123,6 +124,7 @@ function MessageButton({ waiterId }: { waiterId: string }) {
 }
 
 function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
+  const updatePerson = useUpdateStaffPerson();
   const update = useUpdateStaffMember();
   const setRoles = useSetStaffMemberRoles();
   const toast = useToast();
@@ -139,6 +141,40 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
   );
   const [phone, setPhone] = useState(member.phone ?? "");
   const [notes, setNotes] = useState(member.note ?? "");
+  const busy =
+    updatePerson.isPending || update.isPending || setRoles.isPending;
+
+  /**
+   * Un gesto, tre scritture, tre livelli diversi:
+   *
+   *   · nome/telefono/note → la **persona** (`staff_people`), quindi valgono in
+   *     tutte le sedi del titolare in cui lavora;
+   *   · tipo di impiego    → questa **sede** (`staff_members`);
+   *   · ruoli              → questa sede, tabella a parte.
+   *
+   * In quest'ordine di proposito: se una cade, quelle già passate sono salvate e
+   * il messaggio dice quale pezzo è rimasto indietro.
+   */
+  async function onSave() {
+    try {
+      await updatePerson.mutateAsync({
+        id: member.person_id,
+        fields: {
+          full_name: name.trim(),
+          phone: phone.trim() || null,
+          note: notes.trim() || null,
+        },
+      });
+      await update.mutateAsync({
+        id: member.id,
+        fields: { employment_type: empType },
+      });
+      await setRoles.mutateAsync({ staffMemberId: member.id, roleIds });
+      toast.show("Scheda aggiornata");
+    } catch (e) {
+      toast.show(userErrorMessage(e), "error");
+    }
+  }
 
   return (
     <section className="flex flex-col gap-3">
@@ -181,35 +217,10 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
       <div>
         <Button
           variant="gold"
-          disabled={update.isPending || !name.trim()}
-          onClick={() =>
-            update.mutate(
-              {
-                id: member.id,
-                fields: {
-                  display_name: name.trim(),
-                  employment_type: empType,
-                  phone: phone.trim() || null,
-                  note: notes.trim() || null,
-                },
-              },
-              {
-                // Due scritture, un solo gesto: la scheda e poi i ruoli, che
-                // stanno in una tabella a parte.
-                onSuccess: () =>
-                  setRoles.mutate(
-                    { staffMemberId: member.id, roleIds },
-                    {
-                      onSuccess: () => toast.show("Scheda aggiornata"),
-                      onError: (e) => toast.show(userErrorMessage(e), "error"),
-                    }
-                  ),
-                onError: (e) => toast.show(userErrorMessage(e), "error"),
-              }
-            )
-          }
+          disabled={busy || !name.trim()}
+          onClick={() => void onSave()}
         >
-          {update.isPending ? "Salvataggio…" : "Salva"}
+          {busy ? "Salvataggio…" : "Salva"}
         </Button>
       </div>
     </section>

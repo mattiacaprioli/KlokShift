@@ -2,8 +2,13 @@ import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
 
 /**
- * Documenti di una scheda dell'organico: HACCP, contratto, visita medica,
+ * Documenti di una **persona** dell'organico: HACCP, contratto, visita medica,
  * patentino. Quello che un locale deve poter esibire in un'ispezione.
+ *
+ * Stanno sulla persona (`staff_people`) e non sulla singola scheda, da
+ * 20260913100100: chi lavora in due sedi dello stesso titolare li carica una
+ * volta, e dimettersi da una delle due non li porta via. Spariscono quando la
+ * persona esce dall'organico di quel titolare, cioè quando lascia l'ultima sede.
  *
  * ⚠️ Questo file lo importa **anche la dashboard web**: niente Expo qui dentro.
  * La scelta del file sul telefono vive in `pickDocument.ts`, che è solo nativo.
@@ -41,14 +46,14 @@ export type DocumentFile = {
 
 export type DocumentMeta = { name: string; expires_at: string | null };
 
-/** I documenti di una scheda, scadenze più vicine in cima. */
+/** I documenti di una persona, scadenze più vicine in cima. */
 export async function getStaffDocuments(
-  staffMemberId: string
+  personId: string
 ): Promise<StaffDocument[]> {
   const { data, error } = await supabase
     .from("staff_documents")
     .select("*")
-    .eq("staff_member_id", staffMemberId)
+    .eq("person_id", personId)
     .order("expires_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -56,17 +61,17 @@ export async function getStaffDocuments(
 }
 
 /**
- * Il path dentro il bucket. La prima cartella **deve** essere la scheda: è da lì
+ * Il path dentro il bucket. La prima cartella **deve** essere la persona: è da lì
  * che la policy su `storage.objects` ricava chi può leggere il file, e il check
  * `staff_documents_path_owner_ck` lo impone anche a livello di riga.
  *
  * Il suffisso casuale non è paranoia: `storage_path` è `unique` e due tap
  * ravvicinati cadono nello stesso millisecondo.
  */
-function documentPath(staffMemberId: string, fileName: string): string {
+function documentPath(personId: string, fileName: string): string {
   const ext = (fileName.split(".").pop() ?? "bin").toLowerCase();
   const rand = Math.random().toString(36).slice(2, 8);
-  return `${staffMemberId}/${Date.now()}-${rand}.${ext}`;
+  return `${personId}/${Date.now()}-${rand}.${ext}`;
 }
 
 async function uploadFile(path: string, file: DocumentFile): Promise<void> {
@@ -88,18 +93,18 @@ async function uploadFile(path: string, file: DocumentFile): Promise<void> {
  * errore visibile a ogni tap — invece di un file invisibile a tutti.
  */
 export async function createStaffDocument(
-  staffMemberId: string,
+  personId: string,
   uploadedBy: string,
   meta: DocumentMeta,
   file: DocumentFile
 ): Promise<StaffDocument> {
-  const path = documentPath(staffMemberId, file.fileName);
+  const path = documentPath(personId, file.fileName);
   await uploadFile(path, file);
 
   const { data, error } = await supabase
     .from("staff_documents")
     .insert({
-      staff_member_id: staffMemberId,
+      person_id: personId,
       uploaded_by: uploadedBy,
       name: meta.name.trim(),
       expires_at: meta.expires_at,
@@ -140,7 +145,7 @@ export async function replaceStaffDocumentFile(
   doc: StaffDocument,
   file: DocumentFile
 ): Promise<void> {
-  const path = documentPath(doc.staff_member_id, file.fileName);
+  const path = documentPath(doc.person_id, file.fileName);
   await uploadFile(path, file);
 
   const { error } = await supabase

@@ -8,18 +8,20 @@ import { DocumentFormView } from "@/features/documents/DocumentFormView";
 import { useCreateStaffDocument } from "@/features/documents/hooks";
 
 /**
- * Aggiunta di un documento alla scheda di un dipendente, lato locale. È la
- * ragione per cui i documenti stanno sulla scheda e non sulla persona: metà
- * dell'organico è fatto di schede senza account, e quelle persone non possono
- * caricarsi niente da sole.
+ * Aggiunta di un documento a un dipendente, lato locale. Resta il locale a poter
+ * caricare per conto suo, perché metà dell'organico è fatto di schede senza
+ * account e quelle persone non possono caricarsi niente da sole.
+ *
+ * `personId` e non la scheda: il documento vale in tutte le sedi del titolare in
+ * cui quella persona lavora (20260913100100).
  */
 export default function NewStaffDocumentScreen() {
-  const { staffId } = useLocalSearchParams<{ staffId: string }>();
+  const { personId } = useLocalSearchParams<{ personId: string }>();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
-  const create = useCreateStaffDocument(staffId);
+  const create = useCreateStaffDocument(personId);
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>

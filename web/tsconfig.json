@@ -17,6 +17,9 @@
     "paths": {
       "@/lib/supabase": ["./src/lib/supabase.ts"],
       "@/features/push/api": ["./src/lib/pushStub.ts"],
+      "@/features/venues/activeVenueStorage": [
+        "./src/lib/activeVenueStorage.ts"
+      ],
       "@/*": ["../src/*"]
     }
   },

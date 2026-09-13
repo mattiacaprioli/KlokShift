@@ -3,12 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useConversations, useStartConversation } from "@/features/chat/hooks";
 import { useChatThread } from "@/features/chat/useChatThread";
-import { useVenueStaff } from "@/features/staff/hooks";
-import { staffRoleNames } from "@/features/staff/api";
+import { useOwnerPeople } from "@/features/staff/hooks";
 import { userErrorMessage } from "@/lib/errors";
 import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { useVenue } from "../lib/venue";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import {
@@ -135,10 +133,17 @@ export function ChatPage() {
 }
 
 /**
- * Scelta del destinatario per una chat nuova. L'elenco è l'organico: si scrive
- * a chi lavora nel locale, e solo a chi ha un account (senza, non c'è nessuno
- * dall'altra parte). Chi ha già una conversazione resta in lista: riaprirla è
- * lo stesso gesto, e `getOrCreateConversation` non ne crea una seconda.
+ * Scelta del destinatario per una chat nuova. L'elenco sono le **persone del
+ * titolare**, non l'organico della sede attiva, e solo quelle con un account
+ * (senza, non c'è nessuno dall'altra parte).
+ *
+ * Il perimetro è il titolare perché il thread lo è: uno per coppia (dipendente,
+ * titolare), non uno per sede. Se qui si fermasse alla sede attiva, Giuseppe dalla
+ * pagina di Roma non potrebbe scrivere a chi ha solo a Milano — pur avendo con lui
+ * una conversazione già aperta.
+ *
+ * Chi ha già una conversazione resta in lista: riaprirla è lo stesso gesto, e
+ * `getOrCreateConversation` non ne crea una seconda.
  */
 function StaffPicker({
   managerId,
@@ -147,17 +152,16 @@ function StaffPicker({
   managerId: string;
   onOpened: (conversationId: string) => void;
 }) {
-  const venue = useVenue();
   const toast = useToast();
   const [filter, setFilter] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const startConversation = useStartConversation();
-  const { data, isPending, isError, error } = useVenueStaff(venue.id);
+  const { data, isPending, isError, error } = useOwnerPeople(managerId);
 
-  const linked = (data ?? []).filter((m) => m.waiter_id);
+  const linked = (data ?? []).filter((p) => p.waiter_id);
   const needle = filter.trim().toLowerCase();
   const shown = needle
-    ? linked.filter((m) => m.display_name.toLowerCase().includes(needle))
+    ? linked.filter((p) => p.full_name.toLowerCase().includes(needle))
     : linked;
 
   function open(memberId: string, waiterId: string) {
@@ -202,36 +206,44 @@ function StaffPicker({
             </p>
           ) : (
             <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
-              {shown.map((member) => (
-                <button
-                  key={member.id}
-                  disabled={startConversation.isPending}
-                  onClick={() => open(member.id, member.waiter_id as string)}
-                  className="focus-gold flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-bg-1 disabled:opacity-40"
-                >
-                  <Avatar
-                    url={member.waiter?.avatar_url}
-                    name={member.display_name}
-                    size={32}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-t1">
-                      {member.display_name}
+              {shown.map((person) => {
+                const venuesLabel = person.memberships
+                  .map((m) => m.venue?.name)
+                  .filter((n): n is string => !!n)
+                  .sort((a, b) => a.localeCompare(b, "it"))
+                  .join(" · ");
+                const allPending = person.memberships.every(
+                  (m) => m.link_status === "pending"
+                );
+                return (
+                  <button
+                    key={person.id}
+                    disabled={startConversation.isPending}
+                    onClick={() => open(person.id, person.waiter_id as string)}
+                    className="focus-gold flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-bg-1 disabled:opacity-40"
+                  >
+                    <Avatar url={person.waiter?.avatar_url} name={person.full_name} size={32} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-t1">
+                        {person.full_name}
+                      </span>
+                      {/* Le sedi e non i ruoli: qui serve sapere "chi è questo",
+                          e con più locali la sede lo dice meglio del ruolo. */}
+                      <span className="block truncate text-xs text-t4">
+                        {venuesLabel || "Nessuna sede"}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs text-t4">
-                      {staffRoleNames(member) ?? "Ruoli non indicati"}
+                    {allPending ? (
+                      <Pill tone="warning">Invito in attesa</Pill>
+                    ) : null}
+                    <span className="shrink-0 text-xs text-gold">
+                      {openingId === person.id && startConversation.isPending
+                        ? "Apertura…"
+                        : "Scrivi"}
                     </span>
-                  </span>
-                  {member.link_status === "pending" ? (
-                    <Pill tone="warning">Invito in attesa</Pill>
-                  ) : null}
-                  <span className="shrink-0 text-xs text-gold">
-                    {openingId === member.id && startConversation.isPending
-                      ? "Apertura…"
-                      : "Scrivi"}
-                  </span>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </>

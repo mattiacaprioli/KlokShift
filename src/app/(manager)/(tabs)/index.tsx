@@ -20,7 +20,8 @@ import { ProUpsellCard } from "@/features/plan/ProLock";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { formatShiftRange, todayString } from "@/lib/format";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { VenueSwitcher } from "@/features/venues/VenueSwitcher";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
 import { useTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
@@ -49,8 +50,8 @@ export default function ManagerHome() {
   const userId = session!.user.id;
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Ristoratore";
 
-  const venueQuery = useMyVenue(userId);
-  const venue = venueQuery.data ?? null;
+  const venueQuery = useActiveVenue();
+  const venue = venueQuery.venue;
   const shiftsQuery = useMyShifts(venue?.id);
   const shifts = shiftsQuery.data ?? [];
   const pastCount = useVenuePastShiftsCount(venue?.id).data ?? 0;
@@ -124,9 +125,10 @@ export default function ManagerHome() {
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
           <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
-          {venue ? (
-            <Text className="mt-1 text-sm text-t3">{venue.name}</Text>
-          ) : null}
+          {/* Il nome della sede era un testo morto: ora è il punto da cui si
+              cambia sede, perché è lì che si guarda "dove sono" prima di fare
+              qualsiasi cosa. Con una sede sola resta identico a prima. */}
+          <VenueSwitcher />
         </View>
         <NotificationBell
           count={unread}
@@ -147,7 +149,7 @@ export default function ManagerHome() {
           <GoldButton
             className="mt-2"
             label="Configura locale"
-            onPress={() => router.push("/(manager)/venue")}
+            onPress={() => router.push("/(manager)/venue/new")}
           />
         </View>
       ) : shiftsQuery.isLoading ? (

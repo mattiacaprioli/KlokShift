@@ -1,7 +1,22 @@
 import { supabase } from "@/lib/supabase";
-import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
+import type { Enums, Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type StaffMember = Tables<"staff_members">;
+
+/**
+ * La persona, un livello sopra la scheda.
+ *
+ * Un titolare con più sedi ha **una** anagrafica per dipendente e tante
+ * appartenenze (`staff_members`) quante sono le sedi in cui lavora: Marco a Roma
+ * e a Milano è una persona con due schede, non due Marco. Sulla persona vivono
+ * nome, telefono, note, l'account collegato e i documenti; sulla scheda il tipo
+ * di impiego, lo stato dell'invito, i ruoli, i turni e le ore.
+ *
+ * ⚠️ `staff_members.display_name`, `.waiter_id`, `.phone` e `.note` sono un
+ * **mirror** di sola lettura, riscritto da un trigger (20260913100000): scriverci
+ * non dà errore e non salva niente. L'anagrafica si modifica da qui.
+ */
+export type StaffPerson = Tables<"staff_people">;
 
 /** Una mansione della persona, come la carica l'embed dell'organico. */
 export type StaffRoleRef = { id: string; name: string; sort_order: number };
@@ -53,7 +68,44 @@ export async function getStaffMember(id: string): Promise<StaffMember | null> {
   return data ?? null;
 }
 
-export async function addStaffMember(
+/** Una persona del titolare, con le sedi in cui lavora e la sua foto. */
+export type OwnerPerson = StaffPerson & {
+  waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
+  memberships: (Pick<
+    StaffMember,
+    "id" | "venue_id" | "link_status" | "employment_type"
+  > & {
+    venue: Pick<Tables<"venues">, "id" | "name" | "city"> | null;
+  })[];
+};
+
+/**
+ * Tutte le persone dell'organico del titolare, **attraverso le sedi**.
+ *
+ * È ciò che rende possibile "Marco lavora già a Roma, aggiungilo anche a Milano"
+ * senza creargli una seconda anagrafica. Serve anche alla chat: il thread è per
+ * persona, quindi il selettore dei destinatari non può fermarsi all'organico della
+ * sede attiva — altrimenti dalla sede Roma non si potrebbe scrivere a chi si ha
+ * solo a Milano.
+ */
+export async function getOwnerPeople(ownerId: string): Promise<OwnerPerson[]> {
+  const { data, error } = await supabase
+    .from("staff_people")
+    .select(
+      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), memberships:staff_members(id, venue_id, link_status, employment_type, venue:venues(id, name, city))"
+    )
+    .eq("owner_id", ownerId)
+    .order("full_name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as OwnerPerson[] | null) ?? [];
+}
+
+/**
+ * Aggiunge a una sede una persona che il titolare **ha già** (perché lavora in
+ * un'altra delle sue sedi). Nessun invito: l'account, se c'è, è già collegato
+ * alla persona e il trigger lo copia sulla scheda nuova.
+ */
+export async function addPersonToVenue(
   input: TablesInsert<"staff_members">
 ): Promise<StaffMember> {
   const { data, error } = await supabase
@@ -65,6 +117,93 @@ export async function addStaffMember(
   return data;
 }
 
+/**
+ * Persona nuova + prima appartenenza, in due scritture.
+ *
+ * Se l'account è **già** una persona di questo titolare (lavora in un'altra sede)
+ * si riusa quella: l'unique `staff_people (owner_id, waiter_id)` rifiuterebbe una
+ * seconda anagrafica, e sarebbe comunque sbagliato crearla — è lo stesso Marco.
+ *
+ * Se la seconda scrittura fallisce si cancella la persona appena creata. Senza la
+ * compensazione resterebbe una persona senza sedi, che nessuna schermata elenca e
+ * che occuperebbe il posto nell'unique: il prossimo tentativo di invitare la
+ * stessa email fallirebbe senza una ragione visibile. Stessa regola di
+ * `createStaffDocument`.
+ */
+export async function addStaffToVenue(args: {
+  ownerId: string;
+  venueId: string;
+  fullName: string;
+  employmentType: Enums<"employment_type">;
+  phone?: string | null;
+  waiterId?: string | null;
+  linkStatus?: Enums<"staff_link_status">;
+}): Promise<StaffMember> {
+  let personId: string | null = null;
+  let created = false;
+
+  if (args.waiterId) {
+    const { data, error } = await supabase
+      .from("staff_people")
+      .select("id")
+      .eq("owner_id", args.ownerId)
+      .eq("waiter_id", args.waiterId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    personId = data?.id ?? null;
+  }
+
+  if (!personId) {
+    const { data, error } = await supabase
+      .from("staff_people")
+      .insert({
+        owner_id: args.ownerId,
+        full_name: args.fullName,
+        phone: args.phone ?? null,
+        waiter_id: args.waiterId ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    personId = data.id;
+    created = true;
+  }
+
+  try {
+    return await addPersonToVenue({
+      venue_id: args.venueId,
+      person_id: personId,
+      employment_type: args.employmentType,
+      ...(args.linkStatus ? { link_status: args.linkStatus } : {}),
+    });
+  } catch (e) {
+    if (created) {
+      await supabase.from("staff_people").delete().eq("id", personId);
+    }
+    throw e;
+  }
+}
+
+/**
+ * L'anagrafica della persona: vale in **tutte** le sedi del titolare. Rinominare
+ * Marco dalla scheda di Milano lo rinomina anche a Roma, ed è il punto del
+ * modello — è la stessa persona.
+ */
+export async function updateStaffPerson(
+  id: string,
+  fields: TablesUpdate<"staff_people">
+): Promise<void> {
+  const { error } = await supabase
+    .from("staff_people")
+    .update(fields)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Quel che è davvero della singola sede: `employment_type` e `link_status`. Si
+ * può essere fissi a Roma e a chiamata a Milano.
+ */
 export async function updateStaffMember(
   id: string,
   fields: TablesUpdate<"staff_members">
@@ -138,6 +277,48 @@ export async function getMyEmployers(waiterId: string): Promise<MyEmployer[]> {
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data as MyEmployer[] | null) ?? [];
+}
+
+/**
+ * Una "cartella" di documenti del professionista: **una per datore di lavoro**,
+ * non una per locale.
+ *
+ * Se Giuseppe ha tre sedi e tu lavori in due, la cartella è una sola e i
+ * documenti valgono per entrambe. Le sedi servono solo a dare un nome alla
+ * cartella ("Da Buffa · Osteria Milano"), perché il nome del titolare non è quello
+ * con cui uno riconosce il posto in cui lavora.
+ */
+export type DocumentScope = StaffPerson & {
+  memberships: {
+    venue: Pick<Tables<"venues">, "id" | "name" | "city"> | null;
+  }[];
+};
+
+/**
+ * Come si chiama una cartella: i nomi delle sedi, non quello del titolare — è
+ * così che uno riconosce il posto in cui lavora. Un'unica funzione perché la
+ * stessa etichetta la mostrano l'app e (in futuro) la dashboard, e ricomporla a
+ * mano è il modo in cui due schermate iniziano a ordinarla diversamente.
+ */
+export function documentScopeLabel(scope: DocumentScope): string {
+  const names = scope.memberships
+    .map((m) => m.venue?.name)
+    .filter((n): n is string => !!n)
+    .sort((a, b) => a.localeCompare(b, "it"));
+  return names.length > 0 ? names.join(" · ") : "Locale";
+}
+
+/** Waiter: le sue cartelle documenti, una per titolare che lo ha in organico. */
+export async function getMyDocumentScopes(
+  waiterId: string
+): Promise<DocumentScope[]> {
+  const { data, error } = await supabase
+    .from("staff_people")
+    .select("*, memberships:staff_members(venue:venues(id, name, city))")
+    .eq("waiter_id", waiterId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as DocumentScope[] | null) ?? [];
 }
 
 /** Waiter: accept (true) or decline (false) a staff invite (via DEFINER RPC). */

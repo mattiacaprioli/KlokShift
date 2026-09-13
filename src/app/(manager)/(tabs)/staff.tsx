@@ -14,9 +14,8 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ProBadge } from "@/features/plan/ProLock";
 import { useProGate } from "@/features/plan/hooks";
-import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import { useVenueStaff } from "@/features/staff/hooks";
 import { staffRoleNames, type StaffMemberWithWaiter } from "@/features/staff/api";
 
@@ -65,12 +64,10 @@ function StaffRow({
 export default function ManagerStaffScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
-  const userId = session!.user.id;
   const { isPro, gate } = useProGate();
 
-  const venueQuery = useMyVenue(userId);
-  const venue = venueQuery.data ?? null;
+  const venueQuery = useActiveVenue();
+  const venue = venueQuery.venue;
   const staffQuery = useVenueStaff(venue?.id);
   const staff = staffQuery.data ?? [];
   const pull = usePullToRefresh(staffQuery.refetch);
@@ -110,7 +107,7 @@ export default function ManagerStaffScreen() {
           <GoldButton
             className="mt-2"
             label="Configura locale"
-            onPress={() => router.push("/(manager)/venue")}
+            onPress={() => router.push("/(manager)/venue/new")}
           />
         </View>
       ) : (

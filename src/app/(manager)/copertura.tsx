@@ -9,9 +9,8 @@ import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { formatDate, formatShiftRange } from "@/lib/format";
-import { useMyVenue } from "@/features/venues/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import { useVenueCoverage } from "@/features/assignments/hooks";
 import { shiftCoverage } from "@/features/assignments/coverage";
 import type { CoverageShift } from "@/features/assignments/api";
@@ -19,9 +18,7 @@ import type { CoverageShift } from "@/features/assignments/api";
 export default function CoverageScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
-  const userId = session!.user.id;
-  const venue = useMyVenue(userId).data ?? null;
+  const venue = useActiveVenue().venue;
 
   const query = useVenueCoverage(venue?.id);
   const shifts = useMemo(() => query.data ?? [], [query.data]);

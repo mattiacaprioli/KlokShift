@@ -11,7 +11,8 @@ export default function ManagerLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="venue" options={{ headerShown: false }} />
+      <Stack.Screen name="venue/new" options={{ headerShown: false }} />
+      <Stack.Screen name="venue/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="shift/new" options={{ headerShown: false }} />
       <Stack.Screen name="shift/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="shift/edit/[id]" options={{ headerShown: false }} />
