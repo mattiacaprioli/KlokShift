@@ -23,7 +23,6 @@ export default function ManagerLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="ore" options={{ headerShown: false }} />
-      <Stack.Screen name="copertura" options={{ headerShown: false }} />
       <Stack.Screen name="pro" options={{ headerShown: false }} />
       <Stack.Screen name="ruoli" options={{ headerShown: false }} />
       <Stack.Screen name="cameriere/[id]" options={{ headerShown: false }} />

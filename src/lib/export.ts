@@ -5,7 +5,7 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
-import type { StaffHoursRow } from "@/features/assignments/api";
+import type { PersonHours } from "@/features/assignments/hoursSummary";
 import {
   buildHoursCsv,
   buildHoursHtml,
@@ -16,30 +16,30 @@ export { buildHoursCsv, buildHoursHtml } from "@/lib/exportBuilders";
 
 /** Genera un PDF del riepilogo ore e apre il foglio di condivisione. */
 export async function exportHoursPdf(
-  venueName: string,
+  companyName: string,
   monthLabel: string,
-  rows: StaffHoursRow[],
+  people: PersonHours[],
   totalHours: number
 ): Promise<void> {
-  const html = buildHoursHtml(venueName, monthLabel, rows, totalHours);
+  const html = buildHoursHtml(companyName, monthLabel, people, totalHours);
   const { uri } = await Print.printToFileAsync({ html });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       UTI: "com.adobe.pdf",
       mimeType: "application/pdf",
-      dialogTitle: `Ore ${venueName} · ${monthLabel}`,
+      dialogTitle: `Ore ${companyName} · ${monthLabel}`,
     });
   }
 }
 
 /** Genera un CSV del riepilogo ore e apre il foglio di condivisione. */
 export async function exportHoursCsv(
-  venueName: string,
+  companyName: string,
   monthLabel: string,
-  rows: StaffHoursRow[]
+  people: PersonHours[]
 ): Promise<void> {
-  const csv = buildHoursCsv(rows);
-  const uri = `${FileSystem.cacheDirectory}${hoursFileName(venueName, monthLabel, "csv")}`;
+  const csv = buildHoursCsv(people);
+  const uri = `${FileSystem.cacheDirectory}${hoursFileName(companyName, monthLabel, "csv")}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,
   });
@@ -47,7 +47,7 @@ export async function exportHoursCsv(
     await Sharing.shareAsync(uri, {
       UTI: "public.comma-separated-values-text",
       mimeType: "text/csv",
-      dialogTitle: `Ore ${venueName} · ${monthLabel}`,
+      dialogTitle: `Ore ${companyName} · ${monthLabel}`,
     });
   }
 }

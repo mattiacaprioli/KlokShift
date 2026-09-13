@@ -17,11 +17,10 @@ import {
   getShiftAssignments,
   getShiftRoleRequirements,
   STAFF_RECENT_SHIFTS,
-  getStaffPerformance,
-  getStaffWorkedShifts,
+  getPersonPerformance,
+  getPersonWorkedShifts,
   getTodayAssignments,
-  getVenueCoverage,
-  getVenueHoursSummary,
+  getOwnerHoursSummary,
   reassignShiftAssignment,
   setAssignmentPresence,
   updateAssignmentStatus,
@@ -82,7 +81,6 @@ function invalidateAfterShiftWrite(
   if (venueId) {
     qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
     qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
-    qc.invalidateQueries({ queryKey: qk.assignments.coverage(venueId) });
   }
   qc.invalidateQueries({ queryKey: qk.assignments.all });
 }
@@ -178,6 +176,8 @@ export function useReassignShiftAssignment(venueId: string | undefined) {
       shiftId: string;
       toStaffMember: {
         id: string;
+        /** La persona dietro l'appartenenza: serve al carico settimanale. */
+        person_id: string;
         display_name: string;
         /** Le sue mansioni: servono a indovinare il ruolo come fa il server. */
         roles: { id: string; name: string }[];
@@ -217,6 +217,7 @@ export function useReassignShiftAssignment(venueId: string | undefined) {
                     role,
                     staff_member: {
                       id: toStaffMember.id,
+                      person_id: toStaffMember.person_id,
                       display_name: toStaffMember.display_name,
                       // Lo rimette a posto il refetch: qui serve solo al
                       // conteggio dei destinatari, che non è ancora in gioco.
@@ -255,14 +256,6 @@ export function useShiftRoleRequirements(shiftId: string, enabled = true) {
   });
 }
 
-export function useVenueCoverage(venueId: string | undefined) {
-  return useQuery({
-    queryKey: qk.assignments.coverage(venueId ?? ""),
-    queryFn: () => getVenueCoverage(venueId as string),
-    enabled: !!venueId,
-  });
-}
-
 export function useUpdateAssignmentStatus(shiftId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -275,35 +268,45 @@ export function useUpdateAssignmentStatus(shiftId: string) {
   });
 }
 
-/** Statistiche aggregate di un membro dell'organico (le calcola il database). */
-export function useStaffPerformance(staffMemberId: string | undefined) {
+/**
+ * Statistiche aggregate di una persona dell'organico, su **tutte** le sedi del
+ * titolare (le calcola il database).
+ */
+export function usePersonPerformance(personId: string | undefined) {
   return useQuery({
-    queryKey: qk.assignments.staffPerformance(staffMemberId ?? ""),
-    queryFn: () => getStaffPerformance(staffMemberId as string),
-    enabled: !!staffMemberId,
+    queryKey: qk.assignments.personPerformance(personId ?? ""),
+    queryFn: () => getPersonPerformance(personId as string),
+    enabled: !!personId,
   });
 }
 
-/** Ultimi turni svolti di un membro, ordinati e limitati dal database. */
-export function useStaffWorkedShifts(
-  staffMemberId: string | undefined,
+/** Ultimi turni svolti dalla persona, con la sede, ordinati dal database. */
+export function usePersonWorkedShifts(
+  personId: string | undefined,
   limit = STAFF_RECENT_SHIFTS
 ) {
   return useQuery({
-    queryKey: qk.assignments.staffWorked(staffMemberId ?? "", limit),
-    queryFn: () => getStaffWorkedShifts(staffMemberId as string, limit),
-    enabled: !!staffMemberId,
+    queryKey: qk.assignments.personWorked(personId ?? "", limit),
+    queryFn: () => getPersonWorkedShifts(personId as string, limit),
+    enabled: !!personId,
   });
 }
 
-export function useVenueHoursSummary(
-  venueId: string | undefined,
+/**
+ * Le ore di tutta l'azienda in un mese.
+ *
+ * ⚠️ `ownerId` è **solo la chiave di cache**: la RPC non lo riceve, usa
+ * `auth.uid()`. Serve a non mescolare la cache di due account sullo stesso
+ * dispositivo, e a spegnere la query per chi non è un titolare.
+ */
+export function useOwnerHoursSummary(
+  ownerId: string | undefined,
   month: string
 ) {
   return useQuery({
-    queryKey: qk.staff.hours(venueId ?? "", month),
-    queryFn: () => getVenueHoursSummary(venueId as string, month),
-    enabled: !!venueId,
+    queryKey: qk.staff.ownerHours(ownerId ?? "", month),
+    queryFn: () => getOwnerHoursSummary(month),
+    enabled: !!ownerId,
   });
 }
 

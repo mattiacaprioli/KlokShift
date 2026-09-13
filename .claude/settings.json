@@ -1,8 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "enabledPlugins": {
-    "expo@claude-plugins-official": true
-  },
   "permissions": {
     "allow": [
       "Bash(npm:*)",
@@ -42,5 +39,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "expo@claude-plugins-official": true,
+    "caveman@caveman": true
   }
 }

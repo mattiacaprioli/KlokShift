@@ -26,6 +26,14 @@ export const qk = {
     // Prefisso: invalida ogni intervallo già in cache per quel locale (la vista
     // calendario ne tiene più di uno mentre si naviga tra le settimane).
     rangeAll: (venueId: string) => ["shifts", "range", venueId] as const,
+    /**
+     * I turni della settimana nelle **altre** sedi del titolare: servono alle
+     * soglie 40/48h, che sono della persona e non del locale.
+     */
+    elsewhereRange: (venueId: string, from: string, to: string) =>
+      ["shifts", "elsewhereRange", venueId, from, to] as const,
+    /** Prefisso: un turno che cambia può alterare il carico visto altrove. */
+    elsewhereAll: ["shifts", "elsewhereRange"] as const,
     past: (venueId: string) => ["shifts", "past", venueId] as const,
     pastCount: (venueId: string) => ["shifts", "pastCount", venueId] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
@@ -66,10 +74,20 @@ export const qk = {
      * quindi ogni invalidazione dell'organico già esistente la copre.
      */
     people: (ownerId: string) => ["staff", "people", ownerId] as const,
+    /** La scheda di una persona, con tutte le sue sedi. */
+    person: (personId: string) => ["staff", "person", personId] as const,
     invites: (waiterId: string) => ["staff", "invites", waiterId] as const,
     employers: (waiterId: string) => ["staff", "employers", waiterId] as const,
-    hours: (venueId: string, month: string) =>
-      ["staff", "hours", venueId, month] as const,
+    /**
+     * Le ore di un mese, per **azienda** e non per sede: chi lavora in due sedi
+     * dello stesso titolare ha una sola busta paga (20260913110100).
+     *
+     * `ownerId` è solo la chiave — la RPC usa `auth.uid()`. Sotto `staff.all`,
+     * quindi già invalidata da `invalidateAfterShiftWrite` e da
+     * `useSetAssignmentPresence`.
+     */
+    ownerHours: (ownerId: string, month: string) =>
+      ["staff", "ownerHours", ownerId, month] as const,
   },
   assignments: {
     all: ["assignments"] as const,
@@ -80,11 +98,14 @@ export const qk = {
       ["assignments", "workHistory", waiterId] as const,
     workHistoryTotals: (waiterId: string) =>
       ["assignments", "workHistoryTotals", waiterId] as const,
-    staffPerformance: (staffMemberId: string) =>
-      ["assignments", "staffPerformance", staffMemberId] as const,
-    staffWorked: (staffMemberId: string, limit: number) =>
-      ["assignments", "staffWorked", staffMemberId, limit] as const,
-    coverage: (venueId: string) => ["assignments", "coverage", venueId] as const,
+    /**
+     * Statistiche e turni recenti della **persona**, su tutte le sedi del
+     * titolare: sono i numeri della sua busta paga, non di un suo indirizzo.
+     */
+    personPerformance: (personId: string) =>
+      ["assignments", "personPerformance", personId] as const,
+    personWorked: (personId: string, limit: number) =>
+      ["assignments", "personWorked", personId, limit] as const,
     roleReqs: (shiftId: string) => ["assignments", "roleReqs", shiftId] as const,
     today: (venueId: string) => ["assignments", "today", venueId] as const,
     mineUpcoming: (waiterId: string) =>

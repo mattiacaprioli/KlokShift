@@ -14,7 +14,6 @@ import { StoricoPage } from "./pages/Storico";
 import { NotifichePage } from "./pages/Notifiche";
 import { ChatPage } from "./pages/Chat";
 import { PlanningPage } from "./pages/Planning";
-import { CoperturaPage } from "./pages/Copertura";
 import { OrePage } from "./pages/Ore";
 import { StaffPage } from "./pages/Staff";
 import { RuoliPage } from "./pages/Ruoli";
@@ -69,7 +68,6 @@ export function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/planning" element={<PlanningPage />} />
           <Route path="/storico" element={<StoricoPage />} />
-          <Route path="/copertura" element={<CoperturaPage />} />
           <Route path="/ore" element={<OrePage />} />
           <Route path="/staff" element={<StaffPage />} />
           <Route path="/ruoli" element={<RuoliPage />} />

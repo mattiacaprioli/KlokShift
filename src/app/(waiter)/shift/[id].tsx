@@ -17,7 +17,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { formatDate, formatShiftRange } from "@/lib/format";
+import { formatDate, formatShiftRange, isShiftOver } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -81,6 +81,18 @@ export default function WaiterShiftDetailScreen() {
   }
 
   const [declineVisible, setDeclineVisible] = useState(false);
+
+  /**
+   * A turno concluso non si risponde più.
+   *
+   * Confermare la presenza a un turno già passato non significa niente, e da
+   * 20260913110000 il database lo rifiuta: `freeze_assignment_payroll` congela lo
+   * `status` una volta che il turno è finito, perché un `declined` scritto il
+   * giorno dopo cancellerebbe ore già lavorate e già viste dal locale. Senza
+   * questa guardia i bottoni resterebbero visibili e il tap sarebbe un no-op
+   * silenzioso — il modo peggiore di comunicare una regola.
+   */
+  const isOver = shift ? isShiftOver(shift) : false;
 
   /** Conferma presenza (o ri-conferma dopo un rifiuto). */
   function onRespond(status: Enums<"assignment_status">) {
@@ -215,7 +227,11 @@ export default function WaiterShiftDetailScreen() {
                 }
               />
             </View>
-            {myAssignment.status === "assigned" ? (
+            {isOver ? (
+              <Text className="mt-3 text-sm leading-5 text-t3">
+                Turno concluso. Le presenze e le ore le registra il locale.
+              </Text>
+            ) : myAssignment.status === "assigned" ? (
               <View className="mt-4 gap-2.5">
                 <GoldButton
                   label={respond.isPending ? "Attendere…" : "Conferma presenza"}

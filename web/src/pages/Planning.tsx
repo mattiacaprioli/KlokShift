@@ -20,7 +20,7 @@ import {
   isOvernightShift,
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { shiftCounts } from "@/features/assignments/coverage";
+import { shiftCoverage, shiftCounts } from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import { useVenue } from "../lib/venue";
@@ -123,6 +123,21 @@ export function PlanningPage() {
     [data]
   );
 
+  // Quante persone mancano sul periodo che si ha davanti. Era il sottotitolo di
+  // una pagina "Copertura" a parte, che però ripeteva questa stessa griglia: il
+  // numero vale di più qui, sopra i turni a cui si riferisce. I dati sono già
+  // caricati — `getVenueShiftsRange` porta con sé fabbisogni e assegnazioni.
+  const missing = useMemo(
+    () =>
+      (data ?? [])
+        .filter((s) => s.status !== "cancelled")
+        .reduce((sum, s) => {
+          const { filled, total } = shiftCounts(s);
+          return sum + Math.max(0, total - filled);
+        }, 0),
+    [data]
+  );
+
   const toast = useToast();
   const move = useMoveShiftToDate(venue.id);
   const reassign = useReassignShiftAssignment(venue.id);
@@ -162,6 +177,7 @@ export function PlanningPage() {
         shiftId: payload.shiftId,
         toStaffMember: {
           id: to.id,
+          person_id: to.person_id,
           display_name: to.display_name,
           // Le sue mansioni: la patch ottimistica riproduce con queste la regola
           // che il server applica per scegliere il ruolo di chi entra.
@@ -214,7 +230,18 @@ export function PlanningPage() {
     <>
       <PageHeader
         title="Planning"
-        subtitle={isWeekly ? weekLabel(monday) : monthTitle(month)}
+        subtitle={
+          <>
+            {isWeekly ? weekLabel(monday) : monthTitle(month)}
+            {missing > 0 ? (
+              <span className="text-warning">
+                {" · "}
+                {missing === 1 ? "Manca 1 persona" : `Mancano ${missing} persone`}
+                {isWeekly ? " questa settimana" : " questo mese"}
+              </span>
+            ) : null}
+          </>
+        }
         actions={
           <>
             {/* Solo sulle viste settimanali: si duplica una settimana, non un
@@ -697,6 +724,16 @@ function ShiftCell({
   const cancelled = shift.status === "cancelled";
   const { filled, total, short } = shiftCounts(shift);
 
+  // Il dettaglio per ruolo sta nel tooltip: in una cella larga un settimo di
+  // schermo non ci sta, ma è quello che dice *chi* manca — ed è l'unica cosa
+  // che la vecchia pagina Copertura avesse in più di questa griglia.
+  const roles = shiftCoverage(shift)
+    .rows.map((r) => `${r.role} ${r.covered}/${r.required}`)
+    .join(" · ");
+  const hint = cancelled
+    ? "Turno annullato: riattivalo dal pannello per spostarlo."
+    : roles || undefined;
+
   return (
     <button
       onClick={() => {
@@ -717,11 +754,7 @@ function ShiftCell({
             },
             shift.title
           ))}
-      title={
-        cancelled
-          ? "Turno annullato: riattivalo dal pannello per spostarlo."
-          : undefined
-      }
+      title={hint}
       className={cn(
         "focus-gold rounded-lg border p-2 text-left transition hover:border-border-gold",
         cancelled
@@ -744,8 +777,14 @@ function ShiftCell({
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
         {cancelled ? (
           <Pill tone="error">Annullato</Pill>
+        ) : short ? (
+          // Chi manca lo dice, chi è a posto si limita a contare: il verde su
+          // ogni cella della settimana copriva di rumore le due che servono.
+          <Pill tone="warning">
+            {total - filled === 1 ? "Manca 1" : `Mancano ${total - filled}`}
+          </Pill>
         ) : (
-          <Pill tone={short ? "warning" : "success"}>
+          <Pill tone="neutral">
             {filled}/{total}
           </Pill>
         )}

@@ -10,6 +10,8 @@ import {
   isActiveAssignment,
 } from "@/features/assignments/status";
 import { useVenueStaff } from "@/features/staff/hooks";
+import { useOtherVenuesShiftsRange } from "@/features/shifts/hooks";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
 import { formatHours, formatShiftRange } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
@@ -49,8 +51,22 @@ export function PeopleWeek({
   onReassign: (payload: ReassignDragPayload, to: StaffMemberWithWaiter) => void;
 }) {
   const venue = useVenue();
+  const { venues } = useActiveVenue();
   const staffQuery = useVenueStaff(venue.id);
   const dnd = useShiftDrag();
+
+  // Le ALTRE sedi del titolare. Con una sede sola l'array è vuoto, la query non
+  // parte e questa vista è quella di prima: chi ha un locale solo non paga nulla
+  // per una correttezza che non lo riguarda.
+  const otherVenueIds = useMemo(
+    () => venues.filter((v) => v.id !== venue.id).map((v) => v.id),
+    [venues, venue.id]
+  );
+  const elsewhereQuery = useOtherVenuesShiftsRange(
+    otherVenueIds,
+    days[0],
+    days[days.length - 1]
+  );
 
   const byId = useMemo(
     () => new Map(shifts.map((s) => [s.id, s])),
@@ -68,11 +84,13 @@ export function PeopleWeek({
         shifts,
         (staffQuery.data ?? []).map((m) => ({
           id: m.id,
+          person_id: m.person_id,
           display_name: m.display_name,
           roles: staffRoleNames(m),
-        }))
+        })),
+        elsewhereQuery.data ?? []
       ),
-    [shifts, staffQuery.data]
+    [shifts, staffQuery.data, elsewhereQuery.data]
   );
 
   if (staffQuery.isPending) return <Spinner />;
@@ -86,6 +104,8 @@ export function PeopleWeek({
     );
   }
 
+  // I totali in fondo sono di questa sede: è il turnario di questo locale. Le
+  // soglie invece guardano il totale della persona, che può venire da più sedi.
   const totalHours = rows.reduce((s, r) => s + r.hours, 0);
   const working = rows.filter((r) => r.hours > 0).length;
 
@@ -122,7 +142,7 @@ export function PeopleWeek({
           <div className="flex flex-col gap-1.5">
             {rows.map((person) => (
               <div
-                key={person.staffMemberId}
+                key={person.personId}
                 className="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] items-stretch gap-1.5 print:break-inside-avoid"
               >
                 <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border-2 bg-bg-card px-3 py-2">
@@ -204,7 +224,12 @@ export function PeopleWeek({
                   );
                 })}
 
-                <HoursCell hours={person.hours} daysWorked={person.daysWorked} />
+                <HoursCell
+                  hours={person.hours}
+                  totalHours={person.totalHours}
+                  elsewhere={person.elsewhere}
+                  daysWorked={person.daysWorked}
+                />
               </div>
             ))}
           </div>
@@ -231,6 +256,13 @@ export function PeopleWeek({
         Sono ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
         rifiutato o è stato segnato assente non le somma. Le ore effettivamente
         lavorate — quelle che vanno al commercialista — stanno nella pagina Ore.
+        {otherVenueIds.length > 0 ? (
+          <>
+            {" "}
+            Le ore sono <b>della persona</b>: se lavora anche in un&apos;altra tua
+            sede, quelle ore sono già contate qui.
+          </>
+        ) : null}
       </p>
     </div>
   );
@@ -302,17 +334,33 @@ function PersonShiftChip({
   );
 }
 
+/**
+ * Le ore della settimana, e il giudizio sulle soglie.
+ *
+ * Il numero grande è il **totale della persona**, non di questa sede: è quello che
+ * va in busta paga e su cui scattano i limiti di legge. Se viene anche da altrove
+ * la riga sotto dice da dove — un titolare che vede 55 ore su una settimana in cui
+ * qui ne ha programmate 30 ha il diritto di capirlo subito.
+ */
 function HoursCell({
   hours,
+  totalHours,
+  elsewhere,
   daysWorked,
 }: {
+  /** Ore in questa sede. */
   hours: number;
+  /** Ore in tutte le sedi del titolare: è su queste che si giudica. */
+  totalHours: number;
+  elsewhere: { venueName: string; hours: number }[];
   daysWorked: number;
 }) {
-  const over = hours > MAX_WEEK_HOURS;
-  const heavy = hours > ORDINARY_WEEK_HOURS;
-  // Sette giorni su sette significa nessun riposo settimanale.
+  const over = totalHours > MAX_WEEK_HOURS;
+  const heavy = totalHours > ORDINARY_WEEK_HOURS;
+  // Sette giorni su sette significa nessun riposo settimanale — e i giorni si
+  // contano su tutte le sedi, perché il riposo è uno.
   const noRest = daysWorked >= 7;
+  const split = elsewhere.length > 0;
 
   return (
     <div
@@ -324,6 +372,13 @@ function HoursCell({
             ? "border-warning/40 bg-warning/10"
             : "border-border-2 bg-bg-card"
       )}
+      title={
+        split
+          ? `${formatHours(hours)} qui · ${elsewhere
+              .map((e) => `${formatHours(e.hours)} ${e.venueName}`)
+              .join(" · ")}`
+          : undefined
+      }
     >
       <span
         className={cn(
@@ -331,15 +386,28 @@ function HoursCell({
           over ? "text-error" : heavy ? "text-warning" : "text-t1"
         )}
       >
-        {formatHours(hours)}
+        {formatHours(totalHours)}
       </span>
+
+      {split ? (
+        <span className="text-right text-[10px] leading-tight text-t4">
+          {formatHours(hours)} qui
+          {elsewhere.map((e) => (
+            <span key={e.venueName}>
+              {" + "}
+              {formatHours(e.hours)} {e.venueName}
+            </span>
+          ))}
+        </span>
+      ) : null}
+
       {noRest && !over ? (
         <Pill tone="warning">0 riposi</Pill>
-      ) : (
+      ) : !split ? (
         <span className="text-[10px] text-t4">
           {daysWorked} {daysWorked === 1 ? "giorno" : "giorni"}
         </span>
-      )}
+      ) : null}
     </div>
   );
 }

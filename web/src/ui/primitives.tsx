@@ -172,7 +172,8 @@ export function PageHeader({
   actions,
 }: {
   title: string;
-  subtitle?: string;
+  /** Testo, o un frammento: il Planning ci appende l'avviso sui turni scoperti. */
+  subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
   return (

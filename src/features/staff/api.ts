@@ -12,6 +12,11 @@ export type StaffMember = Tables<"staff_members">;
  * nome, telefono, note, l'account collegato e i documenti; sulla scheda il tipo
  * di impiego, lo stato dell'invito, i ruoli, i turni e le ore.
  *
+ * Da 20260913110100 anche le **ore** sono di questo livello: `staff_members` resta
+ * l'unità di *assegnazione* (il turno si fa in un locale, coi ruoli di quel
+ * locale), `staff_people` è l'unità di *rendiconto* — 20 ore a Roma e 20 a Milano
+ * sono 40 ore e una busta paga.
+ *
  * ⚠️ `staff_members.display_name`, `.waiter_id`, `.phone` e `.note` sono un
  * **mirror** di sola lettura, riscritto da un trigger (20260913100000): scriverci
  * non dà errore e non salva niente. L'anagrafica si modifica da qui.
@@ -58,14 +63,50 @@ export async function getVenueStaff(
   return (data as StaffMemberWithWaiter[] | null) ?? [];
 }
 
-export async function getStaffMember(id: string): Promise<StaffMember | null> {
+/** Una sede in cui la persona lavora, con quel che è **della sede**. */
+export type PersonMembership = Pick<
+  StaffMember,
+  "id" | "venue_id" | "link_status" | "employment_type" | "created_at"
+> & {
+  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "closed_at"> | null;
+  staff_member_roles: { role: StaffRoleRef | null }[];
+};
+
+/**
+ * La persona con **tutte** le sue appartenenze: è la scheda del dipendente.
+ *
+ * Una scheda per persona, non una per sede. Prima Marco ne aveva due (una per
+ * locale) e ognuna mostrava le ore di quella sola sede — un'assenza a Milano non
+ * scalfiva il 100% di affidabilità di Roma. Ore, presenze e affidabilità sono
+ * dell'azienda; ruoli e tipo di impiego restano della sede, e stanno nelle
+ * `memberships`.
+ */
+export type StaffPersonDetail = StaffPerson & {
+  waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
+  memberships: PersonMembership[];
+};
+
+/**
+ * Embed a tre livelli (`staff_people → staff_members → staff_member_roles →
+ * venue_roles`), che compone due pezzi già in produzione: `memberships:` viene da
+ * `getOwnerPeople`, i ruoli annidati da `getVenueStaff`. Entrambi non ambigui —
+ * `staff_members` ha una sola FK verso `staff_people`.
+ */
+export async function getStaffPerson(
+  personId: string
+): Promise<StaffPersonDetail | null> {
   const { data, error } = await supabase
-    .from("staff_members")
-    .select("*")
-    .eq("id", id)
+    .from("staff_people")
+    .select(
+      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), " +
+        "memberships:staff_members(id, venue_id, link_status, employment_type, created_at, " +
+        "venue:venues(id, name, city, closed_at), " +
+        "staff_member_roles(role:venue_roles(id, name, sort_order)))"
+    )
+    .eq("id", personId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data ?? null;
+  return (data as StaffPersonDetail | null) ?? null;
 }
 
 /** Una persona del titolare, con le sedi in cui lavora e la sua foto. */
@@ -75,9 +116,31 @@ export type OwnerPerson = StaffPerson & {
     StaffMember,
     "id" | "venue_id" | "link_status" | "employment_type"
   > & {
-    venue: Pick<Tables<"venues">, "id" | "name" | "city"> | null;
+    venue: Pick<
+      Tables<"venues">,
+      "id" | "name" | "city" | "closed_at"
+    > | null;
   })[];
 };
+
+/**
+ * Le **altre** sedi (aperte) in cui la persona lavora, per il badge dell'organico.
+ *
+ * Una funzione sola: la stessa frase la mostrano l'app e la dashboard, e
+ * ricomporla a mano è il modo in cui due schermate iniziano a ordinarla
+ * diversamente. Le sedi chiuse restano fuori — un badge "anche a Osteria Como" per
+ * un locale chiuso sei mesi fa manda solo a cercare un turno che non si può fare.
+ */
+export function otherVenueNames(
+  person: OwnerPerson | undefined,
+  currentVenueId: string
+): string[] {
+  return (person?.memberships ?? [])
+    .filter((m) => m.venue_id !== currentVenueId && !m.venue?.closed_at)
+    .map((m) => m.venue?.name)
+    .filter((n): n is string => !!n)
+    .sort((a, b) => a.localeCompare(b, "it"));
+}
 
 /**
  * Tutte le persone dell'organico del titolare, **attraverso le sedi**.
@@ -92,7 +155,7 @@ export async function getOwnerPeople(ownerId: string): Promise<OwnerPerson[]> {
   const { data, error } = await supabase
     .from("staff_people")
     .select(
-      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), memberships:staff_members(id, venue_id, link_status, employment_type, venue:venues(id, name, city))"
+      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), memberships:staff_members(id, venue_id, link_status, employment_type, venue:venues(id, name, city, closed_at))"
     )
     .eq("owner_id", ownerId)
     .order("full_name", { ascending: true });

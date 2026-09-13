@@ -36,6 +36,16 @@ import type { Venue } from "./api";
  * la persistenza passa da un alias (vedi `activeVenueStorage.ts`).
  */
 export type ActiveVenueState = {
+  /**
+   * Il titolare, cioè **l'azienda**. `undefined` per chi non è un gestore.
+   *
+   * È il perimetro di tutto ciò che non è di una singola sede: le ore del mese,
+   * l'organico dell'azienda, l'export per il commercialista. Sta qui perché il
+   * provider questo valore lo calcola già, e i chiamanti altrimenti se lo
+   * ricavano ognuno per conto suo — da `useAuth()` o da `venue.owner_id`, che però
+   * esiste solo se una sede esiste.
+   */
+  ownerId: string | undefined;
   /** Le sedi aperte, la più vecchia prima. Vuota per chi non è un titolare. */
   venues: Venue[];
   /** La sede attiva. `null` solo se il titolare non ha (ancora) nessuna sede. */
@@ -138,6 +148,7 @@ export function ActiveVenueProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<ActiveVenueState>(
     () => ({
+      ownerId: ownerId || undefined,
       venues,
       venue,
       venueId: venue?.id,
@@ -149,6 +160,7 @@ export function ActiveVenueProvider({ children }: PropsWithChildren) {
       refetch: query.refetch,
     }),
     [
+      ownerId,
       venues,
       venue,
       setActiveVenue,

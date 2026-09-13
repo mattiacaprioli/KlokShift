@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { addDaysToDate, isShiftOver, todayString } from "@/lib/format";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import type {
+  ElsewhereShift,
   Shift,
   ShiftWithAssignees,
   ShiftWithCount,
@@ -10,6 +11,7 @@ import type {
 } from "./types";
 
 export type {
+  ElsewhereShift,
   Shift,
   ShiftWithAssignees,
   ShiftWithCount,
@@ -69,7 +71,7 @@ export async function getVenueShiftsRange(
       //   · `id` dell'assegnazione → è ciò che si riassegna;
       //   · `waiter_id` → chi non ha un account collegato non riceve notifiche,
       //     quindi non va contato quando si chiede conferma.
-      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), staff_member:staff_members(id, display_name, waiter_id))"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), staff_member:staff_members(id, display_name, person_id, waiter_id))"
     )
     .eq("venue_id", venueId)
     .gte("date", from)
@@ -78,6 +80,39 @@ export async function getVenueShiftsRange(
     .order("start_time", { ascending: true });
   if (error) throw new Error(error.message);
   return (data as ShiftWithAssignees[] | null) ?? [];
+}
+
+/**
+ * I turni dell'intervallo nelle **altre** sedi del titolare.
+ *
+ * Serve a una cosa sola, ed è una correzione di sostanza: le soglie 40h/48h
+ * settimanali sono **della persona**, non del locale. Prima 30 ore a Roma più 25 a
+ * Milano erano due celle verdi in due viste diverse, mentre sono 55 ore e uno
+ * straordinario — e nessuno lo vedeva.
+ *
+ * `.in("venue_id", ids)` e non una RPC: la RLS di `shifts` («shifts: manager crud
+ * own») limita già al titolare. Con una sede sola l'array è vuoto e la query non
+ * parte nemmeno: la vista Persone resta byte per byte quella di prima.
+ */
+export async function getOtherVenuesShiftsRange(
+  venueIds: string[],
+  from: string,
+  to: string
+): Promise<ElsewhereShift[]> {
+  if (venueIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("shifts")
+    .select(
+      "id, venue_id, date, start_time, end_time, status, venue:venues(id, name), " +
+        "shift_assignments(id, status, staff_member:staff_members(id, person_id))"
+    )
+    .in("venue_id", venueIds)
+    .gte("date", from)
+    .lte("date", to);
+  if (error) throw new Error(error.message);
+  // `as unknown`: su un embed annidato PostgREST non riesce a inferire il tipo e
+  // il cast diretto non si sovrappone. Stessa scorciatoia del resto del file.
+  return (data as unknown as ElsewhereShift[] | null) ?? [];
 }
 
 /** Una pagina di storico, con l'indicazione che ce ne sono altre. */

@@ -1,12 +1,18 @@
-import { useMemo, useState } from "react";
-import { useVenueHoursSummary } from "@/features/assignments/hooks";
+import { Fragment, useMemo, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { companyName } from "@/features/venues/companyName";
+import { useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  groupHoursByPerson,
+  venueCount,
+} from "@/features/assignments/hoursSummary";
 import {
   buildHoursCsv,
   buildHoursHtml,
   hoursFileName,
 } from "@/lib/exportBuilders";
 import { formatHours } from "@/lib/format";
-import { useVenue } from "../lib/venue";
 import { monthKey, monthLabel } from "../lib/week";
 import {
   Button,
@@ -25,36 +31,60 @@ function recentMonths(): string[] {
   );
 }
 
+/**
+ * Le ore del mese di **tutta l'azienda**, una riga per persona.
+ *
+ * Nessun selettore di sede: chi lavora in due locali dello stesso titolare ha una
+ * sola busta paga. Con più sedi ogni riga si espande sul dettaglio, che è quel che
+ * serve al titolare per allocare il costo del lavoro — al commercialista servono le
+ * ore, e il CSV gli dà una riga per persona.
+ */
 export function OrePage() {
-  const venue = useVenue();
+  const { profile } = useAuth();
+  const { ownerId, venues } = useActiveVenue();
   const months = useMemo(() => recentMonths(), []);
   const [month, setMonth] = useState(months[0]);
-  const { data, isPending, isError, error } = useVenueHoursSummary(
-    venue.id,
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const { data, isPending, isError, error } = useOwnerHoursSummary(
+    ownerId,
     month
   );
 
   const rows = data ?? [];
-  const totalHours = rows.reduce((s, r) => s + r.hours, 0);
-  const maxHours = Math.max(1, ...rows.map((r) => r.hours));
+  const people = groupHoursByPerson(rows);
+  // La forma della tabella la decide il DATO, non l'account: un mese in cui si è
+  // lavorato solo a Roma è un mese a una sede anche per chi ne ha tre.
+  const multi = venueCount(rows) > 1;
+  const totalHours = people.reduce((s, p) => s + p.hours, 0);
+  const maxHours = Math.max(1, ...people.map((p) => p.hours));
   const label = monthLabel(month);
+  const company = companyName(venues, profile?.full_name);
+
+  function toggle(personId: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(personId)) next.delete(personId);
+      else next.add(personId);
+      return next;
+    });
+  }
 
   function downloadCsv() {
     // Stessa funzione pura dell'app: i due file devono coincidere.
-    const blob = new Blob([buildHoursCsv(rows)], {
+    const blob = new Blob([buildHoursCsv(people)], {
       type: "text/csv;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = hoursFileName(venue.name, label, "csv");
+    a.download = hoursFileName(company, label, "csv");
     a.click();
     URL.revokeObjectURL(url);
   }
 
   function printPdf() {
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
-    const html = buildHoursHtml(venue.name, label, rows, totalHours);
+    const html = buildHoursHtml(company, label, people, totalHours);
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(html);
@@ -70,13 +100,13 @@ export function OrePage() {
         subtitle={`${label} · ${formatHours(totalHours)} totali`}
         actions={
           <>
-            <Button onClick={downloadCsv} disabled={rows.length === 0}>
+            <Button onClick={downloadCsv} disabled={people.length === 0}>
               Esporta CSV
             </Button>
             <Button
               variant="gold"
               onClick={printPdf}
-              disabled={rows.length === 0}
+              disabled={people.length === 0}
             >
               Stampa / PDF
             </Button>
@@ -103,19 +133,22 @@ export function OrePage() {
       {isError ? <QueryError error={error} /> : null}
       {isPending ? <Spinner /> : null}
 
-      {!isPending && rows.length === 0 ? (
+      {!isPending && people.length === 0 ? (
         <Placeholder
           title={`Nessuna ora registrata a ${label}`}
-          detail="Le ore arrivano dai turni interni conclusi. Segna le presenze aprendo un turno passato dal Planning."
+          detail="Le ore arrivano dai turni interni conclusi di tutte le tue sedi. Segna le presenze aprendo un turno passato dal Planning."
         />
       ) : null}
 
-      {rows.length > 0 ? (
+      {people.length > 0 ? (
         <Card className="p-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-2 text-left text-[11px] uppercase tracking-wider text-t3">
                 <th className="px-5 py-3 font-semibold">Nome</th>
+                {multi ? (
+                  <th className="px-5 py-3 font-semibold">Sede</th>
+                ) : null}
                 <th className="px-5 py-3 font-semibold">Ruolo</th>
                 <th className="px-5 py-3 text-right font-semibold">Turni</th>
                 <th className="px-5 py-3 text-right font-semibold">Ore</th>
@@ -123,36 +156,84 @@ export function OrePage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.staff_member_id}
-                  className="border-b border-border last:border-0"
-                >
-                  <td className="px-5 py-2.5 text-t1">{r.display_name}</td>
-                  <td className="px-5 py-2.5 text-t3">{r.roles ?? "—"}</td>
-                  <td className="px-5 py-2.5 text-right font-mono text-t2">
-                    {r.shifts_count}
-                  </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-t1">
-                    {formatHours(r.hours)}
-                  </td>
-                  <td className="px-5 py-2.5">
-                    <div className="h-1.5 w-full rounded-full bg-bg-2">
-                      <div
-                        className="h-1.5 rounded-full bg-gold"
-                        style={{ width: `${(r.hours / maxHours) * 100}%` }}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {people.map((p) => {
+                const splittable = p.venues.length > 1;
+                const open = expanded.has(p.person_id);
+                return (
+                  <Fragment key={p.person_id}>
+                    <tr className="border-b border-border last:border-0">
+                      <td className="px-5 py-2.5 text-t1">
+                        {splittable ? (
+                          <button
+                            onClick={() => toggle(p.person_id)}
+                            className="focus-gold -mx-1 rounded px-1 text-left font-semibold hover:text-gold"
+                            aria-expanded={open}
+                          >
+                            {open ? "▾" : "▸"} {p.person_name}
+                          </button>
+                        ) : (
+                          p.person_name
+                        )}
+                      </td>
+                      {multi ? (
+                        <td className="px-5 py-2.5 text-t3">
+                          {splittable
+                            ? `${p.venues.length} sedi`
+                            : (p.venues[0]?.venue_name ?? "—")}
+                        </td>
+                      ) : null}
+                      <td className="px-5 py-2.5 text-t3">{p.roles ?? "—"}</td>
+                      <td className="px-5 py-2.5 text-right font-mono text-t2">
+                        {p.shifts_count}
+                      </td>
+                      <td className="px-5 py-2.5 text-right font-mono text-t1">
+                        {formatHours(p.hours)}
+                      </td>
+                      <td className="px-5 py-2.5">
+                        <div className="h-1.5 w-full rounded-full bg-bg-2">
+                          <div
+                            className="h-1.5 rounded-full bg-gold"
+                            style={{ width: `${(p.hours / maxHours) * 100}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+
+                    {splittable && open
+                      ? p.venues.map((v) => (
+                          <tr
+                            key={v.venue_id}
+                            className="border-b border-border bg-bg-1/40 text-xs last:border-0"
+                          >
+                            <td className="py-2 pl-10 pr-5 text-t4">↳</td>
+                            <td className="px-5 py-2 text-t2">
+                              {v.venue_name}
+                              {v.venue_closed ? " (chiusa)" : ""}
+                            </td>
+                            <td className="px-5 py-2 text-t3">
+                              {v.roles ?? "—"}
+                            </td>
+                            <td className="px-5 py-2 text-right font-mono text-t3">
+                              {v.shifts_count}
+                            </td>
+                            <td className="px-5 py-2 text-right font-mono text-t2">
+                              {formatHours(v.hours)}
+                            </td>
+                            <td />
+                          </tr>
+                        ))
+                      : null}
+                  </Fragment>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold/40">
                 <td className="px-5 py-3 font-semibold text-t1">Totale</td>
+                {multi ? <td /> : null}
                 <td />
                 <td className="px-5 py-3 text-right font-mono text-t2">
-                  {rows.reduce((s, r) => s + r.shifts_count, 0)}
+                  {people.reduce((s, p) => s + p.shifts_count, 0)}
                 </td>
                 <td className="px-5 py-3 text-right font-mono font-semibold text-gold">
                   {formatHours(totalHours)}

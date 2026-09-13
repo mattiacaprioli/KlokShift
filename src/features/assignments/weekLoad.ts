@@ -6,7 +6,7 @@ import { isActiveAssignment, type AssignmentStatus } from "./status";
  *
  * ⚠️ Non è il consuntivo: qui le ore vengono dagli orari del turno, mentre le
  * ore *lavorate* stanno in `shift_assignments.worked_hours` e le aggrega
- * `getVenueHoursSummary` (pagina Ore, quella che va al commercialista). Questo
+ * `get_owner_hours_summary` (pagina Ore, quella che va al commercialista). Questo
  * serve **mentre** si assegna, per accorgersi degli squilibri prima che
  * diventino un problema di busta paga.
  */
@@ -21,7 +21,12 @@ type LoadAssignment = {
   status: AssignmentStatus;
   /** Il ruolo ricoperto su **questo** turno, se è stato scelto. */
   role: { name: string } | null;
-  staff_member: { id: string; display_name: string } | null;
+  staff_member: {
+    id: string;
+    display_name: string;
+    /** La persona: la chiave con cui si incrociano i turni delle altre sedi. */
+    person_id: string;
+  } | null;
 };
 
 /** Il minimo che serve al calcolo: un turno con i suoi assegnati. */
@@ -51,16 +56,44 @@ export type PersonShift = {
   hours: number;
 };
 
+/** Un turno in un'altra sede del titolare: solo quel che serve a sommare le ore. */
+export type ElsewhereLoadShift = {
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  venue: { name: string } | null;
+  shift_assignments: {
+    status: AssignmentStatus;
+    staff_member: { person_id: string } | null;
+  }[];
+};
+
 export type PersonLoad = {
+  /**
+   * L'appartenenza **nella sede attiva**: è ciò che si assegna e si riassegna.
+   * Il drag & drop e il "+" su una cella vuota lavorano con questo, perché un
+   * turno si crea in un locale.
+   */
   staffMemberId: string;
+  /**
+   * La **persona**: è il livello a cui si contano le ore e si giudicano le
+   * soglie. Una settimana da 55 ore non diventa legale perché è spezzata su due
+   * locali.
+   */
+  personId: string;
   name: string;
   /** Le mansioni della persona, già composte ("Cameriere, Barman"). */
   roles: string | null;
-  /** Turni per data (`YYYY-MM-DD`). */
+  /** Turni per data (`YYYY-MM-DD`) — solo questa sede: il planning pianifica un locale. */
   byDay: Map<string, PersonShift[]>;
-  /** Ore programmate nell'intervallo. */
+  /** Ore programmate in **questa** sede. */
   hours: number;
-  /** Giorni distinti con almeno un turno che la persona farà davvero. */
+  /** Ore programmate in **tutte** le sedi del titolare: è su queste che si giudica. */
+  totalHours: number;
+  /** Le altre sedi che contribuiscono, per la riga sotto il totale. */
+  elsewhere: { venueName: string; hours: number }[];
+  /** Giorni distinti con lavoro, **tutte** le sedi: il riposo settimanale è uno. */
   daysWorked: number;
 };
 
@@ -69,18 +102,33 @@ export type PersonLoad = {
  * non lavora nel periodo compare comunque **a zero** — che è metà
  * dell'informazione: senza quelle righe non si vede chi è rimasto fermo.
  *
- * Ordinamento per ore decrescenti: questa vista esiste per far salire in cima i
- * casi estremi, non per cercare una persona (per quello c'è la vista a giorni).
+ * `elsewhere` sono i turni della stessa settimana nelle **altre** sedi del
+ * titolare. Serve perché le soglie 40h/48h sono della *persona*: prima 30 ore a
+ * Roma più 25 a Milano erano due celle verdi in due viste diverse, mentre sono 55
+ * ore e uno straordinario. Chi non è nel roster di questa sede viene ignorato: non
+ * ha una riga da pianificare qui.
+ *
+ * Ordinamento per ore **totali** decrescenti: questa vista esiste per far salire in
+ * cima i casi estremi, e il caso estremo ora è cross-sede.
  */
 export function computeWeekLoad(
   shifts: LoadShift[],
-  roster: { id: string; display_name: string; roles: string | null }[]
+  roster: {
+    id: string;
+    person_id: string;
+    display_name: string;
+    roles: string | null;
+  }[],
+  elsewhere: ElsewhereLoadShift[] = []
 ): PersonLoad[] {
   const rows = new Map<string, PersonLoad>();
   const activeDays = new Map<string, Set<string>>();
+  /** person_id → riga, per incrociare i turni delle altre sedi. */
+  const byPerson = new Map<string, PersonLoad>();
 
   function row(member: {
     id: string;
+    person_id: string;
     display_name: string;
     roles?: string | null;
   }): PersonLoad {
@@ -88,13 +136,17 @@ export function computeWeekLoad(
     if (existing) return existing;
     const created: PersonLoad = {
       staffMemberId: member.id,
+      personId: member.person_id,
       name: member.display_name,
       roles: member.roles ?? null,
       byDay: new Map(),
       hours: 0,
+      totalHours: 0,
+      elsewhere: [],
       daysWorked: 0,
     };
     rows.set(member.id, created);
+    byPerson.set(member.person_id, created);
     activeDays.set(member.id, new Set());
     return created;
   }
@@ -127,7 +179,30 @@ export function computeWeekLoad(
       });
       person.byDay.set(shift.date, list);
       person.hours += hours;
+      person.totalHours += hours;
       if (active) activeDays.get(member.id)?.add(shift.date);
+    }
+  }
+
+  // Secondo passaggio: le altre sedi. Non entrano in `byDay` — le loro celle non
+  // sono pianificabili da qui — ma contano nel totale e nei giorni di riposo.
+  for (const shift of elsewhere) {
+    if (shift.status === "cancelled") continue;
+    for (const assignment of shift.shift_assignments) {
+      const personId = assignment.staff_member?.person_id;
+      if (!personId) continue;
+      const person = byPerson.get(personId);
+      if (!person) continue; // non è nel roster di questa sede: niente riga qui
+      if (!isActiveAssignment(assignment.status)) continue;
+
+      const hours = shiftDurationHours(shift.start_time, shift.end_time);
+      person.totalHours += hours;
+      activeDays.get(person.staffMemberId)?.add(shift.date);
+
+      const venueName = shift.venue?.name ?? "Altra sede";
+      const bucket = person.elsewhere.find((e) => e.venueName === venueName);
+      if (bucket) bucket.hours += hours;
+      else person.elsewhere.push({ venueName, hours });
     }
   }
 
@@ -136,7 +211,13 @@ export function computeWeekLoad(
     if (person) person.daysWorked = days.size;
   }
 
+  for (const person of rows.values()) {
+    person.elsewhere.sort((a, b) =>
+      a.venueName.localeCompare(b.venueName, "it")
+    );
+  }
+
   return [...rows.values()].sort(
-    (a, b) => b.hours - a.hours || a.name.localeCompare(b.name, "it")
+    (a, b) => b.totalHours - a.totalHours || a.name.localeCompare(b.name, "it")
   );
 }

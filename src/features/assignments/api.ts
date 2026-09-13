@@ -9,8 +9,8 @@ import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember, StaffRoleRef } from "@/features/staff/api";
 import { isActiveAssignment } from "./status";
+import type { OwnerHoursRow } from "./hoursSummary";
 import { UserFacingError } from "@/lib/errors";
-import type { CoverageEmbeds } from "./coverage";
 
 export type Assignment = Tables<"shift_assignments">;
 
@@ -394,38 +394,6 @@ export async function getShiftRoleRequirements(
   );
 }
 
-/** Turno interno con fabbisogno + assegnati (con ruolo) per il calcolo copertura. */
-export type CoverageShift = CoverageEmbeds & {
-  id: string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  positions_total: number;
-  positions_filled: number;
-};
-
-/** Turni interni futuri del locale con dati per calcolare la copertura per ruolo. */
-export async function getVenueCoverage(venueId: string): Promise<CoverageShift[]> {
-  const { data, error } = await supabase
-    .from("shifts")
-    .select(
-      "id, title, date, start_time, end_time, positions_total, positions_filled, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
-    )
-    .eq("venue_id", venueId)
-    .eq("kind", "internal")
-    // Gli annullati non hanno fabbisogno da coprire.
-    .neq("status", "cancelled")
-    // Da ieri: un turno notturno in corso è ancora scoperto se manca qualcuno.
-    .gte("date", addDaysToDate(todayString(), -1))
-    .order("date", { ascending: true })
-    .order("start_time", { ascending: true });
-  if (error) throw new Error(error.message);
-  return ((data as CoverageShift[] | null) ?? []).filter(
-    (s) => !isShiftOver(s)
-  );
-}
-
 export async function getShiftAssignments(
   shiftId: string
 ): Promise<AssignmentWithStaff[]> {
@@ -491,11 +459,16 @@ export async function setAssignmentPresence(
 }
 
 /**
- * Statistiche di un membro dell'organico (sezioni "Ore & presenze" e
+ * Statistiche di una **persona** dell'organico (sezioni "Ore & presenze" e
  * "Performance"). Sette numeri, calcolati dal database.
  *
- * Prima le due sezioni condividevano una query che scaricava **l'intera storia
- * di assegnazioni** del membro per sommarla in JS — e ne mostrava sei righe.
+ * Sono i numeri dell'**azienda**, non di una sede: chi lavora a Roma e a Milano
+ * per lo stesso titolare ha un solo monte ore e una sola affidabilità. Prima
+ * l'aggregazione era per appartenenza, e un'assenza fatta a Milano non scalfiva
+ * il 100% di Roma (20260913110100).
+ *
+ * Prima ancora, le due sezioni condividevano una query che scaricava **l'intera
+ * storia di assegnazioni** per sommarla in JS — e ne mostrava sei righe.
  */
 export type StaffPerformance = {
   past_total: number;
@@ -507,17 +480,22 @@ export type StaffPerformance = {
   month_hours: number;
 };
 
-export async function getStaffPerformance(
-  staffMemberId: string
+export async function getPersonPerformance(
+  personId: string
 ): Promise<StaffPerformance | null> {
   const { data, error } = await supabase
-    .rpc("get_staff_performance", { p_staff_member: staffMemberId })
+    .rpc("get_person_performance", { p_person: personId })
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ?? null;
 }
 
-/** Ultimi turni svolti da un membro, già ordinati e limitati dal database. */
+/**
+ * Ultimi turni svolti dalla persona, già ordinati e limitati dal database.
+ *
+ * Porta la **sede**: senza, due turni lo stesso giovedì alla stessa ora in due
+ * locali diversi sembrerebbero un doppione.
+ */
 export type StaffWorkedShift = {
   id: string;
   status: Enums<"assignment_status">;
@@ -529,16 +507,18 @@ export type StaffWorkedShift = {
   end_time: string;
   /** Ore effettive: `worked_hours` se corretta a mano, altrimenti la durata. */
   hours: number;
+  venue_id: string;
+  venue_name: string;
 };
 
 export const STAFF_RECENT_SHIFTS = 6;
 
-export async function getStaffWorkedShifts(
-  staffMemberId: string,
+export async function getPersonWorkedShifts(
+  personId: string,
   limit = STAFF_RECENT_SHIFTS
 ): Promise<StaffWorkedShift[]> {
-  const { data, error } = await supabase.rpc("get_staff_worked_shifts", {
-    p_staff_member: staffMemberId,
+  const { data, error } = await supabase.rpc("get_person_worked_shifts", {
+    p_person: personId,
     p_limit: limit,
   });
   if (error) throw new Error(error.message);
@@ -594,16 +574,6 @@ export async function getMyWorkHistoryTotals(): Promise<WorkHistoryTotals> {
   return data ?? { total_count: 0, total_hours: 0 };
 }
 
-/** Ore lavorate per membro dell'organico in un mese ("YYYY-MM"). */
-export type StaffHoursRow = {
-  staff_member_id: string;
-  display_name: string;
-  /** Le mansioni della persona, già composte dal DB ("Cameriere, Barman"). */
-  roles: string | null;
-  shifts_count: number;
-  hours: number;
-};
-
 function monthBounds(month: string): { start: string; end: string } {
   const [y, m] = month.split("-").map(Number);
   const nextY = m === 12 ? y + 1 : y;
@@ -615,20 +585,25 @@ function monthBounds(month: string): { start: string; end: string } {
 }
 
 /**
- * Riepilogo ore per l'organico di un locale in un mese: aggrega i turni interni
- * già svolti (data passata, non rifiutati/assenti) per membro. Ordine per ore desc.
+ * Riepilogo ore di **tutta l'azienda** in un mese, righe (persona × sede).
  *
- * L'aggregazione la fa il database (`get_venue_hours_summary`). Prima scaricava
- * ogni assegnazione del mese con due join e sommava qui — e la pagina Ore offre
- * dodici mesi a portata di click, cioè dodici dataset completi.
+ * Le ore sono della persona, non della sede (20260913110100): chi fa 20 ore a Roma
+ * e 20 a Milano per lo stesso titolare ha 40 ore e **una** busta paga. Il totale
+ * per persona lo compone `groupHoursByPerson`; lo split per sede resta nelle righe
+ * perché serve al titolare per allocare il costo del lavoro.
+ *
+ * L'aggregazione la fa il database. Prima scaricava ogni assegnazione del mese con
+ * due join e sommava qui — e la pagina Ore offre dodici mesi a portata di click,
+ * cioè dodici dataset completi.
+ *
+ * ⚠️ Nessun parametro per il titolare: la RPC è INVOKER e usa `auth.uid()`. Il
+ * perimetro è «la MIA azienda» e non è negoziabile dal client.
  */
-export async function getVenueHoursSummary(
-  venueId: string,
+export async function getOwnerHoursSummary(
   month: string
-): Promise<StaffHoursRow[]> {
+): Promise<OwnerHoursRow[]> {
   const { start, end } = monthBounds(month);
-  const { data, error } = await supabase.rpc("get_venue_hours_summary", {
-    p_venue: venueId,
+  const { data, error } = await supabase.rpc("get_owner_hours_summary", {
     p_from: start,
     p_to: end,
   });

@@ -9,7 +9,7 @@ import {
   getMyEmployers,
   getMyPendingInvites,
   getOwnerPeople,
-  getStaffMember,
+  getStaffPerson,
   getVenueStaff,
   leaveVenue,
   removeStaffMember,
@@ -64,10 +64,12 @@ export function useVenueStaff(venueId: string | undefined) {
   });
 }
 
-export function useStaffMember(id: string) {
+/** La scheda di un dipendente: la persona con tutte le sue sedi. */
+export function useStaffPerson(personId: string | undefined) {
   return useQuery({
-    queryKey: [...qk.staff.all, "detail", id] as const,
-    queryFn: () => getStaffMember(id),
+    queryKey: qk.staff.person(personId ?? ""),
+    queryFn: () => getStaffPerson(personId as string),
+    enabled: !!personId,
   });
 }
 

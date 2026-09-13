@@ -929,6 +929,47 @@ export type Database = {
           total_hours: number
         }[]
       }
+      get_owner_hours_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          hours: number
+          person_id: string
+          person_name: string
+          roles: string
+          shifts_count: number
+          venue_closed: boolean
+          venue_id: string
+          venue_name: string
+        }[]
+      }
+      get_person_performance: {
+        Args: { p_person: string }
+        Returns: {
+          declined_count: number
+          month_hours: number
+          month_shifts: number
+          no_show_count: number
+          past_total: number
+          total_hours: number
+          worked_count: number
+        }[]
+      }
+      get_person_worked_shifts: {
+        Args: { p_limit?: number; p_person: string }
+        Returns: {
+          date: string
+          end_time: string
+          hours: number
+          id: string
+          shift_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          title: string
+          venue_id: string
+          venue_name: string
+          worked_hours: number
+        }[]
+      }
       get_rating_breakdown: {
         Args: { p_waiter: string }
         Returns: {

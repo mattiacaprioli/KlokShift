@@ -14,8 +14,14 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { formatHours, todayString } from "@/lib/format";
 import { exportHoursCsv, exportHoursPdf } from "@/lib/export";
 import { useToast } from "@/providers/Toast";
+import { useAuth } from "@/lib/auth";
 import { useActiveVenue } from "@/features/venues/ActiveVenue";
-import { useVenueHoursSummary } from "@/features/assignments/hooks";
+import { companyName } from "@/features/venues/companyName";
+import { useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  groupHoursByPerson,
+  venueCount,
+} from "@/features/assignments/hoursSummary";
 
 const monthFmt = new Intl.DateTimeFormat("it-IT", {
   month: "long",
@@ -41,29 +47,56 @@ function monthLabel(month: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+/**
+ * Le ore del mese di **tutta l'azienda**, una riga per persona.
+ *
+ * Non c'è un selettore di sede, di proposito: chi lavora in due locali dello stesso
+ * titolare ha una sola busta paga, e il numero che serve è il totale. Lo split per
+ * sede sta nella riga espandibile — è quello che serve al titolare per capire dove
+ * è finito il costo del lavoro, non al commercialista.
+ *
+ * Con una sola sede nessuna riga si espande: la pagina è identica a prima del
+ * multi-sede.
+ */
 export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const venue = useActiveVenue().venue;
+  const { profile } = useAuth();
+  const { ownerId, venues } = useActiveVenue();
 
   const [month, setMonth] = useState(currentMonth());
   const atCurrentMonth = month >= currentMonth();
+  // Quali righe sono aperte. Un Set e non un singolo id: due persone in due sedi
+  // si guardano insieme, e chiudere la prima per aprire la seconda è un tap in più.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const query = useVenueHoursSummary(venue?.id, month);
+  const query = useOwnerHoursSummary(ownerId, month);
   const rows = query.data ?? [];
+  const people = groupHoursByPerson(rows);
+  const venues_n = venueCount(rows);
 
-  const totalHours = rows.reduce((s, r) => s + r.hours, 0);
-  const totalShifts = rows.reduce((s, r) => s + r.shifts_count, 0);
-  const maxHours = rows.reduce((m, r) => Math.max(m, r.hours), 0);
+  const totalHours = people.reduce((s, p) => s + p.hours, 0);
+  const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
+  const maxHours = people.reduce((m, p) => Math.max(m, p.hours), 0);
   const label = monthLabel(month);
 
+  function toggle(personId: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(personId)) next.delete(personId);
+      else next.add(personId);
+      return next;
+    });
+  }
+
   async function onExport(kind: "pdf" | "csv") {
-    if (!venue || rows.length === 0) return;
+    if (people.length === 0) return;
+    const company = companyName(venues, profile?.full_name);
     try {
       if (kind === "pdf") {
-        await exportHoursPdf(venue.name, label, rows, totalHours);
+        await exportHoursPdf(company, label, people, totalHours);
       } else {
-        await exportHoursCsv(venue.name, label, rows);
+        await exportHoursCsv(company, label, people);
       }
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
@@ -112,10 +145,10 @@ export default function VenueHoursScreen() {
         <ActivityIndicator color="#EAB54C" className="mt-10" />
       ) : query.isError ? (
         <QueryError onRetry={() => query.refetch()} />
-      ) : rows.length === 0 ? (
+      ) : people.length === 0 ? (
         <EmptyState
           title="Nessuna ora registrata"
-          subtitle="Le ore dei turni interni conclusi di questo mese compariranno qui."
+          subtitle="Le ore dei turni interni conclusi di questo mese, in tutte le tue sedi, compariranno qui."
         />
       ) : (
         <>
@@ -128,30 +161,77 @@ export default function VenueHoursScreen() {
               {formatHours(totalHours)}
             </Text>
             <Text className="text-xs text-t3">
-              {totalShifts} turni · {rows.length}{" "}
-              {rows.length === 1 ? "persona" : "persone"}
+              {totalShifts} turni · {people.length}{" "}
+              {people.length === 1 ? "persona" : "persone"}
+              {venues_n > 1 ? ` · ${venues_n} sedi` : ""}
             </Text>
           </Card>
 
           <View className="gap-4">
-            {rows.map((r) => (
-              <View key={r.staff_member_id} className="gap-2">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <Text className="text-sm font-sans-semibold text-t1">
-                      {r.display_name}
+            {people.map((p) => {
+              // Il chevron appare solo a chi ha davvero più di una sede: per gli
+              // altri non c'è niente da espandere, e un affordance che non porta
+              // da nessuna parte è peggio di nessun affordance.
+              const splittable = p.venues.length > 1;
+              const open = expanded.has(p.person_id);
+              return (
+                <View key={p.person_id} className="gap-2">
+                  <Pressable
+                    disabled={!splittable}
+                    onPress={() => toggle(p.person_id)}
+                    hitSlop={6}
+                    className="flex-row items-center justify-between"
+                  >
+                    <View className="flex-1">
+                      <Text className="text-sm font-sans-semibold text-t1">
+                        {p.person_name}
+                      </Text>
+                      <Text className="text-xs text-t3">
+                        {p.roles ?? "—"} · {p.shifts_count} turni
+                        {splittable ? ` · ${p.venues.length} sedi` : ""}
+                      </Text>
+                    </View>
+                    <Text className="text-sm font-sans-bold text-gold">
+                      {formatHours(p.hours)}
                     </Text>
-                    <Text className="text-xs text-t3">
-                      {r.roles ?? "—"} · {r.shifts_count} turni
-                    </Text>
-                  </View>
-                  <Text className="text-sm font-sans-bold text-gold">
-                    {formatHours(r.hours)}
-                  </Text>
+                    {splittable ? (
+                      <Icon
+                        name="chevR"
+                        size={16}
+                        color="#8C8579"
+                        style={{
+                          marginLeft: 6,
+                          transform: [{ rotate: open ? "90deg" : "0deg" }],
+                        }}
+                      />
+                    ) : null}
+                  </Pressable>
+
+                  <ProgressBar progress={maxHours > 0 ? p.hours / maxHours : 0} />
+
+                  {splittable && open ? (
+                    <View className="mt-1 gap-1.5 pl-3">
+                      {p.venues.map((v) => (
+                        <View
+                          key={v.venue_id}
+                          className="flex-row items-baseline justify-between"
+                        >
+                          <Text className="flex-1 text-xs text-t3">
+                            {v.venue_name}
+                            {v.venue_closed ? " (chiusa)" : ""}
+                            {v.roles ? ` · ${v.roles}` : ""} · {v.shifts_count}{" "}
+                            turni
+                          </Text>
+                          <Text className="text-xs font-sans-semibold text-t2">
+                            {formatHours(v.hours)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
-                <ProgressBar progress={maxHours > 0 ? r.hours / maxHours : 0} />
-              </View>
-            ))}
+              );
+            })}
           </View>
 
           <View className="mt-2 gap-2.5">

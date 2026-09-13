@@ -15,6 +15,7 @@ import {
   getShiftWithVenue,
   getVenuePastShiftsCount,
   getVenuePastShiftsPage,
+  getOtherVenuesShiftsRange,
   getVenueShiftsRange,
   updateShift,
   updateShiftStatus,
@@ -26,6 +27,25 @@ export function useMyShifts(venueId: string | undefined) {
     queryKey: qk.shifts.byVenue(venueId ?? ""),
     queryFn: () => getMyShifts(venueId as string),
     enabled: !!venueId,
+  });
+}
+
+/**
+ * I turni della settimana nelle altre sedi del titolare.
+ *
+ * `venueIds` vuoto ⇒ la query non parte: chi ha una sede sola non paga nulla per
+ * una correttezza che non lo riguarda. `venueIds.join()` nella chiave perché
+ * l'insieme delle altre sedi cambia quando si apre o si chiude un locale.
+ */
+export function useOtherVenuesShiftsRange(
+  venueIds: string[],
+  from: string,
+  to: string
+) {
+  return useQuery({
+    queryKey: qk.shifts.elsewhereRange(venueIds.join(","), from, to),
+    queryFn: () => getOtherVenuesShiftsRange(venueIds, from, to),
+    enabled: venueIds.length > 0,
   });
 }
 
@@ -91,6 +111,8 @@ export function useCreateShift(venueId: string | undefined) {
         qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
         qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
       }
+      // Il carico settimanale visto da un'altra sede include questo turno.
+      qc.invalidateQueries({ queryKey: qk.shifts.elsewhereAll });
     },
   });
 }
@@ -106,6 +128,8 @@ export function useUpdateShiftStatus(shiftId: string, venueId?: string) {
         qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
         qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
       }
+      // Un turno annullato non è carico di lavoro per nessuno, nemmeno altrove.
+      qc.invalidateQueries({ queryKey: qk.shifts.elsewhereAll });
     },
   });
 }
@@ -126,10 +150,14 @@ function invalidateAfterShiftWrite(
   qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
   qc.invalidateQueries({ queryKey: qk.shifts.past(venueId) });
   qc.invalidateQueries({ queryKey: qk.shifts.pastCount(venueId) });
-  qc.invalidateQueries({ queryKey: qk.assignments.coverage(venueId) });
   qc.invalidateQueries({ queryKey: qk.assignments.today(venueId) });
-  // Prefisso di `qk.staff.hours(venueId, mese)`: un turno che cambia mese
-  // cambia due totali nella pagina Ore.
+  // Il carico settimanale di un'altra sede include questo turno: le soglie
+  // 40/48h sono della persona, non del locale.
+  qc.invalidateQueries({ queryKey: qk.shifts.elsewhereAll });
+  // Prefisso di `qk.staff.ownerHours(ownerId, mese)`: un turno che cambia mese
+  // cambia due totali nella pagina Ore. Il prefisso largo serve anche perché le
+  // ore sono dell'**azienda** (20260913110100): un turno spostato da una sede
+  // all'altra non cambia il totale di nessuno, ma cambia il suo dettaglio.
   qc.invalidateQueries({ queryKey: qk.staff.all });
 }
 

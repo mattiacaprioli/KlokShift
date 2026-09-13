@@ -13,15 +13,13 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
-import { NavRow } from "@/components/ui/NavRow";
 import { QueryError } from "@/components/ui/QueryError";
 import { WeekCalendar } from "@/components/ui/WeekCalendar";
 import { type DaySection, groupByDay } from "@/features/assignments/agenda";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import type { ShiftWithCount } from "@/features/shifts/types";
-import { ProBadge } from "@/features/plan/ProLock";
-import { useProGate } from "@/features/plan/hooks";
+import { cn } from "@/lib/cn";
 import { addDaysToDate, startOfWeek, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useActiveVenue } from "@/features/venues/ActiveVenue";
@@ -34,6 +32,11 @@ const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
 
 type ShiftSection = DaySection<ShiftWithCount>;
 
+/** Un turno da coprire: manca qualcuno e non è stato annullato. */
+function isShort(shift: ShiftWithCount): boolean {
+  return shift.status !== "cancelled" && shiftCounts(shift).short;
+}
+
 /**
  * L'agenda del locale: i turni organizzati per giorno sotto un calendario.
  *
@@ -44,13 +47,18 @@ type ShiftSection = DaySection<ShiftWithCount>;
  *
  * La differenza è cosa si cerca: il professionista vuole sapere quando lavora,
  * il locale vuole sapere **cosa è scoperto**. Per questo il pallino sul
- * calendario diventa arancio sui giorni con un buco, e sotto c'è il conto della
- * settimana: il quadro d'insieme senza costruire una vista di pianificazione.
+ * calendario diventa arancio sui giorni con un buco, sotto c'è il conto della
+ * settimana, e un filtro riduce l'agenda ai soli turni da coprire: il quadro
+ * d'insieme senza costruire una vista di pianificazione.
+ *
+ * Fino al 13/09/2026 quel filtro era una schermata a parte («Copertura turni»),
+ * cioè una seconda lista degli stessi turni con gli stessi tap: si è rivelata
+ * la stessa agenda detta peggio, e i suoi due contenuti — i ruoli e i buchi —
+ * sono rientrati qui, nella card e in questo filtro.
  */
 export default function ManagerShiftsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isPro, gate } = useProGate();
 
   const venueQuery = useActiveVenue();
   const venue = venueQuery.venue;
@@ -66,6 +74,8 @@ export default function ManagerShiftsScreen() {
   /** Il giorno evidenziato: lo sposta anche lo scorrimento della lista. */
   const [visibleDay, setVisibleDay] = useState(today);
   const [expanded, setExpanded] = useState(false);
+  /** L'agenda ridotta a ciò che manca da coprire. */
+  const [onlyShort, setOnlyShort] = useState(false);
 
   const listRef = useRef<SectionList<ShiftWithCount, ShiftSection>>(null);
   const syncing = useRef(false);
@@ -86,10 +96,16 @@ export default function ManagerShiftsScreen() {
     const a = new Set<string>();
     for (const s of upcoming) {
       m.add(s.date);
-      if (s.status !== "cancelled" && shiftCounts(s).short) a.add(s.date);
+      if (isShort(s)) a.add(s.date);
     }
     return { marked: m, alerts: a };
   }, [upcoming]);
+
+  /** Quanti turni restano da coprire in tutto: decide se il filtro esiste. */
+  const shortCount = useMemo(() => upcoming.filter(isShort).length, [upcoming]);
+  // Coprire l'ultimo buco spegne il filtro da sé: restare su una lista vuota
+  // con il comando per uscirne appena sparito sarebbe un vicolo cieco.
+  const filtering = onlyShort && shortCount > 0;
 
   const dayGroups = useMemo(
     () => groupByDay(upcoming, (s) => s.date),
@@ -98,12 +114,20 @@ export default function ManagerShiftsScreen() {
 
   const sections = useMemo<ShiftSection[]>(() => {
     const future = dayGroups.filter((g) => (g.date ?? "") >= anchorDay);
+    if (filtering) {
+      // Un giorno rimasto senza turni scoperti non è un giorno vuoto da
+      // mostrare: è un giorno a posto, e sparisce insieme ai suoi turni.
+      return future
+        .map((g) => ({ ...g, data: g.data.filter(isShort) }))
+        .filter((g) => g.data.length > 0);
+    }
     // Lo storico chiude l'agenda come sezione unica: così resta virtualizzato e
     // `onEndReached` continua a paginarlo. `date: null` lo tiene fuori dalla
-    // sincronia col calendario — non è un giorno, è una coda.
+    // sincronia col calendario — non è un giorno, è una coda. Sotto filtro non
+    // c'è: un turno passato non lo copre più nessuno.
     if (pastShifts.length === 0) return future;
     return [...future, { date: null, title: "Storico", data: pastShifts }];
-  }, [dayGroups, anchorDay, pastShifts]);
+  }, [dayGroups, anchorDay, pastShifts, filtering]);
 
   // Il quadro della settimana di cui si sta guardando un giorno.
   const week = useMemo(() => {
@@ -274,19 +298,45 @@ export default function ManagerShiftsScreen() {
           onViewableItemsChanged={onViewableItemsChanged}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
+            // Sotto filtro lo storico non è in lista: non c'è nulla da paginare.
+            if (filtering) return;
             if (pastQuery.hasNextPage && !pastQuery.isFetchingNextPage) {
               pastQuery.fetchNextPage();
             }
           }}
           ListHeaderComponent={
-            <NavRow
-              className="mb-4"
-              icon="users"
-              title="Copertura turni"
-              subtitle="Fabbisogno per ruolo e turni scoperti"
-              onPress={gate(() => router.push("/(manager)/copertura"))}
-              right={isPro ? undefined : <ProBadge />}
-            />
+            // Compare solo quando c'è davvero qualcosa da coprire: su un'agenda
+            // in ordine sarebbe un comando che non filtra niente.
+            shortCount > 0 ? (
+              <Pressable
+                onPress={() => setOnlyShort((v) => !v)}
+                // Sfondo inline come nelle `Pill`: `bg-warning/15` passerebbe da
+                // `color-mix`, che react-native-css non regge.
+                style={
+                  filtering
+                    ? { backgroundColor: "rgba(226,146,47,0.15)" }
+                    : undefined
+                }
+                className={cn(
+                  "mb-4 flex-row items-center gap-2 self-start rounded-full border px-3.5 py-2",
+                  filtering ? "border-warning" : "border-border-2 bg-bg-2"
+                )}
+                accessibilityRole="button"
+                accessibilityState={{ selected: filtering }}
+                accessibilityLabel={
+                  filtering
+                    ? "Mostra tutti i turni"
+                    : `Mostra solo i turni scoperti, ${shortCount}`
+                }
+              >
+                <Icon name="alert" size={13} color="#E2922F" strokeWidth={2.4} />
+                <Text className="text-[13px] font-sans-semibold text-warning">
+                  {filtering
+                    ? "Mostra tutti i turni"
+                    : `Solo i turni scoperti (${shortCount})`}
+                </Text>
+              </Pressable>
+            ) : null
           }
           renderSectionHeader={({ section }) => (
             <View className="bg-bg-0 pb-2 pt-3">
@@ -303,18 +353,29 @@ export default function ManagerShiftsScreen() {
           )}
           ListEmptyComponent={
             <View className="flex-1 justify-center">
-              <EmptyState
-                title={
-                  away
-                    ? "Nessun turno da qui in poi"
-                    : "Nessun turno in programma"
-                }
-                subtitle={
-                  away
-                    ? "Tocca «Oggi» per tornare ai prossimi, oppure «+» per crearne uno in questo giorno."
-                    : "Tocca «+» per crearne uno."
-                }
-              />
+              {filtering ? (
+                <EmptyState
+                  title="Nessun turno scoperto da qui in poi"
+                  subtitle={
+                    away
+                      ? "I turni da coprire sono prima di questo giorno: tocca «Oggi» per vederli."
+                      : "Tocca «Mostra tutti i turni» per tornare all'agenda completa."
+                  }
+                />
+              ) : (
+                <EmptyState
+                  title={
+                    away
+                      ? "Nessun turno da qui in poi"
+                      : "Nessun turno in programma"
+                  }
+                  subtitle={
+                    away
+                      ? "Tocca «Oggi» per tornare ai prossimi, oppure «+» per crearne uno in questo giorno."
+                      : "Tocca «+» per crearne uno."
+                  }
+                />
+              )}
             </View>
           }
           ListFooterComponent={

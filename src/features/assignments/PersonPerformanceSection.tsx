@@ -6,18 +6,28 @@ import { RatingBadge } from "@/components/ui/RatingBadge";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatHours } from "@/lib/format";
-import { useStaffPerformance } from "@/features/assignments/hooks";
+import { usePersonPerformance } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 
-/** Performance di un membro: turni svolti, ore totali, affidabilità, rating clienti. */
-export function StaffPerformanceSection({
-  staffMemberId,
+/**
+ * Performance di una persona: turni svolti, ore totali, affidabilità, rating.
+ *
+ * Su **tutte** le sedi del titolare. Prima l'aggregazione era per appartenenza, e
+ * un'assenza fatta a Milano non scalfiva il 100% di affidabilità di Roma: due
+ * mezze verità al posto di un numero (20260913110100).
+ *
+ * L'affidabilità resta derivata qui e non in SQL: è il rapporto di due numeri che
+ * la RPC già restituisce, e portarla nel database aggiungerebbe una colonna, una
+ * decisione sull'arrotondamento e un secondo posto dove gestire `past_total = 0`.
+ */
+export function PersonPerformanceSection({
+  personId,
   waiterId,
 }: {
-  staffMemberId: string;
+  personId: string;
   waiterId: string | null;
 }) {
-  const query = useStaffPerformance(staffMemberId);
+  const query = usePersonPerformance(personId);
   const perf = query.data ?? null;
   const card = useWaiterPublicCard(waiterId ?? undefined).data ?? null;
 

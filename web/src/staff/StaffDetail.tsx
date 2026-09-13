@@ -5,12 +5,13 @@ import { useAuth } from "@/lib/auth";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
   useRemoveStaffMember,
+  useStaffPerson,
   useUpdateStaffMember,
   useUpdateStaffPerson,
 } from "@/features/staff/hooks";
 import {
-  useStaffPerformance,
-  useStaffWorkedShifts,
+  usePersonPerformance,
+  usePersonWorkedShifts,
 } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
@@ -18,7 +19,10 @@ import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import { DocumentsPanel } from "./DocumentsPanel";
 import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
-import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import type {
+  PersonMembership,
+  StaffPersonDetail,
+} from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
 import {
@@ -27,6 +31,8 @@ import {
   Field,
   Input,
   Pill,
+  Placeholder,
+  QueryError,
   Select,
   Spinner,
   Textarea,
@@ -34,17 +40,56 @@ import {
 import { useToast } from "../ui/Toast";
 
 /**
- * Scheda di un membro dell'organico: anagrafica modificabile, ore e performance.
- * Le metriche sono calcolate con le stesse funzioni pure dell'app
- * (`isWorked`/`assignmentHours`), così i numeri coincidono sui due schermi.
+ * La scheda di un dipendente: **una per persona**, non una per sede.
+ *
+ * Anagrafica (vale in tutte le sedi), ore e performance dell'azienda, documenti, e
+ * una card per ogni sede in cui lavora con i ruoli e il tipo di impiego di *quella*
+ * sede. Prima Marco ne aveva due, e ognuna mostrava le ore di una sola sede.
  */
 export function StaffDetail({
-  member,
+  personId,
   onClose,
 }: {
-  member: StaffMemberWithWaiter;
+  personId: string;
   onClose: () => void;
 }) {
+  const { data, isPending, isError, error } = useStaffPerson(personId);
+
+  if (isPending || isError || !data) {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end">
+        <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
+        <div className="relative flex h-full w-full max-w-lg flex-col gap-6 overflow-y-auto border-l border-border-2 bg-bg-0 p-6">
+          <div className="flex justify-end">
+            <Button onClick={onClose}>Chiudi</Button>
+          </div>
+          {isError ? (
+            <QueryError error={error} />
+          ) : isPending ? (
+            <Spinner />
+          ) : (
+            <Placeholder
+              title="Scheda non trovata"
+              detail="Questa persona non fa più parte del tuo organico."
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return <PersonPanel person={data} onClose={onClose} />;
+}
+
+function PersonPanel({
+  person,
+  onClose,
+}: {
+  person: StaffPersonDetail;
+  onClose: () => void;
+}) {
+  const memberships = person.memberships;
+  const multiVenue = memberships.length > 1;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div
@@ -56,38 +101,40 @@ export function StaffDetail({
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 className="truncate font-serif text-xl text-t1">
-              {member.display_name}
+              {person.full_name}
             </h2>
             <div className="mt-2 flex flex-wrap gap-2">
-              {member.link_status === "pending" ? (
-                <Pill tone="warning">Invito in attesa</Pill>
-              ) : member.waiter ? (
+              {person.waiter ? (
                 <Pill tone="success">Account collegato</Pill>
               ) : (
                 <Pill tone="neutral">Scheda senza account</Pill>
               )}
-              <Pill tone="neutral">
-                {member.employment_type === "fisso" ? "Fisso" : "A chiamata"}
-              </Pill>
+              {memberships.map((m) => (
+                <Pill key={m.id} tone="neutral">
+                  {m.venue?.name ?? "Locale"}
+                </Pill>
+              ))}
             </div>
           </div>
           <div className="flex shrink-0 gap-2">
             {/* Scrivere a chi hai davanti è il gesto più frequente su questa
                 scheda: sta in testa, non in fondo alle performance. */}
-            {member.waiter_id ? (
-              <MessageButton waiterId={member.waiter_id} />
+            {person.waiter_id ? (
+              <MessageButton waiterId={person.waiter_id} />
             ) : null}
             <Button onClick={onClose}>Chiudi</Button>
           </div>
         </header>
 
-        <Anagrafica member={member} />
-        <DocumentsPanel personId={member.person_id} />
+        <Anagrafica person={person} />
+        <DocumentsPanel personId={person.id} />
         <Performance
-          staffMemberId={member.id}
-          waiterId={member.waiter_id ?? null}
+          personId={person.id}
+          waiterId={person.waiter_id ?? null}
+          showVenue={multiVenue}
         />
-        <RemoveSection memberId={member.id} onRemoved={onClose} />
+        <Workplaces person={person} multiVenue={multiVenue} />
+        <RemoveSection person={person} onRemoved={onClose} />
       </div>
     </div>
   );
@@ -123,54 +170,30 @@ function MessageButton({ waiterId }: { waiterId: string }) {
   );
 }
 
-function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
-  const updatePerson = useUpdateStaffPerson();
-  const update = useUpdateStaffMember();
-  const setRoles = useSetStaffMemberRoles();
+/**
+ * L'anagrafica della persona: vale in **tutte** le sedi, quindi una sola
+ * scrittura e un solo Salva. Prima questo form ne faceva tre su tre livelli
+ * diversi; con N sedi diventerebbero 1+2N sotto un bottone solo, e «quale pezzo è
+ * rimasto indietro» una lotteria. Ruoli e impiego stanno in "Dove lavora".
+ */
+function Anagrafica({ person }: { person: StaffPersonDetail }) {
+  const update = useUpdateStaffPerson();
   const toast = useToast();
-  const [name, setName] = useState(member.display_name);
-  // La scheda arriva già con i suoi ruoli embeddati dall'organico: nessuna
-  // query in più, e nessuno stato da risincronizzare dopo il primo render.
-  const [roleIds, setRoleIds] = useState<string[]>(
-    member.staff_member_roles
-      .map((r) => r.role?.id)
-      .filter((id): id is string => !!id)
-  );
-  const [empType, setEmpType] = useState<Enums<"employment_type">>(
-    member.employment_type
-  );
-  const [phone, setPhone] = useState(member.phone ?? "");
-  const [notes, setNotes] = useState(member.note ?? "");
-  const busy =
-    updatePerson.isPending || update.isPending || setRoles.isPending;
+  const [name, setName] = useState(person.full_name);
+  const [phone, setPhone] = useState(person.phone ?? "");
+  const [notes, setNotes] = useState(person.note ?? "");
 
-  /**
-   * Un gesto, tre scritture, tre livelli diversi:
-   *
-   *   · nome/telefono/note → la **persona** (`staff_people`), quindi valgono in
-   *     tutte le sedi del titolare in cui lavora;
-   *   · tipo di impiego    → questa **sede** (`staff_members`);
-   *   · ruoli              → questa sede, tabella a parte.
-   *
-   * In quest'ordine di proposito: se una cade, quelle già passate sono salvate e
-   * il messaggio dice quale pezzo è rimasto indietro.
-   */
   async function onSave() {
     try {
-      await updatePerson.mutateAsync({
-        id: member.person_id,
+      await update.mutateAsync({
+        id: person.id,
         fields: {
           full_name: name.trim(),
           phone: phone.trim() || null,
           note: notes.trim() || null,
         },
       });
-      await update.mutateAsync({
-        id: member.id,
-        fields: { employment_type: empType },
-      });
-      await setRoles.mutateAsync({ staffMemberId: member.id, roleIds });
-      toast.show("Scheda aggiornata");
+      toast.show("Anagrafica aggiornata");
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
     }
@@ -179,7 +202,7 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
   return (
     <section className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Scheda
+        Anagrafica
       </span>
 
       <div className="grid grid-cols-2 gap-3">
@@ -189,26 +212,7 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
         <Field label="Telefono">
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
         </Field>
-        <Field label="Impiego">
-          <Select
-            value={empType}
-            onChange={(e) =>
-              setEmpType(e.target.value as Enums<"employment_type">)
-            }
-          >
-            <option value="fisso">Fisso</option>
-            <option value="a_chiamata">A chiamata</option>
-          </Select>
-        </Field>
       </div>
-
-      <Field label="Ruoli">
-        <RoleCheckboxes
-          venueId={member.venue_id}
-          value={roleIds}
-          onChange={setRoleIds}
-        />
-      </Field>
 
       <Field label="Note" hint="Private, visibili solo a te.">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -217,26 +221,180 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
       <div>
         <Button
           variant="gold"
-          disabled={busy || !name.trim()}
+          disabled={update.isPending || !name.trim()}
           onClick={() => void onSave()}
         >
-          {busy ? "Salvataggio…" : "Salva"}
+          {update.isPending ? "Salvataggio…" : "Salva anagrafica"}
         </Button>
       </div>
     </section>
   );
 }
 
-function Performance({
-  staffMemberId,
-  waiterId,
+/** Le sedi in cui la persona lavora: una card per sede, con il suo Salva. */
+function Workplaces({
+  person,
+  multiVenue,
 }: {
-  staffMemberId: string;
+  person: StaffPersonDetail;
+  multiVenue: boolean;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+        {multiVenue
+          ? `Dove lavora · ${person.memberships.length}`
+          : "Dove lavora"}
+      </span>
+      {person.memberships.map((m) => (
+        <WorkplaceCard
+          key={m.id}
+          person={person}
+          membership={m}
+          isOnly={!multiVenue}
+        />
+      ))}
+    </section>
+  );
+}
+
+function WorkplaceCard({
+  person,
+  membership,
+  /** Unica sede: la rimozione sta nel bottone globale in fondo al pannello. */
+  isOnly,
+}: {
+  person: StaffPersonDetail;
+  membership: PersonMembership;
+  isOnly: boolean;
+}) {
+  const update = useUpdateStaffMember();
+  const setRoles = useSetStaffMemberRoles();
+  const remove = useRemoveStaffMember();
+  const toast = useToast();
+  const [roleIds, setRoleIds] = useState<string[]>(
+    membership.staff_member_roles
+      .map((r) => r.role?.id)
+      .filter((id): id is string => !!id)
+  );
+  const [empType, setEmpType] = useState<Enums<"employment_type">>(
+    membership.employment_type
+  );
+  const [confirming, setConfirming] = useState(false);
+
+  const venueName = membership.venue?.name ?? "Locale";
+  const busy = update.isPending || setRoles.isPending || remove.isPending;
+
+  async function onSave() {
+    try {
+      await update.mutateAsync({
+        id: membership.id,
+        fields: { employment_type: empType },
+      });
+      await setRoles.mutateAsync({ staffMemberId: membership.id, roleIds });
+      toast.show(`${venueName} aggiornato`);
+    } catch (e) {
+      toast.show(userErrorMessage(e), "error");
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-t1">
+          {venueName}
+        </span>
+        {membership.link_status === "pending" ? (
+          <Pill tone="warning">Invito in attesa</Pill>
+        ) : null}
+        {membership.venue?.closed_at ? (
+          <Pill tone="neutral">Sede chiusa</Pill>
+        ) : null}
+      </div>
+
+      <Field label="Impiego in questa sede">
+        <Select
+          value={empType}
+          onChange={(e) =>
+            setEmpType(e.target.value as Enums<"employment_type">)
+          }
+          className="w-40"
+        >
+          <option value="fisso">Fisso</option>
+          <option value="a_chiamata">A chiamata</option>
+        </Select>
+      </Field>
+
+      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa i locali. */}
+      <Field label="Ruoli in questa sede">
+        <RoleCheckboxes
+          venueId={membership.venue_id}
+          value={roleIds}
+          onChange={setRoleIds}
+        />
+      </Field>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="gold" disabled={busy} onClick={() => void onSave()}>
+          {busy ? "Salvataggio…" : "Salva"}
+        </Button>
+        {!isOnly ? (
+          confirming ? (
+            <>
+              <Button
+                variant="danger"
+                disabled={busy}
+                onClick={() =>
+                  remove.mutate(membership.id, {
+                    onSuccess: () => toast.show(`Rimosso da ${venueName}`),
+                    onError: (e) => toast.show(userErrorMessage(e), "error"),
+                  })
+                }
+              >
+                {remove.isPending ? "Rimozione…" : "Conferma"}
+              </Button>
+              <Button onClick={() => setConfirming(false)}>Annulla</Button>
+            </>
+          ) : (
+            <Button onClick={() => setConfirming(true)}>
+              Rimuovi da {venueName}
+            </Button>
+          )
+        ) : null}
+      </div>
+
+      {confirming && !isOnly ? (
+        // ⚠️ La cascata è del database: cancellando l'appartenenza se ne vanno le
+        // sue `shift_assignments`, e con loro le ore di questa sede.
+        <p className="text-xs leading-5 text-warning">
+          {person.full_name} non sarà più in organico a {venueName}. Perderai le
+          ore e le presenze dei turni che ha fatto lì (anche nell&apos;export per
+          il commercialista). Resta nel tuo organico nelle altre sedi, con le sue
+          ore e i suoi documenti.
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
+/**
+ * Performance della **persona**, su tutte le sedi del titolare: sono i numeri
+ * della sua busta paga. Prima l'aggregazione era per appartenenza, e un'assenza
+ * fatta a Milano non scalfiva il 100% di affidabilità di Roma.
+ */
+function Performance({
+  personId,
+  waiterId,
+  showVenue,
+}: {
+  personId: string;
   waiterId: string | null;
+  /** Il locale su ogni turno recente: serve solo a chi ha più di una sede. */
+  showVenue: boolean;
 }) {
   // Totali dal database; la lista sono solo le ultime righe, già limitate.
-  const perfQuery = useStaffPerformance(staffMemberId);
-  const recentQuery = useStaffWorkedShifts(staffMemberId);
+  const perfQuery = usePersonPerformance(personId);
+  const recentQuery = usePersonWorkedShifts(personId);
   const card = useWaiterPublicCard(waiterId ?? undefined).data ?? null;
 
   if (perfQuery.isLoading || recentQuery.isLoading) return <Spinner />;
@@ -349,6 +507,13 @@ function Performance({
                   <span className="ml-2 font-mono text-xs text-t4">
                     {formatShiftRange(a.start_time, a.end_time)}
                   </span>
+                  {/* Senza la sede, due turni lo stesso giovedì alla stessa ora
+                      in due locali diversi sembrerebbero un doppione. */}
+                  {showVenue ? (
+                    <span className="ml-2 text-xs text-t4">
+                      · {a.venue_name}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="font-mono text-xs text-t1">
                   {formatHours(a.hours)}
@@ -362,35 +527,45 @@ function Performance({
   );
 }
 
+/**
+ * Rimozione totale: una scrittura per appartenenza. L'ultima fa scattare
+ * `staff_members_zz_orphan_person`, che cancella la persona e con lei i documenti.
+ */
 function RemoveSection({
-  memberId,
+  person,
   onRemoved,
 }: {
-  memberId: string;
+  person: StaffPersonDetail;
   onRemoved: () => void;
 }) {
   const remove = useRemoveStaffMember();
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
 
+  async function doRemoveAll() {
+    try {
+      for (const m of person.memberships) await remove.mutateAsync(m.id);
+      onRemoved();
+    } catch (e) {
+      toast.show(userErrorMessage(e), "error");
+    }
+  }
+
   return (
     <section className="mt-auto border-t border-border pt-4">
       {confirming ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs leading-5 text-warning">
-            Rimuovendo questa persona perdi anche lo storico delle sue ore, e le
-            sue assegnazioni future vengono cancellate.
+            {person.full_name} non lavorerà più in nessuna delle tue sedi.
+            Perderai lo storico di ore e presenze di tutti i suoi turni (incluso
+            l&apos;export per il commercialista) e i documenti caricati sulla sua
+            scheda.
           </p>
           <div className="flex gap-2">
             <Button
               variant="danger"
               disabled={remove.isPending}
-              onClick={() =>
-                remove.mutate(memberId, {
-                  onSuccess: onRemoved,
-                  onError: (e) => toast.show(userErrorMessage(e), "error"),
-                })
-              }
+              onClick={() => void doRemoveAll()}
             >
               {remove.isPending ? "Rimozione…" : "Conferma rimozione"}
             </Button>

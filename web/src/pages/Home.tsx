@@ -97,7 +97,7 @@ export function HomePage() {
           value={shortCount}
           label="turni scoperti"
           tone={shortCount > 0 ? "warning" : "normal"}
-          onClick={() => navigate("/copertura")}
+          onClick={() => navigate("/planning")}
         />
         <Stat value={pastCount} label="turni svolti" />
       </div>

@@ -76,7 +76,7 @@ export function ProUpsellCard() {
           <ProBadge />
         </View>
         <Text className="mt-0.5 text-xs text-t3">
-          Ore, copertura e performance del tuo staff.
+          Ore, presenze e performance del tuo staff.
         </Text>
       </View>
       <Icon name="chevR" size={18} color="#8c857a" />

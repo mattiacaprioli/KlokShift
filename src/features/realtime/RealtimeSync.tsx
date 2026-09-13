@@ -128,7 +128,6 @@ export function RealtimeSync({
           invalidate(qk.shifts.rangeAll(venueId));
           invalidate(qk.shifts.past(venueId));
           invalidate(qk.shifts.pastCount(venueId));
-          invalidate(qk.assignments.coverage(venueId));
         }
       )
       .on(
@@ -144,7 +143,7 @@ export function RealtimeSync({
             invalidate(qk.assignments.all);
           }
           invalidate(qk.assignments.today(venueId));
-          invalidate(qk.assignments.coverage(venueId));
+          // La copertura si legge dalle liste di turni: invalidare quelle basta.
           invalidate(qk.shifts.byVenue(venueId));
           invalidate(qk.shifts.rangeAll(venueId));
           // Ore lavorate e performance dell'organico.

@@ -16,14 +16,21 @@ import { ProBadge } from "@/features/plan/ProLock";
 import { useProGate } from "@/features/plan/hooks";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useActiveVenue } from "@/features/venues/ActiveVenue";
-import { useVenueStaff } from "@/features/staff/hooks";
-import { staffRoleNames, type StaffMemberWithWaiter } from "@/features/staff/api";
+import { useOwnerPeople, useVenueStaff } from "@/features/staff/hooks";
+import {
+  otherVenueNames,
+  staffRoleNames,
+  type StaffMemberWithWaiter,
+} from "@/features/staff/api";
 
 function StaffRow({
   member,
+  /** Le altre sedi del titolare in cui lavora: vuoto se solo questa. */
+  alsoAt,
   onPress,
 }: {
   member: StaffMemberWithWaiter;
+  alsoAt: string[];
   onPress: () => void;
 }) {
   const linked = !!member.waiter_id;
@@ -44,6 +51,13 @@ function StaffRow({
           <Text className="text-xs text-t3">
             {staffRoleNames(member) ?? "Ruoli non indicati"}
           </Text>
+          {/* Chi lavora anche altrove: senza, la stessa persona in tre liste
+              sembra tre persone diverse. */}
+          {alsoAt.length > 0 ? (
+            <Text className="mt-0.5 text-xs text-t4">
+              anche a {alsoAt.join(", ")}
+            </Text>
+          ) : null}
           {member.link_status === "pending" ? (
             <View className="mt-1 flex-row">
               <Pill label="Invito in attesa" variant="pending" />
@@ -70,6 +84,10 @@ export default function ManagerStaffScreen() {
   const venue = venueQuery.venue;
   const staffQuery = useVenueStaff(venue?.id);
   const staff = staffQuery.data ?? [];
+  // Già in cache quasi sempre (la usano l'aggiunta staff e il selettore chat):
+  // nella pratica è zero latenza, e porta gratis il conteggio dell'azienda.
+  const people = useOwnerPeople(venueQuery.ownerId).data ?? [];
+  const byPerson = new Map(people.map((p) => [p.id, p]));
   const pull = usePullToRefresh(staffQuery.refetch);
 
   return (
@@ -92,6 +110,13 @@ export default function ManagerStaffScreen() {
       <View>
         <Mono gold>Organico</Mono>
         <Display className="mt-1 text-4xl">Il mio staff</Display>
+        {/* Con una sede sola i due numeri coincidono e la riga non compare: chi
+            ha un locale solo non deve accorgersi del multi-sede. */}
+        {venue && people.length > staff.length ? (
+          <Text className="mt-1 text-sm text-t3">
+            {staff.length} in questa sede · {people.length} nell&apos;azienda
+          </Text>
+        ) : null}
       </View>
 
       {venueQuery.isLoading ? (
@@ -130,7 +155,9 @@ export default function ManagerStaffScreen() {
                   Ore del mese
                 </Text>
                 <Text className="text-xs text-t3">
-                  Riepilogo ore e export per il commercialista
+                  {venueQuery.venues.length > 1
+                    ? "Ore di tutte le tue sedi, per persona"
+                    : "Riepilogo ore e export per il commercialista"}
                 </Text>
               </View>
               {isPro ? (
@@ -181,7 +208,13 @@ export default function ManagerStaffScreen() {
                 <StaffRow
                   key={member.id}
                   member={member}
-                  onPress={() => router.push(`/(manager)/staff/${member.id}`)}
+                  alsoAt={otherVenueNames(
+                    byPerson.get(member.person_id),
+                    venue.id
+                  )}
+                  onPress={() =>
+                    router.push(`/(manager)/staff/${member.person_id}`)
+                  }
                 />
               ))}
             </View>

@@ -15,11 +15,6 @@ const FEATURES: { icon: IconName; title: string; sub: string }[] = [
     sub: "Riepilogo mensile delle ore e export pronto per il commercialista.",
   },
   {
-    icon: "users",
-    title: "Copertura turni",
-    sub: "Fabbisogno per ruolo e alert sui turni ancora scoperti.",
-  },
-  {
     icon: "shield",
     title: "Performance dello staff",
     sub: "Turni svolti, ore totali e affidabilità di ogni membro.",
@@ -50,9 +45,8 @@ export default function ManagerProScreen() {
             La gestione completa del tuo personale
           </Text>
           <Text className="max-w-[300px] text-center text-sm leading-5 text-t2">
-            Organizza i turni con il tuo staff, tieni sotto controllo ore e
-            copertura e valuta le performance. Le recensioni dei clienti restano
-            sempre gratuite.
+            Organizza i turni con il tuo staff, tieni sotto controllo le ore e
+            valuta le performance. La copertura dei turni resta sempre gratuita.
           </Text>
         </View>
 

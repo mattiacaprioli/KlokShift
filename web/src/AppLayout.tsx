@@ -13,7 +13,6 @@ type NavItem = { to: string; label: string; badge?: "chat" | "notifiche" };
 const NAV: NavItem[] = [
   { to: "/", label: "Home" },
   { to: "/planning", label: "Planning" },
-  { to: "/copertura", label: "Copertura" },
   { to: "/ore", label: "Ore" },
   { to: "/staff", label: "Staff" },
   { to: "/storico", label: "Storico" },

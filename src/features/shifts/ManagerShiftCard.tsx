@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
-import { shiftCounts } from "@/features/assignments/coverage";
+import { shiftCounts, shiftCoverage } from "@/features/assignments/coverage";
 import {
   formatDayLabel,
   formatHours,
@@ -36,6 +36,10 @@ function shiftLabel(shift: ShiftWithCount): string {
  * bene; il turno **scoperto** — l'unico su cui c'è qualcosa da fare — si
  * distingueva per una barra più corta alta un pixel. Ora è il contrario: chi è
  * a posto sta zitto, chi è scoperto porta barra arancio e «manca N».
+ *
+ * Il dettaglio per ruolo sta qui — e non in una seconda schermata, come fino al
+ * 13/09/2026 — ma solo quando «x/y» da solo non basta a sapere cosa fare: con
+ * due ruoli in ballo, o con uno scoperto, serve leggere *quale*.
  */
 export function ManagerShiftCard({
   shift,
@@ -54,6 +58,14 @@ export function ManagerShiftCard({
   const alert = short && !cancelled;
   const label = shiftLabel(shift);
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
+
+  // Le relazioni della copertura viaggiano già con il turno: nessuna query in
+  // più per sapere che il buco è sul barista e non sul cameriere.
+  const coverage = shiftCoverage(shift);
+  const showRoles =
+    !cancelled &&
+    coverage.rows.length > 0 &&
+    (coverage.rows.length > 1 || coverage.missing > 0);
 
   const bar = cancelled || closed ? "bg-t4" : alert ? "bg-warning" : "bg-gold";
 
@@ -153,12 +165,27 @@ export function ManagerShiftCard({
               <Pill label="Chiuso" variant="closed" />
             ) : null}
           </View>
-          {/* Il rapporto resta neutro anche quando manca qualcuno: l'allarme
-              lo danno già la barra e la pill, e ripeterlo in arancio faceva
-              gridare due volte la stessa cosa. */}
-          <Text className="mt-1.5 text-[13px] text-t2">
-            {total > 0 ? `${filled}/${total} coperti` : "Nessun fabbisogno"}
-          </Text>
+          {showRoles ? (
+            // I ruoli **al posto** del rapporto, non sotto: «2/3 coperti» e
+            // «Cameriere 2/2 · Barista 0/1» sono la stessa frase detta due
+            // volte. Verde su nessuno — solo chi manca si fa notare.
+            <View className="mt-2 flex-row flex-wrap gap-1.5">
+              {coverage.rows.map((r) => (
+                <Pill
+                  key={r.role}
+                  label={`${r.role} ${r.covered}/${r.required}`}
+                  variant={r.covered >= r.required ? "neutral" : "pending"}
+                />
+              ))}
+            </View>
+          ) : (
+            /* Il rapporto resta neutro anche quando manca qualcuno: l'allarme
+               lo danno già la barra e la pill, e ripeterlo in arancio faceva
+               gridare due volte la stessa cosa. */
+            <Text className="mt-1.5 text-[13px] text-t2">
+              {total > 0 ? `${filled}/${total} coperti` : "Nessun fabbisogno"}
+            </Text>
+          )}
         </View>
       </View>
     </Card>

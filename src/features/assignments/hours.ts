@@ -12,6 +12,13 @@ export function isWorked(status: Enums<"assignment_status">): boolean {
  * Ore effettive di un assegnato:
  * 0 se rifiutato/assente, altrimenti `worked_hours` (variazione manuale) oppure
  * la durata pianificata del turno. Nessun dato economico: solo ore.
+ *
+ * ⚠️ È il gemello client della formula che sta in SQL — la stessa
+ * `coalesce(worked_hours, shift_duration_hours(...))` usata ora da **tre** RPC
+ * (`get_owner_hours_summary`, `get_person_performance`,
+ * `get_person_worked_shifts`). Se cambia la definizione di "ora lavorata", vanno
+ * cambiate insieme, o il dettaglio di un turno e il riepilogo del mese diranno
+ * due numeri diversi sullo stesso lavoro.
  */
 export function assignmentHours(
   status: Enums<"assignment_status">,
