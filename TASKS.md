@@ -324,6 +324,21 @@ Il titolare che ha qualcuno in organico da un anno non sa quando fargli gli augu
 
 ---
 
+### Sessione 2026-09-14 (3) — Sito vetrina ✅
+
+Il prodotto non aveva una porta d'ingresso: chi ne sentiva parlare non aveva un posto dove capire cos'è né dove registrarsi. Ora `web-site/` è una landing lunga a sezioni (stile `uidu.org` / `info.wideread.it`) che prende la **radice** di Pages.
+
+- **`web-site/`** — Vite + React + Tailwind v4, gemello di `web/` ma **senza Supabase, senza `src/features`, senza router**: è una pagina statica. Nessun `package.json` locale (stessa ragione di `web/`). Script `site:dev|site:build|site:preview|site:typecheck`; `lint` e CI ora nominano anche `web-site/src`.
+- **La radice passa alla vetrina.** `web-review/` scende sotto `/recensioni/` e `index.html` porta uno shim: un ingresso con `?w=<id>` (i QR già stampati) viene rimandato lì. Quando le recensioni verranno rimosse si cancellano insieme cartella, riga di `cp` e shim. Workflow rinominato in `deploy-web.yml` (`/` vetrina, `/app/` dashboard, `/recensioni/` recensioni).
+- **Pagine legali spostate** in `web-site/public/` con **gli stessi nomi di file**: sono negli store e in `LEGAL_URLS`. `src/features/account/legal.ts` non dipende più da `reviews/config` — usa `EXPO_PUBLIC_SITE_URL` con fallback su `EXPO_PUBLIC_REVIEW_SITE_URL` (stesso host), così nulla si rompe prima che la variabile sia impostata ovunque.
+- **Tutto il copy in `web-site/src/content/it.ts`**, tipizzato: nessuna stringa nei componenti. È la condizione perché inglese e spagnolo siano un secondo file + una build per lingua (`/en/`, `/es/`), non una riscrittura.
+- **Cosa il sito non dice**, verificato sul codice e ricontrollato a pagina renderizzata: recensioni/reputazione/QR (sospesi), candidature/annunci (rimossi), paghe e compensi (fuori scope), prezzi (modello non definito → la sezione "Piani" dice cosa resta gratis e cosa andrà nel Pro, senza cifre).
+- **Mockup, non screenshot**: nella repo non ce ne sono. `src/mock/` ricostruisce agenda, planning, ore e conferma turno con i token e le etichette vere (`3/3 coperti`, `manca 1`, `Da confermare`). `Shot` accetta già `src`: quando arriva uno screenshot vero si passa il file e si cancella il mock.
+- **Mobile-first**: nav a pannello sotto `md`, barra CTA fissa in basso che compare dopo l'hero e sparisce sulla CTA finale, planning che scorre **dentro** il proprio contenitore. Verificato via Chrome headless a 320/390/768/1024/1440: `scrollWidth === clientWidth` ovunque.
+- ⚠️ **DA FARE**: riempire `[P.IVA]` e `[EMAIL DI CONTATTO]` nelle legali (e decidere l'indirizzo, che oggi nel footer è `info@topwaitr.com`); il testo delle legali parla ancora di candidature e recensioni. Impostare `EXPO_PUBLIC_SITE_URL` in `.env`, su EAS e nelle `vars` di GitHub.
+
+---
+
 ## 🔜 In sospeso — prossimi passi immediati
 
 - [ ] ⚠️ **Rimuovere un'appartenenza cancella le ore di quella sede** (cascata di `shift_assignments` su `staff_members` + trigger degli orfani). Con le ore come input della busta paga è un rischio: rimuovere Marco da Milano a fine ottobre cancella le sue 25 ore di ottobre. Il copy di conferma ora lo dice esplicitamente, ma il rimedio vero è `staff_members.removed_at` con l'appartenenza **archiviata** e le RPC che filtrano l'operatività (organico, planning, assegnazioni) ma **non** il rendiconto. Non urgente: nulla è in produzione.

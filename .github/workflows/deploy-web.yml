@@ -1,23 +1,27 @@
 name: Deploy sito + dashboard to Pages
 
-# Pubblica su GitHub Pages i due pezzi web del progetto, in un solo artifact
+# Pubblica su GitHub Pages i pezzi web del progetto, in un solo artifact
 # (Pages consente un solo sito per repo):
-#   /            → web-review/ : recensioni dei clienti + pagine legali.
-#                  HTML/CSS/JS puri, nessuno step di build. L'URL NON deve
-#                  cambiare: è quello nei QR e in EXPO_PUBLIC_REVIEW_SITE_URL.
-#   /app/        → web/dist    : dashboard dei locali (Vite, build richiesta).
+#   /              → web-site/dist : sito vetrina + pagine legali (privacy,
+#                    elimina-account). Gli URL delle legali sono dentro le
+#                    schede degli store: i nomi dei file NON devono cambiare.
+#   /app/          → web/dist      : dashboard dei locali (Vite, build richiesta).
+#   /recensioni/   → web-review/   : recensioni dei clienti, HTML/CSS/JS puri.
+#                    Sospese (REVIEWS_ENABLED=false) e destinate a sparire: la
+#                    vetrina rimanda qui i vecchi QR (`/?w=<id>`) finché ci sono.
 
 on:
   push:
     branches: [main]
     paths:
+      - "web-site/**"
       - "web-review/**"
       - "web/**"
       # La dashboard importa il data layer dell'app: una modifica lì cambia
       # il bundle pubblicato.
       - "src/**"
       - "package.json"
-      - ".github/workflows/deploy-web-review.yml"
+      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 permissions:
@@ -52,15 +56,19 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build sito vetrina
+        run: npx vite build web-site
+
       - name: Build dashboard
         run: npx vite build web
 
       - name: Assemble Pages artifact
         run: |
           rm -rf _site
-          cp -r web-review _site
-          mkdir -p _site/app
+          cp -r web-site/dist _site
+          mkdir -p _site/app _site/recensioni
           cp -r web/dist/. _site/app/
+          cp -r web-review/. _site/recensioni/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

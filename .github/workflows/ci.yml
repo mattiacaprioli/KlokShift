@@ -27,9 +27,14 @@ jobs:
       - name: Typecheck dashboard web
         run: npx tsc -p web --noEmit
 
+      # Stessa storia per il sito vetrina: tsconfig proprio, escluso dalla root.
+      - name: Typecheck sito vetrina
+        run: npx tsc -p web-site --noEmit
+
       # Blocking: ESLint is configured (eslint.config.js + eslint-config-expo).
       # Fails on errors; advisory warnings (e.g. RHF watch) don't block.
-      # `expo lint` senza argomenti guarda solo src/app/components: la dashboard
-      # web va nominata, altrimenti questo job dà falsa sicurezza su web/src.
+      # `expo lint` senza argomenti guarda solo src/app/components: dashboard e
+      # vetrina vanno nominate, altrimenti questo job dà falsa sicurezza su
+      # web/src e web-site/src.
       - name: Lint
-        run: npx expo lint src web/src
+        run: npx expo lint src web/src web-site/src

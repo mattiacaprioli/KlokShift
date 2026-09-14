@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0907" />
+
+    <title>topWaitr · I turni del tuo locale, in un posto solo</title>
+    <meta
+      name="description"
+      content="topWaitr organizza i turni del tuo locale con il tuo organico: agenda, copertura per ruolo, ore lavorate ed export per il commercialista. Per ristoranti, hotel, catering, discoteche, pub e agenzie di eventi."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://mattiacaprioli.github.io/topWaitr/" />
+    <link rel="icon" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./favicon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="topWaitr" />
+    <meta property="og:locale" content="it_IT" />
+    <meta property="og:title" content="topWaitr · I turni del tuo locale, in un posto solo" />
+    <meta
+      property="og:description"
+      content="Organico, turni, ore e chat in un'unica app. Per ristoranti, hotel, catering, discoteche, pub e agenzie di eventi."
+    />
+    <meta property="og:url" content="https://mattiacaprioli.github.io/topWaitr/" />
+    <meta property="og:image" content="https://mattiacaprioli.github.io/topWaitr/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="topWaitr · I turni del tuo locale, in un posto solo" />
+    <meta
+      name="twitter:description"
+      content="Organico, turni, ore e chat in un'unica app. Per ristoranti, hotel, catering, discoteche, pub e agenzie di eventi."
+    />
+    <meta name="twitter:image" content="https://mattiacaprioli.github.io/topWaitr/og.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "topWaitr",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "iOS, Android, Web",
+        "inLanguage": "it",
+        "url": "https://mattiacaprioli.github.io/topWaitr/",
+        "description": "Gestione dei turni per il settore dell'ospitalità: il locale organizza i turni con il proprio organico, il professionista conferma i turni e tiene il conto delle ore."
+      }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Compatibilità con i QR di recensione già stampati: il loro URL è la
+      // radice con `?w=<id>`, che ora è la vetrina. Finché `web-review/` resta
+      // pubblicato sotto /recensioni/, si rimanda lì prima di caricare il
+      // bundle. Quando le recensioni verranno rimosse, sparisce anche questo.
+      (function () {
+        var q = window.location.search;
+        if (q.length > 1 && /(^|[?&])w=/.test(q)) {
+          window.location.replace("recensioni/" + q);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

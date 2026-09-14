@@ -30,8 +30,9 @@ yarn start                # Expo dev server
 yarn ios                  # iOS simulator
 yarn android              # Android emulator
 yarn web                  # web
-yarn lint                 # expo lint src web/src (eslint) — bloccante in CI
-                          #   i path vanno nominati: senza, expo lint salta web/
+yarn lint                 # expo lint src web/src web-site/src (eslint) — bloccante in CI
+                          #   i path vanno nominati: senza, expo lint salta web/ e web-site/
+yarn site:dev             # sito vetrina (web-site/) — vedi web-site/README.md
 yarn add <pkg>            # dipendenze (oppure `npx expo install <pkg>`)
 npx tsc --noEmit          # type-check
 npx expo export --platform ios   # verifica bundle
@@ -54,7 +55,14 @@ src/
 ├── types/database.ts     # tipi DB generati
 ├── constants/theme.ts    # colori, spacing, font (palette AURA)
 └── global.css            # import Tailwind v4 + @theme token
+
+web/        # dashboard desktop dei locali (Vite+React, /app/ su Pages)
+web-site/   # sito vetrina pubblico + pagine legali (radice su Pages)
+web-review/ # recensioni cliente (sospese, sotto /recensioni/)
 ```
+
+⚠️ Il copy del sito vetrina sta tutto in `web-site/src/content/it.ts` e non può
+nominare recensioni, candidature, paghe o prezzi: vedi `web-site/README.md`.
 
 ## Path alias
 `@/` → `src/`. Es. `import { cn } from "@/lib/cn"`, `import { View, Text } from "@/tw"`.

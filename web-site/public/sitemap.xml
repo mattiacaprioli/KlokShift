@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tre URL: la vetrina e le due pagine legali (che sono anche i link nella
+  scheda dello store). Quando arriveranno /en/ e /es/ vanno aggiunte qui con
+  i rispettivi `xhtml:link rel="alternate" hreflang`.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://mattiacaprioli.github.io/topWaitr/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://mattiacaprioli.github.io/topWaitr/privacy.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mattiacaprioli.github.io/topWaitr/elimina-account.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

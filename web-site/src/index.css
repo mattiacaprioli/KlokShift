@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+/*
+ * Token AURA — stessi valori di `web/src/index.css` e `src/global.css`: la
+ * vetrina e il prodotto devono sembrare lo stesso oggetto, non due progetti.
+ * Qui i font sono famiglie web reali con i pesi numerici (in React Native il
+ * peso fa parte del nome della famiglia).
+ */
+@theme {
+  --color-gold: #eab54c;
+  --color-gold-light: #f5c765;
+  --color-gold-dark: #c68a34;
+  --color-gold-ink: #1a1206;
+
+  --color-bg-0: #0c0907;
+  --color-bg-1: #1f1a13;
+  --color-bg-2: #2a241b;
+  --color-bg-3: #362e24;
+  --color-bg-card: #17120b;
+
+  --color-t1: #f8f4ed;
+  --color-t2: #c2bbb0;
+  --color-t3: #8c857a;
+  --color-t4: #6a6358;
+
+  --color-success: #4fc97d;
+  --color-warning: #e2922f;
+  --color-error: #e55b45;
+  --color-info: #208aef;
+
+  --color-border: rgba(255, 240, 220, 0.07);
+  --color-border-2: rgba(255, 240, 220, 0.12);
+  --color-border-gold: rgba(234, 181, 76, 0.4);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /*
+   * Scala tipografica fluida: è l'unica differenza sostanziale rispetto alla
+   * dashboard. Un `clamp()` per taglia evita tre override di classe per ogni
+   * titolo e tiene il telefono come punto di partenza vero, non come ripiego.
+   */
+  --text-fluid-hero: clamp(2.25rem, 1.3rem + 4.6vw, 4rem);
+  --text-fluid-h2: clamp(1.75rem, 1.25rem + 2.2vw, 2.75rem);
+  --text-fluid-h3: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
+  --text-fluid-lead: clamp(1.0625rem, 1rem + 0.5vw, 1.25rem);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    /* La nav è fissa: le ancore non devono finire sotto di lei. */
+    scroll-padding-top: 5rem;
+  }
+  body {
+    background: var(--color-bg-0);
+    color: var(--color-t1);
+    font-family: var(--font-sans);
+    /* Il corpo non scende sotto i 16px: sotto, iOS zooma da solo. */
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    /* Nessuna sezione può far scorrere la pagina in orizzontale. */
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-gold-ink);
+  }
+  /* Il pannello della nav su mobile blocca lo scroll sotto di sé. */
+  body[data-menu-open="true"] {
+    overflow: hidden;
+  }
+  :where(h1, h2, h3) {
+    font-family: var(--font-serif);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  :where(p) {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /* Gemello di `.focus-gold` della dashboard: stesso anello, stessa promessa. */
+  .focus-gold {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-0;
+  }
+
+  /*
+   * MENU MOBILE — il cerchio che diventa lo sfondo.
+   *
+   * Lo stato sta su `body[data-menu-open]` (lo scrive `Nav.tsx`): così una sola
+   * riga governa scroll bloccato, cerchio e pannello, invece di tre classi
+   * condizionali sparse nel markup.
+   *
+   * `scale(180)` su un cerchio di 1rem = 2880px: copre qualunque telefono
+   * partendo dall'angolo del bottone.
+   *
+   * La curva è simmetrica, non un ease-out: lo schermo è già coperto al ~64%
+   * della scala (il raggio supera la diagonale molto prima della fine), quindi
+   * con una curva sbilanciata in avanti il cerchio sparirebbe in 70ms e non si
+   * vedrebbe crescere niente. Resta senza rimbalzo, come la molla sovrasmorzata
+   * dell'originale in framer-motion.
+   */
+  [data-menu-circle] {
+    transform: scale(0);
+    transition: transform 0.55s cubic-bezier(0.83, 0, 0.17, 1);
+  }
+  body[data-menu-open="true"] [data-menu-circle] {
+    transform: scale(180);
+  }
+
+  /*
+   * Il pannello entra da destra e sfuma. In apertura con un ritardo: il colore
+   * deve arrivare prima del testo, altrimenti le voci si vedono galleggiare sul
+   * fondo scuro mentre il cerchio è ancora a metà strada.
+   */
+  [data-menu-panel] {
+    transition:
+      right 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.25s ease-out;
+  }
+  body[data-menu-open="true"] [data-menu-panel] {
+    transition-delay: 0.2s;
+  }
+
+  /*
+   * Ingresso delle sezioni. `IntersectionObserver` mette `data-in="true"`;
+   * senza JS (o con JS lento) il contenuto è comunque visibile, perché lo stato
+   * di partenza è opaco al 100% finché `data-reveal` non viene armato.
+   */
+  [data-reveal="armed"] {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  [data-reveal="armed"][data-in="true"] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.6s ease-out,
+      transform 0.6s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [data-reveal="armed"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  /* Il menu resta funzionante: appare e sparisce, senza corsa del cerchio. */
+  [data-menu-circle],
+  [data-menu-panel] {
+    transition: none;
+  }
+}

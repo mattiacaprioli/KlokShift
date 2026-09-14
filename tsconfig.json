@@ -22,6 +22,7 @@
   ],
   "exclude": [
     "supabase/functions",
-    "web"
+    "web",
+    "web-site"
   ]
 }

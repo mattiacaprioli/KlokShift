@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# La dashboard dei locali non è contenuto pubblico: è dietro login e ha già
+# `noindex` nel suo HTML. Qui si evita anche la scansione.
+Disallow: /app/
+
+Sitemap: https://mattiacaprioli.github.io/topWaitr/sitemap.xml
