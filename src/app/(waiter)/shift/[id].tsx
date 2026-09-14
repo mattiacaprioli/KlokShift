@@ -25,6 +25,8 @@ import {
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
 import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
+import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal";
+import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import type { Enums } from "@/types/database";
 
 /** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
@@ -82,6 +84,10 @@ export default function WaiterShiftDetailScreen() {
   }
 
   const [declineVisible, setDeclineVisible] = useState(false);
+  const [requestVisible, setRequestVisible] = useState(false);
+
+  // La RLS filtra già: qui torna solo la **propria** richiesta aperta.
+  const pendingRequest = usePendingRequestsForShift(id).data?.[0] ?? null;
 
   /**
    * A turno concluso non si risponde più.
@@ -246,9 +252,31 @@ export default function WaiterShiftDetailScreen() {
                 />
               </View>
             ) : myAssignment.status === "confirmed" ? (
-              <Text className="mt-3 text-sm text-t3">
-                Hai confermato la presenza. A presto!
-              </Text>
+              <View className="mt-3 gap-2.5">
+                <Text className="text-sm text-t3">
+                  {/* `confirmed_at` null = non ha confermato nessuno: è un
+                      dipendente fisso, per cui il turno è già suo (migration
+                      20260915100000). Dirgli "hai confermato" sarebbe falso. */}
+                  {myAssignment.confirmed_at
+                    ? "Hai confermato la presenza. A presto!"
+                    : "Sei in turno. Non serve confermare."}
+                </Text>
+                {/* Dopo la conferma il turno non si molla da soli: il locale ci
+                    ha pianificato sopra. Resta la richiesta di sostituzione, che
+                    decide lui. Per il dipendente fisso è l'unica via d'uscita, ed
+                    è esattamente come funziona con un dipendente. */}
+                {pendingRequest ? (
+                  <Text className="text-sm text-gold">
+                    Richiesta di sostituzione inviata: attendi la risposta del
+                    locale.
+                  </Text>
+                ) : (
+                  <GhostButton
+                    label="Chiedi sostituzione"
+                    onPress={() => setRequestVisible(true)}
+                  />
+                )}
+              </View>
             ) : (
               <View className="mt-3 gap-2.5">
                 <Text className="text-sm text-t3">
@@ -299,6 +327,15 @@ export default function WaiterShiftDetailScreen() {
         onConfirm={doDecline}
         onCancel={() => setDeclineVisible(false)}
       />
+
+      {myAssignment ? (
+        <RequestChangeModal
+          visible={requestVisible}
+          assignmentId={myAssignment.id}
+          shiftLabel={formatDate(shift.date)}
+          onClose={() => setRequestVisible(false)}
+        />
+      ) : null}
     </>
   );
 }

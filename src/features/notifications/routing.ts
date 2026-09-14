@@ -17,10 +17,15 @@ export function routeForNotification(
 ): Href | null {
   if (role === "waiter") {
     if (type === "staff_invite") return "/(waiter)/inviti";
-    // Per i messaggi related_id è la conversazione, non un turno.
-    if (type === "new_message") {
+    // Per i messaggi related_id è la conversazione, non un turno. Vale anche per
+    // l'esito di un cambio turno: la card con la risposta vive nel thread, ed è
+    // lì che ha senso atterrare — il turno, se approvato, non è più suo.
+    if (type === "new_message" || type === "shift_change_response") {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
+    // Il professionista non riceve mai le altre due (sono per il locale), ma la
+    // funzione è totale sui tipi: meglio dirlo che lasciarlo al ramo finale.
+    if (type === "shift_change_request" || type === "shift_declined") return null;
     // shift_unassigned: la delete dell'assegnazione gli toglie anche la lettura
     // del turno (is_my_assigned_shift), quindi non c'è nulla da aprire.
     //
@@ -42,7 +47,9 @@ export function routeForNotification(
 
   // manager
   if (type === "staff_response") return "/(manager)/(tabs)/staff";
-  if (type === "new_message") {
+  // `shift_change_request` porta la conversazione, non il turno: la richiesta si
+  // legge e si decide dalla card nel thread.
+  if (type === "new_message" || type === "shift_change_request") {
     return relatedId ? `/(manager)/chat/${relatedId}` : null;
   }
   return relatedId ? `/(manager)/shift/${relatedId}` : null;

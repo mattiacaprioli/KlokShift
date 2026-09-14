@@ -99,6 +99,16 @@ export async function createInternalShift(input: {
   staff: StaffAssignmentInput[];
   /** Fabbisogno per ruolo (es. 2 Cameriere + 1 Sommelier). */
   roleTargets?: RoleTargetInput[];
+  /**
+   * Chiede la conferma anche ai dipendenti fissi (default: no).
+   *
+   * Di norma lo stato iniziale di ogni assegnazione lo decide il database
+   * (`default_assignment_confirmation`, 20260915100000) guardando
+   * `staff_members.employment_type`: il fisso nasce già `confirmed`, chi è a
+   * chiamata deve rispondere. Questo flag è l'eccezione per il singolo turno —
+   * straordinario, festivo — e vale per tutti.
+   */
+  require_confirmation?: boolean;
 }): Promise<Shift> {
   const { staff, roleTargets, ...fields } = input;
   const targets = (roleTargets ?? []).filter((t) => t.count > 0);
@@ -164,6 +174,8 @@ export type InternalShiftPlan = {
   start_time: string;
   end_time: string;
   description: string | null;
+  /** Vedi `createInternalShift`. Va ricopiato: fa parte della ricetta del turno. */
+  require_confirmation: boolean;
   roleTargets: RoleTargetInput[];
   staff: StaffAssignmentInput[];
 };
@@ -176,7 +188,7 @@ export async function getInternalShiftPlans(
   const { data, error } = await supabase
     .from("shifts")
     .select(
-      "venue_id, title, date, start_time, end_time, description, shift_role_requirements(role_id, count), shift_assignments(staff_member_id, role_id, status)"
+      "venue_id, title, date, start_time, end_time, description, require_confirmation, shift_role_requirements(role_id, count), shift_assignments(staff_member_id, role_id, status)"
     )
     .in("id", shiftIds)
     .order("date", { ascending: true })
@@ -190,6 +202,7 @@ export async function getInternalShiftPlans(
     start_time: s.start_time,
     end_time: s.end_time,
     description: s.description,
+    require_confirmation: s.require_confirmation,
     roleTargets: (s.shift_role_requirements ?? []).map((r) => ({
       role_id: r.role_id,
       count: r.count,
@@ -236,6 +249,7 @@ export async function createInternalShifts(
           start_time: p.start_time,
           end_time: p.end_time,
           description: p.description,
+          require_confirmation: p.require_confirmation,
           kind: "internal" as const,
           status: "open" as const,
           positions_total: internalPositionsTotal(targetSum, p.staff.length),
@@ -303,6 +317,8 @@ export async function updateInternalShift(
     start_time: string;
     end_time: string;
     description: string | null;
+    /** Vedi `createInternalShift`. */
+    require_confirmation: boolean;
     roleTargets: RoleTargetInput[];
     staff: StaffAssignmentInput[];
   }

@@ -30,6 +30,12 @@ const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
   staff_invite: [qk.staff.all],
   staff_response: [qk.staff.all],
   staff_removed: [qk.staff.all, qk.assignments.all],
+  // Le due facce di una richiesta di cambio turno. La chat la aggiorna già il
+  // canale su `messages`: qui serve lo stato della richiesta (la card cambia
+  // bottoni) e, sull'esito, le assegnazioni — approvare sposta il turno.
+  shift_change_request: [qk.changeRequests.all],
+  shift_change_response: [qk.changeRequests.all, qk.assignments.all],
+  shift_declined: [qk.assignments.all],
 };
 
 /**

@@ -105,6 +105,7 @@ export function useCreateInternalShift() {
       description: string | null;
       staff: StaffAssignmentInput[];
       roleTargets?: RoleTargetInput[];
+      require_confirmation?: boolean;
     }) => createInternalShift(input),
     onSuccess: () => invalidateAfterShiftWrite(qc),
   });

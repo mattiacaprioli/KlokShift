@@ -117,10 +117,11 @@ export function useOwnerPastShiftsCount(
   });
 }
 
-export function useShift(id: string) {
+export function useShift(id: string, enabled = true) {
   return useQuery({
     queryKey: qk.shifts.detail(id),
     queryFn: () => getShift(id),
+    enabled: enabled && !!id,
   });
 }
 

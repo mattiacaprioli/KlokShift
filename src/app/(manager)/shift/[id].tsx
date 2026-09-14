@@ -31,6 +31,7 @@ import {
   useShiftAssignments,
   useShiftRoleRequirements,
 } from "@/features/assignments/hooks";
+import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
 import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
@@ -68,10 +69,13 @@ function AssignedRow({
   assignment,
   onPress,
   onMessage,
+  changeRequested,
 }: {
   assignment: AssignmentWithStaff;
   onPress?: () => void;
   onMessage?: () => void;
+  /** Ha chiesto di essere sostituito: la richiesta si legge e si decide in chat. */
+  changeRequested?: boolean;
 }) {
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Staff";
@@ -89,6 +93,11 @@ function AssignedRow({
           <Text className="text-xs text-t3">
             {assignment.role?.name ?? "Ruolo da assegnare"}
           </Text>
+          {changeRequested ? (
+            <Text className="text-xs font-sans-semibold text-gold">
+              Ha chiesto il cambio · rispondi in chat
+            </Text>
+          ) : null}
         </View>
         <Pill
           label={ASSIGNMENT_STATUS_LABEL[assignment.status]}
@@ -274,6 +283,15 @@ export default function ShiftDetailScreen() {
   const assignments = assignmentsQuery.data ?? [];
   const roleReqsQuery = useShiftRoleRequirements(id);
   const roleRequirements = roleReqsQuery.data ?? [];
+
+  // Chi ha chiesto di essere sostituito. La decisione si prende in chat, dove
+  // c'è il motivo: qui è solo il segnale che da qualche parte c'è una risposta
+  // da dare — senza, il titolare la vedrebbe solo se apre il thread.
+  const requestedAssignmentIds = new Set(
+    (usePendingRequestsForShift(id).data ?? [])
+      .map((r) => r.assignment_id)
+      .filter((x): x is string => !!x)
+  );
 
   const statusMutation = useUpdateShiftStatus(id);
   const busy = statusMutation.isPending;
@@ -551,6 +569,7 @@ export default function ShiftDetailScreen() {
                       : undefined
                   }
                   onMessage={waiterId ? () => onMessage(waiterId) : undefined}
+                  changeRequested={requestedAssignmentIds.has(a.id)}
                 />
               );
             })

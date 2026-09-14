@@ -39,6 +39,7 @@ import {
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { PresenceSection } from "./PresenceSection";
+import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 
 type RoleTarget = { role_id: string; count: number };
@@ -240,6 +241,9 @@ function InternalForm({
   const roleReqsQuery = useShiftRoleRequirements(shift?.id ?? "", !!shift?.id);
   const create = useCreateInternalShifts();
   const update = useUpdateInternalShift(shift?.id ?? "");
+  // Chi ha chiesto di essere sostituito: la decisione si prende in chat, dove
+  // c'è il motivo. Qui è solo il segnale che c'è una risposta da dare.
+  const changeRequests = usePendingRequestsForShift(shift?.id ?? "", !!shift?.id);
   const cancelled = shift?.status === "cancelled";
 
   // Chi lavora **e** in che ruolo: la chiave è la scheda di sede
@@ -268,6 +272,7 @@ function InternalForm({
       start_time: shift?.start_time?.slice(0, 5) ?? "18:00",
       end_time: shift?.end_time?.slice(0, 5) ?? "23:00",
       description: shift?.description ?? "",
+      require_confirmation: shift?.require_confirmation ?? false,
     },
   });
 
@@ -352,6 +357,20 @@ function InternalForm({
 
   const staff = staffQuery.data ?? [];
   const roles = rolesQuery.data ?? [];
+  // La richiesta punta all'assegnazione; la riga qui è la persona: si passa per
+  // gli assegnati del turno per tradurre l'una nell'altra.
+  const requestedStaffIds = useMemo(() => {
+    const wanted = new Set(
+      (changeRequests.data ?? [])
+        .map((r) => r.assignment_id)
+        .filter((x): x is string => !!x)
+    );
+    return new Set(
+      (assignmentsQuery.data ?? [])
+        .filter((a) => wanted.has(a.id))
+        .map((a) => a.staff_member_id)
+    );
+  }, [changeRequests.data, assignmentsQuery.data]);
   const staffIds = useMemo(() => Object.keys(staffRoles), [staffRoles]);
   const selectedStaff = useMemo(
     () => staff.filter((m) => m.id in staffRoles),
@@ -457,6 +476,7 @@ function InternalForm({
       start_time: values.start_time,
       end_time: values.end_time,
       description: values.description.trim() || null,
+      require_confirmation: values.require_confirmation,
       staff: staffIds.map((id) => ({
         staff_member_id: id,
         role_id: staffRoles[id] ?? null,
@@ -671,6 +691,11 @@ function InternalForm({
                       <span className="block truncate text-xs text-t4">
                         {staffRoleNames(member) ?? "Ruoli non indicati"}
                       </span>
+                      {requestedStaffIds.has(member.id) ? (
+                        <span className="block truncate text-xs font-semibold text-gold">
+                          Ha chiesto il cambio · rispondi in chat
+                        </span>
+                      ) : null}
                     </span>
                     {on ? (
                       <Pill tone={works ? "gold" : "error"}>
@@ -712,6 +737,24 @@ function InternalForm({
           </div>
         )}
       </section>
+
+      {/* Di norma la conferma la chiede solo chi è a chiamata: l'assegnazione di
+          un dipendente fisso nasce già confermata (default_assignment_confirmation,
+          20260915100000). Lo switch è per i turni fuori dall'ordinario. */}
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-2 bg-bg-1 p-3">
+        <input
+          type="checkbox"
+          {...register("require_confirmation")}
+          className="mt-0.5 h-4 w-4 accent-gold"
+        />
+        <span>
+          <span className="block text-sm text-t1">Chiedi conferma a tutti</span>
+          <span className="mt-0.5 block text-xs leading-4 text-t4">
+            Di norma confermano solo i collaboratori a chiamata: chi è assunto
+            fisso risulta già in turno.
+          </span>
+        </span>
+      </label>
 
       {/* Solo a turno concluso: prima non c'è nulla da consuntivare. */}
       {shift && isShiftOver(shift) && !cancelled ? (

@@ -18,6 +18,7 @@ import { useLastVenue } from "@/features/venues/useLastVenue";
 import { useVenueStaff } from "@/features/staff/hooks";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import { useVenueRoles } from "@/features/roles/hooks";
+import { RequireConfirmationField } from "@/features/assignments/RequireConfirmationField";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
 import {
   StaffAssignPicker,
@@ -69,6 +70,7 @@ export function StaffShiftForm({ initialDate }: Props) {
   const [selected, setSelected] = useState<Record<string, string | null>>({});
   const [note, setNote] = useState("");
   const [targets, setTargets] = useState<Record<string, number>>({});
+  const [requireConfirmation, setRequireConfirmation] = useState(false);
 
   function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
@@ -147,6 +149,7 @@ export function StaffShiftForm({ initialDate }: Props) {
         start_time: toTimeString(start),
         end_time: toTimeString(end),
         description: note.trim() || null,
+        require_confirmation: requireConfirmation,
         staff: selectedIds.map((id) => ({
           staff_member_id: id,
           role_id: selected[id],
@@ -203,6 +206,12 @@ export function StaffShiftForm({ initialDate }: Props) {
           value={selected}
           onToggle={toggle}
           onRoleChange={setRole}
+        />
+
+        <RequireConfirmationField
+          value={requireConfirmation}
+          onChange={setRequireConfirmation}
+          disabled={create.isPending}
         />
 
         <Input

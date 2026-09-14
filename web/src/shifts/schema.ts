@@ -28,6 +28,12 @@ export const internalShiftSchema = z
     start_time: z.string().min(1, "Scegli l'orario di inizio."),
     end_time: z.string().min(1, "Scegli l'orario di fine."),
     description: z.string().trim(),
+    /**
+     * Chiede la conferma anche ai dipendenti fissi. Di norma false: lo stato
+     * iniziale di ogni assegnazione lo decide il database dal tipo di rapporto
+     * (migration 20260915100000).
+     */
+    require_confirmation: z.boolean(),
   })
   .refine((v) => isValidShiftRange(v.start_time, v.end_time), {
     message: SHIFT_RANGE_ERROR,

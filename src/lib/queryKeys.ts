@@ -159,6 +159,21 @@ export const qk = {
     unreadAll: ["chat", "unread"] as const,
     unread: (userId: string) => ["chat", "unread", userId] as const,
   },
+  /**
+   * Richieste di cambio turno.
+   *
+   * `byId` e non una lista: la card vive dentro il thread di chat e ogni
+   * messaggio sa già quale richiesta porta. `pendingFor` risponde invece alla
+   * domanda delle schermate del turno — «questa persona ha chiesto il cambio?».
+   */
+  changeRequests: {
+    all: ["changeRequests"] as const,
+    byId: (requestId: string) => ["changeRequests", "byId", requestId] as const,
+    pendingFor: (assignmentId: string) =>
+      ["changeRequests", "pendingFor", assignmentId] as const,
+    byShift: (shiftId: string) =>
+      ["changeRequests", "byShift", shiftId] as const,
+  },
   notifications: {
     all: ["notifications"] as const,
     list: (userId: string) => ["notifications", "list", userId] as const,

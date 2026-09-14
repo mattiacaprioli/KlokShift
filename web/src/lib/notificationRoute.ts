@@ -15,8 +15,11 @@ export function webRouteForNotification(
   relatedId: string | null
 ): string | null {
   if (type === "staff_response") return "/staff";
-  // Per i messaggi related_id è la conversazione, non un turno.
-  if (type === "new_message") return relatedId ? `/chat/${relatedId}` : null;
+  // Per i messaggi related_id è la conversazione, non un turno. Stessa cosa per
+  // la richiesta di cambio turno: si legge e si decide dalla card nel thread.
+  if (type === "new_message" || type === "shift_change_request") {
+    return relatedId ? `/chat/${relatedId}` : null;
+  }
   // Tutto il resto è legato a un turno. La dashboard non ha una pagina di
   // dettaglio: il turno si apre nel pannello del Planning, che si sposta da solo
   // sulla settimana giusta.

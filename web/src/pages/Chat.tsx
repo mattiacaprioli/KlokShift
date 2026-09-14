@@ -7,6 +7,7 @@ import { useOwnerPeople } from "@/features/staff/hooks";
 import { userErrorMessage } from "@/lib/errors";
 import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { ChangeRequestCard } from "../chat/ChangeRequestCard";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import {
@@ -332,6 +333,19 @@ function Thread({
             <div className="flex flex-col gap-2">
               {ordered.map((m) => {
                 const own = m.sender_id === userId;
+                // Le righe di servizio (richieste di cambio turno) non sono
+                // testo: portano un `request_id` e si rendono come card con i
+                // bottoni di chi deve decidere.
+                if (m.kind !== "text") {
+                  return (
+                    <ChangeRequestCard
+                      key={m.id}
+                      message={m}
+                      userId={userId}
+                      own={own}
+                    />
+                  );
+                }
                 return (
                   <div
                     key={m.id}

@@ -111,7 +111,9 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["message_kind"]
           read_at: string | null
+          request_id: string | null
           sender_id: string
         }
         Insert: {
@@ -119,7 +121,9 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["message_kind"]
           read_at?: string | null
+          request_id?: string | null
           sender_id: string
         }
         Update: {
@@ -127,10 +131,19 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["message_kind"]
           read_at?: string | null
+          request_id?: string | null
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "shift_change_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -343,6 +356,7 @@ export type Database = {
       }
       shift_assignments: {
         Row: {
+          confirmed_at: string | null
           created_at: string
           id: string
           role_id: string | null
@@ -352,6 +366,7 @@ export type Database = {
           worked_hours: number | null
         }
         Insert: {
+          confirmed_at?: string | null
           created_at?: string
           id?: string
           role_id?: string | null
@@ -361,6 +376,7 @@ export type Database = {
           worked_hours?: number | null
         }
         Update: {
+          confirmed_at?: string | null
           created_at?: string
           id?: string
           role_id?: string | null
@@ -389,6 +405,77 @@ export type Database = {
             columns: ["staff_member_id"]
             isOneToOne: false
             referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_change_requests: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          id: string
+          reason: string
+          requested_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          shift_date: string
+          shift_id: string
+          status: Database["public"]["Enums"]["change_request_status"]
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          requested_by: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shift_date: string
+          shift_id: string
+          status?: Database["public"]["Enums"]["change_request_status"]
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          requested_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          shift_date?: string
+          shift_id?: string
+          status?: Database["public"]["Enums"]["change_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_change_requests_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "shift_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_change_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_change_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_change_requests_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -444,6 +531,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["shift_kind"]
           positions_filled: number
           positions_total: number
+          require_confirmation: boolean
           requirements: string[] | null
           start_time: string
           status: Database["public"]["Enums"]["shift_status"]
@@ -461,6 +549,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["shift_kind"]
           positions_filled?: number
           positions_total?: number
+          require_confirmation?: boolean
           requirements?: string[] | null
           start_time: string
           status?: Database["public"]["Enums"]["shift_status"]
@@ -478,6 +567,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["shift_kind"]
           positions_filled?: number
           positions_total?: number
+          require_confirmation?: boolean
           requirements?: string[] | null
           start_time?: string
           status?: Database["public"]["Enums"]["shift_status"]
@@ -1084,6 +1174,23 @@ export type Database = {
         Args: { p_assignment: string; p_staff_member: string }
         Returns: string
       }
+      request_shift_change: {
+        Args: { p_assignment: string; p_reason: string }
+        Returns: string
+      }
+      resolve_shift_change_request: {
+        Args: {
+          p_approve: boolean
+          p_note?: string
+          p_replacement?: string
+          p_request: string
+        }
+        Returns: undefined
+      }
+      withdraw_shift_change_request: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
       register_push_token: {
         Args: { p_platform: string; p_token: string }
         Returns: undefined
@@ -1101,7 +1208,9 @@ export type Database = {
     Enums: {
       application_status: "pending" | "accepted" | "rejected" | "cancelled"
       assignment_status: "assigned" | "confirmed" | "declined" | "no_show"
+      change_request_status: "pending" | "approved" | "rejected" | "withdrawn"
       employment_type: "fisso" | "a_chiamata"
+      message_kind: "text" | "shift_change_request" | "shift_change_response"
       notification_type:
         | "application_received"
         | "application_accepted"
@@ -1114,6 +1223,9 @@ export type Database = {
         | "shift_cancelled"
         | "shift_updated"
         | "shift_unassigned"
+        | "shift_change_request"
+        | "shift_change_response"
+        | "shift_declined"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       staff_link_status: "pending" | "active" | "left"

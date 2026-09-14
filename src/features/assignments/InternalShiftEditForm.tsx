@@ -17,6 +17,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useVenueStaff } from "@/features/staff/hooks";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import { useVenueRoles } from "@/features/roles/hooks";
+import { RequireConfirmationField } from "@/features/assignments/RequireConfirmationField";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
 import {
   StaffAssignPicker,
@@ -79,6 +80,9 @@ function EditForm({
   const [selected, setSelected] =
     useState<Record<string, string | null>>(initialRoles);
   const [note, setNote] = useState(shift.description ?? "");
+  const [requireConfirmation, setRequireConfirmation] = useState(
+    shift.require_confirmation
+  );
 
   function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
@@ -132,6 +136,7 @@ function EditForm({
         start_time: toTimeString(start),
         end_time: toTimeString(end),
         description: note.trim() || null,
+        require_confirmation: requireConfirmation,
         roleTargets: roles.map((role) => ({
           role_id: role.id,
           count: targets[role.id] ?? 0,
@@ -205,6 +210,12 @@ function EditForm({
           onToggle={toggle}
           onRoleChange={setRole}
           statusFor={memberStatus}
+        />
+
+        <RequireConfirmationField
+          value={requireConfirmation}
+          onChange={setRequireConfirmation}
+          disabled={update.isPending}
         />
 
         <Input
