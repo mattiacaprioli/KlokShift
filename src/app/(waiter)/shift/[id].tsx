@@ -333,6 +333,8 @@ export default function WaiterShiftDetailScreen() {
           visible={requestVisible}
           assignmentId={myAssignment.id}
           shiftLabel={formatDate(shift.date)}
+          shiftStart={shift.start_time}
+          shiftEnd={shift.end_time}
           onClose={() => setRequestVisible(false)}
         />
       ) : null}

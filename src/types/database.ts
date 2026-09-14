@@ -414,6 +414,9 @@ export type Database = {
           assignment_id: string | null
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["change_request_kind"]
+          proposed_end_time: string | null
+          proposed_start_time: string | null
           reason: string
           requested_by: string
           resolution_note: string | null
@@ -427,6 +430,9 @@ export type Database = {
           assignment_id?: string | null
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["change_request_kind"]
+          proposed_end_time?: string | null
+          proposed_start_time?: string | null
           reason: string
           requested_by: string
           resolution_note?: string | null
@@ -440,6 +446,9 @@ export type Database = {
           assignment_id?: string | null
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["change_request_kind"]
+          proposed_end_time?: string | null
+          proposed_start_time?: string | null
           reason?: string
           requested_by?: string
           resolution_note?: string | null
@@ -1175,7 +1184,13 @@ export type Database = {
         Returns: string
       }
       request_shift_change: {
-        Args: { p_assignment: string; p_reason: string }
+        Args: {
+          p_assignment: string
+          p_end?: string
+          p_kind?: Database["public"]["Enums"]["change_request_kind"]
+          p_reason: string
+          p_start?: string
+        }
         Returns: string
       }
       resolve_shift_change_request: {
@@ -1208,6 +1223,7 @@ export type Database = {
     Enums: {
       application_status: "pending" | "accepted" | "rejected" | "cancelled"
       assignment_status: "assigned" | "confirmed" | "declined" | "no_show"
+      change_request_kind: "substitution" | "hours"
       change_request_status: "pending" | "approved" | "rejected" | "withdrawn"
       employment_type: "fisso" | "a_chiamata"
       message_kind: "text" | "shift_change_request" | "shift_change_response"

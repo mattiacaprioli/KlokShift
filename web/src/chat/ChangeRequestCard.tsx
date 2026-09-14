@@ -49,19 +49,21 @@ export function ChangeRequestCard({
   const isRequester = request?.requested_by === userId;
   const pending = request?.status === "pending";
   const isResponse = message.kind === "shift_change_response";
-  // Le liste dell'organico servono solo a chi deve decidere, e solo finché la
-  // richiesta è aperta: senza `enabled` ogni card vecchia del thread farebbe
-  // tre query per niente.
+  // «Ci sono, ma su un altro orario»: nessun sostituto da scegliere, e
+  // accettare non sposta niente — è un accordo che il titolare applica poi dal
+  // pannello del turno (migration 20260915140000).
+  const isHours = request?.kind === "hours";
   const deciding = !!request && pending && !isRequester && !isResponse;
+  // Le liste dell'organico servono solo a chi deve scegliere un sostituto, e
+  // solo finché la richiesta è aperta: senza `enabled` ogni card vecchia del
+  // thread farebbe tre query per niente.
+  const picking = deciding && !isHours;
 
-  const shiftQuery = useShift(request?.shift_id ?? "", deciding);
+  const shiftQuery = useShift(request?.shift_id ?? "", picking);
   const staffQuery = useVenueStaff(
-    deciding ? shiftQuery.data?.venue_id : undefined
+    picking ? shiftQuery.data?.venue_id : undefined
   );
-  const assignmentsQuery = useShiftAssignments(
-    request?.shift_id ?? "",
-    deciding
-  );
+  const assignmentsQuery = useShiftAssignments(request?.shift_id ?? "", picking);
 
   const candidates = useMemo(() => {
     const busy = new Set(
@@ -117,7 +119,11 @@ export function ChangeRequestCard({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-gold">
-          {isResponse ? "Esito richiesta" : "Richiesta di cambio"}
+          {isResponse
+            ? "Esito richiesta"
+            : isHours
+              ? "Richiesta di orario"
+              : "Richiesta di cambio"}
         </span>
         {request ? (
           <Pill
@@ -145,37 +151,51 @@ export function ChangeRequestCard({
       </p>
 
       {deciding ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Select
-            value={replacement}
-            onChange={(e) => setReplacement(e.target.value)}
-            className="w-48"
-            disabled={resolve.isPending}
-          >
-            <option value="">Nessun sostituto</option>
-            {candidates.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.display_name}
-              </option>
-            ))}
-          </Select>
-          <Button
-            type="button"
-            variant="gold"
-            disabled={resolve.isPending}
-            onClick={() => decide(true)}
-          >
-            {replacement ? "Approva e sostituisci" : "Approva"}
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            disabled={resolve.isPending}
-            onClick={() => decide(false)}
-          >
-            Rifiuta
-          </Button>
-        </div>
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {picking ? (
+              <Select
+                value={replacement}
+                onChange={(e) => setReplacement(e.target.value)}
+                className="w-48"
+                disabled={resolve.isPending}
+              >
+                <option value="">Nessun sostituto</option>
+                {candidates.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.display_name}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+            <Button
+              type="button"
+              variant="gold"
+              disabled={resolve.isPending}
+              onClick={() => decide(true)}
+            >
+              {isHours
+                ? "Accetta l'orario"
+                : replacement
+                  ? "Approva e sostituisci"
+                  : "Approva"}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={resolve.isPending}
+              onClick={() => decide(false)}
+            >
+              Rifiuta
+            </Button>
+          </div>
+          {isHours ? (
+            <p className="mt-2 text-xs text-t4">
+              L&apos;accordo resta scritto qui. L&apos;orario del turno lo
+              aggiorni tu dal Planning: non cambia nulla da solo.
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       {!isResponse && pending && isRequester ? (

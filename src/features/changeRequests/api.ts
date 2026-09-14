@@ -1,8 +1,21 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
-import type { Tables } from "@/types/database";
+import type { Enums, Tables } from "@/types/database";
 
 export type ChangeRequest = Tables<"shift_change_requests">;
+export type ChangeRequestKind = Enums<"change_request_kind">;
+
+/**
+ * Cosa sta chiedendo il professionista.
+ *
+ * `hours` non è una mezza sostituzione: dice «ci sono, ma su un altro orario».
+ * Approvarla **non scrive niente** — è un accordo, e l'orario del turno lo
+ * cambia poi il titolare dal pannello (vedi la migration 20260915140000).
+ */
+export const CHANGE_REQUEST_KIND_LABEL: Record<ChangeRequestKind, string> = {
+  substitution: "Sostituzione",
+  hours: "Orario diverso",
+};
 
 /**
  * Richieste di sostituzione su un turno.
@@ -16,13 +29,20 @@ export type ChangeRequest = Tables<"shift_change_requests">;
  * così come sono, quindi `UserFacingError` e non il messaggio generico. Stessa
  * scelta di `reassignShiftAssignment`.
  */
-export async function requestShiftChange(
-  assignmentId: string,
-  reason: string
-): Promise<string> {
+export async function requestShiftChange(input: {
+  assignmentId: string;
+  reason: string;
+  kind: ChangeRequestKind;
+  /** Solo per `hours`, formato "HH:MM". Obbligatori entrambi: il DB li pretende. */
+  startTime?: string | null;
+  endTime?: string | null;
+}): Promise<string> {
   const { data, error } = await supabase.rpc("request_shift_change", {
-    p_assignment: assignmentId,
-    p_reason: reason,
+    p_assignment: input.assignmentId,
+    p_reason: input.reason,
+    p_kind: input.kind,
+    p_start: input.kind === "hours" ? (input.startTime ?? undefined) : undefined,
+    p_end: input.kind === "hours" ? (input.endTime ?? undefined) : undefined,
   });
   if (error) throw new UserFacingError(error.message);
   return data as string;

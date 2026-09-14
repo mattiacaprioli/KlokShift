@@ -48,8 +48,7 @@ function invalidateAfterRequestWrite(qc: ReturnType<typeof useQueryClient>) {
 export function useRequestShiftChange() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { assignmentId: string; reason: string }) =>
-      requestShiftChange(vars.assignmentId, vars.reason),
+    mutationFn: requestShiftChange,
     onSuccess: () => invalidateAfterRequestWrite(qc),
   });
 }

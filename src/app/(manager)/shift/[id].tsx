@@ -74,8 +74,8 @@ function AssignedRow({
   assignment: AssignmentWithStaff;
   onPress?: () => void;
   onMessage?: () => void;
-  /** Ha chiesto di essere sostituito: la richiesta si legge e si decide in chat. */
-  changeRequested?: boolean;
+  /** Tipo della richiesta aperta, se c'è: si legge e si decide in chat. */
+  changeRequested?: Enums<"change_request_kind">;
 }) {
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Staff";
@@ -95,7 +95,10 @@ function AssignedRow({
           </Text>
           {changeRequested ? (
             <Text className="text-xs font-sans-semibold text-gold">
-              Ha chiesto il cambio · rispondi in chat
+              {changeRequested === "hours"
+                ? "Ha chiesto un altro orario"
+                : "Ha chiesto il cambio"}{" "}
+              · rispondi in chat
             </Text>
           ) : null}
         </View>
@@ -287,10 +290,10 @@ export default function ShiftDetailScreen() {
   // Chi ha chiesto di essere sostituito. La decisione si prende in chat, dove
   // c'è il motivo: qui è solo il segnale che da qualche parte c'è una risposta
   // da dare — senza, il titolare la vedrebbe solo se apre il thread.
-  const requestedAssignmentIds = new Set(
+  const requestedByAssignment = new Map(
     (usePendingRequestsForShift(id).data ?? [])
-      .map((r) => r.assignment_id)
-      .filter((x): x is string => !!x)
+      .filter((r) => !!r.assignment_id)
+      .map((r) => [r.assignment_id as string, r.kind])
   );
 
   const statusMutation = useUpdateShiftStatus(id);
@@ -569,7 +572,7 @@ export default function ShiftDetailScreen() {
                       : undefined
                   }
                   onMessage={waiterId ? () => onMessage(waiterId) : undefined}
-                  changeRequested={requestedAssignmentIds.has(a.id)}
+                  changeRequested={requestedByAssignment.get(a.id)}
                 />
               );
             })

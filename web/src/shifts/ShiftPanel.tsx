@@ -359,16 +359,16 @@ function InternalForm({
   const roles = rolesQuery.data ?? [];
   // La richiesta punta all'assegnazione; la riga qui è la persona: si passa per
   // gli assegnati del turno per tradurre l'una nell'altra.
-  const requestedStaffIds = useMemo(() => {
-    const wanted = new Set(
+  const requestedByStaff = useMemo(() => {
+    const wanted = new Map(
       (changeRequests.data ?? [])
-        .map((r) => r.assignment_id)
-        .filter((x): x is string => !!x)
+        .filter((r) => !!r.assignment_id)
+        .map((r) => [r.assignment_id as string, r.kind])
     );
-    return new Set(
+    return new Map(
       (assignmentsQuery.data ?? [])
         .filter((a) => wanted.has(a.id))
-        .map((a) => a.staff_member_id)
+        .map((a) => [a.staff_member_id, wanted.get(a.id)])
     );
   }, [changeRequests.data, assignmentsQuery.data]);
   const staffIds = useMemo(() => Object.keys(staffRoles), [staffRoles]);
@@ -691,9 +691,12 @@ function InternalForm({
                       <span className="block truncate text-xs text-t4">
                         {staffRoleNames(member) ?? "Ruoli non indicati"}
                       </span>
-                      {requestedStaffIds.has(member.id) ? (
+                      {requestedByStaff.has(member.id) ? (
                         <span className="block truncate text-xs font-semibold text-gold">
-                          Ha chiesto il cambio · rispondi in chat
+                          {requestedByStaff.get(member.id) === "hours"
+                            ? "Ha chiesto un altro orario"
+                            : "Ha chiesto il cambio"}{" "}
+                          · rispondi in chat
                         </span>
                       ) : null}
                     </span>

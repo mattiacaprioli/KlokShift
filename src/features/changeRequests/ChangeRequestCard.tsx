@@ -60,6 +60,10 @@ export function ChangeRequestCard({
 
   const isRequester = request?.requested_by === userId;
   const pending = request?.status === "pending";
+  // «Ci sono, ma su un altro orario»: nessun sostituto da scegliere, e
+  // approvare non sposta niente — è un accordo che il titolare applica poi dal
+  // pannello del turno (migration 20260915140000).
+  const isHours = request?.kind === "hours";
   // Il messaggio di esito è una riga di servizio: la card completa (motivo,
   // bottoni) è quella della richiesta, ripeterla due volte nel thread
   // racconterebbe la stessa cosa due volte.
@@ -84,9 +88,13 @@ export function ChangeRequestCard({
         )}
       >
         <View className="flex-row items-center gap-2">
-          <Icon name="users" size={16} color="#EAB54C" />
+          <Icon name={isHours ? "clock" : "users"} size={16} color="#EAB54C" />
           <Text className="flex-1 text-[13px] font-sans-bold uppercase tracking-wider text-gold">
-            {isResponse ? "Esito richiesta" : "Richiesta di cambio"}
+            {isResponse
+              ? "Esito richiesta"
+              : isHours
+                ? "Richiesta di orario"
+                : "Richiesta di cambio"}
           </Text>
           {request ? (
             <Pill

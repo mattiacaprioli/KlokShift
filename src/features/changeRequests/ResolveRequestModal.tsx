@@ -33,10 +33,16 @@ export function ResolveRequestModal({
   onClose: () => void;
 }) {
   const toast = useToast();
-  const shiftQuery = useShift(request.shift_id);
+  // Su una richiesta di orario non c'è nessun sostituto da scegliere: le tre
+  // query dell'organico non servono e non vanno fatte.
+  const isHours = request.kind === "hours";
+  const shiftQuery = useShift(request.shift_id, !isHours);
   const venueId = shiftQuery.data?.venue_id;
-  const staffQuery = useVenueStaff(venueId);
-  const assignmentsQuery = useShiftAssignments(request.shift_id, visible);
+  const staffQuery = useVenueStaff(isHours ? undefined : venueId);
+  const assignmentsQuery = useShiftAssignments(
+    request.shift_id,
+    visible && !isHours
+  );
   const resolve = useResolveShiftChangeRequest();
 
   const [replacement, setReplacement] = useState<string | null>(null);
@@ -94,14 +100,15 @@ export function ResolveRequestModal({
           className="max-h-[80%] w-full rounded-3xl border border-border-2 bg-bg-card p-6"
         >
           <Text className="text-lg font-sans-bold text-t1">
-            Chi copre il turno?
+            {isHours ? "Accetti il nuovo orario?" : "Chi copre il turno?"}
           </Text>
           <Text className="mt-2 text-sm leading-5 text-t2">
-            Scegli una persona dell&apos;organico, oppure approva lasciando il
-            posto scoperto.
+            {isHours
+              ? "Accettare mette l'accordo per iscritto nella chat. L'orario del turno lo aggiorni tu dal pannello: qui non cambia nulla da solo."
+              : "Scegli una persona dell'organico, oppure approva lasciando il posto scoperto."}
           </Text>
 
-          {loading ? (
+          {isHours ? null : loading ? (
             <ActivityIndicator color="#EAB54C" className="my-8" />
           ) : candidates.length === 0 ? (
             <Text className="mt-4 text-sm text-t3">
@@ -149,9 +156,11 @@ export function ResolveRequestModal({
               label={
                 resolve.isPending
                   ? "Attendere…"
-                  : replacement
-                    ? "Approva e sostituisci"
-                    : "Approva, resta scoperto"
+                  : isHours
+                    ? "Accetta l'orario"
+                    : replacement
+                      ? "Approva e sostituisci"
+                      : "Approva, resta scoperto"
               }
               disabled={resolve.isPending}
               onPress={() => decide(true)}
