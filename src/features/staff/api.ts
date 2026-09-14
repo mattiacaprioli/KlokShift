@@ -66,7 +66,7 @@ export async function getVenueStaff(
 /** Una sede in cui la persona lavora, con quel che è **della sede**. */
 export type PersonMembership = Pick<
   StaffMember,
-  "id" | "venue_id" | "link_status" | "employment_type" | "created_at"
+  "id" | "venue_id" | "link_status" | "employment_type" | "created_at" | "left_at"
 > & {
   venue: Pick<Tables<"venues">, "id" | "name" | "city" | "closed_at"> | null;
   staff_member_roles: { role: StaffRoleRef | null }[];
@@ -99,7 +99,7 @@ export async function getStaffPerson(
     .from("staff_people")
     .select(
       "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), " +
-        "memberships:staff_members(id, venue_id, link_status, employment_type, created_at, " +
+        "memberships:staff_members(id, venue_id, link_status, employment_type, created_at, left_at, " +
         "venue:venues(id, name, city, closed_at), " +
         "staff_member_roles(role:venue_roles(id, name, sort_order)))"
     )
@@ -207,17 +207,79 @@ export async function getOwnerPeople(ownerId: string): Promise<OwnerPerson[]> {
   // `as unknown`: su questo embed a quattro livelli PostgREST non riesce a
   // inferire il tipo e il cast diretto non si sovrappone. Stessa scorciatoia di
   // `shifts/api.ts` sugli embed annidati.
-  return (data as unknown as OwnerPerson[] | null) ?? [];
+  const people = (data as unknown as OwnerPerson[] | null) ?? [];
+
+  // Le appartenenze finite restano nel database (sono lo storico), ma **questo**
+  // è l'elenco dell'organico: chi se n'è andato non ha un chip di sede, non
+  // porta i suoi ruoli nella riga e, se non lavora più da nessuna parte, non
+  // compare. La sua scheda resta raggiungibile da Ore e dallo storico, dove
+  // `getStaffPerson` le appartenenze finite le mostra apposta.
+  return people
+    .map((p) => ({
+      ...p,
+      memberships: p.memberships.filter((m) => m.link_status !== "left"),
+    }))
+    .filter((p) => p.memberships.length > 0);
+}
+
+/**
+ * L'appartenenza finita che c'è già per quella persona in quella sede, se c'è.
+ *
+ * ⚠️ Da quando uscire è `link_status = 'left'` e non un delete, riaggiungere
+ * qualcuno che se n'era andato **non può** essere una insert: l'unique
+ * `staff_members_venue_person_uq (venue_id, person_id)` la rifiuterebbe, con un
+ * 23505 in faccia a chi voleva solo riprendere Marco per l'estate. Si rianima la
+ * riga di prima, e lo storico di quella sede torna attaccato alla persona senza
+ * un buco in mezzo.
+ */
+async function findLeftMembership(
+  venueId: string,
+  personId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("staff_members")
+    .select("id")
+    .eq("venue_id", venueId)
+    .eq("person_id", personId)
+    .eq("link_status", "left")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.id ?? null;
+}
+
+/** Rimette in organico un'appartenenza chiusa. `left_at` torna a null. */
+async function reviveMembership(
+  id: string,
+  fields: Pick<TablesInsert<"staff_members">, "employment_type" | "link_status">
+): Promise<StaffMember> {
+  const { data, error } = await supabase
+    .from("staff_members")
+    .update({
+      link_status: fields.link_status ?? "active",
+      employment_type: fields.employment_type,
+      left_at: null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 /**
  * Aggiunge a una sede una persona che il titolare **ha già** (perché lavora in
  * un'altra delle sue sedi). Nessun invito: l'account, se c'è, è già collegato
  * alla persona e il trigger lo copia sulla scheda nuova.
+ *
+ * Se in quella sede c'era già stata e se n'era andata, si riprende quella riga
+ * invece di crearne una seconda — vedi `findLeftMembership`.
  */
 export async function addPersonToVenue(
   input: TablesInsert<"staff_members">
 ): Promise<StaffMember> {
+  const left = await findLeftMembership(input.venue_id, input.person_id);
+  if (left) return reviveMembership(left, input);
+
   const { data, error } = await supabase
     .from("staff_members")
     .insert(input)
@@ -290,10 +352,39 @@ export async function addStaffToVenues(args: {
   }
 
   const person = personId;
+
+  // Le sedi in cui questa persona era già stata e se n'era andata: lì si
+  // rianima la riga di prima, perché l'unique (venue_id, person_id) non ne
+  // ammette una seconda. Vedi `findLeftMembership`.
+  const { data: leftRows, error: leftError } = await supabase
+    .from("staff_members")
+    .select("id, venue_id")
+    .eq("person_id", person)
+    .eq("link_status", "left")
+    .in("venue_id", args.venueIds);
+  if (leftError) {
+    if (created) await supabase.from("staff_people").delete().eq("id", person);
+    throw new Error(leftError.message);
+  }
+  const leftByVenue = new Map((leftRows ?? []).map((r) => [r.venue_id, r.id]));
+  const toInsert = args.venueIds.filter((v) => !leftByVenue.has(v));
+
+  const revived: StaffMember[] = [];
+  for (const [, id] of leftByVenue) {
+    revived.push(
+      await reviveMembership(id, {
+        employment_type: args.employmentType,
+        ...(args.linkStatus ? { link_status: args.linkStatus } : {}),
+      })
+    );
+  }
+
+  if (toInsert.length === 0) return revived;
+
   const { data: members, error } = await supabase
     .from("staff_members")
     .insert(
-      args.venueIds.map((venue_id) => ({
+      toInsert.map((venue_id) => ({
         venue_id,
         person_id: person,
         employment_type: args.employmentType,
@@ -308,7 +399,7 @@ export async function addStaffToVenues(args: {
     }
     throw new Error(error.message);
   }
-  return members ?? [];
+  return [...revived, ...(members ?? [])];
 }
 
 /**
@@ -342,8 +433,19 @@ export async function updateStaffMember(
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Il titolare toglie una persona dall'organico di una sede.
+ *
+ * ⚠️ **Non è un delete.** Lo era, e portava via per cascata tutte le
+ * `shift_assignments` di quella sede — ore lavorate comprese, cioè il riepilogo
+ * che va al commercialista. Ora la RPC `remove_staff_member` (20260914102811)
+ * mette `link_status = 'left'`: lo storico resta, i turni futuri vengono
+ * annullati e contati nella notifica al professionista.
+ */
 export async function removeStaffMember(id: string): Promise<void> {
-  const { error } = await supabase.from("staff_members").delete().eq("id", id);
+  const { error } = await supabase.rpc("remove_staff_member", {
+    p_staff_id: id,
+  });
   if (error) throw new Error(error.message);
 }
 

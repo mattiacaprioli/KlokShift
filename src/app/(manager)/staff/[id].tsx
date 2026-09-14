@@ -14,6 +14,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -71,6 +72,8 @@ function WorkplaceCard({
 
   const venueName = membership.venue?.name ?? "Locale";
   const busy = update.isPending || setRoles.isPending || remove.isPending;
+  /** Appartenenza finita: resta per lo storico, non si modifica più. */
+  const left = membership.link_status === "left";
 
   async function onSave() {
     try {
@@ -102,6 +105,29 @@ function WorkplaceCard({
         toast.show("Impossibile rimuovere. Riprova.", "error");
       },
     });
+  }
+
+  // Chi non c'è più: la sede resta in scheda perché le sue ore sono lì, ma
+  // ruoli, tipo di impiego e rimozione non hanno più un oggetto su cui agire.
+  // Per riprenderlo lo si riaggiunge dall'organico (Staff → + Aggiungi): con la
+  // stessa persona e la stessa sede si rianima **questa** riga invece di
+  // crearne una seconda, vedi `addStaffToVenues`.
+  if (left) {
+    return (
+      <View className="gap-2 rounded-3xl border border-border bg-bg-card p-5 opacity-70">
+        <View className="flex-row items-center gap-2">
+          <Text className="flex-1 text-base font-sans-semibold text-t2">
+            {venueName}
+          </Text>
+          <Pill label="Non più in organico" variant="closed" />
+        </View>
+        <Text className="text-sm text-t3">
+          {membership.left_at
+            ? `Ha lasciato questa sede il ${formatDate(membership.left_at.slice(0, 10))}. Le ore dei turni già fatti restano nel rendiconto.`
+            : "Le ore dei turni già fatti restano nel rendiconto."}
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -163,12 +189,11 @@ function WorkplaceCard({
       <ConfirmModal
         visible={confirmVisible}
         title={`Rimuovere da ${venueName}?`}
-        // ⚠️ La cascata è del database, non di questa schermata: cancellando
-        // l'appartenenza se ne vanno le sue `shift_assignments`, e con loro le ore
-        // di quella sede. Il giorno in cui servirà conservarle, l'appartenenza
-        // diventerà soft-deleted (`removed_at`) e le RPC filtreranno l'operatività
-        // ma non il rendiconto.
-        message={`${person.full_name} non sarà più in organico a ${venueName}. Perderai le ore e le presenze dei turni che ha fatto lì (anche nell'export per il commercialista). Resta nel tuo organico nelle altre sedi, con le sue ore e i suoi documenti.`}
+        // Da 20260914102811 non è più una cancellazione: l'appartenenza passa a
+        // `link_status = 'left'`, quindi le ore già lavorate restano nel
+        // rendiconto e nell'export. Spariscono solo i turni **futuri**, che
+        // altrimenti resterebbero assegnati a chi non lavora più lì.
+        message={`${person.full_name} non sarà più in organico a ${venueName}. I turni futuri già assegnati vengono annullati e tornano da coprire; le ore dei turni passati restano nel rendiconto. Resta nel tuo organico nelle altre sedi.`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}
@@ -268,7 +293,10 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
 
   const waiterId = person.waiter_id;
   const memberships = person.memberships;
-  const multiVenue = memberships.length > 1;
+  // Le sedi dove lavora **adesso**. Le altre restano in elenco (sono lo storico
+  // delle sue ore) ma non contano per "in quante sedi lavora" né per le azioni.
+  const liveMemberships = memberships.filter((m) => m.link_status !== "left");
+  const multiVenue = liveMemberships.length > 1;
 
   function onMessage() {
     if (!waiterId) return;
@@ -289,7 +317,10 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
    */
   async function doRemoveAll() {
     try {
-      for (const m of memberships) await remove.mutateAsync(m.id);
+      // Solo le sedi in cui è ancora in organico: `remove_staff_member` rifiuta
+      // una riga già 'left' (`not allowed`), e il ciclo si fermerebbe lì
+      // mostrando un errore per un lavoro in realtà già fatto.
+      for (const m of liveMemberships) await remove.mutateAsync(m.id);
       setConfirmVisible(false);
       toast.show("Rimosso dall'organico");
       router.back();
@@ -375,7 +406,9 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
 
         <View className="gap-3">
           <Mono>
-            {multiVenue ? `Dove lavora · ${memberships.length}` : "Dove lavora"}
+            {multiVenue
+              ? `Dove lavora · ${liveMemberships.length}`
+              : "Dove lavora"}
           </Mono>
           {memberships.map((m) => (
             <WorkplaceCard
@@ -401,7 +434,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
       <ConfirmModal
         visible={confirmVisible}
         title="Rimuovere dall'organico?"
-        message={`${person.full_name} non lavorerà più in nessuna delle tue sedi. Perderai lo storico di ore e presenze di tutti i suoi turni (incluso l'export per il commercialista) e i documenti caricati sulla sua scheda.`}
+        message={`${person.full_name} non lavorerà più in nessuna delle tue sedi. I turni futuri già assegnati vengono annullati; ore, presenze e documenti restano nella sua scheda e nell'export. Per riprenderlo in futuro basta riaggiungerlo dall'organico.`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}

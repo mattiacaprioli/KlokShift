@@ -42,32 +42,19 @@ function InfoLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Un locale per cui il cameriere è staff, con azioni "Scrivi"/"Lascia". */
-function EmployerCard({
+/** Una sede dentro la card del datore di lavoro: identità e "Lascia". */
+function EmployerVenueRow({
   employer,
-  waiterId,
+  standalone,
 }: {
   employer: MyEmployer;
-  waiterId: string;
+  /** Unica sede di quel datore: niente separatore, "Lascia" nella riga azioni. */
+  standalone: boolean;
 }) {
   const toast = useToast();
-  const router = useRouter();
   const leave = useLeaveVenue();
-  const startConversation = useStartConversation();
   const [confirmVisible, setConfirmVisible] = useState(false);
   const venueName = employer.venue?.name ?? "Locale";
-  const ownerId = employer.venue?.owner_id ?? null;
-
-  function onContact() {
-    if (!ownerId) return;
-    startConversation.mutate(
-      { waiterId, managerId: ownerId },
-      {
-        onSuccess: (conv) => router.push(`/(waiter)/chat/${conv.id}`),
-        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
-      }
-    );
-  }
 
   function onConfirm() {
     leave.mutate(employer.id, {
@@ -83,8 +70,13 @@ function EmployerCard({
   }
 
   return (
-    <Card className="rounded-3xl border-border-2 p-4">
-      <View className="flex-row items-center gap-3">
+    <>
+      <View
+        className={cn(
+          "flex-row items-center gap-3",
+          !standalone && "border-t border-border pt-3"
+        )}
+      >
         <Avatar
           uri={employer.venue?.logo_url ?? undefined}
           name={venueName}
@@ -102,24 +94,19 @@ function EmployerCard({
           gold={employer.employment_type === "fisso"}
         />
       </View>
-      <View className="mt-3 flex-row items-center gap-5">
-        {ownerId ? (
-          <Pressable
-            onPress={onContact}
-            disabled={startConversation.isPending}
-            hitSlop={6}
-          >
-            <Text className="text-sm font-sans-semibold text-gold">
-              {startConversation.isPending ? "Apertura…" : "Scrivi al locale"}
-            </Text>
-          </Pressable>
-        ) : null}
-        <Pressable onPress={() => setConfirmVisible(true)} hitSlop={6}>
-          <Text className="text-sm font-sans-semibold text-error">
-            Lascia il locale
-          </Text>
-        </Pressable>
-      </View>
+
+      {/* "Lascia" è **della sede**: ci si dimette da un posto di lavoro, non da
+          un'azienda intera. Con più sedi sta sotto la riga a cui si riferisce,
+          sennò non si capisce quale delle due si sta lasciando. */}
+      <Pressable
+        onPress={() => setConfirmVisible(true)}
+        hitSlop={6}
+        className={standalone ? undefined : "mt-2"}
+      >
+        <Text className="text-sm font-sans-semibold text-error">
+          {standalone ? "Lascia il locale" : `Lascia ${venueName}`}
+        </Text>
+      </Pressable>
 
       <ConfirmModal
         visible={confirmVisible}
@@ -127,15 +114,106 @@ function EmployerCard({
         // Il nome della sede nel titolo, non "questo locale": un datore di lavoro
         // può averne più di una, e chi si dimette da Milano deve vedere scritto
         // "Milano" prima di confermare.
-        message={`Non farai più parte dello staff di ${venueName}. Se lavori in altre sedi dello stesso datore di lavoro, quelle restano — e con loro i tuoi documenti.`}
+        // Le due cose che cambiano davvero, dette prima: i turni futuri saltano
+        // (e il locale se lo vede scritto nella notifica), il lavoro già fatto
+        // resta dov'è. Vedi `leave_venue` in 20260914102811.
+        message={`Non farai più parte dello staff di ${venueName}. I turni che hai in programma lì vengono annullati e il locale viene avvisato; le ore che hai già lavorato restano nel tuo storico. Se lavori in altre sedi dello stesso datore di lavoro, quelle restano — e con loro i tuoi documenti.`}
         confirmLabel="Lascia"
         destructive
         pending={leave.isPending}
         onConfirm={onConfirm}
         onCancel={() => setConfirmVisible(false)}
       />
+    </>
+  );
+}
+
+/**
+ * Un **datore di lavoro** e le sue sedi, non una card per sede.
+ *
+ * ⚠️ La chat è una sola per coppia professionista–titolare (indice unico
+ * `conversations_waiter_manager_key`, e vedi 20260913100200: la decisione di
+ * prodotto è un filo solo, non uno per edificio). Con due sedi dello stesso
+ * titolare c'erano due "Scrivi al locale" che aprivano **la stessa**
+ * conversazione: due bottoni diversi per la stessa cosa, cioè una promessa che
+ * il prodotto non mantiene. Qui il bottone è uno, come il filo.
+ *
+ * Lo stesso raggruppamento che fanno già i documenti (`documentScopeLabel`): la
+ * cartella è del datore di lavoro, le sedi le danno solo il nome.
+ */
+function EmployerGroupCard({
+  venues,
+  waiterId,
+}: {
+  /** Le sedi di **un** datore di lavoro, dalla più vecchia. */
+  venues: MyEmployer[];
+  waiterId: string;
+}) {
+  const toast = useToast();
+  const router = useRouter();
+  const startConversation = useStartConversation();
+  const ownerId = venues[0].venue?.owner_id ?? null;
+  const multi = venues.length > 1;
+
+  function onContact() {
+    if (!ownerId) return;
+    startConversation.mutate(
+      { waiterId, managerId: ownerId },
+      {
+        onSuccess: (conv) => router.push(`/(waiter)/chat/${conv.id}`),
+        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+      }
+    );
+  }
+
+  return (
+    <Card className="gap-3 rounded-3xl border-border-2 p-4">
+      {venues.map((employer) => (
+        <EmployerVenueRow
+          key={employer.id}
+          employer={employer}
+          standalone={!multi}
+        />
+      ))}
+
+      {ownerId ? (
+        <View className={multi ? "border-t border-border pt-3" : undefined}>
+          <Pressable
+            onPress={onContact}
+            disabled={startConversation.isPending}
+            hitSlop={6}
+          >
+            <Text className="text-sm font-sans-semibold text-gold">
+              {startConversation.isPending
+                ? "Apertura…"
+                : multi
+                  ? "Scrivi al datore di lavoro"
+                  : "Scrivi al locale"}
+            </Text>
+          </Pressable>
+          {multi ? (
+            <Text className="mt-1 text-xs text-t3">
+              Una chat sola per tutte le sedi di questo datore di lavoro.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
     </Card>
   );
+}
+
+/** Le sedi raggruppate per titolare, nell'ordine in cui sono arrivate. */
+function groupByEmployer(employers: MyEmployer[]): MyEmployer[][] {
+  const groups = new Map<string, MyEmployer[]>();
+  for (const e of employers) {
+    // Senza `owner_id` (sede non leggibile) la riga resta un gruppo a sé: meglio
+    // una card sola in più che fondere due datori di lavoro diversi.
+    const key = e.venue?.owner_id ?? `solo:${e.id}`;
+    const list = groups.get(key);
+    if (list) list.push(e);
+    else groups.set(key, [e]);
+  }
+  return [...groups.values()];
 }
 
 export default function WaiterProfiloScreen() {
@@ -240,8 +318,12 @@ export default function WaiterProfiloScreen() {
       {employers.length > 0 ? (
         <View className="gap-3">
           <Mono>I tuoi locali</Mono>
-          {employers.map((e) => (
-            <EmployerCard key={e.id} employer={e} waiterId={userId} />
+          {groupByEmployer(employers).map((group) => (
+            <EmployerGroupCard
+              key={group[0].id}
+              venues={group}
+              waiterId={userId}
+            />
           ))}
         </View>
       ) : null}

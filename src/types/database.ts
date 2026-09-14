@@ -581,6 +581,7 @@ export type Database = {
           display_name: string
           employment_type: Database["public"]["Enums"]["employment_type"]
           id: string
+          left_at: string | null
           link_status: Database["public"]["Enums"]["staff_link_status"]
           note: string | null
           person_id: string
@@ -593,6 +594,7 @@ export type Database = {
           display_name?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
+          left_at?: string | null
           link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
           person_id: string
@@ -605,6 +607,7 @@ export type Database = {
           display_name?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
+          left_at?: string | null
           link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
           person_id?: string
@@ -1052,6 +1055,7 @@ export type Database = {
         Args: { p_platform: string; p_token: string }
         Returns: undefined
       }
+      remove_staff_member: { Args: { p_staff_id: string }; Returns: undefined }
       respond_to_staff_invite: {
         Args: { p_accept: boolean; p_staff_id: string }
         Returns: undefined
@@ -1079,7 +1083,7 @@ export type Database = {
         | "shift_unassigned"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
-      staff_link_status: "pending" | "active"
+      staff_link_status: "pending" | "active" | "left"
       user_role: "waiter" | "manager"
     }
     CompositeTypes: {
@@ -1226,7 +1230,7 @@ export const Constants = {
       ],
       shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],
-      staff_link_status: ["pending", "active"],
+      staff_link_status: ["pending", "active", "left"],
       user_role: ["waiter", "manager"],
     },
   },

@@ -89,7 +89,10 @@ function PersonPanel({
   onClose: () => void;
 }) {
   const memberships = person.memberships;
-  const multiVenue = memberships.length > 1;
+  // Le sedi dove lavora **adesso**: quelle lasciate restano nella scheda (sono
+  // lo storico delle sue ore) ma non sono chip di dove trovarlo.
+  const liveMemberships = memberships.filter((m) => m.link_status !== "left");
+  const multiVenue = liveMemberships.length > 1;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div
@@ -109,7 +112,7 @@ function PersonPanel({
               ) : (
                 <Pill tone="neutral">Scheda senza account</Pill>
               )}
-              {memberships.map((m) => (
+              {liveMemberships.map((m) => (
                 <Pill key={m.id} tone="neutral">
                   {m.venue?.name ?? "Locale"}
                 </Pill>
@@ -243,7 +246,7 @@ function Workplaces({
     <section className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
         {multiVenue
-          ? `Dove lavora · ${person.memberships.length}`
+          ? `Dove lavora · ${person.memberships.filter((m) => m.link_status !== "left").length}`
           : "Dove lavora"}
       </span>
       {person.memberships.map((m) => (
@@ -296,6 +299,28 @@ function WorkplaceCard({
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
     }
+  }
+
+  // Appartenenza finita: resta in scheda perché le ore di quella sede sono
+  // sue, ma non c'è più niente da modificare. Per riprenderla si riaggiunge la
+  // persona alla sede, e la stessa riga torna attiva (`addPersonToVenue`).
+  if (membership.link_status === "left") {
+    return (
+      <Card className="flex flex-col gap-2 p-4 opacity-70">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-t2">
+            {venueName}
+          </span>
+          <Pill tone="neutral">Non più in organico</Pill>
+        </div>
+        <p className="text-xs leading-5 text-t3">
+          {membership.left_at
+            ? `Ha lasciato questa sede il ${formatDate(membership.left_at.slice(0, 10))}. `
+            : ""}
+          Le ore dei turni già fatti restano nel rendiconto.
+        </p>
+      </Card>
+    );
   }
 
   return (
@@ -364,13 +389,14 @@ function WorkplaceCard({
       </div>
 
       {confirming && !isOnly ? (
-        // ⚠️ La cascata è del database: cancellando l'appartenenza se ne vanno le
-        // sue `shift_assignments`, e con loro le ore di questa sede.
+        // Da 20260914102811 non è una cancellazione: l'appartenenza passa a
+        // `link_status = 'left'` e lo storico resta. Spariscono solo i turni
+        // futuri, che nessuno coprirebbe.
         <p className="text-xs leading-5 text-warning">
-          {person.full_name} non sarà più in organico a {venueName}. Perderai le
-          ore e le presenze dei turni che ha fatto lì (anche nell&apos;export per
-          il commercialista). Resta nel tuo organico nelle altre sedi, con le sue
-          ore e i suoi documenti.
+          {person.full_name} non sarà più in organico a {venueName}. I turni
+          futuri già assegnati vengono annullati e tornano da coprire; le ore dei
+          turni passati restano nel rendiconto. Resta nel tuo organico nelle
+          altre sedi.
         </p>
       ) : null}
     </Card>
@@ -544,7 +570,11 @@ function RemoveSection({
 
   async function doRemoveAll() {
     try {
-      for (const m of person.memberships) await remove.mutateAsync(m.id);
+      // Solo le sedi ancora attive: `remove_staff_member` rifiuta una riga già
+      // 'left' e il ciclo si fermerebbe su un lavoro già fatto.
+      for (const m of person.memberships.filter((m) => m.link_status !== "left")) {
+        await remove.mutateAsync(m.id);
+      }
       onRemoved();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
@@ -556,10 +586,10 @@ function RemoveSection({
       {confirming ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs leading-5 text-warning">
-            {person.full_name} non lavorerà più in nessuna delle tue sedi.
-            Perderai lo storico di ore e presenze di tutti i suoi turni (incluso
-            l&apos;export per il commercialista) e i documenti caricati sulla sua
-            scheda.
+            {person.full_name} non lavorerà più in nessuna delle tue sedi. I
+            turni futuri già assegnati vengono annullati; ore, presenze e
+            documenti restano nella sua scheda e nell&apos;export. Per
+            riprenderlo in futuro basta riaggiungerlo dall&apos;organico.
           </p>
           <div className="flex gap-2">
             <Button

@@ -166,7 +166,11 @@ export function useLeaveVenue() {
     mutationFn: (staffId: string) => leaveVenue(staffId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
+      // I turni futuri di quella sede sono stati tolti: l'agenda del
+      // professionista li mostrerebbe ancora, e il trigger dei coperti ha
+      // aggiornato i turni dall'altra parte.
       qc.invalidateQueries({ queryKey: qk.assignments.all });
+      qc.invalidateQueries({ queryKey: qk.shifts.all });
     },
   });
 }
