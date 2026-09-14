@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
+import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -11,7 +11,7 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { cn } from "@/lib/cn";
+import { Segmented } from "@/components/ui/Segmented";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
@@ -265,31 +265,7 @@ export default function StaffNewScreen() {
       >
         <ScreenHeader eyebrow="Staff" title="Aggiungi" />
 
-        {/* Segmented */}
-        <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">
-          {MODES.map((m) => {
-            const active = m.id === mode;
-            return (
-              <Pressable
-                key={m.id}
-                onPress={() => setMode(m.id)}
-                className={cn(
-                  "flex-1 items-center rounded-xl py-2.5",
-                  active && "bg-bg-2"
-                )}
-              >
-                <Text
-                  className={cn(
-                    "text-sm",
-                    active ? "font-sans-semibold text-t1" : "text-t3"
-                  )}
-                >
-                  {m.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Segmented options={MODES} value={mode} onChange={setMode} />
 
         {mode === "manuale" ? (
           <View className="gap-5">

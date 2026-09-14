@@ -15,12 +15,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Mono } from "@/components/ui/Mono";
 import { NavRow } from "@/components/ui/NavRow";
 import { QueryError } from "@/components/ui/QueryError";
+import { Segmented } from "@/components/ui/Segmented";
 import { WeekCalendar } from "@/components/ui/WeekCalendar";
 import {
   type AgendaItem,
   type AgendaSection,
   daysWithShifts,
   groupAssignmentsByDay,
+  groupByDay,
   withShift,
 } from "@/features/assignments/agenda";
 import {
@@ -29,8 +31,16 @@ import {
 } from "@/features/assignments/hooks";
 import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
+import { useStaffPlanning } from "@/features/planning/hooks";
+import { VenuePlanningList } from "@/features/planning/VenuePlanningList";
+import { useMyEmployers } from "@/features/staff/hooks";
 import { useAuth } from "@/lib/auth";
-import { formatDayLabel, formatHours, todayString } from "@/lib/format";
+import {
+  addDaysToDate,
+  formatDayLabel,
+  formatHours,
+  todayString,
+} from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
 
@@ -38,6 +48,21 @@ import { useToast } from "@/providers/Toast";
 const SYNC_SETTLE_MS = 400;
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
+
+/**
+ * Quanti giorni di planning del locale si caricano in un colpo.
+ *
+ * Sei settimane: copre il mese che si sfoglia più quello dopo, e sta dentro il
+ * tetto di 62 giorni che `get_staff_planning` applica comunque lato server.
+ */
+const PLANNING_WINDOW_DAYS = 42;
+
+const MODES = [
+  { id: "mine", label: "I miei" },
+  { id: "venue", label: "Il locale" },
+] as const;
+
+type Mode = (typeof MODES)[number]["id"];
 
 /**
  * L'agenda del professionista: i turni che i locali gli hanno assegnato,
@@ -60,6 +85,22 @@ const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
  * l'app da questo lato — farla passare per il dettaglio turno significava due
  * tocchi in più per la cosa che si fa ogni settimana. Il rifiuto invece resta
  * dietro una conferma: avvisa il locale e non si torna indietro da soli.
+ *
+ * ── «I miei» / «Il locale» ─────────────────────────────────────────────────
+ *
+ * Un turno è un lavoro di squadra, e la seconda vista risponde alle due domande
+ * che l'agenda personale non sa fare: chi c'è stasera con me, e chi è in turno
+ * sabato a cui chiedere un cambio.
+ *
+ * Il selettore cambia la lista, **non** il calendario: mese, giorno scelto e
+ * ancora restano gli stessi passando da una vista all'altra, perché sono la
+ * domanda («cosa succede giovedì») e non la risposta. Per la stessa ragione le
+ * due liste non tengono uno stato per uno: lo leggono da qui.
+ *
+ * Il selettore compare solo per chi è in organico da qualche parte
+ * (`useMyEmployers`): a chi non lo è, la seconda vista non avrebbe niente da
+ * mostrare e un selettore con metà dei tocchi inerti è peggio di nessun
+ * selettore.
  */
 export default function WaiterShiftsScreen() {
   const router = useRouter();
@@ -71,11 +112,9 @@ export default function WaiterShiftsScreen() {
   const assignedQuery = useMyAssignedUpcoming(waiterId);
   const totals = useMyWorkHistoryTotals(waiterId);
   const respond = useRespondToAssignment();
-  const pull = usePullToRefresh(() =>
-    Promise.all([assignedQuery.refetch(), totals.refetch()])
-  );
 
   const today = todayString();
+  const [mode, setMode] = useState<Mode>("mine");
   const [declining, setDeclining] = useState<string | null>(null);
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
   const [anchorDay, setAnchorDay] = useState(today);
@@ -93,14 +132,45 @@ export default function WaiterShiftsScreen() {
     [assignedQuery.data]
   );
   const allSections = useMemo(() => groupAssignmentsByDay(items), [items]);
-  // I pallini del calendario restano su **tutti** i giorni con turni, anche
-  // quelli prima dell'ancora: il calendario è la mappa, non la vista corrente.
-  const marked = useMemo(() => daysWithShifts(items), [items]);
   const sections = useMemo(
     () => allSections.filter((s) => (s.date ?? "") >= anchorDay),
     [allSections, anchorDay]
   );
   const daConfermare = items.filter((a) => a.status === "assigned");
+
+  // Il planning del locale: una finestra che parte dal giorno da cui parte
+  // l'agenda, così scegliere una data lontana va a prendersi il periodo giusto
+  // invece di mostrare un vuoto. Il server filtra già da `anchorDay` in avanti,
+  // quindi qui non serve il `filter` che la vista «I miei» fa sulle sezioni.
+  const planningTo = addDaysToDate(anchorDay, PLANNING_WINDOW_DAYS);
+  const planning = useStaffPlanning(anchorDay, planningTo, mode === "venue");
+  const planningSections = useMemo(
+    () => groupByDay(planning.data ?? [], (s) => s.date),
+    [planning.data]
+  );
+
+  // Chi è in organico da qualche parte: decide se il selettore ha senso, e se
+  // sulle card serve il nome della sede.
+  const employers = useMyEmployers(waiterId);
+  const venueCount = employers.data?.length ?? 0;
+
+  // I pallini del calendario seguono la vista: sono la mappa di **questa**
+  // lista, e lasciarli sui propri turni mentre si guarda il locale indicherebbe
+  // giorni che la lista sotto non ha.
+  const myDays = useMemo(() => daysWithShifts(items), [items]);
+  const planningDays = useMemo(
+    () => new Set((planning.data ?? []).map((s) => s.date)),
+    [planning.data]
+  );
+  const marked = mode === "venue" ? planningDays : myDays;
+
+  const pull = usePullToRefresh(() =>
+    Promise.all(
+      mode === "venue"
+        ? [planning.refetch()]
+        : [assignedQuery.refetch(), totals.refetch()]
+    )
+  );
 
   function goToDay(date: string, browsing?: boolean) {
     syncing.current = true;
@@ -166,11 +236,15 @@ export default function WaiterShiftsScreen() {
           <View className="flex-row items-end justify-between gap-3">
             <View className="flex-1">
               <Mono gold>
-                {daConfermare.length > 0
-                  ? `${daConfermare.length} da confermare`
-                  : `${items.length} in programma`}
+                {mode === "venue"
+                  ? `${planningSections.length} ${planningSections.length === 1 ? "giornata" : "giornate"}`
+                  : daConfermare.length > 0
+                    ? `${daConfermare.length} da confermare`
+                    : `${items.length} in programma`}
               </Mono>
-              <Display className="mt-1 text-3xl">I miei turni</Display>
+              <Display className="mt-1 text-3xl">
+                {mode === "venue" ? "Turni del locale" : "I miei turni"}
+              </Display>
             </View>
             {/* Il ritorno: una volta spostata l'ancora, "oggi" non è più a
                 portata di scorrimento e va rimesso a portata di tocco. */}
@@ -184,6 +258,14 @@ export default function WaiterShiftsScreen() {
               </Pressable>
             ) : null}
           </View>
+          {venueCount > 0 ? (
+            <Segmented
+              className="mt-4"
+              options={MODES}
+              value={mode}
+              onChange={setMode}
+            />
+          ) : null}
           <WeekCalendar
             className="mt-4"
             selected={visibleDay}
@@ -194,7 +276,23 @@ export default function WaiterShiftsScreen() {
           />
         </View>
 
-        {assignedQuery.isLoading ? (
+        {mode === "venue" ? (
+          <VenuePlanningList
+            sections={planningSections}
+            isLoading={planning.isLoading}
+            isError={planning.isError}
+            onRetry={() => planning.refetch()}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={VIEWABILITY}
+            showVenue={venueCount > 1}
+            today={today}
+            away={away}
+            anchorDay={anchorDay}
+            paddingBottom={insets.bottom + 96}
+          />
+        ) : assignedQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
         ) : assignedQuery.isError ? (
           <QueryError onRetry={() => assignedQuery.refetch()} />

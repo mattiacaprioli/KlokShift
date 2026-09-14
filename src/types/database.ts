@@ -740,6 +740,7 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string
+          staff_sees_planning: boolean
         }
         Insert: {
           address?: string | null
@@ -752,6 +753,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id: string
+          staff_sees_planning?: boolean
         }
         Update: {
           address?: string | null
@@ -764,6 +766,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string
+          staff_sees_planning?: boolean
         }
         Relationships: [
           {
@@ -984,6 +987,24 @@ export type Database = {
         Returns: {
           cnt: number
           rating: number
+        }[]
+      }
+      get_staff_planning: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avatar_url: string
+          date: string
+          end_time: string
+          is_me: boolean
+          person_name: string
+          role_name: string
+          shift_id: string
+          staff_member_id: string
+          start_time: string
+          title: string
+          venue_id: string
+          venue_logo_url: string
+          venue_name: string
         }[]
       }
       get_staff_performance: {

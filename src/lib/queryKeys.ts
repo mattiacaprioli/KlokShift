@@ -123,6 +123,18 @@ export const qk = {
     mineForShift: (shiftId: string, waiterId: string) =>
       ["assignments", "mineForShift", shiftId, waiterId] as const,
   },
+  /**
+   * Il planning che il professionista vede delle sedi in cui è in organico.
+   *
+   * Nessun id utente nella chiave: la RPC parte da `auth.uid()`, e l'uscita
+   * svuota la cache (`queryClient.clear()` su `SIGNED_OUT` in `auth.tsx`).
+   * L'intervallo invece c'è, perché scorrendo le settimane se ne tiene più d'uno
+   * in cache — stessa ragione di `shifts.range`.
+   */
+  planning: {
+    all: ["planning"] as const,
+    range: (from: string, to: string) => ["planning", "range", from, to] as const,
+  },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
   chat: {
     all: ["chat"] as const,

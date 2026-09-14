@@ -24,6 +24,7 @@ import {
   useMyAssignmentForShift,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
+import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
 import type { Enums } from "@/types/database";
 
 /** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
@@ -268,6 +269,15 @@ export default function WaiterShiftDetailScreen() {
             </Text>
           </Card>
         )}
+
+        {/* Sotto l'azione, non sopra: la schermata esiste per confermare la
+            presenza, e la squadra è il contesto di quel gesto. Si toglie da sé
+            quando si è da soli o quando il locale non condivide il planning. */}
+        <ShiftTeamSection
+          className="mt-8"
+          shiftId={shift.id}
+          date={shift.date}
+        />
 
         {shift.venue ? (
           <GhostButton
