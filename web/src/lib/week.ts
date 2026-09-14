@@ -79,6 +79,44 @@ export function monthGridDays(monthStart: Date): string[] {
   return out;
 }
 
+/** I giorni del mese **vero** (1 → ultimo), non delle settimane che lo contengono. */
+export function monthDays(monthStart: Date): string[] {
+  const year = monthStart.getFullYear();
+  const month = monthStart.getMonth();
+  const last = new Date(year, month + 1, 0).getDate();
+  return Array.from({ length: last }, (_, i) =>
+    toDateString(new Date(year, month, i + 1))
+  );
+}
+
+/**
+ * La stessa **posizione nel mese**: il 2° martedì di settembre diventa il 2°
+ * martedì di ottobre.
+ *
+ * È la regola giusta per un turnario, ed è la stessa del "duplica settimana":
+ * un turno del venerdì deve ricadere di venerdì — il sabato sera di un locale
+ * non somiglia al martedì. Tenere invece il giorno del mese (15 → 15) sposta i
+ * turni di weekend in mezzo alla settimana.
+ *
+ * `null` quando quella posizione nel mese di destinazione non esiste: il 5°
+ * venerdì c'è in qualche mese e in altri no. Chi chiama lo conta e lo dice.
+ */
+export function sameWeekdaySlot(
+  dateStr: string,
+  targetMonth: Date
+): string | null {
+  const d = new Date(`${dateStr}T00:00:00`);
+  // 0-based: il 1°–7° del mese è la prima occorrenza del suo giorno, l'8°–14° la
+  // seconda, e così via.
+  const occurrence = Math.floor((d.getDate() - 1) / 7);
+  const year = targetMonth.getFullYear();
+  const month = targetMonth.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const offset = (d.getDay() - firstWeekday + 7) % 7;
+  const out = new Date(year, month, 1 + offset + occurrence * 7);
+  return out.getMonth() === month ? toDateString(out) : null;
+}
+
 export function isSameMonth(dateStr: string, monthStart: Date): boolean {
   return dateStr.slice(0, 7) === toDateString(monthStart).slice(0, 7);
 }

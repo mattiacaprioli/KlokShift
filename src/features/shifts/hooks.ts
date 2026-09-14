@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
-import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useOwnerVenues, venuesKeyOf } from "@/features/venues/OwnerVenues";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import {
   createShift,
@@ -42,13 +42,30 @@ export function useOwnerShifts() {
   });
 }
 
-/** Turni in un intervallo di date — vista calendario/planning. */
-export function useOwnerShiftsRange(from: string, to: string) {
+/**
+ * Turni in un intervallo di date — vista calendario/planning.
+ *
+ * `scope` restringe la query a un sottoinsieme delle sedi dell'azienda: è il
+ * filtro per locale del Planning, e filtra **sul server** (`.in("venue_id", …)`
+ * sull'indice `shifts_venue_date_idx`), non a valle sui risultati. Ogni scope ha
+ * la sua chiave di cache, quindi tornare su "tutti i locali" non rifà la query.
+ *
+ * ⚠️ `scope` deve contenere solo id di sedi del titolare: la policy SELECT su
+ * `shifts` è larga (vedi il commento in `api.ts`), e un id arbitrario qui
+ * mostrerebbe i turni marketplace di un'altra azienda. Chi filtra parte sempre
+ * da `venueIds`.
+ */
+export function useOwnerShiftsRange(
+  from: string,
+  to: string,
+  scope?: string[]
+) {
   const { venueIds, venuesKey } = useOwnerVenues();
+  const ids = scope ?? venueIds;
   return useQuery({
-    queryKey: qk.shifts.range(venuesKey, from, to),
-    queryFn: () => getOwnerShiftsRange(venueIds, from, to),
-    enabled: venueIds.length > 0,
+    queryKey: qk.shifts.range(scope ? venuesKeyOf(scope) : venuesKey, from, to),
+    queryFn: () => getOwnerShiftsRange(ids, from, to),
+    enabled: ids.length > 0,
   });
 }
 

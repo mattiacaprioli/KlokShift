@@ -10,6 +10,7 @@ import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { cn } from "@/lib/cn";
+import { useAuth } from "@/lib/auth";
 import { PlanCard } from "@/features/plan/ProLock";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -136,6 +137,41 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
   );
 }
 
+/**
+ * Il proprio account, in mezzo a una pagina che parla del locale.
+ *
+ * Sta qui perché è qui che lo si cerca: questa schermata si chiama "Profilo", e
+ * chi voleva cambiare il **proprio** nome o la propria foto non trovava che il
+ * logo della sede. Il gesto vero sta in `(manager)/profilo-edit`.
+ */
+function AccountCard({ onPress }: { onPress: () => void }) {
+  const { session, profile } = useAuth();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Modifica il tuo profilo"
+      className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card p-5"
+    >
+      <Avatar
+        uri={profile?.avatar_url ?? undefined}
+        name={profile?.full_name ?? session?.user.email ?? "?"}
+        size={44}
+      />
+      <View className="flex-1">
+        <Mono>Il tuo account</Mono>
+        <Text className="mt-1 text-[15px] font-sans-semibold text-t1">
+          {profile?.full_name?.trim() || "Aggiungi il tuo nome"}
+        </Text>
+        <Text className="mt-0.5 text-xs text-t3">
+          Nome e foto con cui ti vede il tuo staff
+        </Text>
+      </View>
+      <Icon name="chevR" size={18} color="#8C8579" />
+    </Pressable>
+  );
+}
+
 export default function ManagerProfiloScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -170,6 +206,10 @@ export default function ManagerProfiloScreen() {
           <Icon name="settings" size={19} color="#F8F4ED" />
         </Pressable>
       </View>
+
+      {/* Prima del locale, e senza aspettare la query delle sedi: è l'identità
+          di chi sta guardando, e non dipende da quanti locali ha. */}
+      <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
 
       {venueQuery.isLoading ? (
         <ActivityIndicator color="#EAB54C" className="mt-16" />

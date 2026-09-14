@@ -3,7 +3,12 @@ import { Card } from "@/components/ui/Card";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
-import { shiftCounts, shiftCoverage } from "@/features/assignments/coverage";
+import {
+  shiftCounts,
+  shiftCoverage,
+  shiftTone,
+  type ShiftTone,
+} from "@/features/assignments/coverage";
 import {
   formatDayLabel,
   formatHours,
@@ -21,6 +26,13 @@ import type { ShiftWithCount } from "./types";
  * giorno. Un titolo scritto a mano dalla dashboard web passa invece intatto.
  */
 const AUTO_TITLE = /^Turno · /;
+
+/** Gli stessi tre colori della legenda del planning web. */
+const TONE_BAR: Record<ShiftTone, string> = {
+  covered: "bg-success",
+  short: "bg-warning",
+  off: "bg-t4",
+};
 
 function shiftLabel(shift: ShiftWithCount): string {
   const title = shift.title?.trim();
@@ -63,6 +75,7 @@ export function ManagerShiftCard({
   const { filled, total, short } = shiftCounts(shift);
   // Un turno annullato non è scoperto: non deve coprirlo più nessuno.
   const alert = short && !cancelled;
+  const tone = shiftTone(shift);
   const label = shiftLabel(shift);
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
 
@@ -74,18 +87,17 @@ export function ManagerShiftCard({
     coverage.rows.length > 0 &&
     (coverage.rows.length > 1 || coverage.missing > 0);
 
-  const bar = cancelled || closed ? "bg-t4" : alert ? "bg-warning" : "bg-gold";
-
   /**
-   * La barra a sinistra dice due cose diverse a seconda di quante sedi ci sono.
-   * Con una sola resta lo stato del turno (oro / arancio / spento), che è
-   * l'unica informazione che quella card ha da dare. Con più sedi prende il
-   * colore della sede, perché in un'agenda mescolata «di chi è questo turno» si
-   * legge prima di «è coperto»: lo stato lo dicono comunque la pill e il
-   * rapporto, la sede non la direbbe nessun altro.
+   * La barra a sinistra dice **la copertura**, e dice la stessa cosa del bordo
+   * colorato del planning web: verde coperto, arancio manca qualcuno, spento se
+   * non c'è più niente da coprire (`shiftTone`).
+   *
+   * Fino al 14/09/2026 erano due regole diverse: qui il verde non c'era (chi era
+   * a posto prendeva l'oro del marchio) e con più sedi la barra passava alla
+   * *sede*, che è un'altra domanda. La sede ha il suo posto — il nome in
+   * `accent` sopra il titolo, che si legge anche senza distinguere i colori.
    */
-  const barStyle =
-    venue && !cancelled && !closed ? { backgroundColor: venue.accent } : undefined;
+  const bar = TONE_BAR[tone];
 
   if (variant === "compact") {
     return (
@@ -96,10 +108,7 @@ export function ManagerShiftCard({
         )}
         onPress={onPress}
       >
-        <View
-          className={cn("h-8 w-1 rounded-full", bar)}
-          style={barStyle}
-        />
+        <View className={cn("h-8 w-1 rounded-full", bar)} />
         <View className="items-start">
           <Text
             className="text-[15px] font-sans-bold text-t1"
@@ -124,8 +133,11 @@ export function ManagerShiftCard({
           >
             {/* La sede prima della copertura: nella home i turni di tre locali
                 si susseguono, e senza il nome due card identiche sono
-                indistinguibili. */}
-            {venue ? `${venue.name} · ` : ""}
+                indistinguibili. Nel suo colore, da quando la barra a sinistra
+                è tornata a dire la copertura. */}
+            {venue ? (
+              <Text style={{ color: venue.accent }}>{venue.name} · </Text>
+            ) : null}
             {alert ? `manca ${total - filled}` : `${filled}/${total} coperti`}
           </Text>
         </View>
@@ -142,7 +154,7 @@ export function ManagerShiftCard({
       onPress={onPress}
     >
       <View className="flex-row gap-3.5">
-        <View className={cn("w-1 rounded-full", bar)} style={barStyle} />
+        <View className={cn("w-1 rounded-full", bar)} />
 
         <View className="items-start pt-0.5">
           <Text

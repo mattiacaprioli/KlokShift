@@ -112,6 +112,28 @@ export type CountableShift = CoverageEmbeds & {
  * sulla stessa schermata: i posti contano teste, la copertura conta i ruoli
  * che servono davvero.
  */
+/**
+ * Il colore di un turno, in una parola sola: verde coperto, arancio scoperto,
+ * spento se non c'è più niente da coprire.
+ *
+ * ⚠️ È **l'unico** posto in cui si decide. Prima ogni vista aveva la sua regola
+ * — il mese web colorava il bordo per copertura, la settimana web lo dava alla
+ * sede, la card mobile faceva oro-su-tutto — e lo stesso turno cambiava
+ * significato passando da una schermata all'altra. Il colore della sede è un
+ * altro segnale e vuole un altro supporto (il pallino, il nome): non si mette
+ * qui sopra, perché "di chi è" e "è coperto" non possono occupare lo stesso
+ * pixel.
+ */
+export type ShiftTone = "covered" | "short" | "off";
+
+export function shiftTone(
+  shift: CountableShift & { status: Enums<"shift_status"> }
+): ShiftTone {
+  // Annullato o chiuso: non è scoperto: non deve coprirlo più nessuno.
+  if (shift.status === "cancelled" || shift.status === "closed") return "off";
+  return shiftCounts(shift).short ? "short" : "covered";
+}
+
 export function shiftCounts(shift: CountableShift): {
   filled: number;
   total: number;

@@ -23,12 +23,19 @@ type AssignmentStatus = Enums<"assignment_status">;
  * un'etichetta: la Pill costava un terzo della larghezza della card e su uno
  * schermo da 375pt troncava sia il nome del locale sia il ruolo. Resta solo
  * dove dice qualcosa che il colore non dice — un turno rifiutato o un'assenza.
+ *
+ * Gli stessi tre colori del lato locale (vedi `shiftTone`), letti però sul
+ * **proprio** stato invece che sulla copertura: verde a posto, arancio c'è da
+ * fare qualcosa, spento fuori gioco. Fino al 14/09/2026 un turno confermato era
+ * oro e uno da confermare arancio — #EAB54C contro #E2922F, due ambre che su un
+ * telefono al sole sono lo stesso colore — e il verde c'era solo nella Pill del
+ * dettaglio turno, che quindi diceva un'altra cosa.
  */
 const STATUS: Record<
   AssignmentStatus,
   { bar: string; pill?: { label: string; variant: "cancelled" } }
 > = {
-  confirmed: { bar: "bg-gold" },
+  confirmed: { bar: "bg-success" },
   assigned: { bar: "bg-warning" },
   declined: {
     bar: "bg-t4",

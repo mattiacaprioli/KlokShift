@@ -11,6 +11,7 @@ import {
 } from "@/features/assignments/status";
 import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
 import { formatHours, formatShiftRange } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
@@ -34,12 +35,22 @@ import {
 export function PeopleWeek({
   days,
   shifts,
+  venueIds,
   onOpen,
   onCreate,
   onReassign,
 }: {
   days: string[];
   shifts: ShiftWithAssignees[];
+  /**
+   * Le sedi che `shifts` contiene: tutte quelle dell'azienda, o la sola sede
+   * scelta col filtro per locale del Planning. Qui serve a due cose — tenere
+   * nelle righe solo chi lavora in quelle sedi, e dire che le ore sono parziali
+   * quando il filtro è acceso (le soglie 40h/48h sono **della persona**, su
+   * tutte le sedi: con un locale solo sotto gli occhi, un totale basso non è una
+   * promessa che la persona sia scarica).
+   */
+  venueIds: string[];
   onOpen: (shift: ShiftWithAssignees) => void;
   /**
    * Casella vuota: un turno nuovo quel giorno, già assegnato a quella persona.
@@ -56,9 +67,24 @@ export function PeopleWeek({
   const peopleQuery = useOwnerPeople(ownerId);
   const dnd = useShiftDrag();
 
-  /** Il nome del locale di un turno. `null` con un locale solo. */
-  const venueName = (venueId: string) =>
-    isMultiVenue ? (venues.find((v) => v.id === venueId)?.name ?? null) : null;
+  /** Il filtro per locale del Planning è acceso: si vede una sede sola. */
+  const filtered = venueIds.length < venues.length;
+  /**
+   * Più sedi **in questa griglia**: è la condizione per scrivere il locale sui
+   * turni. Con il filtro acceso il locale è già nel titolo della pagina, e
+   * ripeterlo su ogni chip toglierebbe spazio all'orario.
+   */
+  const showVenue = isMultiVenue && venueIds.length > 1;
+
+  /**
+   * Nome e colore del locale di un turno. L'indice è quello di `venues`, non di
+   * `venueIds`: il colore di una sede non deve cambiare quando si filtra.
+   */
+  const venueOf = (venueId: string) => {
+    if (!isMultiVenue) return null;
+    const i = venues.findIndex((v) => v.id === venueId);
+    return i < 0 ? null : { name: venues[i].name, accent: venueAccent(i) };
+  };
 
   const byId = useMemo(() => new Map(shifts.map((s) => [s.id, s])), [shifts]);
 
@@ -91,23 +117,34 @@ export function PeopleWeek({
     return map;
   }, [peopleQuery.data]);
 
-  const rows = useMemo(
-    () =>
-      computeWeekLoad(
-        shifts,
-        (peopleQuery.data ?? []).map((p) => ({
-          person_id: p.id,
-          display_name: p.full_name,
-          roles: personRoleNames(p),
-        }))
-      ),
-    [shifts, peopleQuery.data]
-  );
+  const rows = useMemo(() => {
+    const scope = new Set(venueIds);
+    const roster = (peopleQuery.data ?? [])
+      // Con il filtro acceso restano solo le righe di chi in quella sede
+      // lavora davvero: gli altri comparirebbero a zero ore, e una colonna di
+      // zeri che non si possono riempire è rumore, non informazione.
+      .filter((p) =>
+        p.memberships.some(
+          (m) => m.link_status === "active" && scope.has(m.venue_id)
+        )
+      )
+      .map((p) => ({
+        person_id: p.id,
+        display_name: p.full_name,
+        roles: personRoleNames(p),
+      }));
+    return computeWeekLoad(shifts, roster);
+  }, [shifts, peopleQuery.data, venueIds]);
 
   if (peopleQuery.isPending) return <Spinner />;
 
   if (rows.length === 0) {
-    return (
+    return filtered ? (
+      <Placeholder
+        title="Nessuno lavora in questo locale"
+        detail="Assegna delle persone a questa sede dalla sezione Staff, oppure togli il filtro per vedere tutta l'azienda."
+      />
+    ) : (
       <Placeholder
         title="Nessuno nel tuo organico"
         detail="Aggiungi le persone che lavorano per te dalla sezione Staff: qui vedrai come si distribuiscono i turni fra loro."
@@ -144,7 +181,7 @@ export function PeopleWeek({
               );
             })}
             <span className="text-right text-xs font-semibold uppercase tracking-wider text-t4">
-              Ore
+              {filtered ? "Ore qui" : "Ore"}
             </span>
           </div>
 
@@ -225,7 +262,8 @@ export function PeopleWeek({
                           key={ps.shiftId}
                           personShift={ps}
                           fromStaffName={person.name}
-                          venueName={venueName(ps.venueId)}
+                          venue={venueOf(ps.venueId)}
+                          showVenue={showVenue}
                           busyStaffIds={
                             byId
                               .get(ps.shiftId)
@@ -243,7 +281,11 @@ export function PeopleWeek({
                   );
                 })}
 
-                <HoursCell hours={person.hours} daysWorked={person.daysWorked} />
+                <HoursCell
+                  hours={person.hours}
+                  daysWorked={person.daysWorked}
+                  partial={filtered}
+                />
               </div>
             ))}
           </div>
@@ -270,12 +312,20 @@ export function PeopleWeek({
         Sono ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
         rifiutato o è stato segnato assente non le somma. Le ore effettivamente
         lavorate — quelle che vanno al commercialista — stanno nella pagina Ore.
-        {isMultiVenue ? (
+        {isMultiVenue && !filtered ? (
           <>
             {" "}
             Le ore sono <b>della persona</b>: i turni di tutti i tuoi locali sono
             già contati qui, e un turno si può passare solo a chi lavora nella sua
             stessa sede.
+          </>
+        ) : null}
+        {filtered ? (
+          <>
+            {" "}
+            Stai guardando <b>un locale solo</b>: le ore qui sotto sono quelle di
+            questa sede, non il totale della persona. Le soglie di legge sono
+            della persona — per vederle tutte, togli il filtro.
           </>
         ) : null}
       </p>
@@ -286,14 +336,20 @@ export function PeopleWeek({
 function PersonShiftChip({
   personShift,
   fromStaffName,
-  venueName,
+  venue,
+  showVenue,
   busyStaffIds,
   onOpen,
 }: {
   personShift: PersonShift;
   fromStaffName: string;
-  /** Il locale del turno. `null` con un locale solo. */
-  venueName: string | null;
+  /** Il locale del turno: nome e colore. `null` con un locale solo. */
+  venue: { name: string; accent: string } | null;
+  /**
+   * Scrivere il nome del locale sul chip. Falso quando la griglia mostra una
+   * sede sola: il nome sarebbe uguale su ogni turno.
+   */
+  showVenue: boolean;
   busyStaffIds: string[];
   onOpen: () => void;
 }) {
@@ -322,7 +378,7 @@ function PersonShiftChip({
         `${personShift.title} · ${fromStaffName}`
       )}
       title={[
-        venueName,
+        venue?.name,
         personShift.title,
         formatShiftRange(personShift.start_time, personShift.end_time),
         active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
@@ -352,6 +408,20 @@ function PersonShiftChip({
           ? personShift.title
           : ASSIGNMENT_STATUS_LABEL[personShift.status]}
       </span>
+      {/* Il locale, terza riga. Qui il nome si **scrive**: questa è la vista in
+          cui una persona lavora in due sedi nella stessa settimana, e sapere
+          dov'è giovedì è metà della domanda. Il pallino colorato è solo un
+          appiglio — si stampa in grigio, il nome no. */}
+      {showVenue && venue ? (
+        <span className="mt-0.5 flex items-center gap-1">
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: venue.accent }}
+          />
+          <span className="truncate text-[10px] text-t4">{venue.name}</span>
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -367,9 +437,17 @@ function PersonShiftChip({
 function HoursCell({
   hours,
   daysWorked,
+  partial,
 }: {
   hours: number;
   daysWorked: number;
+  /**
+   * Il filtro per locale è acceso: qui c'è **una parte** delle ore della
+   * persona. Le soglie restano vere quando scattano — le ore filtrate non
+   * superano mai quelle vere — ma una cella tranquilla non promette più niente,
+   * e va detto.
+   */
+  partial: boolean;
 }) {
   const over = hours > MAX_WEEK_HOURS;
   const heavy = hours > ORDINARY_WEEK_HOURS;
@@ -379,6 +457,11 @@ function HoursCell({
 
   return (
     <div
+      title={
+        partial
+          ? "Solo le ore di questo locale: togli il filtro per il totale della persona."
+          : undefined
+      }
       className={cn(
         "flex flex-col items-end justify-center rounded-xl border px-2 py-2",
         over

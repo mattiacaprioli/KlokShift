@@ -27,6 +27,7 @@ export default function ManagerLayout() {
       <Stack.Screen name="ruoli" options={{ headerShown: false }} />
       <Stack.Screen name="cameriere/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
+      <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />
       <Stack.Screen
         name="impostazioni-notifiche"

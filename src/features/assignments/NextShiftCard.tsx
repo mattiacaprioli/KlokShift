@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
+import { Pill } from "@/components/ui/Pill";
 import {
   formatHours,
   formatRelativeStart,
@@ -71,6 +72,15 @@ export function NextShiftCard({
           </Text>
         </View>
       </View>
+
+      {/* Confermato: una riga verde, perché questa card non ha la barra di
+          stato delle altre e senza di essa un turno già confermato è identico a
+          uno che aspetta ancora una risposta. */}
+      {item.status === "confirmed" ? (
+        <View className="mt-4 flex-row">
+          <Pill label="Presenza confermata" variant="accepted" />
+        </View>
+      ) : null}
 
       {canRespond ? (
         <View className="mt-4 flex-row gap-2">

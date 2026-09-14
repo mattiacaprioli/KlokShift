@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
@@ -15,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { session, profile, signOut } = useAuth();
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -32,6 +33,34 @@ export default function ManagerSettingsScreen() {
           flexGrow: 1,
         }}
       >
+        <View className="gap-2">
+          <SectionHeader title="Account" />
+          <Card className="p-0">
+            {/* Il proprio nome e la propria foto, non quelli del locale: il
+                Profilo parla della sede, e questa era l'unica cosa che dal
+                telefono non si poteva più sistemare. */}
+            <Pressable
+              onPress={() => router.push("/(manager)/profilo-edit")}
+              className="flex-row items-center gap-3 px-4 py-3.5"
+            >
+              <Avatar
+                uri={profile?.avatar_url ?? undefined}
+                name={profile?.full_name ?? session?.user.email ?? "?"}
+                size={36}
+              />
+              <View className="flex-1">
+                <Text className="text-[15px] font-sans-semibold text-t1">
+                  {profile?.full_name?.trim() || "Il tuo profilo"}
+                </Text>
+                <Text className="mt-0.5 text-[13px] text-t3" numberOfLines={1}>
+                  {session?.user.email ?? "Nome e foto"}
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#6A6358" />
+            </Pressable>
+          </Card>
+        </View>
+
         <View className="gap-2">
           <SectionHeader title="Preferenze" />
           <Card className="p-0">

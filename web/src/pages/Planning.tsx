@@ -20,7 +20,11 @@ import {
   isOvernightShift,
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { shiftCoverage, shiftCounts } from "@/features/assignments/coverage";
+import {
+  shiftCoverage,
+  shiftCounts,
+  shiftTone,
+} from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
@@ -39,12 +43,20 @@ import {
   weekLabel,
   WEEKDAY_NAMES,
 } from "../lib/week";
-import { Button, PageHeader, Pill, QueryError, Spinner } from "../ui/primitives";
+import {
+  Button,
+  PageHeader,
+  Pill,
+  QueryError,
+  Select,
+  Spinner,
+} from "../ui/primitives";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { PeopleWeek } from "../shifts/PeopleWeek";
-import { DuplicateWeekDialog } from "../shifts/DuplicateWeekDialog";
+import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
+import { CoverageLegend, TONE_BORDER } from "../shifts/CoverageLegend";
 import {
   dropClass,
   ShiftDragProvider,
@@ -57,6 +69,7 @@ import {
 const VIEWS = ["settimana", "mese", "persone"] as const;
 type View = (typeof VIEWS)[number];
 const VIEW_KEY = "topwaitr.planning.view";
+const VENUE_KEY = "topwaitr.planning.venue";
 
 function storedView(): View {
   try {
@@ -65,6 +78,15 @@ function storedView(): View {
   } catch {
     // Private browsing / cookie bloccati: si riparte dal default.
     return "settimana";
+  }
+}
+
+/** Il filtro per locale scelto l'ultima volta. `null` = tutti. */
+function storedVenue(): string | null {
+  try {
+    return localStorage.getItem(VENUE_KEY);
+  } catch {
+    return null;
   }
 }
 
@@ -81,7 +103,7 @@ function storedView(): View {
  * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
-  const { venues, isMultiVenue } = useOwnerVenues();
+  const { venues, venueIds, isMultiVenue } = useOwnerVenues();
   /** Il locale di un turno: nome e colore. `undefined` con un locale solo. */
   const venueOf = useCallback(
     (venueId: string) => {
@@ -94,6 +116,18 @@ export function PlanningPage() {
     [venues, isMultiVenue]
   );
   const [view, setView] = useState<View>(storedView);
+  const [venueFilter, setVenueFilter] = useState<string | null>(storedVenue);
+  // Il filtro salvato può puntare a una sede chiusa, o a quella di un altro
+  // account sullo stesso browser: si valida contro le sedi vere, altrimenti il
+  // planning resterebbe vuoto senza dire perché.
+  const activeVenueId =
+    venueFilter && venues.some((v) => v.id === venueFilter) ? venueFilter : null;
+  const activeVenueName = venues.find((v) => v.id === activeVenueId)?.name;
+  /** Le sedi da interrogare: una sola se il filtro è attivo, sennò tutte. */
+  const scopedIds = useMemo(
+    () => (activeVenueId ? [activeVenueId] : venueIds),
+    [activeVenueId, venueIds]
+  );
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [panel, setPanel] = useState<{
@@ -115,15 +149,28 @@ export function PlanningPage() {
     }
   }, [view]);
 
+  useEffect(() => {
+    try {
+      if (venueFilter) localStorage.setItem(VENUE_KEY, venueFilter);
+      else localStorage.removeItem(VENUE_KEY);
+    } catch {
+      // Preferenza non memorizzabile: il filtro resta per la sessione.
+    }
+  }, [venueFilter]);
+
   const isWeekly = view !== "mese";
   const days = useMemo(
     () => (isWeekly ? weekDays(monday) : monthGridDays(month)),
     [isWeekly, monday, month]
   );
 
+  // Il filtro per locale è **del server**: cambia l'insieme di `venue_id`
+  // interrogato, non nasconde righe già scaricate. Con dieci sedi e un mese
+  // aperto la differenza è tutto il payload.
   const { data, isPending, isError, error } = useOwnerShiftsRange(
     days[0],
-    days[days.length - 1]
+    days[days.length - 1],
+    scopedIds
   );
 
   const byDay = useMemo(() => {
@@ -151,6 +198,20 @@ export function PlanningPage() {
           return sum + Math.max(0, total - filled);
         }, 0),
     [data]
+  );
+
+  /**
+   * Cosa si duplica. Sulla vista mese **non** è tutto `data`: la griglia mensile
+   * è fatta di settimane intere, quindi contiene la coda del mese prima e la
+   * testa di quello dopo — copiarle vorrebbe dire duplicare turni che l'utente
+   * vede in grigio e non considera suoi.
+   */
+  const duplicable = useMemo(
+    () =>
+      isWeekly
+        ? (data ?? [])
+        : (data ?? []).filter((s) => isSameMonth(s.date, month)),
+    [data, isWeekly, month]
   );
 
   const toast = useToast();
@@ -255,6 +316,9 @@ export function PlanningPage() {
         subtitle={
           <>
             {isWeekly ? weekLabel(monday) : monthTitle(month)}
+            {/* Anche sul foglio: i comandi non si stampano, quindi senza questo
+                un turnario filtrato sembrerebbe l'agenda di tutta l'azienda. */}
+            {activeVenueName ? ` · ${activeVenueName}` : null}
             {missing > 0 ? (
               <span className="text-warning">
                 {" · "}
@@ -266,13 +330,29 @@ export function PlanningPage() {
         }
         actions={
           <>
-            {/* Solo sulle viste settimanali: si duplica una settimana, non un
-                mese — copiare 60 turni in un colpo non è un gesto da un click. */}
-            {isWeekly ? (
-              <Button onClick={() => setDuplicating(true)}>
-                Duplica settimana
-              </Button>
+            {/* Il filtro per locale ha senso solo se i locali sono più d'uno. */}
+            {isMultiVenue ? (
+              <Select
+                aria-label="Filtra per locale"
+                value={activeVenueId ?? ""}
+                onChange={(e) => setVenueFilter(e.target.value || null)}
+                className="mr-2 w-auto"
+              >
+                <option value="">Tutti i locali</option>
+                {venues.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </Select>
             ) : null}
+            {/* Si duplica il periodo che si ha davanti: la settimana sulle viste
+                settimanali, il mese sulla vista mese. Il dialogo dice quanti
+                turni e quante notifiche prima di procedere — che su un mese non
+                è una formalità. */}
+            <Button onClick={() => setDuplicating(true)}>
+              {isWeekly ? "Duplica settimana" : "Duplica mese"}
+            </Button>
             {/* Il turnario finisce in bacheca: la stampa la fa il browser sulla
                 vista che hai davanti, con i token ribaltati su bianco. */}
             <Button className="mr-2" onClick={() => window.print()}>
@@ -340,6 +420,7 @@ export function PlanningPage() {
           <PeopleWeek
             days={days}
             shifts={data ?? []}
+            venueIds={scopedIds}
             onOpen={(shift) => setPanel({ date: shift.date, shift })}
             onCreate={(day, personId) =>
               setPanel({ date: day, personIds: [personId] })
@@ -373,9 +454,14 @@ export function PlanningPage() {
       ) : null}
 
       {duplicating ? (
-        <DuplicateWeekDialog
-          monday={monday}
-          shifts={data ?? []}
+        <DuplicatePeriodDialog
+          period={isWeekly ? "week" : "month"}
+          anchor={isWeekly ? monday : month}
+          shifts={duplicable}
+          // Stesso perimetro della griglia che si sta guardando: si copia quel
+          // che si vede, e il conteggio del periodo di destinazione deve contare
+          // le stesse sedi, sennò avviserebbe per turni non copiabili.
+          venueIds={scopedIds}
           onClose={() => setDuplicating(false)}
         />
       ) : null}
@@ -510,64 +596,67 @@ function WeekGrid({
   const dnd = useShiftDrag();
 
   return (
-    <div className="grid grid-cols-7 gap-3">
-      {days.map((day) => {
-        const { name, num } = dayLabel(day);
-        const shifts = byDay.get(day) ?? [];
-        const { state, ...dropHandlers } = dnd.dropProps({
-          key: `week:${day}`,
-          accepts: (d) => d.mode === "move" && d.sourceDate !== day,
-          onDrop: (d) => {
-            if (d.mode === "move") onMove(d, day);
-          },
-        });
+    <div>
+      <div className="grid grid-cols-7 gap-3">
+        {days.map((day) => {
+          const { name, num } = dayLabel(day);
+          const shifts = byDay.get(day) ?? [];
+          const { state, ...dropHandlers } = dnd.dropProps({
+            key: `week:${day}`,
+            accepts: (d) => d.mode === "move" && d.sourceDate !== day,
+            onDrop: (d) => {
+              if (d.mode === "move") onMove(d, day);
+            },
+          });
 
-        return (
-          <section
-            key={day}
-            {...dropHandlers}
-            className={cn(
-              "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
-              isToday(day) ? "border-border-gold" : "border-border-2",
-              dropClass(state)
-            )}
-          >
-            <header className="mb-2 flex items-baseline justify-between px-1">
-              <span
-                className={cn(
-                  "text-xs font-semibold uppercase tracking-wider",
-                  isToday(day) ? "text-gold" : "text-t3"
-                )}
-              >
-                {name}
-              </span>
-              <span className="font-mono text-sm text-t2">{num}</span>
-            </header>
-
-            <div className="flex flex-1 flex-col gap-1.5">
-              {shifts.map((shift) => (
-                <ShiftCell
-                  key={shift.id}
-                  shift={shift}
-                  accent={venueOf(shift.venue_id)?.accent}
-                  venueName={venueOf(shift.venue_id)?.name}
-                  onOpen={() => onOpen(day, shift)}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={() => {
-                if (dnd.swallowClick()) return;
-                onCreate(day);
-              }}
-              className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold print:hidden"
+          return (
+            <section
+              key={day}
+              {...dropHandlers}
+              className={cn(
+                "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
+                isToday(day) ? "border-border-gold" : "border-border-2",
+                dropClass(state)
+              )}
             >
-              + Turno
-            </button>
-          </section>
-        );
-      })}
+              <header className="mb-2 flex items-baseline justify-between px-1">
+                <span
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wider",
+                    isToday(day) ? "text-gold" : "text-t3"
+                  )}
+                >
+                  {name}
+                </span>
+                <span className="font-mono text-sm text-t2">{num}</span>
+              </header>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                {shifts.map((shift) => (
+                  <ShiftCell
+                    key={shift.id}
+                    shift={shift}
+                    accent={venueOf(shift.venue_id)?.accent}
+                    venueName={venueOf(shift.venue_id)?.name}
+                    onOpen={() => onOpen(day, shift)}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  if (dnd.swallowClick()) return;
+                  onCreate(day);
+                }}
+                className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold print:hidden"
+              >
+                + Turno
+              </button>
+            </section>
+          );
+        })}
+      </div>
+      <CoverageLegend />
     </div>
   );
 }
@@ -665,7 +754,7 @@ function MonthGrid({
                 {visible.map((shift) => {
                   const counts = shiftCounts(shift);
                   const cancelled = shift.status === "cancelled";
-                  const short = counts.short && !cancelled;
+                  const tone = shiftTone(shift);
                   return (
                     <button
                       key={shift.id}
@@ -698,11 +787,10 @@ function MonthGrid({
                       }
                       className={cn(
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
+                        TONE_BORDER[tone],
                         cancelled
-                          ? "border-l-t4 opacity-50"
-                          : short
-                            ? "cursor-grab border-l-warning active:cursor-grabbing"
-                            : "cursor-grab border-l-success active:cursor-grabbing",
+                          ? "opacity-50"
+                          : "cursor-grab active:cursor-grabbing",
                         dnd.isSource(shift.id) && "opacity-40"
                       )}
                     >
@@ -749,17 +837,7 @@ function MonthGrid({
         })}
       </div>
 
-      <p className="mt-3 flex flex-wrap gap-4 text-xs text-t4">
-        <span className="flex items-center gap-1.5">
-          <span className="h-3 w-0.5 rounded bg-success" /> coperto
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-3 w-0.5 rounded bg-warning" /> mancano persone
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-3 w-0.5 rounded bg-t4" /> annullato
-        </span>
-      </p>
+      <CoverageLegend />
     </div>
   );
 }
@@ -778,6 +856,7 @@ function ShiftCell({
 }) {
   const dnd = useShiftDrag();
   const cancelled = shift.status === "cancelled";
+  const tone = shiftTone(shift);
   const { filled, total, short } = shiftCounts(shift);
 
   // Il dettaglio per ruolo sta nel tooltip: in una cella larga un settimo di
@@ -811,16 +890,21 @@ function ShiftCell({
             shift.title
           ))}
       title={hint}
-      // Il bordo sinistro colorato è il segnale **secondario** della sede: si
-      // stampa in grigio, quindi il nome resta nel tooltip e nel pannello. In una
-      // cella larga un settimo di schermo non c'è spazio per scriverlo.
-      style={accent && !cancelled ? { borderLeftColor: accent } : undefined}
+      // Il bordo sinistro dice la **copertura**, come nella vista mese: è la cosa
+      // che si cerca scorrendo una griglia, ed è l'unica che cambia il da farsi.
+      // Fino al 14/09/2026 qui lo prendeva la sede, e lo stesso colore voleva
+      // dire due cose diverse a seconda della vista aperta. La sede ha il suo
+      // supporto sotto: pallino più nome.
       className={cn(
-        "focus-gold rounded-lg border p-2 text-left transition hover:border-border-gold",
+        // Niente bordo dorato al passaggio del mouse: colorerebbe **tutti** i
+        // lati, compreso quello sinistro, cioè spegnerebbe il segnale della
+        // copertura proprio mentre ci si sta lavorando. Basta il fondo.
+        "focus-gold rounded-lg border border-l-[3px] p-2 text-left transition",
         cancelled
           ? "border-border bg-bg-1 opacity-50"
           : "cursor-grab border-border-2 bg-bg-1 hover:bg-bg-2 active:cursor-grabbing",
-        accent && !cancelled && "border-l-[3px]",
+        // Dopo il colore di bordo generico, sennò `cn()` lo considera vinto.
+        TONE_BORDER[tone],
         dnd.isSource(shift.id) && "opacity-40"
       )}
     >
@@ -835,6 +919,19 @@ function ShiftCell({
       <p className="mt-0.5 font-mono text-[11px] text-t3">
         {formatShiftRange(shift.start_time, shift.end_time)}
       </p>
+      {/* La sede, da quando il bordo dice la copertura: pallino come appiglio e
+          nome come verità, che è l'unica coppia che sopravvive alla stampa in
+          bianco e nero. */}
+      {venueName ? (
+        <p className="mt-0.5 flex items-center gap-1">
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: accent }}
+          />
+          <span className="truncate text-[10px] text-t4">{venueName}</span>
+        </p>
+      ) : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
         {cancelled ? (
           <Pill tone="error">Annullato</Pill>

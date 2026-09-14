@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
@@ -14,15 +13,8 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
-import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import { qk } from "@/lib/queryKeys";
-import {
-  deleteAvatarByUrl,
-  updateMyProfile,
-  uploadAvatar,
-} from "@/features/account/api";
-import { pickAvatar } from "@/features/account/avatarPicker";
+import { useAvatarUpload } from "@/features/account/useAvatarUpload";
 import {
   useMyWaiterProfile,
   useSaveWaiterProfile,
@@ -39,10 +31,11 @@ export default function WaiterProfileEditScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const { session, profile, refreshProfile } = useAuth();
-  const qc = useQueryClient();
+  const { session, refreshProfile } = useAuth();
   const userId = session!.user.id;
-  const [photoBusy, setPhotoBusy] = useState(false);
+  // Stesso gesto del gestore, stesso ordine delle operazioni: vedi il commento
+  // in `useAvatarUpload`.
+  const photo = useAvatarUpload(userId);
 
   const profileQuery = useMyWaiterProfile(userId);
   const save = useSaveWaiterProfile(userId);
@@ -97,57 +90,6 @@ export default function WaiterProfileEditScreen() {
     }
   });
 
-  /**
-   * Il ritaglio quadrato e il ridimensionamento li fa `pickAvatar`; qui resta
-   * l'ordine che conta: prima il profilo punta alla foto nuova, poi si cancella
-   * la vecchia. Al contrario, un errore a metà lascerebbe il profilo a puntare
-   * a un file che non c'è più.
-   */
-  async function onPhoto() {
-    if (photoBusy) return;
-    const previous = profile?.avatar_url ?? null;
-    try {
-      const picked = await pickAvatar();
-      if (!picked) return; // annullato
-      setPhotoBusy(true);
-      const url = await uploadAvatar(userId, picked.bytes, {
-        contentType: picked.contentType,
-      });
-      await updateMyProfile(userId, { avatar_url: url });
-      await deleteAvatarByUrl(previous);
-      await refreshProfile();
-      qc.invalidateQueries({ queryKey: qk.profile.mine(userId) });
-      toast.show("Foto aggiornata");
-    } catch (e) {
-      toast.show(
-        userErrorMessage(e, "Caricamento non riuscito"),
-        "error"
-      );
-    } finally {
-      setPhotoBusy(false);
-    }
-  }
-
-  async function onRemovePhoto() {
-    const previous = profile?.avatar_url ?? null;
-    if (!previous || photoBusy) return;
-    setPhotoBusy(true);
-    try {
-      await updateMyProfile(userId, { avatar_url: null });
-      await deleteAvatarByUrl(previous);
-      await refreshProfile();
-      qc.invalidateQueries({ queryKey: qk.profile.mine(userId) });
-      toast.show("Foto rimossa");
-    } catch (e) {
-      toast.show(
-        userErrorMessage(e, "Operazione non riuscita"),
-        "error"
-      );
-    } finally {
-      setPhotoBusy(false);
-    }
-  }
-
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -191,11 +133,11 @@ export default function WaiterProfileEditScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <AvatarPickerField
-              uri={profile?.avatar_url}
+              uri={photo.uri}
               name={watchedName || "Professionista"}
-              busy={photoBusy}
-              onPick={onPhoto}
-              onRemove={onRemovePhoto}
+              busy={photo.busy}
+              onPick={photo.pick}
+              onRemove={photo.remove}
             />
 
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">

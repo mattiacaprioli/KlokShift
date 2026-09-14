@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
-import { addDaysToDate } from "@/lib/format";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
 import type {
@@ -124,9 +123,19 @@ export function useCreateInternalShifts() {
 }
 
 /**
- * Duplica turni interni esistenti spostandoli di `dayShift` giorni: è il
- * "copia questa settimana su quella dopo" — un click al posto di riscrivere a
- * mano i turni che si ripetono uguali ogni settimana.
+ * Duplica turni interni esistenti su altre date: è il "copia questa settimana su
+ * quella dopo" (e il "copia questo mese sul prossimo") — un click al posto di
+ * riscrivere a mano i turni che si ripetono uguali.
+ *
+ * `dateMap` va da data di origine a data di destinazione (`YYYY-MM-DD`), non uno
+ * scostamento in giorni: su una settimana lo scostamento è sempre lo stesso, su
+ * un mese no — 4 o 5 settimane a seconda della posizione nel mese, perché un
+ * turno del venerdì deve ricadere di venerdì. Chi chiama decide la regola; qui si
+ * applica e basta.
+ *
+ * ⚠️ Un piano la cui data non è nella mappa **non viene copiato**: è il 5°
+ * venerdì che nel mese di destinazione non esiste. Silenzioso qui di proposito —
+ * chi chiama lo conta prima e lo dice all'utente (vedi `DuplicatePeriodDialog`).
  *
  * `withStaff: false` copia la griglia (orari e fabbisogno per ruolo) lasciando
  * i turni da assegnare: utile quando le persone cambiano ma la struttura no, e
@@ -141,16 +150,19 @@ export function useCopyInternalShifts() {
   return useMutation({
     mutationFn: async (input: {
       sourceIds: string[];
-      dayShift: number;
+      /** Data di origine → data di destinazione. */
+      dateMap: Record<string, string>;
       withStaff: boolean;
     }) => {
       const plans = await getInternalShiftPlans(input.sourceIds);
       return createInternalShifts(
-        plans.map((p) => ({
-          ...p,
-          date: addDaysToDate(p.date, input.dayShift),
-          staff: input.withStaff ? p.staff : [],
-        }))
+        plans
+          .filter((p) => !!input.dateMap[p.date])
+          .map((p) => ({
+            ...p,
+            date: input.dateMap[p.date],
+            staff: input.withStaff ? p.staff : [],
+          }))
       );
     },
     onSuccess: () => invalidateAfterShiftWrite(qc),
