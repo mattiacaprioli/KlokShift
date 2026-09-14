@@ -25,6 +25,28 @@ export async function getVenueRoles(venueId: string): Promise<VenueRole[]> {
 }
 
 /**
+ * I ruoli di più sedi insieme, per i filtri dell'azienda (lo storico turni).
+ *
+ * Include gli archiviati: un filtro sullo storico deve poter nominare un ruolo
+ * che oggi non si assegna più ma che quei turni passati avevano. Chi raggruppa
+ * per nome (`groupRolesByName`) fonde da sé il ruolo archiviato con quello
+ * ancora vivo che si chiama uguale.
+ */
+export async function getOwnerVenueRoles(
+  venueIds: string[]
+): Promise<VenueRole[]> {
+  if (venueIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("venue_roles")
+    .select("*")
+    .in("venue_id", venueIds)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
  * Nuovo ruolo in coda alla lista. `sort_order` lo calcola il client dal massimo
  * corrente: una sequenza DB darebbe numeri globali, e l'ordine è per locale.
  */

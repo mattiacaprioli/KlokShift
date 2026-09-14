@@ -8,6 +8,14 @@ export const waiterProfileSchema = z.object({
   languages: z.array(z.string()),
   specializations: z.string().trim(),
   experience: z.string().trim(),
+  /**
+   * Giorno e mese insieme, o niente: è la stessa regola del CHECK
+   * `profiles_birthday_valid`, perché un mese senza giorno non è una data
+   * parziale ma una riga da cui l'interfaccia non sa che scrivere.
+   */
+  birthday: z
+    .object({ day: z.number().int().min(1).max(31), month: z.number().int().min(1).max(12) })
+    .nullable(),
 });
 
 export type WaiterProfileForm = z.infer<typeof waiterProfileSchema>;

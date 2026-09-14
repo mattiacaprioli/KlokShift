@@ -21,6 +21,11 @@ import {
   updateShiftStatus,
   type ShiftWithAssignees,
 } from "./api";
+import {
+  NO_PAST_FILTERS,
+  pastFiltersKey,
+  type PastShiftsFilters,
+} from "./pastFilters";
 
 /**
  * Gli hook dei turni **non prendono una sede**: leggono le sedi dell'azienda dal
@@ -69,12 +74,22 @@ export function useOwnerShiftsRange(
   });
 }
 
-/** Storico turni — scroll infinito. */
-export function useOwnerPastShifts() {
+/**
+ * Storico turni — scroll infinito, filtrato **dal server**.
+ *
+ * ⚠️ I filtri non si applicano mai alle righe già ricevute: la lista è
+ * paginata, e togliere righe a valle accorcia le pagine finché
+ * `getNextPageParam` non scambia una pagina corta per l'ultima. Vedi il
+ * commento in testa a `pastFilters.ts`.
+ */
+export function useOwnerPastShifts(
+  filters: PastShiftsFilters = NO_PAST_FILTERS
+) {
   const { venueIds, venuesKey } = useOwnerVenues();
   return useInfiniteQuery({
-    queryKey: qk.shifts.past(venuesKey),
-    queryFn: ({ pageParam }) => getOwnerPastShiftsPage(venueIds, pageParam),
+    queryKey: qk.shifts.past(venuesKey, pastFiltersKey(filters)),
+    queryFn: ({ pageParam }) =>
+      getOwnerPastShiftsPage(venueIds, pageParam, filters),
     initialPageParam: 0,
     // `hasMore` e non `rows.length`: la pagina può essere più corta di
     // SHIFTS_PAGE_SIZE perché il turno notturno ancora in corso è stato tolto
@@ -85,11 +100,18 @@ export function useOwnerPastShifts() {
   });
 }
 
-export function useOwnerPastShiftsCount() {
+/**
+ * Quanti turni passati. Con i filtri è il conteggio **della lista filtrata**:
+ * lo mostra l'intestazione dello storico, e deve dire quanto si sta guardando.
+ * Senza filtri è il KPI "turni svolti" della home.
+ */
+export function useOwnerPastShiftsCount(
+  filters: PastShiftsFilters = NO_PAST_FILTERS
+) {
   const { venueIds, venuesKey } = useOwnerVenues();
   return useQuery({
-    queryKey: qk.shifts.pastCount(venuesKey),
-    queryFn: () => getOwnerPastShiftsCount(venueIds),
+    queryKey: qk.shifts.pastCount(venuesKey, pastFiltersKey(filters)),
+    queryFn: () => getOwnerPastShiftsCount(venueIds, filters),
     enabled: venueIds.length > 0,
     staleTime: BADGE_STALE_TIME,
   });

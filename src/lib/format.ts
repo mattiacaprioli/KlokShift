@@ -182,6 +182,43 @@ export function formatMonthLabel(date: string): string {
   return monthFmt.format(new Date(`${date}T00:00:00`));
 }
 
+// I mesi per esteso, come li scriverebbe una persona. Scritti a mano e non presi
+// da `Intl`: servono anche come **elenco da scegliere** nel campo compleanno, e
+// dodici `DateTimeFormat` costruiti al volo per riempire dodici chip sono un
+// costo inutile a ogni render.
+export const MONTH_NAMES = [
+  "gennaio",
+  "febbraio",
+  "marzo",
+  "aprile",
+  "maggio",
+  "giugno",
+  "luglio",
+  "agosto",
+  "settembre",
+  "ottobre",
+  "novembre",
+  "dicembre",
+] as const;
+
+// Quanti giorni ha un mese, senza anno: febbraio ne ha 29 perché il 29 febbraio
+// esiste e chi ci è nato festeggia lo stesso. Stessa regola del CHECK in
+// `profiles_birthday_valid`, e vanno cambiate insieme.
+export function daysInMonth(month: number): number {
+  if (month === 2) return 29;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+// "12 marzo" — il compleanno, senza anno perché l'anno non lo salviamo
+// (20260914160000). `null` quando la persona non l'ha messo.
+export function formatBirthday(
+  day: number | null,
+  month: number | null
+): string | null {
+  if (!day || !month || month < 1 || month > 12) return null;
+  return `${day} ${MONTH_NAMES[month - 1]}`;
+}
+
 // Il lunedì della settimana che contiene `date`. La settimana italiana inizia di
 // lunedì, mentre getDay() conta da domenica: domenica (0) appartiene alla
 // settimana che è iniziata sei giorni prima, non a quella che inizia domani.

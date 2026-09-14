@@ -14,7 +14,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+import { formatBirthday, formatDate } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -266,6 +266,41 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
         disabled={update.isPending || !name.trim()}
         onPress={() => void onSave()}
       />
+
+      <PersonBirthdayRow person={person} />
+    </View>
+  );
+}
+
+/**
+ * Il compleanno, in sola lettura e sotto al pulsante di salvataggio.
+ *
+ * Non è un campo del modulo perché **non è un dato del titolare**: lo mette il
+ * professionista dal suo profilo, e arriva qui solo se ha scelto di metterlo.
+ * Un `Input` disabilitato in mezzo agli altri avrebbe detto che c'è un permesso
+ * da sbloccare; una riga separata dice che è roba sua.
+ *
+ * Giorno e mese, mai l'anno: in `profiles` l'anno non c'è proprio
+ * (20260914160000), quindi qui non c'è un'età da mostrare nemmeno volendo.
+ * Sparisce quando non è stato messo — una riga «non indicato» inviterebbe a
+ * chiederlo, e chiederlo è precisamente ciò che questa colonna evita.
+ */
+function PersonBirthdayRow({ person }: { person: StaffPersonDetail }) {
+  const label = formatBirthday(
+    person.waiter?.birth_day ?? null,
+    person.waiter?.birth_month ?? null
+  );
+  if (!label) return null;
+
+  return (
+    <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
+      <Icon name="sparkle" size={18} color="#EAB54C" />
+      <View className="flex-1">
+        <Mono>Compleanno</Mono>
+        <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
+          {label}
+        </Text>
+      </View>
     </View>
   );
 }

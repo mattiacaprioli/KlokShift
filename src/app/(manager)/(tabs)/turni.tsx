@@ -25,7 +25,7 @@ import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
-import { useOwnerPastShifts, useOwnerShifts } from "@/features/shifts/hooks";
+import { useOwnerShifts } from "@/features/shifts/hooks";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -71,10 +71,7 @@ export default function ManagerShiftsScreen() {
   const venueQuery = useOwnerVenues();
   const { venues, isMultiVenue } = venueQuery;
   const upcomingQuery = useOwnerShifts();
-  const pastQuery = useOwnerPastShifts();
-  const pull = usePullToRefresh(() =>
-    Promise.all([upcomingQuery.refetch(), pastQuery.refetch()])
-  );
+  const pull = usePullToRefresh(() => upcomingQuery.refetch());
 
   const today = todayString();
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
@@ -131,10 +128,6 @@ export default function ManagerShiftsScreen() {
     () => (upcomingQuery.data ?? []).filter(visible),
     [upcomingQuery.data, visible]
   );
-  const pastShifts = useMemo(
-    () => (pastQuery.data?.pages.flatMap((p) => p.rows) ?? []).filter(visible),
-    [pastQuery.data, visible]
-  );
 
   // I giorni con turni e, fra questi, quelli con un buco: i due insiemi che
   // colorano i pallini del calendario.
@@ -168,13 +161,13 @@ export default function ManagerShiftsScreen() {
         .map((g) => ({ ...g, data: g.data.filter(isShort) }))
         .filter((g) => g.data.length > 0);
     }
-    // Lo storico chiude l'agenda come sezione unica: così resta virtualizzato e
-    // `onEndReached` continua a paginarlo. `date: null` lo tiene fuori dalla
-    // sincronia col calendario — non è un giorno, è una coda. Sotto filtro non
-    // c'è: un turno passato non lo copre più nessuno.
-    if (pastShifts.length === 0) return future;
-    return [...future, { date: null, title: "Storico", data: pastShifts }];
-  }, [dayGroups, anchorDay, pastShifts, filtering]);
+    // Fino al 14/09/2026 lo storico chiudeva l'agenda come sezione in coda.
+    // Adesso è una schermata sua (`(manager)/storico`), perché i suoi filtri
+    // devono passare dal server: qui i chip di sede filtrano le righe già
+    // scaricate — va bene per i prossimi turni, che sono tutti in cache, ma su
+    // una lista paginata accorcia le pagine e tronca la lista.
+    return future;
+  }, [dayGroups, anchorDay, filtering]);
 
   // Il quadro della settimana di cui si sta guardando un giorno.
   const week = useMemo(() => {
@@ -282,7 +275,7 @@ export default function ManagerShiftsScreen() {
         {/* L'interruttore fra le due viste. Sta sopra il calendario perché
             decide *cosa* si legge sotto, mentre il calendario e i chip di sede
             valgono per entrambe. */}
-        <View className="mt-4 flex-row gap-2">
+        <View className="mt-4 flex-row items-center gap-2">
           {(["days", "people"] as const).map((m) => {
             const on = mode === m;
             return (
@@ -300,6 +293,18 @@ export default function ManagerShiftsScreen() {
               </Pressable>
             );
           })}
+          {/* L'agenda guarda avanti; i turni già fatti si cercano, non si
+              scorrono. Da qui perché è dove si cercano — non in fondo alla
+              lista, dove stavano prima. */}
+          <Pressable
+            onPress={() => router.push("/(manager)/storico")}
+            accessibilityRole="button"
+            className="ml-auto flex-row items-center gap-1"
+            hitSlop={8}
+          >
+            <Mono>Storico</Mono>
+            <Icon name="chevR" size={14} color="#8C8579" />
+          </Pressable>
         </View>
 
         <WeekCalendar
@@ -421,14 +426,6 @@ export default function ManagerShiftsScreen() {
           }
           viewabilityConfig={VIEWABILITY}
           onViewableItemsChanged={onViewableItemsChanged}
-          onEndReachedThreshold={0.4}
-          onEndReached={() => {
-            // Sotto filtro lo storico non è in lista: non c'è nulla da paginare.
-            if (filtering) return;
-            if (pastQuery.hasNextPage && !pastQuery.isFetchingNextPage) {
-              pastQuery.fetchNextPage();
-            }
-          }}
           ListHeaderComponent={
             // Compare solo quando c'è davvero qualcosa da coprire: su un'agenda
             // in ordine sarebbe un comando che non filtra niente.
@@ -503,11 +500,6 @@ export default function ManagerShiftsScreen() {
                 />
               )}
             </View>
-          }
-          ListFooterComponent={
-            pastQuery.isFetchingNextPage ? (
-              <ActivityIndicator color="#EAB54C" style={{ marginTop: 16 }} />
-            ) : null
           }
         />
       )}

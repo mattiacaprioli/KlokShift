@@ -1,5 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { addDaysToDate, isShiftOver, todayString } from "@/lib/format";
+import {
+  NO_PAST_FILTERS,
+  normalizeQuery,
+  type PastShiftsFilters,
+} from "./pastFilters";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import type {
   Shift,
@@ -116,6 +121,65 @@ export type PastShiftsPage = {
   hasMore: boolean;
 };
 
+/** Le relazioni della copertura: le stesse di `getOwnerShifts`. */
+const PAST_SELECT =
+  "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)";
+
+/**
+ * Il filtro per ruolo è un **secondo** innesto della stessa tabella, con alias e
+ * `!inner`: `!inner` trasforma l'innesto in join e scarta i turni che non hanno
+ * quel fabbisogno. Non si può filtrare su `shift_role_requirements` direttamente
+ * perché quell'innesto alimenta la copertura ("2/3"), e filtrarlo lascerebbe
+ * nella riga solo il fabbisogno cercato: il turno risulterebbe scoperto di tutti
+ * gli altri ruoli. L'alias porta il filtro, l'innesto originale resta intero.
+ */
+const PAST_SELECT_BY_ROLE = `${PAST_SELECT}, role_filter:shift_role_requirements!inner(role_id)`;
+
+/**
+ * Le sedi su cui interrogare: quelle scelte, ristrette a quelle dell'azienda.
+ *
+ * ⚠️ L'intersezione non è una pignoleria: la policy SELECT su `shifts` è larga
+ * (vedi il commento in testa al file), e un `venue_id` arbitrario nei filtri
+ * mostrerebbe i turni di un'altra azienda.
+ */
+function pastScope(venueIds: string[], filters: PastShiftsFilters): string[] {
+  if (!filters.venueIds) return venueIds;
+  const owned = new Set(venueIds);
+  return filters.venueIds.filter((id) => owned.has(id));
+}
+
+/**
+ * Applica al builder i filtri dello storico. Generico sul builder: i due
+ * chiamanti (pagina e conteggio) partono da `select()` diversi, e i filtri
+ * PostgREST tornano sempre lo stesso builder.
+ */
+function withPastFilters<
+  Q extends {
+    in(column: string, values: string[]): Q;
+    lt(column: string, value: string): Q;
+    gte(column: string, value: string): Q;
+    lte(column: string, value: string): Q;
+    eq(column: string, value: string): Q;
+    neq(column: string, value: string): Q;
+    ilike(column: string, pattern: string): Q;
+  },
+>(query: Q, scope: string[], filters: PastShiftsFilters): Q {
+  let q = query.in("venue_id", scope).lt("date", todayString());
+  if (filters.from) q = q.gte("date", filters.from);
+  if (filters.to) q = q.lte("date", filters.to);
+  // "Concluso" è tutto ciò che non è stato annullato: `open` e `closed` sono
+  // stati della pubblicazione, non dell'esito — un turno passato e mai chiuso a
+  // mano è comunque un turno svolto.
+  if (filters.status === "cancelled") q = q.eq("status", "cancelled");
+  else if (filters.status === "done") q = q.neq("status", "cancelled");
+  if (filters.role && filters.role.ids.length > 0) {
+    q = q.in("role_filter.role_id", filters.role.ids);
+  }
+  const text = normalizeQuery(filters.q);
+  if (text) q = q.ilike("title", `%${text}%`);
+  return q;
+}
+
 /**
  * Storico paginato: turni passati dell'azienda, più recenti prima.
  *
@@ -128,20 +192,22 @@ export type PastShiftsPage = {
  */
 export async function getOwnerPastShiftsPage(
   venueIds: string[],
-  page: number
+  page: number,
+  filters: PastShiftsFilters = NO_PAST_FILTERS
 ): Promise<PastShiftsPage> {
-  if (venueIds.length === 0) return { rows: [], hasMore: false };
+  const scope = pastScope(venueIds, filters);
+  if (scope.length === 0) return { rows: [], hasMore: false };
   const from = page * SHIFTS_PAGE_SIZE;
-  const { data, error } = await supabase
-    .from("shifts")
-    .select(
-      // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
-      // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
-      // ragiona per ruolo e ignora chi ha rifiutato.
-      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
-    )
-    .in("venue_id", venueIds)
-    .lt("date", todayString())
+  const { data, error } = await withPastFilters(
+    // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
+    // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
+    // ragiona per ruolo e ignora chi ha rifiutato.
+    supabase
+      .from("shifts")
+      .select(filters.role ? PAST_SELECT_BY_ROLE : PAST_SELECT),
+    scope,
+    filters
+  )
     .order("date", { ascending: false })
     .order("start_time", { ascending: false })
     // Tiebreak deterministico: `.range()` su un ordine ambiguo può ripetere o
@@ -149,7 +215,7 @@ export async function getOwnerPastShiftsPage(
     .order("venue_id", { ascending: false })
     .range(from, from + SHIFTS_PAGE_SIZE - 1);
   if (error) throw new Error(error.message);
-  const received = (data as ShiftWithCount[] | null) ?? [];
+  const received = (data as unknown as ShiftWithCount[] | null) ?? [];
   return {
     rows: received.filter((s) => isShiftOver(s)),
     hasMore: received.length === SHIFTS_PAGE_SIZE,
@@ -164,14 +230,21 @@ export async function getOwnerPastShiftsPage(
  * già fra gli svolti — uno scarto di un'unità per qualche ora di notte.
  */
 export async function getOwnerPastShiftsCount(
-  venueIds: string[]
+  venueIds: string[],
+  filters: PastShiftsFilters = NO_PAST_FILTERS
 ): Promise<number> {
-  if (venueIds.length === 0) return 0;
-  const { count, error } = await supabase
-    .from("shifts")
-    .select("*", { count: "exact", head: true })
-    .in("venue_id", venueIds)
-    .lt("date", todayString());
+  const scope = pastScope(venueIds, filters);
+  if (scope.length === 0) return 0;
+  const { count, error } = await withPastFilters(
+    supabase
+      .from("shifts")
+      .select(filters.role ? "*, role_filter:shift_role_requirements!inner(role_id)" : "*", {
+        count: "exact",
+        head: true,
+      }),
+    scope,
+    filters
+  );
   if (error) throw new Error(error.message);
   return count ?? 0;
 }

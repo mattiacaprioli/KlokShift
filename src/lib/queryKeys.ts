@@ -40,9 +40,17 @@ export const qk = {
     // Prefisso: ogni intervallo già in cache (la vista calendario ne tiene più
     // di uno mentre si naviga tra le settimane).
     rangeAny: ["shifts", "range"] as const,
-    past: (scope: string) => ["shifts", "past", scope] as const,
+    /**
+     * Lo storico. `filters` è `pastFiltersKey()`: i filtri passano dal server,
+     * quindi ogni combinazione è una lista diversa e vuole una cache sua —
+     * altrimenti tornare da "solo annullati" a "tutti" mostrerebbe per un
+     * istante la lista filtrata.
+     */
+    past: (scope: string, filters: string) =>
+      ["shifts", "past", scope, filters] as const,
     pastAll: ["shifts", "past"] as const,
-    pastCount: (scope: string) => ["shifts", "pastCount", scope] as const,
+    pastCount: (scope: string, filters: string) =>
+      ["shifts", "pastCount", scope, filters] as const,
     pastCountAll: ["shifts", "pastCount"] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
   },
@@ -71,6 +79,8 @@ export const qk = {
   roles: {
     all: ["roles"] as const,
     byVenue: (venueId: string) => ["roles", "byVenue", venueId] as const,
+    /** I ruoli di tutte le sedi dell'azienda. `scope` è `venuesKey`. */
+    byOwner: (scope: string) => ["roles", "byOwner", scope] as const,
     byStaffMember: (staffMemberId: string) =>
       ["roles", "byStaffMember", staffMemberId] as const,
   },

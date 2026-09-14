@@ -82,7 +82,10 @@ export type PersonMembership = Pick<
  * `memberships`.
  */
 export type StaffPersonDetail = StaffPerson & {
-  waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
+  waiter: Pick<
+    Tables<"profiles">,
+    "id" | "full_name" | "avatar_url" | "birth_day" | "birth_month"
+  > | null;
   memberships: PersonMembership[];
 };
 
@@ -98,7 +101,10 @@ export async function getStaffPerson(
   const { data, error } = await supabase
     .from("staff_people")
     .select(
-      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), " +
+      // `birth_day`/`birth_month` e non una data di nascita: l'anno non esiste
+      // proprio in `profiles` (20260914160000), quindi non c'è un'età da
+      // consegnare al titolare insieme al compleanno.
+      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url, birth_day, birth_month), " +
         "memberships:staff_members(id, venue_id, link_status, employment_type, created_at, left_at, " +
         "venue:venues(id, name, city, closed_at), " +
         "staff_member_roles(role:venue_roles(id, name, sort_order)))"

@@ -194,7 +194,11 @@ export default function ManagerHome() {
                 value={totalPos > 0 ? `${filled}/${totalPos}` : "—"}
                 label="turni coperti"
               />
-              <StatCard value={String(pastCount)} label="turni svolti" />
+              <StatCard
+                value={String(pastCount)}
+                label="turni svolti"
+                onPress={() => router.push("/(manager)/storico")}
+              />
             </View>
           </View>
 

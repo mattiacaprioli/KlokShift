@@ -311,6 +311,17 @@ Fino a qui il professionista vedeva **solo sé stesso**: tre policy (`"shifts: r
 - **Nuovo modulo** `src/features/planning/` (`api.ts` con `groupPlanningRows` puro, `hooks.ts`, `PlanningShiftCard`, `TeamRow`/`TeamAvatars`, `VenuePlanningList`, `ShiftTeamSection`, `VenuePlanningToggle`) + primitiva `components/ui/Segmented.tsx`, estratta dal blocco inline di `(manager)/staff/new` e ora condivisa.
 - ⚠️ **DA FARE**: applicare la migration (`db push` o SQL editor → in quel caso **allineare a mano la versione nella history**). `src/types/database.ts` è stato **patchato a mano** (`venues.staff_sees_planning` + `get_staff_planning`).
 
+### Sessione 2026-09-14 (2) — Compleanno del professionista ✅ (1 migration DA APPLICARE)
+
+Il titolare che ha qualcuno in organico da un anno non sa quando fargli gli auguri. Lo mette il **professionista**, dal suo profilo; il titolare lo legge sulla scheda persona.
+
+- **`20260914160000_profile_birthday.sql`** — `profiles.birth_day` + `profiles.birth_month` (due `smallint`), **non** una colonna `date`. ⚠️ È la scelta portante: `"profiles: manager reads own staff"` concede al titolare la **riga intera** e le policy di Postgres non restringono le colonne, quindi con una `birth_date` «mostriamo solo giorno e mese» sarebbe stata una promessa scritta nel client, aggirabile con una richiesta REST a mano. Senza anno non c'è niente da nascondere. CHECK `profiles_birthday_valid`: o tutti e due o nessuno, mesi 1-12, giorni per mese (29 febbraio ammesso). Il giorno in cui servirà la **data di nascita** vera (contratto, cedolino) il posto è `staff_people`, che è l'anagrafica del titolare.
+- **Nessuna policy nuova**: scrive il professionista su di sé (`"profiles: own read/write"`), legge il titolare che lo ha in organico (`"profiles: manager reads own staff"`, 20260912130000). La vetrina pubblica non è toccata — `get_waiter_public_card()` e `private.waiter_public_cards_src()` elencano le colonne una per una, quindi una colonna nuova non ci entra da sola.
+- **`BirthdayField`** (chip mese + chip giorno) e **non** un `DateTimePicker`: il picker nativo pretende un anno, e mostrarne uno che poi si butta via fa credere a qualcuno di aver dato la propria data di nascita. Cambiare mese non azzera il giorno, lo porta al massimo consentito. Etichetta esplicita: «lo vedono i locali in cui sei in organico».
+- **Lato titolare**: riga in sola lettura sotto l'anagrafica in `(manager)/staff/[id]` e in `web/src/staff/StaffDetail`. Fuori dal modulo, perché non è un dato che scrive lui. **Sparisce se non c'è**: una riga «non indicato» inviterebbe a chiederlo, che è precisamente ciò che questa colonna evita.
+- **Deciso e scartato**: notifica il giorno del compleanno (serve un job schedulato che non esiste — l'unico trigger push parte da un insert in `notifications`) e sezione «compleanni del mese» in home. Le persone **senza account** restano senza compleanno: il dato è del professionista.
+- ⚠️ **DA FARE**: applicare la migration. `src/types/database.ts` patchato a mano (`profiles.birth_day`/`birth_month`).
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati

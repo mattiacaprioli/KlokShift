@@ -24,7 +24,12 @@ import {
 } from "@/features/staff/contract";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import { DocumentsPanel } from "./DocumentsPanel";
-import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
+import {
+  formatBirthday,
+  formatDate,
+  formatHours,
+  formatShiftRange,
+} from "@/lib/format";
 import type {
   PersonMembership,
   StaffPersonDetail,
@@ -237,7 +242,34 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
           {update.isPending ? "Salvataggio…" : "Salva anagrafica"}
         </Button>
       </div>
+
+      <BirthdayRow person={person} />
     </section>
+  );
+}
+
+/**
+ * Il compleanno, in sola lettura e fuori dal modulo.
+ *
+ * Non è un dato del titolare: lo mette il professionista dal suo profilo
+ * nell'app, e arriva qui solo se ha scelto di metterlo. Giorno e mese, mai
+ * l'anno — in `profiles` l'anno non c'è proprio (20260914160000). Sparisce
+ * quando non è stato messo: una riga «non indicato» inviterebbe a chiederlo.
+ */
+function BirthdayRow({ person }: { person: StaffPersonDetail }) {
+  const label = formatBirthday(
+    person.waiter?.birth_day ?? null,
+    person.waiter?.birth_month ?? null
+  );
+  if (!label) return null;
+
+  return (
+    <div className="flex items-baseline gap-2 rounded-xl border border-border bg-bg-card px-4 py-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+        Compleanno
+      </span>
+      <span className="text-sm font-semibold text-t1">{label}</span>
+    </div>
   );
 }
 

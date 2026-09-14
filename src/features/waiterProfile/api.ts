@@ -16,6 +16,8 @@ export type WaiterProfileInput = {
   languages: string[];
   specializations: string | null;
   experience: string | null;
+  /** Giorno e mese insieme, o `null`: l'anno non si salva (20260914160000). */
+  birthday: { day: number; month: number } | null;
 };
 
 /**
@@ -74,6 +76,10 @@ export async function saveWaiterProfile(
       full_name: input.full_name,
       city: input.city,
       bio: input.bio,
+      // Le due colonne si scrivono sempre insieme: scriverne una sola violerebbe
+      // `profiles_birthday_valid`, che è esattamente ciò che deve fare.
+      birth_day: input.birthday?.day ?? null,
+      birth_month: input.birthday?.month ?? null,
     })
     .eq("id", userId);
   if (profileError) throw new Error(profileError.message);

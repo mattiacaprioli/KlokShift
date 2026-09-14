@@ -20,6 +20,7 @@ import {
   useSaveWaiterProfile,
 } from "@/features/waiterProfile/hooks";
 import { LANGUAGE_OPTIONS, PRIMARY_ROLE_EXAMPLES } from "@/features/waiterProfile/api";
+import { ControlledBirthday } from "@/features/waiterProfile/BirthdayField";
 import {
   waiterProfileSchema,
   type WaiterProfileForm,
@@ -50,6 +51,7 @@ export default function WaiterProfileEditScreen() {
       languages: [],
       specializations: "",
       experience: "",
+      birthday: null,
     },
   });
 
@@ -68,6 +70,12 @@ export default function WaiterProfileEditScreen() {
       languages: wp?.languages ?? [],
       specializations: wp?.specializations ?? "",
       experience: wp?.experience ?? "",
+      // O tutti e due o niente: è il CHECK `profiles_birthday_valid` letto dal
+      // lato client, e una riga a metà qui diventerebbe un salvataggio rifiutato.
+      birthday:
+        data.birth_day && data.birth_month
+          ? { day: data.birth_day, month: data.birth_month }
+          : null,
     });
   }, [data, reset]);
 
@@ -81,6 +89,7 @@ export default function WaiterProfileEditScreen() {
         languages: values.languages,
         specializations: values.specializations || null,
         experience: values.experience || null,
+        birthday: values.birthday,
       });
       await refreshProfile();
       toast.show("Profilo salvato");
@@ -159,6 +168,7 @@ export default function WaiterProfileEditScreen() {
                 label="Città"
                 placeholder="Milano"
               />
+              <ControlledBirthday control={control} name="birthday" />
             </View>
 
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">

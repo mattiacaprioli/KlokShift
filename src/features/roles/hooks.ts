@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   archiveVenueRole,
   createVenueRole,
+  getOwnerVenueRoles,
   getStaffMemberRoles,
   getVenueRoles,
   renameVenueRole,
@@ -30,6 +32,19 @@ export function useVenueRoles(venueId: string | undefined) {
     queryKey: qk.roles.byVenue(venueId ?? ""),
     queryFn: () => getVenueRoles(venueId as string),
     enabled: !!venueId,
+  });
+}
+
+/**
+ * I ruoli di tutta l'azienda. Come gli hook dei turni, non prende una sede:
+ * serve a filtrare liste che sono già di tutte le sedi.
+ */
+export function useOwnerVenueRoles() {
+  const { venueIds, venuesKey } = useOwnerVenues();
+  return useQuery({
+    queryKey: qk.roles.byOwner(venuesKey),
+    queryFn: () => getOwnerVenueRoles(venueIds),
+    enabled: venueIds.length > 0,
   });
 }
 
