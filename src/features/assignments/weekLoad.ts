@@ -1,4 +1,5 @@
 import { shiftDurationHours } from "@/lib/format";
+import type { Contract } from "@/features/staff/contract";
 import { isActiveAssignment, type AssignmentStatus } from "./status";
 
 /**
@@ -9,12 +10,13 @@ import { isActiveAssignment, type AssignmentStatus } from "./status";
  * `get_owner_hours_summary` (pagina Ore, quella che va al commercialista). Questo
  * serve **mentre** si assegna, per accorgersi degli squilibri prima che
  * diventino un problema di busta paga.
+ *
+ * Il metro con cui si giudicano queste ore è il contratto della persona
+ * (`features/staff/contract.ts`), che ogni titolare imposta sulla scheda. Fino al
+ * 14/09/2026 erano due soglie di legge uguali per tutti, 40h e 48h: un numero
+ * solo non dice niente su un part-time, e le soglie normative non sono
+ * responsabilità del prodotto.
  */
-
-/** Orario ordinario settimanale (D.Lgs. 66/2003, art. 3). */
-export const ORDINARY_WEEK_HOURS = 40;
-/** Durata massima settimanale, straordinari inclusi (art. 4: media su 4 mesi). */
-export const MAX_WEEK_HOURS = 48;
 
 type LoadAssignment = {
   id: string;
@@ -81,11 +83,20 @@ export type PersonLoad = {
   name: string;
   /** Le mansioni della persona, già composte ("Cameriere, Barman"). */
   roles: string | null;
+  /**
+   * Le ore che questa persona deve fare, se il titolare le ha registrate. È il
+   * metro della riga: senza, le ore si mostrano e basta.
+   */
+  contract: Contract | null;
   /** Turni per data (`YYYY-MM-DD`), **tutte** le sedi. */
   byDay: Map<string, PersonShift[]>;
-  /** Ore programmate nel periodo: è su queste che si giudicano le soglie. */
+  /** Ore programmate nel periodo: è su queste che si giudica il contratto. */
   hours: number;
-  /** Giorni distinti con lavoro: il riposo settimanale è uno, non uno per sede. */
+  /**
+   * Giorni distinti con lavoro. Sono uno per persona, non uno per sede — e
+   * servono anche al target dei contratti giornalieri, che senza il numero di
+   * giorni non sanno convertirsi a settimana.
+   */
   daysWorked: number;
 };
 
@@ -94,10 +105,10 @@ export type PersonLoad = {
  * chi non lavora nel periodo compare comunque a zero — che è metà
  * dell'informazione: senza quelle righe non si vede chi è rimasto fermo.
  *
- * Le soglie 40h/48h sono della *persona*, non del locale: 30 ore a Roma più 25 a
- * Milano sono 55 ore e uno straordinario. Prima serviva un secondo insieme di
- * turni (`elsewhere`) per dirlo, perché la vista era di una sede sola; ora
- * `shifts` contiene già tutte le sedi del titolare e la somma è naturale.
+ * Il contratto è della *persona*, non del locale: 30 ore a Roma più 25 a Milano
+ * sono 55 ore su un contratto solo. Prima serviva un secondo insieme di turni
+ * (`elsewhere`) per dirlo, perché la vista era di una sede sola; ora `shifts`
+ * contiene già tutte le sedi del titolare e la somma è naturale.
  *
  * Ordinamento per ore decrescenti: questa vista esiste per far salire in cima i
  * casi estremi.
@@ -108,6 +119,7 @@ export function computeWeekLoad(
     person_id: string;
     display_name: string;
     roles: string | null;
+    contract: Contract | null;
   }[]
 ): PersonLoad[] {
   const rows = new Map<string, PersonLoad>();
@@ -117,6 +129,7 @@ export function computeWeekLoad(
     person_id: string;
     display_name: string;
     roles?: string | null;
+    contract?: Contract | null;
   }): PersonLoad {
     const existing = rows.get(member.person_id);
     if (existing) return existing;
@@ -124,6 +137,10 @@ export function computeWeekLoad(
       personId: member.person_id,
       name: member.display_name,
       roles: member.roles ?? null,
+      // Le righe nate da un'assegnazione (persona fuori dal roster passato) non
+      // portano il contratto: la loro cella resta neutra, che è meglio di un
+      // confronto con un target che non si è potuto leggere.
+      contract: member.contract ?? null,
       byDay: new Map(),
       hours: 0,
       daysWorked: 0,

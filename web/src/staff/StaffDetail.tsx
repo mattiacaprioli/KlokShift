@@ -16,6 +16,12 @@ import {
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
+import {
+  CONTRACT_PERIOD_SHORT,
+  CONTRACT_PERIODS,
+  personContract,
+  type ContractPeriod,
+} from "@/features/staff/contract";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import { DocumentsPanel } from "./DocumentsPanel";
 import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
@@ -130,6 +136,7 @@ function PersonPanel({
         </header>
 
         <Anagrafica person={person} />
+        <ContractSection person={person} />
         <DocumentsPanel personId={person.id} />
         <Performance
           personId={person.id}
@@ -228,6 +235,102 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
           onClick={() => void onSave()}
         >
           {update.isPending ? "Salvataggio…" : "Salva anagrafica"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Le ore da contratto: quante ne deve fare, e su che periodo.
+ *
+ * Sta sulla persona come l'anagrafica, perché il contratto lo firma l'azienda —
+ * chi lavora a Roma e a Milano ha un monte ore solo, ed è lo stesso motivo per
+ * cui il planning somma le ore di tutte le sedi. Da lì viene il confronto nella
+ * colonna ore della vista "persone"; qui non si blocca niente.
+ */
+function ContractSection({ person }: { person: StaffPersonDetail }) {
+  const update = useUpdateStaffPerson();
+  const toast = useToast();
+  const contract = personContract(person);
+  const [hours, setHours] = useState(
+    contract ? String(contract.hours).replace(".", ",") : ""
+  );
+  const [period, setPeriod] = useState<ContractPeriod>(
+    contract?.period ?? "week"
+  );
+
+  // La virgola è come si scrivono i decimali in italiano, e il campo è testo
+  // proprio per accettarla: "37,5" da una tastiera italiana non deve diventare
+  // NaN e cancellare in silenzio il contratto.
+  const parsed = hours.trim() ? Number(hours.trim().replace(",", ".")) : null;
+  const invalid =
+    parsed != null && (!Number.isFinite(parsed) || parsed <= 0 || parsed > 400);
+
+  async function onSave() {
+    if (invalid) return;
+    try {
+      await update.mutateAsync({
+        id: person.id,
+        // Campo vuoto = nessun contratto: le due colonne si azzerano insieme,
+        // come impone `staff_people_contract_pair_ck`.
+        fields:
+          parsed == null
+            ? { contract_hours: null, contract_period: null }
+            : { contract_hours: parsed, contract_period: period },
+      });
+      toast.show(parsed == null ? "Contratto rimosso" : "Contratto aggiornato");
+    } catch (e) {
+      toast.show(userErrorMessage(e), "error");
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+        Contratto
+      </span>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Ore da contratto"
+          error={invalid ? "Un numero fra 0 e 400." : undefined}
+        >
+          <Input
+            value={hours}
+            inputMode="decimal"
+            placeholder="Es. 40"
+            onChange={(e) => setHours(e.target.value)}
+          />
+        </Field>
+        <Field label="Periodo">
+          <Select
+            value={period}
+            disabled={parsed == null}
+            onChange={(e) => setPeriod(e.target.value as ContractPeriod)}
+          >
+            {CONTRACT_PERIODS.map((p) => (
+              <option key={p} value={p}>
+                {CONTRACT_PERIOD_SHORT[p]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+
+      <p className="text-xs text-t4">
+        Quante ore deve fare. Servono solo a confrontarle con i turni che
+        programmi, nella vista <b>persone</b> del planning: non bloccano niente.
+        Lascia vuoto se non vuoi il confronto.
+      </p>
+
+      <div>
+        <Button
+          variant="gold"
+          disabled={update.isPending || invalid}
+          onClick={() => void onSave()}
+        >
+          {update.isPending ? "Salvataggio…" : "Salva contratto"}
         </Button>
       </div>
     </section>

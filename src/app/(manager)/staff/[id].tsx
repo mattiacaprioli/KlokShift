@@ -30,6 +30,12 @@ import { useIsPro } from "@/features/plan/hooks";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
+import {
+  CONTRACT_PERIOD_SHORT,
+  CONTRACT_PERIODS,
+  personContract,
+  type ContractPeriod,
+} from "@/features/staff/contract";
 import type {
   PersonMembership,
   StaffPersonDetail,
@@ -265,6 +271,92 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
 }
 
 /**
+ * Le ore da contratto: quante ne deve fare, e su che periodo.
+ *
+ * Sulla persona come l'anagrafica, perché il contratto lo firma l'azienda: chi
+ * lavora in due sedi ha un monte ore solo. Da qui esce il confronto nella
+ * colonna ore della vista "persone" del planning web; nessun turno viene
+ * bloccato, né qui né lì.
+ */
+function PersonContractForm({ person }: { person: StaffPersonDetail }) {
+  const toast = useToast();
+  const update = useUpdateStaffPerson();
+  const contract = personContract(person);
+  const [hours, setHours] = useState(
+    contract ? String(contract.hours).replace(".", ",") : ""
+  );
+  const [period, setPeriod] = useState<ContractPeriod>(
+    contract?.period ?? "week"
+  );
+
+  // Campo di testo e non numerico puro: su una tastiera italiana i decimali si
+  // scrivono con la virgola, e "37,5" non deve diventare NaN e cancellare in
+  // silenzio il contratto.
+  const parsed = hours.trim() ? Number(hours.trim().replace(",", ".")) : null;
+  const invalid =
+    parsed != null && (!Number.isFinite(parsed) || parsed <= 0 || parsed > 400);
+
+  async function onSave() {
+    if (invalid) return;
+    try {
+      await update.mutateAsync({
+        id: person.id,
+        // Campo vuoto = nessun contratto: le due colonne si azzerano insieme,
+        // come impone `staff_people_contract_pair_ck`.
+        fields:
+          parsed == null
+            ? { contract_hours: null, contract_period: null }
+            : { contract_hours: parsed, contract_period: period },
+      });
+      toast.show(parsed == null ? "Contratto rimosso" : "Contratto aggiornato");
+    } catch {
+      toast.show("Impossibile salvare. Riprova.", "error");
+    }
+  }
+
+  return (
+    <View className="gap-5">
+      <Mono>Contratto</Mono>
+      <View className="gap-2">
+        <Input
+          label="Ore da contratto (facoltative)"
+          value={hours}
+          onChangeText={setHours}
+          keyboardType="decimal-pad"
+          placeholder="Es. 40"
+        />
+        {invalid ? (
+          <Text className="text-xs text-error">Un numero fra 0 e 400.</Text>
+        ) : null}
+      </View>
+      <View className="gap-2">
+        <Mono>Periodo</Mono>
+        <View className="flex-row flex-wrap gap-2">
+          {CONTRACT_PERIODS.map((p) => (
+            <Chip
+              key={p}
+              label={CONTRACT_PERIOD_SHORT[p]}
+              active={period === p}
+              gold={period === p}
+              onPress={() => setPeriod(p)}
+            />
+          ))}
+        </View>
+      </View>
+      <Text className="text-xs leading-4 text-t3">
+        Quante ore deve fare. Servono a confrontarle con i turni che programmi:
+        non bloccano niente. Lascia vuoto se non vuoi il confronto.
+      </Text>
+      <GoldButton
+        label={update.isPending ? "Salvataggio…" : "Salva contratto"}
+        disabled={update.isPending || invalid}
+        onPress={() => void onSave()}
+      />
+    </View>
+  );
+}
+
+/**
  * La scheda di un dipendente: **una per persona**, non una per sede.
  *
  * Prima Marco, che lavora a Roma e a Milano, aveva due URL e due schede, e ognuna
@@ -403,6 +495,8 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
         />
 
         <PersonIdentityForm person={person} />
+
+        <PersonContractForm person={person} />
 
         <View className="gap-3">
           <Mono>

@@ -641,6 +641,8 @@ export type Database = {
       }
       staff_people: {
         Row: {
+          contract_hours: number | null
+          contract_period: string | null
           created_at: string
           full_name: string
           id: string
@@ -651,6 +653,8 @@ export type Database = {
           waiter_id: string | null
         }
         Insert: {
+          contract_hours?: number | null
+          contract_period?: string | null
           created_at?: string
           full_name: string
           id?: string
@@ -661,6 +665,8 @@ export type Database = {
           waiter_id?: string | null
         }
         Update: {
+          contract_hours?: number | null
+          contract_period?: string | null
           created_at?: string
           full_name?: string
           id?: string

@@ -1,10 +1,16 @@
 import { useMemo } from "react";
 import {
   computeWeekLoad,
-  MAX_WEEK_HOURS,
-  ORDINARY_WEEK_HOURS,
   type PersonShift,
 } from "@/features/assignments/weekLoad";
+import {
+  formatContract,
+  loadTone,
+  personContract,
+  targetExplainer,
+  weeklyTarget,
+  type Contract,
+} from "@/features/staff/contract";
 import {
   ASSIGNMENT_STATUS_LABEL,
   isActiveAssignment,
@@ -17,7 +23,7 @@ import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
 import { personRoleNames } from "@/features/staff/api";
 import { dayLabel, isToday } from "../lib/week";
-import { Pill, Placeholder, Spinner } from "../ui/primitives";
+import { Placeholder, Spinner } from "../ui/primitives";
 import {
   dropClass,
   useShiftDrag,
@@ -46,9 +52,9 @@ export function PeopleWeek({
    * Le sedi che `shifts` contiene: tutte quelle dell'azienda, o la sola sede
    * scelta col filtro per locale del Planning. Qui serve a due cose — tenere
    * nelle righe solo chi lavora in quelle sedi, e dire che le ore sono parziali
-   * quando il filtro è acceso (le soglie 40h/48h sono **della persona**, su
-   * tutte le sedi: con un locale solo sotto gli occhi, un totale basso non è una
-   * promessa che la persona sia scarica).
+   * quando il filtro è acceso (il contratto è **della persona**, su tutte le
+   * sedi: con un locale solo sotto gli occhi, un totale sotto il target non è
+   * una promessa che alla persona manchino delle ore).
    */
   venueIds: string[];
   onOpen: (shift: ShiftWithAssignees) => void;
@@ -132,6 +138,7 @@ export function PeopleWeek({
         person_id: p.id,
         display_name: p.full_name,
         roles: personRoleNames(p),
+        contract: personContract(p),
       }));
     return computeWeekLoad(shifts, roster);
   }, [shifts, peopleQuery.data, venueIds]);
@@ -154,6 +161,9 @@ export function PeopleWeek({
 
   const totalHours = rows.reduce((s, r) => s + r.hours, 0);
   const working = rows.filter((r) => r.hours > 0).length;
+  // Quante righe restano senza metro: senza questo numero la legenda promette
+  // colori che su metà della griglia non compaiono, e sembra un guasto.
+  const noContract = rows.filter((r) => !r.contract).length;
 
   return (
     <div>
@@ -198,6 +208,14 @@ export function PeopleWeek({
                   <span className="truncate text-xs text-t4">
                     {person.roles ?? "Ruoli non indicati"}
                   </span>
+                  {/* Le ore da contratto qui, non solo nella cella a destra: è
+                      la riga che si legge per prima, e senza il target il
+                      "32 / 40" in fondo sarebbe un rapporto senza fonte. */}
+                  {person.contract ? (
+                    <span className="truncate font-mono text-[10px] text-t4">
+                      {formatContract(person.contract)}
+                    </span>
+                  ) : null}
                 </div>
 
                 {days.map((day) => {
@@ -284,6 +302,7 @@ export function PeopleWeek({
                 <HoursCell
                   hours={person.hours}
                   daysWorked={person.daysWorked}
+                  contract={person.contract}
                   partial={filtered}
                 />
               </div>
@@ -299,12 +318,12 @@ export function PeopleWeek({
           {rows.length === 1 ? "persona" : "persone"} al lavoro
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-warning" /> oltre le{" "}
-          {ORDINARY_WEEK_HOURS} h ordinarie, o senza un giorno di riposo
+          <span className="h-2 w-2 rounded-full bg-warning" /> sotto le ore del
+          contratto
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-error" /> oltre le{" "}
-          {MAX_WEEK_HOURS} h settimanali
+          <span className="h-2 w-2 rounded-full bg-error" /> oltre le ore del
+          contratto
         </span>
       </div>
 
@@ -324,8 +343,16 @@ export function PeopleWeek({
           <>
             {" "}
             Stai guardando <b>un locale solo</b>: le ore qui sotto sono quelle di
-            questa sede, non il totale della persona. Le soglie di legge sono
-            della persona — per vederle tutte, togli il filtro.
+            questa sede, non il totale della persona. Il contratto è della
+            persona — per confrontarlo con tutte le sue ore, togli il filtro.
+          </>
+        ) : null}{" "}
+        Il confronto compare per chi ha le <b>ore da contratto</b> sulla scheda:
+        le imposti da Staff, aprendo la persona.{" "}
+        {noContract > 0 ? (
+          <>
+            Adesso {noContract === 1 ? "manca a 1 persona" : `mancano a ${noContract} persone`}
+            .
           </>
         ) : null}
       </p>
@@ -427,46 +454,56 @@ function PersonShiftChip({
 }
 
 /**
- * Le ore della settimana, e il giudizio sulle soglie.
+ * Le ore della settimana, confrontate con le ore da contratto della persona.
  *
  * È il totale **della persona**: da quando la vista contiene tutte le sedi non
  * c'è più un "qui" da distinguere da un "altrove", e quelle 55 ore che prima
- * erano due celle verdi da 30 e 25 in due viste diverse sono una cella rossa
- * sola. Le soglie di legge sono della persona, non del locale.
+ * erano due celle verdi da 30 e 25 in due viste diverse sono una cella sola.
+ *
+ * Senza contratto non si giudica: la cella mostra le ore in neutro. Prima il
+ * metro erano 40h e 48h uguali per tutti, che su un part-time da 20 ore non
+ * scattavano mai — e non erano una soglia che tocchi a noi mettere.
  */
 function HoursCell({
   hours,
   daysWorked,
+  contract,
   partial,
 }: {
   hours: number;
   daysWorked: number;
+  /** Le ore che la persona deve fare, se il titolare le ha registrate. */
+  contract: Contract | null;
   /**
    * Il filtro per locale è acceso: qui c'è **una parte** delle ore della
-   * persona. Le soglie restano vere quando scattano — le ore filtrate non
-   * superano mai quelle vere — ma una cella tranquilla non promette più niente,
-   * e va detto.
+   * persona. "Oltre il contratto" resta vero quando scatta — le ore filtrate non
+   * superano mai quelle vere — ma "sotto il contratto" no, e una cella
+   * tranquilla non promette più niente: va detto.
    */
   partial: boolean;
 }) {
-  const over = hours > MAX_WEEK_HOURS;
-  const heavy = hours > ORDINARY_WEEK_HOURS;
-  // Sette giorni su sette significa nessun riposo settimanale — e i giorni si
-  // contano su tutte le sedi, perché il riposo è uno.
-  const noRest = daysWorked >= 7;
+  const target = weeklyTarget(contract, daysWorked);
+  const tone = loadTone(hours, target);
+  const explainer = targetExplainer(contract, target);
 
   return (
     <div
       title={
-        partial
-          ? "Solo le ore di questo locale: togli il filtro per il totale della persona."
-          : undefined
+        [
+          explainer,
+          partial
+            ? "Solo le ore di questo locale: togli il filtro per il totale della persona."
+            : null,
+          contract ? null : "Nessuna ora da contratto sulla scheda: qui non c'è niente da confrontare.",
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined
       }
       className={cn(
         "flex flex-col items-end justify-center rounded-xl border px-2 py-2",
-        over
+        tone === "over"
           ? "border-error/40 bg-error/10"
-          : heavy || noRest
+          : tone === "under"
             ? "border-warning/40 bg-warning/10"
             : "border-border-2 bg-bg-card"
       )}
@@ -474,19 +511,22 @@ function HoursCell({
       <span
         className={cn(
           "font-mono text-sm",
-          over ? "text-error" : heavy ? "text-warning" : "text-t1"
+          tone === "over"
+            ? "text-error"
+            : tone === "under"
+              ? "text-warning"
+              : "text-t1"
         )}
       >
         {formatHours(hours)}
+        {target != null ? (
+          <span className="text-t4"> / {formatHours(target)}</span>
+        ) : null}
       </span>
 
-      {noRest && !over ? (
-        <Pill tone="warning">0 riposi</Pill>
-      ) : (
-        <span className="text-[10px] text-t4">
-          {daysWorked} {daysWorked === 1 ? "giorno" : "giorni"}
-        </span>
-      )}
+      <span className="text-[10px] text-t4">
+        {daysWorked} {daysWorked === 1 ? "giorno" : "giorni"}
+      </span>
     </div>
   );
 }
