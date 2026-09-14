@@ -73,11 +73,12 @@ export async function getOwnerShifts(
  * `getOwnerShifts` copre solo futuri/oggi e `getOwnerPastShiftsPage` è paginata.
  * `from`/`to` sono date DB (`YYYY-MM-DD`), vedi `toDateString` in lib/format.
  *
- * Da qui passa anche il carico settimanale per persona (`computeWeekLoad`): le
- * soglie 40h/48h sono **della persona**, e 30 ore a Roma più 25 a Milano sono 55
- * ore. Prima servivano due query — questa e `getOtherVenuesShiftsRange` — perché
- * la vista era di una sede sola; ora questa **è** l'unione, e la seconda non
- * esiste più.
+ * Da qui passa anche il carico settimanale per persona (`computeWeekLoad`), in
+ * entrambe le viste per persona (dashboard web e tab Turni dell'app): le ore da
+ * contratto sono **della persona**, e 30 ore a Roma più 25 a Milano sono 55 ore
+ * su un contratto solo. Prima servivano due query — questa e
+ * `getOtherVenuesShiftsRange` — perché la vista era di una sede sola; ora questa
+ * **è** l'unione, e la seconda non esiste più.
  */
 export async function getOwnerShiftsRange(
   venueIds: string[],

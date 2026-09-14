@@ -304,9 +304,12 @@ function ContractSection({ person }: { person: StaffPersonDetail }) {
           />
         </Field>
         <Field label="Periodo">
+          {/* Sempre attivo, anche a ore vuote: si sceglie prima il periodo e poi
+              si scrivono le ore quanto il contrario, e un campo che non si apre
+              sembra rotto. Senza ore non viene comunque salvato niente — le due
+              colonne si azzerano insieme. */}
           <Select
             value={period}
-            disabled={parsed == null}
             onChange={(e) => setPeriod(e.target.value as ContractPeriod)}
           >
             {CONTRACT_PERIODS.map((p) => (

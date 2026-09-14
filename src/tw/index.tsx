@@ -72,6 +72,7 @@ ScrollView.displayName = "CSS(ScrollView)";
 export const Pressable = (
   props: React.ComponentProps<typeof RNPressable> & { className?: string }
 ) => {
+  // @ts-ignore (non @ts-expect-error: stesso TS2590 non deterministico dello ScrollView qui sopra — scatta quando i call site crescono, e con la build incrementale a volte non scatta affatto, lasciando un TS2578). Runtime corretto, wrapper verbatim.
   return useCssElement(RNPressable, props, { className: "style" });
 };
 Pressable.displayName = "CSS(Pressable)";

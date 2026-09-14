@@ -15,6 +15,7 @@ import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { WeekCalendar } from "@/components/ui/WeekCalendar";
 import { type DaySection, groupByDay } from "@/features/assignments/agenda";
+import { PeopleWeekList } from "@/features/assignments/PeopleWeekList";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import type { ShiftWithCount } from "@/features/shifts/types";
@@ -84,6 +85,14 @@ export default function ManagerShiftsScreen() {
   /** L'agenda ridotta a ciò che manca da coprire. */
   const [onlyShort, setOnlyShort] = useState(false);
   /**
+   * Cosa si sta guardando: i turni per giorno, o l'organico per persona.
+   *
+   * Due viste sotto lo stesso calendario e gli stessi chip di sede, non due
+   * schermate: sono gli stessi turni girati di lato — «cosa succede mercoledì»
+   * contro «chi lavora quanto» — e la settimana scelta vale per entrambe.
+   */
+  const [mode, setMode] = useState<"days" | "people">("days");
+  /**
    * Le sedi nascoste dai chip. Si tiene l'insieme **escluso** e non quello
    * incluso di proposito: così una sede appena aperta compare da sé, mentre con
    * un insieme di inclusi resterebbe invisibile finché qualcuno non la spunta.
@@ -95,6 +104,12 @@ export default function ManagerShiftsScreen() {
 
   const listRef = useRef<SectionList<ShiftWithCount, ShiftSection>>(null);
   const syncing = useRef(false);
+
+  /** Le sedi accese: è lo scope con cui la vista per persona interroga. */
+  const scope = useMemo(
+    () => venues.filter((v) => !hiddenVenues.has(v.id)).map((v) => v.id),
+    [venues, hiddenVenues]
+  );
 
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
   const venueBadge = useCallback(
@@ -264,8 +279,31 @@ export default function ManagerShiftsScreen() {
           </View>
         </View>
 
+        {/* L'interruttore fra le due viste. Sta sopra il calendario perché
+            decide *cosa* si legge sotto, mentre il calendario e i chip di sede
+            valgono per entrambe. */}
+        <View className="mt-4 flex-row gap-2">
+          {(["days", "people"] as const).map((m) => {
+            const on = mode === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => setMode(m)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5",
+                  on ? "border-border-gold bg-bg-2" : "border-border"
+                )}
+              >
+                <Mono gold={on}>{m === "days" ? "Giorni" : "Persone"}</Mono>
+              </Pressable>
+            );
+          })}
+        </View>
+
         <WeekCalendar
-          className="mt-4"
+          className="mt-3"
           selected={visibleDay}
           onSelect={goToDay}
           marked={marked}
@@ -346,7 +384,15 @@ export default function ManagerShiftsScreen() {
         ) : null}
       </View>
 
-      {upcomingQuery.isLoading ? (
+      {mode === "people" ? (
+        <PeopleWeekList
+          from={startOfWeek(visibleDay)}
+          to={addDaysToDate(startOfWeek(visibleDay), 6)}
+          scope={scope}
+          onOpenShift={openShift}
+          paddingBottom={insets.bottom + 96}
+        />
+      ) : upcomingQuery.isLoading ? (
         <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
       ) : upcomingQuery.isError ? (
         <QueryError
