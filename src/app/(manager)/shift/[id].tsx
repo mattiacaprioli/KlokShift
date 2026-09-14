@@ -275,7 +275,7 @@ export default function ShiftDetailScreen() {
   const roleReqsQuery = useShiftRoleRequirements(id);
   const roleRequirements = roleReqsQuery.data ?? [];
 
-  const statusMutation = useUpdateShiftStatus(id, shift?.venue_id);
+  const statusMutation = useUpdateShiftStatus(id);
   const busy = statusMutation.isPending;
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);

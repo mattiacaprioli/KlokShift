@@ -45,11 +45,18 @@ export function ManagerShiftCard({
   shift,
   onPress,
   variant = "agenda",
+  venue,
 }: {
   shift: ShiftWithCount;
   onPress: () => void;
   /** `compact` porta con sé il giorno: è per la home, che non ha un'agenda. */
   variant?: "agenda" | "compact";
+  /**
+   * In quale sede. **Assente con una sede sola**: l'agenda del titolare mostra
+   * tutte le sedi insieme, ma chi ne ha una non deve leggerne il nome su ogni
+   * card. Il nome è il segnale, `accent` (vedi `venueColor.ts`) è l'appiglio.
+   */
+  venue?: { name: string; accent: string };
 }) {
   const cancelled = shift.status === "cancelled";
   const closed = shift.status === "closed";
@@ -69,6 +76,17 @@ export function ManagerShiftCard({
 
   const bar = cancelled || closed ? "bg-t4" : alert ? "bg-warning" : "bg-gold";
 
+  /**
+   * La barra a sinistra dice due cose diverse a seconda di quante sedi ci sono.
+   * Con una sola resta lo stato del turno (oro / arancio / spento), che è
+   * l'unica informazione che quella card ha da dare. Con più sedi prende il
+   * colore della sede, perché in un'agenda mescolata «di chi è questo turno» si
+   * legge prima di «è coperto»: lo stato lo dicono comunque la pill e il
+   * rapporto, la sede non la direbbe nessun altro.
+   */
+  const barStyle =
+    venue && !cancelled && !closed ? { backgroundColor: venue.accent } : undefined;
+
   if (variant === "compact") {
     return (
       <Card
@@ -78,7 +96,10 @@ export function ManagerShiftCard({
         )}
         onPress={onPress}
       >
-        <View className={cn("h-8 w-1 rounded-full", bar)} />
+        <View
+          className={cn("h-8 w-1 rounded-full", bar)}
+          style={barStyle}
+        />
         <View className="items-start">
           <Text
             className="text-[15px] font-sans-bold text-t1"
@@ -101,6 +122,10 @@ export function ManagerShiftCard({
               alert ? "font-sans-semibold text-warning" : "text-t2"
             )}
           >
+            {/* La sede prima della copertura: nella home i turni di tre locali
+                si susseguono, e senza il nome due card identiche sono
+                indistinguibili. */}
+            {venue ? `${venue.name} · ` : ""}
             {alert ? `manca ${total - filled}` : `${filled}/${total} coperti`}
           </Text>
         </View>
@@ -117,7 +142,7 @@ export function ManagerShiftCard({
       onPress={onPress}
     >
       <View className="flex-row gap-3.5">
-        <View className={cn("w-1 rounded-full", bar)} />
+        <View className={cn("w-1 rounded-full", bar)} style={barStyle} />
 
         <View className="items-start pt-0.5">
           <Text
@@ -143,6 +168,18 @@ export function ManagerShiftCard({
         </View>
 
         <View className="flex-1">
+          {/* Il nome della sede sopra il titolo, in mono come le altre
+              etichette di contesto: è quello che si cerca per primo scorrendo
+              un'agenda che mescola tre locali. */}
+          {venue ? (
+            <Text
+              className="mb-0.5 font-mono text-[9.5px] uppercase"
+              style={{ letterSpacing: 1.3, color: venue.accent }}
+              numberOfLines={1}
+            >
+              {venue.name}
+            </Text>
+          ) : null}
           <View className="flex-row items-start justify-between gap-2">
             <Text
               className="flex-1 text-[15px] font-sans-bold text-t1"

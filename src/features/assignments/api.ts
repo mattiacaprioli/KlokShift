@@ -145,6 +145,20 @@ export async function createInternalShift(input: {
  * una settimana, ripetere lo stesso turno su più giorni.
  */
 export type InternalShiftPlan = {
+  /**
+   * ⚠️ La sede sta **sul piano**, non sulla chiamata.
+   *
+   * Prima `createInternalShifts` prendeva un `venue_id` solo e lo applicava a
+   * tutte le copie: andava bene finché una vista conteneva una sede sola.
+   * Con il planning unificato, duplicare una settimana che contiene Roma e
+   * Milano spingerebbe tutti i turni in una sede sola — e il compilatore non se
+   * ne accorgerebbe mai, perché sono entrambe stringhe.
+   *
+   * Anche `staff_member_id` e `role_id` sono legati alla sede del turno che ha
+   * generato il piano: spostare il piano di sede senza rimapparli produrrebbe
+   * assegnazioni che il database accetta e che nessuna schermata sa leggere.
+   */
+  venue_id: string;
   title: string;
   date: string;
   start_time: string;
@@ -162,7 +176,7 @@ export async function getInternalShiftPlans(
   const { data, error } = await supabase
     .from("shifts")
     .select(
-      "title, date, start_time, end_time, description, shift_role_requirements(role_id, count), shift_assignments(staff_member_id, role_id, status)"
+      "venue_id, title, date, start_time, end_time, description, shift_role_requirements(role_id, count), shift_assignments(staff_member_id, role_id, status)"
     )
     .in("id", shiftIds)
     .order("date", { ascending: true })
@@ -170,6 +184,7 @@ export async function getInternalShiftPlans(
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((s) => ({
+    venue_id: s.venue_id,
     title: s.title,
     date: s.date,
     start_time: s.start_time,
@@ -201,11 +216,9 @@ export async function getInternalShiftPlans(
  * I trigger DB fanno il resto, come per il turno singolo: ogni assegnato riceve
  * la sua notifica e `positions_filled` resta sincronizzato.
  */
-export async function createInternalShifts(input: {
-  venue_id: string;
-  plans: InternalShiftPlan[];
-}): Promise<Shift[]> {
-  const { venue_id, plans } = input;
+export async function createInternalShifts(
+  plans: InternalShiftPlan[]
+): Promise<Shift[]> {
   if (plans.length === 0) return [];
 
   const { data: created, error } = await supabase
@@ -217,7 +230,7 @@ export async function createInternalShifts(input: {
           0
         );
         return {
-          venue_id,
+          venue_id: p.venue_id,
           title: p.title,
           date: p.date,
           start_time: p.start_time,
@@ -675,16 +688,18 @@ export async function getMyAssignmentForShift(
  * lavorando un turno datato ieri: è il caso in cui il ristoratore ha più bisogno
  * di sapere chi ha in servizio, ed era esattamente quello che spariva.
  */
-export async function getTodayAssignments(
-  venueId: string
+export async function getOwnerTodayAssignments(
+  venueIds: string[]
 ): Promise<TodayAssignmentRow[]> {
+  if (venueIds.length === 0) return [];
   const today = todayString();
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
       "*, role:venue_roles(id, name), staff_member:staff_members!inner(*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))), shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)"
     )
-    .eq("shift.venue_id", venueId)
+    // `venue_id` resta nel select del sub-embed: serve al badge della sede.
+    .in("shift.venue_id", venueIds)
     .gte("shift.date", addDaysToDate(today, -1))
     .lte("shift.date", today)
     // I turni annullati non contano tra chi lavora oggi.

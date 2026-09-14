@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,9 +25,17 @@ import {
 import { formatShiftSummary, isShiftOver } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
-import { useVenue } from "../lib/venue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useLastVenue } from "@/features/venues/useLastVenue";
 import { dayLabel, startOfWeek, weekDays } from "../lib/week";
-import { Button, Field, Input, Pill, Textarea } from "../ui/primitives";
+import {
+  Button,
+  Field,
+  Input,
+  Pill,
+  Select,
+  Textarea,
+} from "../ui/primitives";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { PresenceSection } from "./PresenceSection";
@@ -43,16 +51,21 @@ type RoleTarget = { role_id: string; count: number };
 export function ShiftPanel({
   date,
   shift,
-  initialStaffIds,
+  initialPersonIds,
   onClose,
 }: {
   date: string;
   shift?: Shift;
   /**
-   * Persone già selezionate in creazione. Serve alla vista per persona: si
-   * clicca la casella vuota di chi è libero e il turno nasce già suo.
+   * Persone già selezionate in creazione, come `staff_people.id`. Serve alla
+   * vista per persona: si clicca la casella vuota di chi è libero e il turno
+   * nasce già suo.
+   *
+   * Id di **persona** e non di scheda, perché al momento del clic la sede non è
+   * ancora stata scelta: la scheda giusta la risolve il form, una volta che sa
+   * dove.
    */
-  initialStaffIds?: string[];
+  initialPersonIds?: string[];
   onClose: () => void;
 }) {
   return (
@@ -78,7 +91,7 @@ export function ShiftPanel({
         <InternalForm
           date={date}
           shift={shift}
-          initialStaffIds={initialStaffIds}
+          initialPersonIds={initialPersonIds}
           onClose={onClose}
         />
       </div>
@@ -99,9 +112,8 @@ function CancelShiftButton({
   shift: Shift;
   onDone: () => void;
 }) {
-  const venue = useVenue();
   const toast = useToast();
-  const status = useUpdateShiftStatus(shift.id, venue.id);
+  const status = useUpdateShiftStatus(shift.id);
   const [asking, setAsking] = useState(false);
 
   return (
@@ -152,9 +164,8 @@ function RestoreShiftButton({
   shift: Shift;
   onDone: () => void;
 }) {
-  const venue = useVenue();
   const toast = useToast();
-  const status = useUpdateShiftStatus(shift.id, venue.id);
+  const status = useUpdateShiftStatus(shift.id);
   const [asking, setAsking] = useState(false);
 
   return (
@@ -213,29 +224,29 @@ function CancelledBanner({
 function InternalForm({
   date,
   shift,
-  initialStaffIds,
+  initialPersonIds,
   onClose,
 }: {
   date: string;
   shift?: Shift;
-  initialStaffIds?: string[];
+  initialPersonIds?: string[];
   onClose: () => void;
 }) {
-  const venue = useVenue();
-  const staffQuery = useVenueStaff(venue.id);
-  const rolesQuery = useVenueRoles(venue.id);
+  const { venues, isMultiVenue } = useOwnerVenues();
+  const { venueId: lastVenueId, choose } = useLastVenue();
   // In creazione non c'è ancora un turno: senza `enabled` il pannello faceva
   // due query con id vuoto ogni volta che si apriva.
   const assignmentsQuery = useShiftAssignments(shift?.id ?? "", !!shift?.id);
   const roleReqsQuery = useShiftRoleRequirements(shift?.id ?? "", !!shift?.id);
-  const create = useCreateInternalShifts(venue.id);
+  const create = useCreateInternalShifts();
   const update = useUpdateInternalShift(shift?.id ?? "");
   const cancelled = shift?.status === "cancelled";
 
-  // Chi lavora **e** in che ruolo: la chiave è la persona, il valore il ruolo
-  // che ricopre in questo turno (null = più mansioni, ancora da scegliere).
+  // Chi lavora **e** in che ruolo: la chiave è la scheda di sede
+  // (`staff_members.id`), il valore il ruolo che ricopre in questo turno
+  // (null = più mansioni, ancora da scegliere).
   const [staffRoles, setStaffRoles] = useState<Record<string, string | null>>(
-    Object.fromEntries((initialStaffIds ?? []).map((id) => [id, null]))
+    {}
   );
   const [roleTargets, setRoleTargets] = useState<RoleTarget[]>([]);
   // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
@@ -249,6 +260,9 @@ function InternalForm({
   } = useForm<InternalShiftForm>({
     resolver: zodResolver(internalShiftSchema),
     defaultValues: {
+      // In modifica la sede è quella del turno e non si tocca (vedi il campo);
+      // in creazione si propone l'ultima usata, la stessa del form mobile.
+      venue_id: shift?.venue_id ?? lastVenueId ?? venues[0]?.id ?? "",
       title: shift?.title ?? "",
       date: shift?.date ?? date,
       start_time: shift?.start_time?.slice(0, 5) ?? "18:00",
@@ -257,10 +271,18 @@ function InternalForm({
     },
   });
 
+  /**
+   * La sede su cui il form sta lavorando: da lei dipendono organico e mansioni
+   * selezionabili. In modifica è quella del turno, sempre.
+   */
+  const formVenueId = shift?.venue_id ?? watch("venue_id");
+  const staffQuery = useVenueStaff(formVenueId || undefined);
+  const rolesQuery = useVenueRoles(formVenueId || undefined);
+
   // Su un turno esistente, assegnati e fabbisogni arrivano da due query: si
   // sincronizzano nello stato locale appena disponibili.
   // ⚠️ Solo su un turno esistente: in creazione la query gira con id vuoto e
-  // sovrascriverebbe `initialStaffIds` con una lista vuota.
+  // sovrascriverebbe `initialPersonIds` con una lista vuota.
   useEffect(() => {
     if (shift && assignmentsQuery.data) {
       setStaffRoles(
@@ -280,6 +302,53 @@ function InternalForm({
       );
     }
   }, [roleReqsQuery.data]);
+
+  /**
+   * Cambiare sede azzera persone e fabbisogni.
+   *
+   * Non è pulizia estetica: le chiavi di `staffRoles` sono `staff_members.id`
+   * della sede precedente e quelle di `roleTargets` sono `venue_roles.id` della
+   * sede precedente. Portarle su un turno di un'altra sede produce assegnazioni
+   * incoerenti che **il database accetta** — nessuna FK lega
+   * `shift_assignments.staff_member_id` alla sede del turno.
+   *
+   * ⚠️ Due guardie, non una. Su un turno esistente esce subito: lì il campo è
+   * disabilitato, e senza la guardia l'effetto sovrascriverebbe gli assegnati
+   * appena caricati da `assignmentsQuery` — lo stesso inciampo già documentato
+   * per `initialPersonIds`. E il `ref` salta il primo giro: al mount la sede non
+   * è *cambiata*, e azzerare lì butterebbe via la preselezione con cui il
+   * pannello è stato aperto dalla vista per persona.
+   */
+  const lastVenueRef = useRef(formVenueId);
+  useEffect(() => {
+    if (shift) return;
+    if (lastVenueRef.current === formVenueId) return;
+    lastVenueRef.current = formVenueId;
+    setStaffRoles({});
+    setRoleTargets([]);
+  }, [shift, formVenueId]);
+
+  /**
+   * La preselezione della vista per persona arriva come `staff_people.id`, e va
+   * tradotta nella **scheda di quella persona nella sede scelta**: è quella che
+   * si scrive in `shift_assignments`.
+   *
+   * Sta in un effetto e non nello stato iniziale perché dipende dall'organico,
+   * che arriva una query dopo; e si applica una volta sola (`applied`), o
+   * riselezionerebbe chi l'utente ha appena tolto. Chi non lavora in quella sede
+   * semplicemente non entra: è la stessa regola del drag & drop.
+   */
+  const applied = useRef(false);
+  useEffect(() => {
+    if (shift || applied.current) return;
+    if (!initialPersonIds?.length || staffQuery.data == null) return;
+    const wanted = new Set(initialPersonIds);
+    const picked = staffQuery.data.filter((m) => wanted.has(m.person_id));
+    if (picked.length > 0) {
+      setStaffRoles(Object.fromEntries(picked.map((m) => [m.id, null])));
+    }
+    applied.current = true;
+  }, [shift, initialPersonIds, staffQuery.data]);
 
   const staff = staffQuery.data ?? [];
   const roles = rolesQuery.data ?? [];
@@ -399,11 +468,17 @@ function InternalForm({
       return;
     }
     // Un turno o dieci passano dalla stessa mutation: la data è l'unica cosa
-    // che cambia tra le copie.
+    // che cambia tra le copie — la sede no, sono copie dello stesso turno.
     const dates = [values.date, ...extraDates.filter((d) => d !== values.date)];
     create.mutate(
-      dates.sort().map((d) => ({ ...payload, date: d })),
-      { onSuccess: onClose }
+      dates.sort().map((d) => ({ ...payload, venue_id: values.venue_id, date: d })),
+      {
+        onSuccess: () => {
+          // La sede appena usata diventa quella proposta al prossimo turno.
+          choose(values.venue_id);
+          onClose();
+        },
+      }
     );
   }
 
@@ -414,6 +489,26 @@ function InternalForm({
     >
       {shift && cancelled ? (
         <CancelledBanner shift={shift} onDone={onClose} />
+      ) : null}
+
+      {/* Il primo campo: da questa risposta discendono organico e mansioni
+          selezionabili. Con un locale solo non compare — la risposta è già nota.
+
+          ⚠️ In modifica è disabilitato, e deve restarci: `updateInternalShift`
+          non tocca `venue_id`, perché assegnazioni e fabbisogni già scritti
+          puntano a `staff_members` e `venue_roles` di **questa** sede, e
+          spostare il turno li lascerebbe appesi a righe di un altro locale —
+          cosa che il database accetterebbe senza dire niente. */}
+      {isMultiVenue ? (
+        <Field label="Sede" error={errors.venue_id?.message}>
+          <Select {...register("venue_id")} disabled={!!shift}>
+            {venues.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
       ) : null}
 
       <Field label="Titolo" error={errors.title?.message}>

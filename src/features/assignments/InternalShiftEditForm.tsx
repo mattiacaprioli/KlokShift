@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
-import { ScrollView, View } from "@/tw";
+import { ScrollView, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
@@ -13,6 +13,7 @@ import {
   toTimeString,
 } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useVenueStaff } from "@/features/staff/hooks";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import { useVenueRoles } from "@/features/roles/hooks";
@@ -59,6 +60,9 @@ function EditForm({
 }: SeededProps) {
   const router = useRouter();
   const toast = useToast();
+  const { venueById, isMultiVenue } = useOwnerVenues();
+  // Solo da due sedi in su: con una sola, dire quale è rumore.
+  const venue = isMultiVenue ? venueById(shift.venue_id) : undefined;
   const staffQuery = useVenueStaff(shift.venue_id);
   // Solo staff confermato (come in creazione).
   const staff = (staffQuery.data ?? []).filter(
@@ -158,6 +162,22 @@ function EditForm({
         contentContainerClassName="p-6 gap-7"
         keyboardShouldPersistTaps="handled"
       >
+        {/* In sola lettura, e deve restarci.
+            `updateInternalShift` non tocca `venue_id`: un turno non si sposta di
+            sede. Le assegnazioni e i fabbisogni già scritti puntano a
+            `staff_members` e `venue_roles` di **questa** sede, e spostare il
+            turno li lascerebbe appesi a righe di un altro locale — il database
+            lo accetterebbe senza dire niente. Chi volesse quel turno altrove lo
+            ricrea; è un'operazione rara, e il costo di sbagliarla è alto. */}
+        {venue ? (
+          <View className="gap-1">
+            <Mono>Sede</Mono>
+            <Text className="text-base font-sans-medium text-t2">
+              {venue.name}
+            </Text>
+          </View>
+        ) : null}
+
         <View className="gap-3">
           <Mono>Giorno</Mono>
           <DayPicker value={date} onChange={setDate} />

@@ -8,7 +8,9 @@ import {
 } from "@/features/roles/hooks";
 import type { VenueRole } from "@/features/roles/api";
 import { SUGGESTED_ROLES } from "@/features/staff/roles";
-import { useVenue } from "../lib/venue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useLastVenue } from "@/features/venues/useLastVenue";
+import { NoVenues } from "../venues/NoVenues";
 import { useToast } from "../ui/Toast";
 import {
   Button,
@@ -17,6 +19,7 @@ import {
   PageHeader,
   Placeholder,
   QueryError,
+  Select,
   Spinner,
 } from "../ui/primitives";
 
@@ -84,31 +87,48 @@ function RoleRow({ role }: { role: VenueRole }) {
 }
 
 /**
- * I ruoli del locale. Era una lista fissa uguale per tutti: un hotel non ha un
+ * I ruoli di un locale. Era una lista fissa uguale per tutti: un hotel non ha un
  * sommelier e una discoteca ha il PR, quindi ora la scrive chi gestisce.
+ *
+ * I ruoli restano **per sede** (`venue_roles.venue_id`), e la sede attiva non
+ * esiste più: va chiesta qui. Un selettore in cima e non una sezione per sede
+ * tutta in pagina — i nomi si ripetono quasi identici fra locali, e il campo
+ * «Aggiungi un ruolo» dovrebbe comunque sapere a quale sezione appartiene:
+ * sarebbe lo stesso selettore, ma nascosto.
  */
 export function RuoliPage() {
-  const venue = useVenue();
+  const { venues, venueById, isMultiVenue } = useOwnerVenues();
+  const { venueId, choose } = useLastVenue();
+  const venue = venueId ? venueById(venueId) : undefined;
   const toast = useToast();
-  const { data, isPending, isError, error } = useVenueRoles(venue.id);
+  const { data, isPending, isError, error } = useVenueRoles(venueId);
   const create = useCreateVenueRole();
   const [draft, setDraft] = useState("");
 
-  if (isPending) return <Spinner />;
-  if (isError) return <QueryError error={error} />;
-
-  const roles = data ?? [];
-
   function add(name: string) {
-    if (!name.trim()) return;
+    if (!venueId || !name.trim()) return;
     create.mutate(
-      { venueId: venue.id, name },
+      { venueId, name },
       {
         onSuccess: () => setDraft(""),
         onError: () => toast.show("Ruolo già presente o non valido.", "error"),
       }
     );
   }
+
+  if (venues.length === 0) {
+    return (
+      <>
+        <PageHeader title="Ruoli" />
+        <NoVenues detail="Ti serve un locale prima di definirne i ruoli." />
+      </>
+    );
+  }
+
+  if (isPending) return <Spinner />;
+  if (isError) return <QueryError error={error} />;
+
+  const roles = data ?? [];
 
   // I suggerimenti spariscono man mano che la lista si riempie: servono a chi
   // parte da zero, non a chi ha già deciso come chiamare le proprie mansioni.
@@ -118,8 +138,28 @@ export function RuoliPage() {
   return (
     <>
       <PageHeader
-        title="Ruoli del locale"
-        subtitle="Le mansioni che assegni allo staff e che chiedi sui turni."
+        title="Ruoli"
+        subtitle={
+          isMultiVenue && venue
+            ? `Le mansioni di ${venue.name}: ogni locale ha le sue.`
+            : "Le mansioni che assegni allo staff e che chiedi sui turni."
+        }
+        actions={
+          isMultiVenue ? (
+            <Select
+              value={venueId ?? ""}
+              onChange={(e) => choose(e.target.value)}
+              className="w-56"
+              aria-label="Ruoli di quale sede"
+            >
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </Select>
+          ) : undefined
+        }
       />
 
       <Card className="flex flex-wrap items-center gap-2 p-3">

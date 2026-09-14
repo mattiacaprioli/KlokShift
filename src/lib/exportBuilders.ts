@@ -20,20 +20,14 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-/** Quante sedi compaiono: con una sola, documenti identici a prima del multi-sede. */
-function venuesInData(people: PersonHours[]): number {
-  const ids = new Set<string>();
-  for (const p of people) for (const v of p.venues) ids.add(v.venue_id);
-  return ids.size;
-}
-
 /**
  * Tabella HTML stampabile (scuro-su-bianco, accento gold). Solo ore/presenze.
  *
- * Il PDF lo legge una **persona**, e al titolare serve anche sapere dove sono
- * finite quelle ore: la riga della persona porta il totale (quello della busta
- * paga) e sotto, rientrate, le sue sedi. Con una sola sede nei dati le righe
- * figlie non ci sono e il documento è identico a quello di prima.
+ * Una riga per **persona**, col totale del mese: è la cifra della busta paga, ed
+ * è l'unica che serve. Fino al 14/09/2026 sotto ogni persona c'erano le righe
+ * delle sue sedi; sono state tolte perché la domanda a cui rispondevano — «di
+ * queste 40 ore, quante a Roma?» — non è quella che si porta al commercialista,
+ * e raddoppiavano la lunghezza del documento per dirlo.
  */
 export function buildHoursHtml(
   companyName: string,
@@ -42,50 +36,18 @@ export function buildHoursHtml(
   totalHours: number
 ): string {
   const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
-  const venues = venuesInData(people);
-  const multi = venues > 1;
-
-  /** Nome della sede, col perché-c'è quando è chiusa. */
-  const venueLabel = (v: PersonHours["venues"][number]) =>
-    escapeHtml(v.venue_name) + (v.venue_closed ? " (chiusa)" : "");
 
   const body = people
-    .map((p) => {
-      // Le righe figlie solo a chi ha davvero più di una sede: per gli altri il
-      // nome della sede sta in colonna, e una riga figlia che ripete lo stesso
-      // totale sarebbe rumore. Stessa forma della tabella sul web.
-      const split = p.venues.length > 1;
-      const sede = split
-        ? `${p.venues.length} sedi`
-        : p.venues[0]
-          ? venueLabel(p.venues[0])
-          : "—";
-
-      const main =
-        `<tr${split ? ' class="grp"' : ""}><td>${escapeHtml(p.person_name)}</td>` +
-        (multi ? `<td>${sede}</td>` : "") +
+    .map(
+      (p) =>
+        `<tr><td>${escapeHtml(p.person_name)}</td>` +
         `<td>${escapeHtml(p.roles ?? "—")}</td>` +
         `<td class="n">${p.shifts_count}</td>` +
-        `<td class="n">${hoursNumber(p.hours)}</td></tr>`;
-
-      if (!split) return main;
-      const children = p.venues
-        .map(
-          (v) =>
-            `<tr class="sub-row"><td class="ind">↳</td>` +
-            `<td>${venueLabel(v)}</td>` +
-            `<td>${escapeHtml(v.roles ?? "—")}</td>` +
-            `<td class="n">${v.shifts_count}</td>` +
-            `<td class="n">${hoursNumber(v.hours)}</td></tr>`
-        )
-        .join("");
-      return main + children;
-    })
+        `<td class="n">${hoursNumber(p.hours)}</td></tr>`
+    )
     .join("");
 
-  const sub = `${escapeHtml(companyName)} · ${escapeHtml(monthLabel)}${
-    multi ? ` · ${venues} sedi` : ""
-  }`;
+  const sub = `${escapeHtml(companyName)} · ${escapeHtml(monthLabel)}`;
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     * { box-sizing: border-box; }
@@ -97,11 +59,6 @@ export function buildHoursHtml(
     th { color: #8c857a; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
     td.n, th.n { text-align: right; }
     tfoot td { font-weight: 700; border-top: 2px solid #eab54c; border-bottom: none; }
-    /* Solo quando ci sono più sedi: la riga della persona è il totale, quelle
-       rientrate sotto dicono da dove viene. */
-    tr.grp td { font-weight: 700; border-bottom: none; }
-    tr.sub-row td { color: #6a6358; font-size: 12px; padding-top: 4px; padding-bottom: 4px; }
-    td.ind { padding-left: 22px; }
     .accent { height: 4px; width: 48px; background: #eab54c; border-radius: 2px; margin-bottom: 16px; }
     .foot { margin-top: 28px; color: #a49a8a; font-size: 11px; }
   </style></head><body>
@@ -109,13 +66,9 @@ export function buildHoursHtml(
     <h1>Ore tracciate</h1>
     <div class="sub">${sub}</div>
     <table>
-      <thead><tr><th>Nome</th>${
-        multi ? "<th>Sede</th>" : ""
-      }<th>Ruolo</th><th class="n">Turni</th><th class="n">Ore</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore</th></tr></thead>
       <tbody>${body}</tbody>
-      <tfoot><tr><td>Totale</td>${
-        multi ? "<td></td>" : ""
-      }<td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(
+      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(
         totalHours
       )}</td></tr></tfoot>
     </table>

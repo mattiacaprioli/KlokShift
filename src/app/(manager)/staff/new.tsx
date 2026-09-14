@@ -10,40 +10,29 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
-import { Pill } from "@/components/ui/Pill";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useLastVenue } from "@/features/venues/useLastVenue";
 import {
-  useAddPersonToVenue,
-  useAddStaffToVenue,
+  useAddStaffToVenues,
   useFindWaiterByEmail,
-  useVenueStaff,
+  useOwnerPeople,
 } from "@/features/staff/hooks";
-import { usePeopleFromOtherVenues } from "@/features/staff/usePeopleFromOtherVenues";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
-import type { WaiterLookup } from "@/features/staff/api";
+import { personVenueNames, type WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
-type Mode = "esistente" | "manuale" | "invita";
+type Mode = "manuale" | "invita";
 
-/**
- * "Dalle tue sedi" compare solo a chi ha più di un locale, e in testa: per un
- * titolare con tre sedi è il modo più frequente di aggiungere qualcuno —
- * riusare una persona che ha già, non inventarne una nuova.
- */
-function modesFor(multiVenue: boolean): { id: Mode; label: string }[] {
-  const base: { id: Mode; label: string }[] = [
-    { id: "manuale", label: "Manuale" },
-    { id: "invita", label: "Invita" },
-  ];
-  return multiVenue
-    ? [{ id: "esistente", label: "Dalle tue sedi" }, ...base]
-    : base;
-}
+const MODES: { id: Mode; label: string }[] = [
+  { id: "manuale", label: "Manuale" },
+  { id: "invita", label: "Invita" },
+];
 
 function TypeChips({
   value,
@@ -69,31 +58,92 @@ function TypeChips({
   );
 }
 
+/**
+ * In quali sedi lavora. Multi-selezione, almeno una.
+ *
+ * Con un locale solo non compare: la risposta è già nota e chiederla sarebbe un
+ * passo in più per nulla.
+ */
+function VenueMultiSelect({
+  venues,
+  value,
+  onToggle,
+}: {
+  venues: { id: string; name: string }[];
+  value: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <View className="gap-2">
+      <Mono>In quali sedi</Mono>
+      <View className="flex-row flex-wrap gap-2">
+        {venues.map((v) => (
+          <Chip
+            key={v.id}
+            label={v.name}
+            gold
+            active={value.has(v.id)}
+            onPress={() => onToggle(v.id)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Aggiungi una persona all'organico.
+ *
+ * Dal 14/09/2026 si aggiunge **una persona**, non una scheda di sede: prima
+ * chi, poi dove. È sparita la modalità «Dalle tue sedi» — esisteva per
+ * rimediare al fatto che l'organico era della sede attiva, e riusare qualcuno
+ * significava ricopiarlo qui. Ora l'organico è dell'azienda: chi c'è già è già
+ * in elenco, e gli si aggiunge una sede dalla sua scheda.
+ */
 export default function StaffNewScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const userId = session!.user.id;
-  const { venue, venues } = useActiveVenue();
-  const venueId = venue?.id;
-  const multiVenue = venues.length > 1;
-  const MODES = modesFor(multiVenue);
+  const { venues, isMultiVenue } = useOwnerVenues();
+  // L'ultima sede usata — la stessa del form turno: chi sta organizzando Milano
+  // la trova già spuntata.
+  const { venueId: lastVenueId } = useLastVenue();
 
-  const [mode, setMode] = useState<Mode>(multiVenue ? "esistente" : "manuale");
-  const add = useAddStaffToVenue();
-  const addExisting = useAddPersonToVenue();
+  const [mode, setMode] = useState<Mode>("manuale");
+  const add = useAddStaffToVenues();
   const setRoles = useSetStaffMemberRoles();
-  const reusable = usePeopleFromOtherVenues(userId, venueId);
 
-  // Chi è già in organico: serve a distinguere, su un invito, chi è già dentro
-  // da chi ha solo un invito in attesa.
-  const staffQuery = useVenueStaff(venueId);
-  const existingStatus = new Map<string, Enums<"staff_link_status">>(
-    (staffQuery.data ?? [])
-      .filter((s): s is typeof s & { waiter_id: string } => !!s.waiter_id)
-      .map((s) => [s.waiter_id, s.link_status])
-  );
+  /**
+   * Le sedi scelte. `null` finché la preferenza non è risolta: derivarle invece
+   * di inizializzarle a `lastVenueId` evita di dover risincronizzare con un
+   * effect quando la preferenza arriva dal disco un render dopo.
+   */
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const venueIds =
+    picked ?? new Set(lastVenueId ? [lastVenueId] : []);
+
+  function toggleVenue(id: string) {
+    setPicked(() => {
+      const next = new Set(venueIds);
+      // L'ultima sede non si toglie: una persona senza sedi non esiste (il
+      // trigger `delete_orphan_staff_person` la cancellerebbe), e il bottone
+      // resterebbe disabilitato senza dire perché.
+      if (next.has(id)) {
+        if (next.size > 1) next.delete(id);
+      } else next.add(id);
+      return next;
+    });
+  }
+
+  // I ruoli sono **per sede**: con due o più sedi scelte servirebbero due o più
+  // selettori, e il form diventerebbe illeggibile. Si assegnano dopo, dalla
+  // scheda della persona, che li mostra già sede per sede.
+  const singleVenue = venueIds.size === 1 ? [...venueIds][0] : undefined;
+
+  // Chi è già in organico: serve a dire, su un invito, che l'accordo esiste già.
+  const people = useOwnerPeople(userId).data ?? [];
 
   // Nuova scheda (manuale)
   const [name, setName] = useState("");
@@ -101,27 +151,19 @@ export default function StaffNewScreen() {
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
   const [phone, setPhone] = useState("");
 
-  // Dalle tue sedi: persona già del titolare, ruoli e impiego di QUESTA sede
-  const [pickedPerson, setPickedPerson] = useState<string | null>(null);
-  const [existingType, setExistingType] =
-    useState<Enums<"employment_type">>("a_chiamata");
-  const [existingRoleIds, setExistingRoleIds] = useState<string[]>([]);
-
   // Invita per email
   const find = useFindWaiterByEmail();
   const [email, setEmail] = useState("");
   const [found, setFound] = useState<WaiterLookup | null>(null);
   const [searched, setSearched] = useState(false);
   const [inviteType, setInviteType] = useState<Enums<"employment_type">>("fisso");
-  const foundStatus = found ? (existingStatus.get(found.id) ?? null) : null;
 
-  // Già nel tuo organico, ma in un'ALTRA sede. Senza questo avviso l'invito
-  // partirebbe davvero e creerebbe una seconda scheda della stessa persona —
-  // inutile, perché l'accordo con lei esiste già: basta aggiungerla a questa sede.
-  const foundElsewhere =
-    found && !foundStatus
-      ? reusable.people.find((r) => r.person.waiter_id === found.id)
-      : undefined;
+  // Già nel tuo organico. Senza questo avviso l'invito partirebbe davvero e
+  // creerebbe una seconda scheda della stessa persona — inutile, perché
+  // l'accordo con lei esiste già: basta aprirla e aggiungerle la sede.
+  const alreadyHave = found
+    ? people.find((p) => p.waiter_id === found.id)
+    : undefined;
 
   function onAdded(msg: string) {
     toast.show(msg);
@@ -131,53 +173,30 @@ export default function StaffNewScreen() {
     toast.show("Operazione non riuscita. Riprova.", "error");
   }
 
-  /**
-   * Una persona che il titolare ha già altrove entra in questa sede senza invito:
-   * l'accordo con lui esiste, e l'account (se c'è) è già collegato all'anagrafica —
-   * il trigger lo copia da sé sulla scheda nuova. Ruoli e tipo di impiego invece
-   * sono di **questa** sede: si può essere fissi a Roma e a chiamata a Milano.
-   */
-  function addFromOtherVenue() {
-    if (!venueId || !pickedPerson) return;
-    addExisting.mutate(
-      {
-        venue_id: venueId,
-        person_id: pickedPerson,
-        employment_type: existingType,
-      },
-      {
-        onSuccess: (member) =>
-          setRoles.mutate(
-            { staffMemberId: member.id, roleIds: existingRoleIds },
-            {
-              onSuccess: () => onAdded("Aggiunto a questa sede"),
-              onError: () =>
-                toast.show(
-                  "Aggiunto, ma i ruoli non sono stati salvati.",
-                  "error"
-                ),
-            }
-          ),
-        onError: onAddError,
-      }
-    );
-  }
-
   function addManual() {
-    if (!venueId || !name.trim()) return;
+    if (venueIds.size === 0 || !name.trim()) return;
     add.mutate(
       {
         ownerId: userId,
-        venueId,
+        venueIds: [...venueIds],
         fullName: name.trim(),
         employmentType: empType,
         phone: phone.trim() || null,
       },
       {
         // I ruoli si scrivono dopo l'insert: hanno bisogno dell'id della scheda.
-        onSuccess: (member) =>
+        // Solo con una sede sola — altrimenti non sono stati chiesti.
+        onSuccess: (members) => {
+          if (!singleVenue || roleIds.length === 0 || members.length !== 1) {
+            onAdded(
+              singleVenue
+                ? "Aggiunto allo staff"
+                : "Aggiunto allo staff · assegna i ruoli in ogni sede"
+            );
+            return;
+          }
           setRoles.mutate(
-            { staffMemberId: member.id, roleIds },
+            { staffMemberId: members[0].id, roleIds },
             {
               onSuccess: () => onAdded("Aggiunto allo staff"),
               onError: () =>
@@ -186,7 +205,8 @@ export default function StaffNewScreen() {
                   "error"
                 ),
             }
-          ),
+          );
+        },
         onError: onAddError,
       }
     );
@@ -205,11 +225,11 @@ export default function StaffNewScreen() {
   }
 
   function sendInvite() {
-    if (!venueId || !found) return;
+    if (venueIds.size === 0 || !found) return;
     add.mutate(
       {
         ownerId: userId,
-        venueId,
+        venueIds: [...venueIds],
         fullName: found.full_name ?? email.trim(),
         employmentType: inviteType,
         waiterId: found.id,
@@ -219,11 +239,20 @@ export default function StaffNewScreen() {
     );
   }
 
+  if (venues.length === 0) {
+    return (
+      <View
+        className="flex-1 bg-bg-0 px-5"
+        style={{ paddingTop: insets.top + 8 }}
+      >
+        <ScreenHeader eyebrow="Staff" title="Aggiungi" />
+        <NoVenuesState subtitle="Ti serve un locale prima di creare il tuo organico." />
+      </View>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior="padding"
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <ScrollView
         className="flex-1 bg-bg-0"
         contentContainerStyle={{
@@ -262,94 +291,7 @@ export default function StaffNewScreen() {
           })}
         </View>
 
-        {mode === "esistente" ? (
-          <View className="gap-5">
-            {reusable.isLoading ? (
-              <Text className="text-sm text-t3">Caricamento…</Text>
-            ) : reusable.people.length === 0 ? (
-              <EmptyState
-                title="Nessuno da riusare"
-                subtitle="Tutte le persone che hai nelle altre sedi fanno già parte di questo organico. Usa “Manuale” o “Invita” per aggiungerne una nuova."
-              />
-            ) : (
-              <>
-                <Text className="text-xs leading-4 text-t3">
-                  Persone che hai nelle altre sedi. Aggiungerle qui non richiede un
-                  nuovo invito: anagrafica e documenti restano quelli che hai già.
-                </Text>
-
-                <View className="gap-2">
-                  {reusable.people.map(({ person, venuesLabel }) => {
-                    const active = person.id === pickedPerson;
-                    return (
-                      <Pressable
-                        key={person.id}
-                        onPress={() => setPickedPerson(active ? null : person.id)}
-                        className={cn(
-                          "flex-row items-center gap-3 rounded-2xl border px-4 py-3",
-                          active
-                            ? "border-gold/40 bg-gold/10"
-                            : "border-border-2 bg-bg-card"
-                        )}
-                      >
-                        <Avatar
-                          uri={person.waiter?.avatar_url ?? undefined}
-                          name={person.full_name}
-                          size={40}
-                        />
-                        <View className="flex-1">
-                          <Text
-                            className={cn(
-                              "text-base",
-                              active
-                                ? "font-sans-semibold text-gold"
-                                : "font-sans-medium text-t1"
-                            )}
-                          >
-                            {person.full_name}
-                          </Text>
-                          <Text className="mt-0.5 text-xs text-t3">
-                            {venuesLabel}
-                          </Text>
-                        </View>
-                        {active ? (
-                          <Pill label="Scelto" variant="accepted" />
-                        ) : null}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                {pickedPerson ? (
-                  <>
-                    <RoleMultiSelect
-                      venueId={venueId}
-                      value={existingRoleIds}
-                      onChange={setExistingRoleIds}
-                    />
-                    <View className="gap-2">
-                      <Mono>Tipo in questa sede</Mono>
-                      <TypeChips
-                        value={existingType}
-                        onChange={setExistingType}
-                      />
-                    </View>
-                    <GoldButton
-                      className="mt-1"
-                      label={
-                        addExisting.isPending
-                          ? "Aggiunta…"
-                          : "Aggiungi a questa sede"
-                      }
-                      disabled={addExisting.isPending}
-                      onPress={addFromOtherVenue}
-                    />
-                  </>
-                ) : null}
-              </>
-            )}
-          </View>
-        ) : mode === "manuale" ? (
+        {mode === "manuale" ? (
           <View className="gap-5">
             <Input
               label="Nome"
@@ -357,11 +299,31 @@ export default function StaffNewScreen() {
               onChangeText={setName}
               placeholder="Es. Marco Rossi"
             />
-            <RoleMultiSelect
-              venueId={venueId}
-              value={roleIds}
-              onChange={setRoleIds}
-            />
+
+            {isMultiVenue ? (
+              <VenueMultiSelect
+                venues={venues}
+                value={venueIds}
+                onToggle={toggleVenue}
+              />
+            ) : null}
+
+            {/* Solo con una sede sola: i ruoli appartengono al locale, e
+                chiederli per tre locali in un form di creazione lo renderebbe
+                illeggibile. Con più sedi si assegnano dalla scheda persona. */}
+            {singleVenue ? (
+              <RoleMultiSelect
+                venueId={singleVenue}
+                value={roleIds}
+                onChange={setRoleIds}
+              />
+            ) : (
+              <Text className="text-xs leading-4 text-t3">
+                I ruoli cambiano da un locale all&apos;altro: li assegnerai dalla
+                sua scheda, sede per sede.
+              </Text>
+            )}
+
             <View className="gap-2">
               <Mono>Tipo</Mono>
               <TypeChips value={empType} onChange={setEmpType} />
@@ -376,7 +338,7 @@ export default function StaffNewScreen() {
             <GoldButton
               className="mt-1"
               label={add.isPending ? "Aggiunta…" : "Aggiungi allo staff"}
-              disabled={add.isPending || !name.trim()}
+              disabled={add.isPending || !name.trim() || venueIds.size === 0}
               onPress={addManual}
             />
           </View>
@@ -403,42 +365,28 @@ export default function StaffNewScreen() {
 
             {searched ? (
               found ? (
-                foundStatus === "pending" ? (
-                  <Card className="rounded-3xl border-border-2 p-5">
-                    <View className="flex-row items-center gap-3">
-                      <View className="flex-1">
-                        <Text className="text-sm text-t2">
-                          Hai già invitato{" "}
-                          {found.full_name ?? "questa persona"}.
-                        </Text>
-                      </View>
-                      <Pill label="In attesa di risposta" variant="pending" />
-                    </View>
-                  </Card>
-                ) : foundStatus === "active" ? (
-                  <Card className="rounded-3xl border-border-2 p-5">
-                    <Text className="text-sm text-t2">
-                      {found.full_name ?? "Questa persona"} è già nel tuo
-                      staff.
-                    </Text>
-                  </Card>
-                ) : foundElsewhere ? (
+                alreadyHave ? (
                   <Card className="gap-4 rounded-3xl border-border-2 p-5">
                     <Text className="text-sm leading-5 text-t2">
                       {found.full_name ?? "Questa persona"} è già nel tuo
-                      organico a{" "}
-                      <Text className="font-sans-semibold text-t1">
-                        {foundElsewhere.venuesLabel}
-                      </Text>
-                      . Aggiungila a questa sede senza rifare l&apos;invito:
-                      tiene anagrafica e documenti che ha già.
+                      organico
+                      {isMultiVenue ? (
+                        <>
+                          {" "}
+                          a{" "}
+                          <Text className="font-sans-semibold text-t1">
+                            {personVenueNames(alreadyHave).join(", ")}
+                          </Text>
+                        </>
+                      ) : null}
+                      . Aprila per aggiungerle una sede o cambiarle i ruoli:
+                      anagrafica e documenti restano quelli che ha già.
                     </Text>
                     <GoldButton
-                      label="Aggiungi a questa sede"
-                      onPress={() => {
-                        setPickedPerson(foundElsewhere.person.id);
-                        setMode("esistente");
-                      }}
+                      label="Apri la scheda"
+                      onPress={() =>
+                        router.replace(`/(manager)/staff/${alreadyHave.id}`)
+                      }
                     />
                   </Card>
                 ) : (
@@ -446,18 +394,29 @@ export default function StaffNewScreen() {
                     <View className="flex-row items-center gap-3">
                       <Avatar
                         uri={found.avatar_url ?? undefined}
-                        name={found.full_name ?? "Cameriere"}
+                        name={found.full_name ?? "Professionista"}
                         size={48}
                       />
                       <View className="flex-1">
                         <Text className="text-base font-sans-bold text-t1">
-                          {found.full_name ?? "Cameriere"}
+                          {found.full_name ?? "Professionista"}
                         </Text>
                         {found.city ? (
                           <Text className="text-xs text-t3">{found.city}</Text>
                         ) : null}
                       </View>
                     </View>
+
+                    {isMultiVenue ? (
+                      <View className="mt-4">
+                        <VenueMultiSelect
+                          venues={venues}
+                          value={venueIds}
+                          onToggle={toggleVenue}
+                        />
+                      </View>
+                    ) : null}
+
                     <View className="mt-4 gap-2">
                       <Mono>Tipo</Mono>
                       <TypeChips value={inviteType} onChange={setInviteType} />
@@ -465,7 +424,7 @@ export default function StaffNewScreen() {
                     <GoldButton
                       className="mt-4"
                       label={add.isPending ? "Invio…" : "Invia richiesta"}
-                      disabled={add.isPending}
+                      disabled={add.isPending || venueIds.size === 0}
                       onPress={sendInvite}
                     />
                   </Card>

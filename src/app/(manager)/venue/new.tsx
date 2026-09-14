@@ -3,7 +3,7 @@ import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { useAuth } from "@/lib/auth";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueFormView } from "@/features/venues/VenueFormView";
 import { canCreateVenue } from "@/features/venues/gate";
 import { usePlan, PAYWALL_ROUTE } from "@/features/plan/hooks";
@@ -12,13 +12,16 @@ import { usePlan, PAYWALL_ROUTE } from "@/features/plan/hooks";
  * Creazione di un locale: il primo, o il terzo.
  *
  * È l'**unico** punto dell'app che chiama `canCreateVenue` (vedi `gate.ts`).
- * Appena creato diventa la sede attiva: chi ha appena aperto Milano si aspetta di
- * trovarsi a Milano, non di dover anche cambiare sede.
+ *
+ * Non c'è più niente da "attivare" dopo il salvataggio: la sede appena aperta
+ * entra in `venues`, e da lì compare da sé nell'agenda, nel picker del form
+ * turno e nell'elenco del Profilo. Chi ha aperto Milano trova Milano ovunque
+ * senza doverci entrare.
  */
 export default function VenueNewScreen() {
   const { session } = useAuth();
   const router = useRouter();
-  const { venues, setActiveVenue } = useActiveVenue();
+  const { venues } = useOwnerVenues();
   const plan = usePlan();
 
   const gate = canCreateVenue({ venueCount: venues.length, plan });
@@ -46,10 +49,7 @@ export default function VenueNewScreen() {
           ? "Una sede in più: avrà un suo organico, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
           : "Queste informazioni saranno visibili ai professionisti sui tuoi turni."
       }
-      onSaved={(created) => {
-        setActiveVenue(created.id);
-        router.back();
-      }}
+      onSaved={() => router.back()}
     />
   );
 }

@@ -120,47 +120,94 @@ export type OwnerPerson = StaffPerson & {
       Tables<"venues">,
       "id" | "name" | "city" | "closed_at"
     > | null;
+    staff_member_roles: { role: StaffRoleRef | null }[];
   })[];
 };
 
 /**
- * Le **altre** sedi (aperte) in cui la persona lavora, per il badge dell'organico.
+ * Le sedi (aperte) in cui la persona lavora: i chip della riga dell'organico.
  *
- * Una funzione sola: la stessa frase la mostrano l'app e la dashboard, e
- * ricomporla a mano è il modo in cui due schermate iniziano a ordinarla
- * diversamente. Le sedi chiuse restano fuori — un badge "anche a Osteria Como" per
- * un locale chiuso sei mesi fa manda solo a cercare un turno che non si può fare.
+ * Le sedi chiuse restano fuori — un chip "Osteria Como" per un locale chiuso sei
+ * mesi fa manda solo a cercare un turno che non si può fare.
  */
-export function otherVenueNames(
-  person: OwnerPerson | undefined,
-  currentVenueId: string
-): string[] {
-  return (person?.memberships ?? [])
-    .filter((m) => m.venue_id !== currentVenueId && !m.venue?.closed_at)
+export function personVenueNames(person: OwnerPerson): string[] {
+  return person.memberships
+    .filter((m) => !m.venue?.closed_at)
     .map((m) => m.venue?.name)
     .filter((n): n is string => !!n)
     .sort((a, b) => a.localeCompare(b, "it"));
 }
 
 /**
+ * Le mansioni della persona, **unite fra le sue sedi** ("Cameriere, Barman").
+ *
+ * L'unione e non un elenco per sede: `venue_roles` è per locale, quindi Marco
+ * può essere "Cameriere" a Roma e "Barman" a Milano, e in una riga d'elenco
+ * quello che si vuole sapere è cosa sa fare — non dove. Il dettaglio per sede
+ * sta nella sua scheda, dove `WorkplaceCard` lo mostra già.
+ *
+ * Stesso criterio di `mergeRoles` in `assignments/hoursSummary.ts`, che fa la
+ * stessa unione partendo dalle righe delle ore.
+ */
+export function personRoleNames(person: OwnerPerson): string | null {
+  const byId = new Map<string, StaffRoleRef>();
+  for (const m of person.memberships) {
+    for (const { role } of m.staff_member_roles) {
+      // Chiave sul **nome**: due sedi che hanno entrambe "Cameriere" sono due
+      // righe `venue_roles` diverse, e l'id le farebbe comparire due volte.
+      if (role) byId.set(role.name.toLowerCase(), role);
+    }
+  }
+  const names = [...byId.values()]
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "it"))
+    .map((r) => r.name);
+  return names.length > 0 ? names.join(", ") : null;
+}
+
+/**
+ * Il tipo di impiego, se è lo stesso **in tutte** le sedi della persona.
+ *
+ * `null` quando divergono: si può essere fissi a Roma e a chiamata a Milano, e
+ * mostrarne uno solo sarebbe una bugia detta con sicurezza. In quel caso la riga
+ * omette il chip e il dettaglio resta nella scheda.
+ */
+export function personEmploymentType(
+  person: OwnerPerson
+): StaffMember["employment_type"] | null {
+  const open = person.memberships.filter((m) => !m.venue?.closed_at);
+  if (open.length === 0) return null;
+  const first = open[0].employment_type;
+  return open.every((m) => m.employment_type === first) ? first : null;
+}
+
+/**
  * Tutte le persone dell'organico del titolare, **attraverso le sedi**.
  *
- * È ciò che rende possibile "Marco lavora già a Roma, aggiungilo anche a Milano"
- * senza creargli una seconda anagrafica. Serve anche alla chat: il thread è per
- * persona, quindi il selettore dei destinatari non può fermarsi all'organico della
- * sede attiva — altrimenti dalla sede Roma non si potrebbe scrivere a chi si ha
- * solo a Milano.
+ * È **l'elenco dell'organico**: dal 14/09/2026 la tab Staff mostra questo e non
+ * più le schede di una sede, perché l'organico è dell'azienda. Serve anche alla
+ * chat, dove il thread è per persona.
+ *
+ * I ruoli arrivano nello stesso embed (`staff_member_roles → venue_roles`) e non
+ * da una query in più: è il frammento che `getVenueStaff` usa già, e
+ * l'annidamento a quattro livelli è quello di `getStaffPerson`. Senza, ogni riga
+ * dell'elenco resterebbe senza mansione o costerebbe una query per persona.
  */
 export async function getOwnerPeople(ownerId: string): Promise<OwnerPerson[]> {
   const { data, error } = await supabase
     .from("staff_people")
     .select(
-      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), memberships:staff_members(id, venue_id, link_status, employment_type, venue:venues(id, name, city, closed_at))"
+      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), " +
+        "memberships:staff_members(id, venue_id, link_status, employment_type, " +
+        "venue:venues(id, name, city, closed_at), " +
+        "staff_member_roles(role:venue_roles(id, name, sort_order)))"
     )
     .eq("owner_id", ownerId)
     .order("full_name", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as OwnerPerson[] | null) ?? [];
+  // `as unknown`: su questo embed a quattro livelli PostgREST non riesce a
+  // inferire il tipo e il cast diretto non si sovrappone. Stessa scorciatoia di
+  // `shifts/api.ts` sugli embed annidati.
+  return (data as unknown as OwnerPerson[] | null) ?? [];
 }
 
 /**
@@ -181,27 +228,37 @@ export async function addPersonToVenue(
 }
 
 /**
- * Persona nuova + prima appartenenza, in due scritture.
+ * Persona nuova + le sue prime appartenenze, in due scritture.
+ *
+ * Si aggiunge una **persona**, e le si dice in quali sedi lavora: dal 14/09/2026
+ * non c'è più una sede attiva a cui "appartenere", quindi il form chiede le sedi
+ * come chiede il nome.
  *
  * Se l'account è **già** una persona di questo titolare (lavora in un'altra sede)
  * si riusa quella: l'unique `staff_people (owner_id, waiter_id)` rifiuterebbe una
  * seconda anagrafica, e sarebbe comunque sbagliato crearla — è lo stesso Marco.
  *
- * Se la seconda scrittura fallisce si cancella la persona appena creata. Senza la
+ * Le appartenenze vanno in **una** insert di N righe: o passano tutte o non passa
+ * nessuna, e non resta una persona in due sedi su tre senza che nessuno lo dica.
+ * Se quella scrittura fallisce si cancella la persona appena creata: senza la
  * compensazione resterebbe una persona senza sedi, che nessuna schermata elenca e
- * che occuperebbe il posto nell'unique: il prossimo tentativo di invitare la
+ * che occuperebbe il posto nell'unique — il prossimo tentativo di invitare la
  * stessa email fallirebbe senza una ragione visibile. Stessa regola di
  * `createStaffDocument`.
  */
-export async function addStaffToVenue(args: {
+export async function addStaffToVenues(args: {
   ownerId: string;
-  venueId: string;
+  venueIds: string[];
   fullName: string;
   employmentType: Enums<"employment_type">;
   phone?: string | null;
   waiterId?: string | null;
   linkStatus?: Enums<"staff_link_status">;
-}): Promise<StaffMember> {
+}): Promise<StaffMember[]> {
+  if (args.venueIds.length === 0) {
+    throw new Error("Scegli almeno una sede.");
+  }
+
   let personId: string | null = null;
   let created = false;
 
@@ -232,19 +289,26 @@ export async function addStaffToVenue(args: {
     created = true;
   }
 
-  try {
-    return await addPersonToVenue({
-      venue_id: args.venueId,
-      person_id: personId,
-      employment_type: args.employmentType,
-      ...(args.linkStatus ? { link_status: args.linkStatus } : {}),
-    });
-  } catch (e) {
+  const person = personId;
+  const { data: members, error } = await supabase
+    .from("staff_members")
+    .insert(
+      args.venueIds.map((venue_id) => ({
+        venue_id,
+        person_id: person,
+        employment_type: args.employmentType,
+        ...(args.linkStatus ? { link_status: args.linkStatus } : {}),
+      }))
+    )
+    .select("*");
+
+  if (error) {
     if (created) {
-      await supabase.from("staff_people").delete().eq("id", personId);
+      await supabase.from("staff_people").delete().eq("id", person);
     }
-    throw e;
+    throw new Error(error.message);
   }
+  return members ?? [];
 }
 
 /**

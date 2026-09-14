@@ -7,14 +7,14 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useSetVenueClosed } from "@/features/venues/hooks";
 import { VenueFormView } from "@/features/venues/VenueFormView";
 
 /**
  * Modifica di una sede, più la sua archiviazione.
  *
- * La sede arriva da `useActiveVenue().venues`, che è già in cache: aprirla non
+ * La sede arriva da `useOwnerVenues().venues`, che è già in cache: aprirla non
  * costa una query in più.
  */
 export default function VenueEditScreen() {
@@ -23,7 +23,7 @@ export default function VenueEditScreen() {
   const router = useRouter();
   const toast = useToast();
   const ownerId = session!.user.id;
-  const { venues, isLoading, isError, refetch } = useActiveVenue();
+  const { venues, isLoading, isError, refetch } = useOwnerVenues();
   const close = useSetVenueClosed(ownerId);
   const [confirmVisible, setConfirmVisible] = useState(false);
 

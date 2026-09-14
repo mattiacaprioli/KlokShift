@@ -20,11 +20,10 @@ export type OwnerHoursRow = {
 };
 
 /**
- * La persona con le sue sedi: è il livello della busta paga.
+ * La persona con le sue ore del mese: è il livello della busta paga.
  *
  * `hours` è il totale su tutte le sedi del titolare — 20 ore a Roma più 20 a
- * Milano sono 40 ore e un solo cedolino. Lo split in `venues` serve al titolare
- * per allocare il costo del lavoro.
+ * Milano sono 40 ore e un solo cedolino.
  */
 export type PersonHours = {
   person_id: string;
@@ -37,6 +36,13 @@ export type PersonHours = {
   roles: string | null;
   shifts_count: number;
   hours: number;
+  /**
+   * ⚠️ **Interno: non si mostra.** Le righe per sede da cui il totale è
+   * composto, tenute perché servono a `mergeRoles`. Dal 14/09/2026 né la pagina
+   * Ore né l'export dicono più *dove* sono state fatte le ore: la busta paga è
+   * una, e quello è il numero che conta. Rimetterle in pagina è tornare
+   * indietro, non aggiungere un dettaglio.
+   */
   venues: OwnerHoursRow[];
 };
 
@@ -84,15 +90,3 @@ function mergeRoles(venues: OwnerHoursRow[]): string | null {
   return seen.size > 0 ? [...seen].join(", ") : null;
 }
 
-/**
- * Quante sedi compaiono nei dati del mese.
- *
- * Decide la **forma** di pagina ed export: con una sola sede nessuna riga si
- * espande, il CSV non cambia schema e il PDF non ha righe figlie — chi ha un
- * locale solo non deve accorgersi che il multi-sede esiste. Si conta sui dati e
- * non sulle sedi dell'account, perché un mese in cui si è lavorato solo a Roma è
- * un mese a una sede anche per chi ne ha tre.
- */
-export function venueCount(rows: OwnerHoursRow[]): number {
-  return new Set(rows.map((r) => r.venue_id)).size;
-}

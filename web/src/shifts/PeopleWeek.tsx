@@ -9,23 +9,19 @@ import {
   ASSIGNMENT_STATUS_LABEL,
   isActiveAssignment,
 } from "@/features/assignments/status";
-import { useVenueStaff } from "@/features/staff/hooks";
-import { useOtherVenuesShiftsRange } from "@/features/shifts/hooks";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerPeople } from "@/features/staff/hooks";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { formatHours, formatShiftRange } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
-import {
-  staffRoleNames,
-  type StaffMemberWithWaiter,
-} from "@/features/staff/api";
-import { useVenue } from "../lib/venue";
+import { personRoleNames } from "@/features/staff/api";
 import { dayLabel, isToday } from "../lib/week";
 import { Pill, Placeholder, Spinner } from "../ui/primitives";
 import {
   dropClass,
   useShiftDrag,
   type ReassignDragPayload,
+  type ReassignTarget,
 } from "./dragContext";
 
 /**
@@ -45,67 +41,80 @@ export function PeopleWeek({
   days: string[];
   shifts: ShiftWithAssignees[];
   onOpen: (shift: ShiftWithAssignees) => void;
-  /** Casella vuota: un turno nuovo quel giorno, già assegnato a quella persona. */
-  onCreate: (date: string, staffMemberId: string) => void;
+  /**
+   * Casella vuota: un turno nuovo quel giorno, già assegnato a quella persona.
+   *
+   * Passa un `staff_people.id` e non uno `staff_members.id`: qui le righe sono
+   * persone, e in quale sede lavorerà lo decide il pannello, dove la sede è un
+   * campo del form.
+   */
+  onCreate: (date: string, personId: string) => void;
   /** Turno trascinato sulla riga di un'altra persona dello stesso giorno. */
-  onReassign: (payload: ReassignDragPayload, to: StaffMemberWithWaiter) => void;
+  onReassign: (payload: ReassignDragPayload, to: ReassignTarget) => void;
 }) {
-  const venue = useVenue();
-  const { venues } = useActiveVenue();
-  const staffQuery = useVenueStaff(venue.id);
+  const { ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const peopleQuery = useOwnerPeople(ownerId);
   const dnd = useShiftDrag();
 
-  // Le ALTRE sedi del titolare. Con una sede sola l'array è vuoto, la query non
-  // parte e questa vista è quella di prima: chi ha un locale solo non paga nulla
-  // per una correttezza che non lo riguarda.
-  const otherVenueIds = useMemo(
-    () => venues.filter((v) => v.id !== venue.id).map((v) => v.id),
-    [venues, venue.id]
-  );
-  const elsewhereQuery = useOtherVenuesShiftsRange(
-    otherVenueIds,
-    days[0],
-    days[days.length - 1]
-  );
+  /** Il nome del locale di un turno. `null` con un locale solo. */
+  const venueName = (venueId: string) =>
+    isMultiVenue ? (venues.find((v) => v.id === venueId)?.name ?? null) : null;
 
-  const byId = useMemo(
-    () => new Map(shifts.map((s) => [s.id, s])),
-    [shifts]
-  );
+  const byId = useMemo(() => new Map(shifts.map((s) => [s.id, s])), [shifts]);
 
-  const staffById = useMemo(
-    () => new Map((staffQuery.data ?? []).map((m) => [m.id, m])),
-    [staffQuery.data]
-  );
+  /**
+   * L'appartenenza di una persona **in una sede**, o `undefined` se lì non
+   * lavora. È il cuore del drag & drop dopo l'unificazione: riassegnare vuole
+   * uno `staff_members.id`, e quello giusto dipende dalla sede del turno che si
+   * sta trascinando. Nessun vincolo del database lo impedisce — un'assegnazione
+   * con `staff_member.venue_id ≠ shift.venue_id` passerebbe in silenzio, e poi
+   * `role_id` punterebbe a un ruolo di un altro locale.
+   */
+  const membershipOf = useMemo(() => {
+    const map = new Map<string, ReassignTarget>();
+    for (const p of peopleQuery.data ?? []) {
+      for (const m of p.memberships) {
+        // Solo le appartenenze attive: un invito non ancora accettato non è
+        // qualcuno a cui si può passare un turno.
+        if (m.link_status !== "active") continue;
+        map.set(`${p.id}:${m.venue_id}`, {
+          id: m.id,
+          person_id: p.id,
+          display_name: p.full_name,
+          waiter_id: p.waiter_id,
+          roles: m.staff_member_roles
+            .map((r) => r.role)
+            .filter((r): r is NonNullable<typeof r> => !!r),
+        });
+      }
+    }
+    return map;
+  }, [peopleQuery.data]);
 
   const rows = useMemo(
     () =>
       computeWeekLoad(
         shifts,
-        (staffQuery.data ?? []).map((m) => ({
-          id: m.id,
-          person_id: m.person_id,
-          display_name: m.display_name,
-          roles: staffRoleNames(m),
-        })),
-        elsewhereQuery.data ?? []
+        (peopleQuery.data ?? []).map((p) => ({
+          person_id: p.id,
+          display_name: p.full_name,
+          roles: personRoleNames(p),
+        }))
       ),
-    [shifts, staffQuery.data, elsewhereQuery.data]
+    [shifts, peopleQuery.data]
   );
 
-  if (staffQuery.isPending) return <Spinner />;
+  if (peopleQuery.isPending) return <Spinner />;
 
   if (rows.length === 0) {
     return (
       <Placeholder
         title="Nessuno nel tuo organico"
-        detail="Aggiungi le persone che lavorano nel locale dalla sezione Staff: qui vedrai come si distribuiscono i turni fra loro."
+        detail="Aggiungi le persone che lavorano per te dalla sezione Staff: qui vedrai come si distribuiscono i turni fra loro."
       />
     );
   }
 
-  // I totali in fondo sono di questa sede: è il turnario di questo locale. Le
-  // soglie invece guardano il totale della persona, che può venire da più sedi.
   const totalHours = rows.reduce((s, r) => s + r.hours, 0);
   const working = rows.filter((r) => r.hours > 0).length;
 
@@ -159,15 +168,25 @@ export function PeopleWeek({
                   // Si accetta solo dalla stessa colonna: trascinare su un
                   // altro giorno *di un'altra persona* sarebbe spostamento e
                   // riassegnazione insieme, e nessuno saprebbe cosa aspettarsi.
+                  //
+                  // ⚠️ E solo se la persona lavora **nella sede di quel turno**:
+                  // è l'unico controllo che impedisce un'assegnazione incoerente,
+                  // perché il database la accetterebbe senza dire niente.
                   const { state, ...dropHandlers } = dnd.dropProps({
-                    key: `person:${person.staffMemberId}:${day}`,
+                    key: `person:${person.personId}:${day}`,
                     accepts: (d) =>
                       d.mode === "reassign" &&
                       d.date === day &&
-                      d.fromStaffMemberId !== person.staffMemberId,
+                      membershipOf.get(`${person.personId}:${d.venueId}`)?.id !==
+                        undefined &&
+                      membershipOf.get(`${person.personId}:${d.venueId}`)?.id !==
+                        d.fromStaffMemberId,
                     onDrop: (d) => {
-                      const to = staffById.get(person.staffMemberId);
-                      if (d.mode === "reassign" && to) onReassign(d, to);
+                      if (d.mode !== "reassign") return;
+                      const to = membershipOf.get(
+                        `${person.personId}:${d.venueId}`
+                      );
+                      if (to) onReassign(d, to);
                     },
                   });
 
@@ -179,7 +198,7 @@ export function PeopleWeek({
                         key={day}
                         onClick={() => {
                           if (dnd.swallowClick()) return;
-                          onCreate(day, person.staffMemberId);
+                          onCreate(day, person.personId);
                         }}
                         aria-label={`Nuovo turno per ${person.name} il ${day}`}
                         {...dropHandlers}
@@ -205,8 +224,8 @@ export function PeopleWeek({
                         <PersonShiftChip
                           key={ps.shiftId}
                           personShift={ps}
-                          fromStaffMemberId={person.staffMemberId}
                           fromStaffName={person.name}
+                          venueName={venueName(ps.venueId)}
                           busyStaffIds={
                             byId
                               .get(ps.shiftId)
@@ -224,12 +243,7 @@ export function PeopleWeek({
                   );
                 })}
 
-                <HoursCell
-                  hours={person.hours}
-                  totalHours={person.totalHours}
-                  elsewhere={person.elsewhere}
-                  daysWorked={person.daysWorked}
-                />
+                <HoursCell hours={person.hours} daysWorked={person.daysWorked} />
               </div>
             ))}
           </div>
@@ -256,11 +270,12 @@ export function PeopleWeek({
         Sono ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
         rifiutato o è stato segnato assente non le somma. Le ore effettivamente
         lavorate — quelle che vanno al commercialista — stanno nella pagina Ore.
-        {otherVenueIds.length > 0 ? (
+        {isMultiVenue ? (
           <>
             {" "}
-            Le ore sono <b>della persona</b>: se lavora anche in un&apos;altra tua
-            sede, quelle ore sono già contate qui.
+            Le ore sono <b>della persona</b>: i turni di tutti i tuoi locali sono
+            già contati qui, e un turno si può passare solo a chi lavora nella sua
+            stessa sede.
           </>
         ) : null}
       </p>
@@ -270,14 +285,15 @@ export function PeopleWeek({
 
 function PersonShiftChip({
   personShift,
-  fromStaffMemberId,
   fromStaffName,
+  venueName,
   busyStaffIds,
   onOpen,
 }: {
   personShift: PersonShift;
-  fromStaffMemberId: string;
   fromStaffName: string;
+  /** Il locale del turno. `null` con un locale solo. */
+  venueName: string | null;
   busyStaffIds: string[];
   onOpen: () => void;
 }) {
@@ -298,15 +314,21 @@ function PersonShiftChip({
           title: personShift.title,
           date: personShift.date,
           assignmentId: personShift.assignmentId,
-          fromStaffMemberId,
+          fromStaffMemberId: personShift.staffMemberId,
           fromStaffName,
+          venueId: personShift.venueId,
           busyStaffIds,
         },
         `${personShift.title} · ${fromStaffName}`
       )}
-      title={`${personShift.title} · ${formatShiftRange(personShift.start_time, personShift.end_time)}${
-        active ? "" : ` · ${ASSIGNMENT_STATUS_LABEL[personShift.status]}`
-      }`}
+      title={[
+        venueName,
+        personShift.title,
+        formatShiftRange(personShift.start_time, personShift.end_time),
+        active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
+      ]
+        .filter(Boolean)
+        .join(" · ")}
       className={cn(
         "focus-gold cursor-grab rounded-lg border px-1.5 py-1 text-left transition active:cursor-grabbing",
         active
@@ -337,30 +359,23 @@ function PersonShiftChip({
 /**
  * Le ore della settimana, e il giudizio sulle soglie.
  *
- * Il numero grande è il **totale della persona**, non di questa sede: è quello che
- * va in busta paga e su cui scattano i limiti di legge. Se viene anche da altrove
- * la riga sotto dice da dove — un titolare che vede 55 ore su una settimana in cui
- * qui ne ha programmate 30 ha il diritto di capirlo subito.
+ * È il totale **della persona**: da quando la vista contiene tutte le sedi non
+ * c'è più un "qui" da distinguere da un "altrove", e quelle 55 ore che prima
+ * erano due celle verdi da 30 e 25 in due viste diverse sono una cella rossa
+ * sola. Le soglie di legge sono della persona, non del locale.
  */
 function HoursCell({
   hours,
-  totalHours,
-  elsewhere,
   daysWorked,
 }: {
-  /** Ore in questa sede. */
   hours: number;
-  /** Ore in tutte le sedi del titolare: è su queste che si giudica. */
-  totalHours: number;
-  elsewhere: { venueName: string; hours: number }[];
   daysWorked: number;
 }) {
-  const over = totalHours > MAX_WEEK_HOURS;
-  const heavy = totalHours > ORDINARY_WEEK_HOURS;
+  const over = hours > MAX_WEEK_HOURS;
+  const heavy = hours > ORDINARY_WEEK_HOURS;
   // Sette giorni su sette significa nessun riposo settimanale — e i giorni si
   // contano su tutte le sedi, perché il riposo è uno.
   const noRest = daysWorked >= 7;
-  const split = elsewhere.length > 0;
 
   return (
     <div
@@ -372,13 +387,6 @@ function HoursCell({
             ? "border-warning/40 bg-warning/10"
             : "border-border-2 bg-bg-card"
       )}
-      title={
-        split
-          ? `${formatHours(hours)} qui · ${elsewhere
-              .map((e) => `${formatHours(e.hours)} ${e.venueName}`)
-              .join(" · ")}`
-          : undefined
-      }
     >
       <span
         className={cn(
@@ -386,28 +394,16 @@ function HoursCell({
           over ? "text-error" : heavy ? "text-warning" : "text-t1"
         )}
       >
-        {formatHours(totalHours)}
+        {formatHours(hours)}
       </span>
-
-      {split ? (
-        <span className="text-right text-[10px] leading-tight text-t4">
-          {formatHours(hours)} qui
-          {elsewhere.map((e) => (
-            <span key={e.venueName}>
-              {" + "}
-              {formatHours(e.hours)} {e.venueName}
-            </span>
-          ))}
-        </span>
-      ) : null}
 
       {noRest && !over ? (
         <Pill tone="warning">0 riposi</Pill>
-      ) : !split ? (
+      ) : (
         <span className="text-[10px] text-t4">
           {daysWorked} {daysWorked === 1 ? "giorno" : "giorni"}
         </span>
-      ) : null}
+      )}
     </div>
   );
 }

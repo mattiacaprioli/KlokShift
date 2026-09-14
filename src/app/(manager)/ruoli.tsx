@@ -13,7 +13,10 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { VenuePicker } from "@/features/venues/VenuePicker";
+import { useLastVenue } from "@/features/venues/useLastVenue";
 import {
   useArchiveVenueRole,
   useCreateVenueRole,
@@ -92,10 +95,17 @@ function RoleRow({
 export default function VenueRolesScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const venueQuery = useActiveVenue();
-  const venue = venueQuery.venue;
+  const venueQuery = useOwnerVenues();
+  const { venues, venueById, isMultiVenue } = venueQuery;
+  // I ruoli sono **per sede** (`venue_roles.venue_id`), e la sede attiva non
+  // esiste più: va chiesta qui. Un selettore in cima e non una sezione per sede
+  // tutta in pagina — i nomi si ripetono quasi identici fra locali, e il campo
+  // "Aggiungi un ruolo" dovrebbe comunque sapere a quale sezione appartiene:
+  // sarebbe lo stesso selettore, ma nascosto.
+  const { venueId, choose } = useLastVenue();
+  const venue = venueId ? venueById(venueId) : undefined;
 
-  const rolesQuery = useVenueRoles(venue?.id);
+  const rolesQuery = useVenueRoles(venueId);
   const roles = rolesQuery.data ?? [];
   const pull = usePullToRefresh(rolesQuery.refetch);
 
@@ -105,9 +115,9 @@ export default function VenueRolesScreen() {
   const [toArchive, setToArchive] = useState<VenueRole | null>(null);
 
   function add(name: string) {
-    if (!venue || !name.trim()) return;
+    if (!venueId || !name.trim()) return;
     create.mutate(
-      { venueId: venue.id, name },
+      { venueId, name },
       {
         onSuccess: () => setDraft(""),
         onError: () => toast.show("Ruolo già presente o non valido.", "error"),
@@ -153,22 +163,28 @@ export default function VenueRolesScreen() {
           />
         }
       >
-        <ScreenHeader eyebrow="Organico" title="Ruoli del locale" />
+        <ScreenHeader eyebrow="Organico" title="Ruoli" />
 
         <Text className="-mt-3 text-[13px] leading-5 text-t3">
           Le mansioni che assegni al tuo staff e che chiedi sui turni. Scrivi
-          quelle che usi davvero: ogni locale ha le sue.
+          quelle che usi davvero: ogni locale ha le sue
+          {isMultiVenue && venue ? `, e queste sono quelle di ${venue.name}` : ""}.
         </Text>
+
+        {/* Ogni locale ha il suo elenco: qui si sceglie di quale. */}
+        <VenuePicker
+          value={venueId}
+          onChange={choose}
+          label="Ruoli di quale sede"
+          className="-mt-1"
+        />
 
         {venueQuery.isLoading || rolesQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" className="mt-10" />
         ) : rolesQuery.isError ? (
           <QueryError className="mt-6" onRetry={() => rolesQuery.refetch()} />
-        ) : !venue ? (
-          <EmptyState
-            title="Configura il tuo locale"
-            subtitle="Ti serve un locale prima di definirne i ruoli."
-          />
+        ) : venues.length === 0 ? (
+          <NoVenuesState subtitle="Ti serve un locale prima di definirne i ruoli." />
         ) : (
           <>
             <View className="gap-2">

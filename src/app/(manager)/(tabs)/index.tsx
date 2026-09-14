@@ -6,7 +6,6 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { NotificationBell } from "@/components/ui/NotificationBell";
@@ -20,10 +19,14 @@ import { ProUpsellCard } from "@/features/plan/ProLock";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { formatShiftRange, todayString } from "@/lib/format";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
-import { VenueSwitcher } from "@/features/venues/VenueSwitcher";
-import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
-import { useTodayAssignments } from "@/features/assignments/hooks";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import {
+  useOwnerPastShiftsCount,
+  useOwnerShifts,
+} from "@/features/shifts/hooks";
+import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { useUnreadCount } from "@/features/notifications/hooks";
 
@@ -40,6 +43,8 @@ type TodayWorker = {
   date: string;
   start: string;
   end: string;
+  /** Dove lavora oggi. Assente con una sede sola. */
+  venue?: { name: string; accent: string };
   onPress?: () => void;
 };
 
@@ -50,17 +55,27 @@ export default function ManagerHome() {
   const userId = session!.user.id;
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Ristoratore";
 
-  const venueQuery = useActiveVenue();
-  const venue = venueQuery.venue;
-  const shiftsQuery = useMyShifts(venue?.id);
+  const venueQuery = useOwnerVenues();
+  const { venues, isMultiVenue } = venueQuery;
+  const shiftsQuery = useOwnerShifts();
   const shifts = shiftsQuery.data ?? [];
-  const pastCount = useVenuePastShiftsCount(venue?.id).data ?? 0;
-  const assignQuery = useTodayAssignments(venue?.id);
+  const pastCount = useOwnerPastShiftsCount().data ?? 0;
+  const assignQuery = useOwnerTodayAssignments();
   const todayAssignments = assignQuery.data ?? [];
   const unread = useUnreadCount(userId).data ?? 0;
 
-  // `getMyShifts` torna già solo i turni non conclusi (turni notturni inclusi):
-  // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
+  /** Il badge di una sede, o niente se il titolare ne ha una sola. */
+  const venueBadge = (venueId: string | undefined) => {
+    if (!isMultiVenue || !venueId) return undefined;
+    const i = venues.findIndex((v) => v.id === venueId);
+    if (i < 0) return undefined;
+    return { name: venues[i].name, accent: venueAccent(i) };
+  };
+
+  // `getOwnerShifts` torna già solo i turni non conclusi (turni notturni
+  // inclusi): qui non serve più rifiltrare per data, che tagliava fuori proprio
+  // quelli. I KPI sommano tutte le sedi — sono i numeri dell'azienda, e le
+  // etichette non hanno bisogno di dirlo.
   const upcoming = shifts;
   // Gli annullati non hanno posti da coprire: esclusi dai KPI.
   const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
@@ -89,6 +104,7 @@ export default function ManagerHome() {
         date: a.shift?.date ?? "",
         start: a.shift?.start_time ?? "",
         end: a.shift?.end_time ?? "",
+        venue: venueBadge(a.shift?.venue_id),
         onPress: waiterId
           ? () => router.push(`/(manager)/cameriere/${waiterId}`)
           : undefined,
@@ -125,10 +141,27 @@ export default function ManagerHome() {
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
           <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
-          {/* Il nome della sede era un testo morto: ora è il punto da cui si
-              cambia sede, perché è lì che si guarda "dove sono" prima di fare
-              qualsiasi cosa. Con una sede sola resta identico a prima. */}
-          <VenueSwitcher />
+          {/* Non più uno switcher: non c'è più una sede da scegliere. Con un
+              locale solo è il suo nome, come è sempre stato; con più locali è il
+              conteggio, e porta dove si gestiscono — il Profilo. */}
+          {venues.length === 0 ? null : isMultiVenue ? (
+            <Pressable
+              onPress={() => router.push("/(manager)/(tabs)/profilo")}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={`${venues.length} locali. Tocca per gestirli.`}
+              className="mt-1 flex-row items-center gap-1"
+            >
+              <Text className="text-sm text-t3">{venues.length} locali</Text>
+              <Icon
+                name="chevR"
+                size={14}
+                color="#8C8579"
+              />
+            </Pressable>
+          ) : (
+            <Text className="mt-1 text-sm text-t3">{venues[0].name}</Text>
+          )}
         </View>
         <NotificationBell
           count={unread}
@@ -140,18 +173,6 @@ export default function ManagerHome() {
         <ActivityIndicator color="#EAB54C" className="mt-16" />
       ) : venueQuery.isError ? (
         <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-      ) : !venue ? (
-        <View className="mt-6">
-          <EmptyState
-            title="Configura il tuo locale"
-            subtitle="Aggiungi le informazioni del tuo locale per iniziare a organizzare i turni."
-          />
-          <GoldButton
-            className="mt-2"
-            label="Configura locale"
-            onPress={() => router.push("/(manager)/venue/new")}
-          />
-        </View>
       ) : shiftsQuery.isLoading ? (
         <ActivityIndicator color="#EAB54C" className="mt-10" />
       ) : (
@@ -179,6 +200,13 @@ export default function ManagerHome() {
             </View>
           </View>
 
+          {/* Chi non ha ancora un locale vede i KPI a zero e questo invito, non
+              un muro al posto della home: la prima schermata dell'app deve
+              somigliare a quella che userà tutti i giorni. */}
+          {venues.length === 0 ? (
+            <NoVenuesState subtitle="Aggiungi le informazioni del tuo locale per iniziare a organizzare i turni." />
+          ) : null}
+
           {/* Upsell Pro — visibile solo agli utenti Free */}
           <ProUpsellCard />
 
@@ -202,8 +230,14 @@ export default function ManagerHome() {
                         <Text className="text-base font-sans-bold text-t1">
                           {w.name}
                         </Text>
-                        {w.role ? (
-                          <Text className="text-xs text-t3">{w.role}</Text>
+                        {/* Con più locali il ruolo da solo non basta: «Barman»
+                            non dice in quale sala si presenta stasera. */}
+                        {w.role || w.venue ? (
+                          <Text className="text-xs text-t3">
+                            {[w.role, w.venue?.name]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </Text>
                         ) : null}
                         {REVIEWS_ENABLED ? (
                           <RatingBadge
@@ -271,6 +305,7 @@ export default function ManagerHome() {
                     key={shift.id}
                     variant="compact"
                     shift={shift}
+                    venue={venueBadge(shift.venue_id)}
                     onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
                   />
                 ))}

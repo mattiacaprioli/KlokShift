@@ -39,6 +39,12 @@ export type ShiftDragPayload =
       assignmentId: string;
       fromStaffMemberId: string;
       fromStaffName: string;
+      /**
+       * La sede del turno. Chi lo riceve deve avere un'appartenenza **lì**:
+       * `reassign_shift_assignment` vuole uno `staff_members.id`, e nessuna FK
+       * garantisce che sia della stessa sede del turno.
+       */
+      venueId: string;
       /** Chi è già sul turno: `unique (shift_id, staff_member_id)`. */
       busyStaffIds: string[];
     };
@@ -48,6 +54,26 @@ export type ReassignDragPayload = Extract<
   ShiftDragPayload,
   { mode: "reassign" }
 >;
+
+/**
+ * Chi riceve un turno riassegnato: l'**appartenenza** nella sede del turno, più
+ * i dati che servono alla patch ottimistica e al messaggio di conferma.
+ *
+ * Un tipo minimo e non `StaffMemberWithWaiter`: da quando la vista per persona
+ * elenca le persone dell'azienda, la scheda di sede va risolta a partire dalla
+ * persona **e** dalla sede del turno, e comporre un finto `staff_members`
+ * completo per il solo gusto di rispettare un tipo più largo è il modo in cui si
+ * finisce a scrivere un cast.
+ */
+export type ReassignTarget = {
+  /** `staff_members.id` nella sede del turno. */
+  id: string;
+  person_id: string;
+  display_name: string;
+  waiter_id: string | null;
+  /** Le sue mansioni **in quella sede**: servono a indovinare il ruolo. */
+  roles: { id: string; name: string }[];
+};
 
 export type DropState = "idle" | "candidate" | "over" | "invalid";
 

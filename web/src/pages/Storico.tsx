@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
-  useVenuePastShifts,
-  useVenuePastShiftsCount,
+  useOwnerPastShifts,
+  useOwnerPastShiftsCount,
 } from "@/features/shifts/hooks";
 import { formatDate, formatShiftRange } from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Shift } from "@/features/shifts/api";
-import { useVenue } from "../lib/venue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { NoVenues } from "../venues/NoVenues";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import {
   Button,
@@ -24,13 +25,22 @@ import {
  * tutto sarebbe un problema in poche settimane.
  */
 export function StoricoPage() {
-  const venue = useVenue();
+  const { venues } = useOwnerVenues();
   // Il dettaglio si apre qui sopra, senza cambiare rotta: mandare l'utente sul
   // Planning gli faceva perdere lo storico e riportava il calendario indietro.
   const [panel, setPanel] = useState<Shift | null>(null);
-  const count = useVenuePastShiftsCount(venue.id).data ?? 0;
+  const count = useOwnerPastShiftsCount().data ?? 0;
   const { data, isPending, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useVenuePastShifts(venue.id);
+    useOwnerPastShifts();
+
+  if (venues.length === 0) {
+    return (
+      <>
+        <PageHeader title="Storico" />
+        <NoVenues detail="I turni svolti compariranno qui." />
+      </>
+    );
+  }
 
   if (isPending) return <Spinner />;
   if (isError) return <QueryError error={error} />;

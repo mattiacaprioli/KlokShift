@@ -1,12 +1,11 @@
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { companyName } from "@/features/venues/companyName";
 import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { cn } from "@/lib/cn";
-import { Button, Placeholder, QueryError, Spinner } from "./ui/primitives";
-import { VenueContext } from "./lib/venue";
-import { VenueSwitcher } from "./VenueSwitcher";
+import { Button, QueryError, Spinner } from "./ui/primitives";
 
 type NavItem = { to: string; label: string; badge?: "chat" | "notifiche" };
 
@@ -23,28 +22,29 @@ const NAV: NavItem[] = [
 ];
 
 export function AppLayout() {
-  // `profile` non serve più qui: l'identità dell'utente la mostra VenueSwitcher,
-  // che è anche il posto da cui si cambia sede.
-  const { session, signOut } = useAuth();
-  const { venue, isPending, isError, error } = useActiveVenue();
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
+  const { session, profile, signOut } = useAuth();
+  const { venues, isPending, isError, error } = useOwnerVenues();
   // Aggiornati in tempo reale da RealtimeSync (invalida chat.unreadAll) e dal
   // canale notifications.
   const chatUnread = useChatUnreadCount(session!.user.id).data ?? 0;
   const notifUnread = useUnreadCount(session!.user.id).data ?? 0;
 
-  // Da "Locale" (e da "/locale/nuovo") si crea un locale, e "Impostazioni" deve
-  // restare raggiungibile comunque (uscire, cancellare l'account): passano il
-  // gate anche senza nessuna sede.
-  const VENUE_FREE = ["/locale", "/locale/nuovo", "/impostazioni"];
-  const needsVenue = !venue && !VENUE_FREE.includes(pathname);
+  // L'**azienda**, non la sede: la dashboard le guarda tutte insieme, e fino al
+  // 14/09/2026 questa riga era uno switcher perché ne guardava una alla volta.
+  const company = companyName(venues, profile?.full_name);
+  const who = profile?.full_name ?? session?.user.email;
 
   return (
     <div className="flex min-h-dvh">
       {/* Navigazione: sul foglio non serve, e ruberebbe un quarto di pagina. */}
       <aside className="flex w-56 shrink-0 flex-col border-r border-border-2 bg-bg-card p-4 print:hidden">
-        <VenueSwitcher />
+        <div className="mb-6 px-2">
+          <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
+          <p className="font-serif text-lg leading-tight text-t1">{company}</p>
+          <p className="mt-0.5 truncate text-xs text-t4">
+            {venues.length > 1 ? `${venues.length} locali · ${who}` : who}
+          </p>
+        </div>
 
         <nav className="flex flex-col gap-0.5">
           {NAV.map((item) => {
@@ -88,36 +88,25 @@ export function AppLayout() {
       </aside>
 
       <main className="min-w-0 flex-1 p-8 print:p-0">
+        {/* Niente più gate "serve un locale": ogni pagina mostra il proprio stato
+            vuoto (`NoVenues`), perché nessuna è più ancorata a una sede sola. */}
         {isPending ? (
           <Spinner />
         ) : isError ? (
           <QueryError error={error} />
-        ) : needsVenue ? (
-          // Senza locale non esiste nulla da gestire: ogni query di questa
-          // dashboard è ancorata a venue_id.
-          <Placeholder
-            title="Nessun locale collegato a questo account"
-            detail="Crea il locale per iniziare a programmare i turni."
-            action={
-              <Button variant="gold" onClick={() => navigate("/locale/nuovo")}>
-                Crea il locale
-              </Button>
-            }
-          />
         ) : (
-          <VenueContext.Provider value={venue}>
+          <>
             {/* Solo in stampa: senza la sidebar il foglio sarebbe anonimo, e un
-                turnario appeso in bacheca deve dire di chi è e di quando. */}
+                turnario appeso in bacheca deve dire di chi è e di quando.
+                L'azienda e non la sede: il turnario ora può contenerne più di una. */}
             <div className="mb-4 hidden items-baseline justify-between gap-4 border-b border-border-2 pb-2 print:flex">
-              <span className="font-serif text-base text-t1">
-                {venue?.name}
-              </span>
+              <span className="font-serif text-base text-t1">{company}</span>
               <span className="font-mono text-xs text-t3">
                 stampato il {new Date().toLocaleDateString("it-IT")}
               </span>
             </div>
             <Outlet />
-          </VenueContext.Provider>
+          </>
         )}
       </main>
     </div>

@@ -15,60 +15,76 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ProBadge } from "@/features/plan/ProLock";
 import { useProGate } from "@/features/plan/hooks";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
-import { useOwnerPeople, useVenueStaff } from "@/features/staff/hooks";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useOwnerPeople } from "@/features/staff/hooks";
 import {
-  otherVenueNames,
-  staffRoleNames,
-  type StaffMemberWithWaiter,
+  personEmploymentType,
+  personRoleNames,
+  personVenueNames,
+  type OwnerPerson,
 } from "@/features/staff/api";
 
-function StaffRow({
-  member,
-  /** Le altre sedi del titolare in cui lavora: vuoto se solo questa. */
-  alsoAt,
+/**
+ * Una riga dell'organico: **una persona**, non una sua scheda di sede.
+ *
+ * Fino al 14/09/2026 questa lista mostrava le `staff_members` della sede attiva,
+ * e chi lavorava in tre locali ci compariva tre volte con un sottotitolo "anche
+ * a…" a rimediare. Ora la riga è la persona (`staff_people`) e le sedi sono i
+ * suoi chip: la stessa informazione, detta nel verso in cui la si pensa.
+ */
+function PersonRow({
+  person,
+  /** Le sedi in cui lavora. Vuoto con un locale solo: sarebbe rumore. */
+  venueNames,
   onPress,
 }: {
-  member: StaffMemberWithWaiter;
-  alsoAt: string[];
+  person: OwnerPerson;
+  venueNames: string[];
   onPress: () => void;
 }) {
-  const linked = !!member.waiter_id;
-  const avatarUri = member.waiter?.avatar_url ?? undefined;
+  const linked = !!person.waiter_id;
+  const avatarUri = person.waiter?.avatar_url ?? undefined;
+  // Basta un invito in sospeso in una sede qualunque: è una cosa da fare.
+  const pending = person.memberships.some((m) => m.link_status === "pending");
+  const employment = personEmploymentType(person);
   return (
     <Card className="rounded-3xl border-border-2 p-4" onPress={onPress}>
       <View className="flex-row items-center gap-3">
-        <Avatar uri={avatarUri} name={member.display_name} size={44} />
+        <Avatar uri={avatarUri} name={person.full_name} size={44} />
         <View className="flex-1">
           <View className="flex-row items-center gap-1.5">
             <Text className="text-base font-sans-bold text-t1">
-              {member.display_name}
+              {person.full_name}
             </Text>
             {linked ? (
               <Icon name="verified" size={15} color="#EAB54C" />
             ) : null}
           </View>
           <Text className="text-xs text-t3">
-            {staffRoleNames(member) ?? "Ruoli non indicati"}
+            {personRoleNames(person) ?? "Ruoli non indicati"}
           </Text>
-          {/* Chi lavora anche altrove: senza, la stessa persona in tre liste
-              sembra tre persone diverse. */}
-          {alsoAt.length > 0 ? (
-            <Text className="mt-0.5 text-xs text-t4">
-              anche a {alsoAt.join(", ")}
-            </Text>
+          {venueNames.length > 0 ? (
+            <View className="mt-1.5 flex-row flex-wrap gap-1.5">
+              {venueNames.map((name) => (
+                <Chip key={name} label={name} />
+              ))}
+            </View>
           ) : null}
-          {member.link_status === "pending" ? (
+          {pending ? (
             <View className="mt-1 flex-row">
               <Pill label="Invito in attesa" variant="pending" />
             </View>
           ) : null}
         </View>
-        <Chip
-          label={member.employment_type === "fisso" ? "Fisso" : "A chiamata"}
-          active
-          gold={member.employment_type === "fisso"}
-        />
+        {/* Assente quando le sedi non concordano: vedi `personEmploymentType`. */}
+        {employment ? (
+          <Chip
+            label={employment === "fisso" ? "Fisso" : "A chiamata"}
+            active
+            gold={employment === "fisso"}
+          />
+        ) : null}
         <Icon name="chevR" size={18} color="#8c857a" />
       </View>
     </Card>
@@ -80,15 +96,12 @@ export default function ManagerStaffScreen() {
   const insets = useSafeAreaInsets();
   const { isPro, gate } = useProGate();
 
-  const venueQuery = useActiveVenue();
-  const venue = venueQuery.venue;
-  const staffQuery = useVenueStaff(venue?.id);
-  const staff = staffQuery.data ?? [];
-  // Già in cache quasi sempre (la usano l'aggiunta staff e il selettore chat):
-  // nella pratica è zero latenza, e porta gratis il conteggio dell'azienda.
-  const people = useOwnerPeople(venueQuery.ownerId).data ?? [];
-  const byPerson = new Map(people.map((p) => [p.id, p]));
-  const pull = usePullToRefresh(staffQuery.refetch);
+  const venueQuery = useOwnerVenues();
+  const { venues, isMultiVenue } = venueQuery;
+  // L'organico è dell'**azienda**: una riga per persona, tutte le sedi insieme.
+  const peopleQuery = useOwnerPeople(venueQuery.ownerId);
+  const people = peopleQuery.data ?? [];
+  const pull = usePullToRefresh(peopleQuery.refetch);
 
   return (
     <ScrollView
@@ -110,11 +123,12 @@ export default function ManagerStaffScreen() {
       <View>
         <Mono gold>Organico</Mono>
         <Display className="mt-1 text-4xl">Il mio staff</Display>
-        {/* Con una sede sola i due numeri coincidono e la riga non compare: chi
-            ha un locale solo non deve accorgersi del multi-sede. */}
-        {venue && people.length > staff.length ? (
+        {isMultiVenue && people.length > 0 ? (
           <Text className="mt-1 text-sm text-t3">
-            {staff.length} in questa sede · {people.length} nell&apos;azienda
+            {people.length === 1
+              ? "1 persona"
+              : `${people.length} persone`}{" "}
+            · {venues.length} locali
           </Text>
         ) : null}
       </View>
@@ -123,18 +137,8 @@ export default function ManagerStaffScreen() {
         <ActivityIndicator color="#EAB54C" className="mt-16" />
       ) : venueQuery.isError ? (
         <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-      ) : !venue ? (
-        <View className="mt-6">
-          <EmptyState
-            title="Configura il tuo locale"
-            subtitle="Ti serve un locale prima di creare il tuo organico."
-          />
-          <GoldButton
-            className="mt-2"
-            label="Configura locale"
-            onPress={() => router.push("/(manager)/venue/new")}
-          />
-        </View>
+      ) : venues.length === 0 ? (
+        <NoVenuesState subtitle="Ti serve un locale prima di creare il tuo organico." />
       ) : (
         <>
           <GoldButton
@@ -155,7 +159,7 @@ export default function ManagerStaffScreen() {
                   Ore del mese
                 </Text>
                 <Text className="text-xs text-t3">
-                  {venueQuery.venues.length > 1
+                  {isMultiVenue
                     ? "Ore di tutte le tue sedi, per persona"
                     : "Riepilogo ore e export per il commercialista"}
                 </Text>
@@ -179,42 +183,37 @@ export default function ManagerStaffScreen() {
                 <Icon name="clipboard" size={18} color="#EAB54C" />
               </View>
               <View className="flex-1">
-                <Text className="text-base font-sans-bold text-t1">
-                  Ruoli del locale
-                </Text>
+                <Text className="text-base font-sans-bold text-t1">Ruoli</Text>
                 <Text className="text-xs text-t3">
-                  Le mansioni che assegni allo staff e chiedi sui turni
+                  {isMultiVenue
+                    ? "Le mansioni di ogni tuo locale"
+                    : "Le mansioni che assegni allo staff e chiedi sui turni"}
                 </Text>
               </View>
               <Icon name="chevR" size={18} color="#8c857a" />
             </View>
           </Card>
 
-          {staffQuery.isLoading ? (
+          {peopleQuery.isLoading ? (
             <ActivityIndicator color="#EAB54C" className="mt-6" />
-          ) : staffQuery.isError ? (
+          ) : peopleQuery.isError ? (
             <QueryError
-              onRetry={() => staffQuery.refetch()}
+              onRetry={() => peopleQuery.refetch()}
               subtitle="Non siamo riusciti a caricare l'organico. Riprova."
             />
-          ) : staff.length === 0 ? (
+          ) : people.length === 0 ? (
             <EmptyState
               title="Nessuno nello staff"
               subtitle="Aggiungi il tuo personale per assegnarlo ai turni."
             />
           ) : (
             <View className="gap-3">
-              {staff.map((member) => (
-                <StaffRow
-                  key={member.id}
-                  member={member}
-                  alsoAt={otherVenueNames(
-                    byPerson.get(member.person_id),
-                    venue.id
-                  )}
-                  onPress={() =>
-                    router.push(`/(manager)/staff/${member.person_id}`)
-                  }
+              {people.map((person) => (
+                <PersonRow
+                  key={person.id}
+                  person={person}
+                  venueNames={isMultiVenue ? personVenueNames(person) : []}
+                  onPress={() => router.push(`/(manager)/staff/${person.id}`)}
                 />
               ))}
             </View>

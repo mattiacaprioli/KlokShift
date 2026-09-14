@@ -1,35 +1,43 @@
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/cn";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
-import { useVenueOptional } from "../lib/venue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { NoVenues } from "../venues/NoVenues";
 import { VenueFormCard } from "../venues/VenueFormCard";
 import { VenuesCard } from "../venues/VenuesCard";
-import { Button, Card, PageHeader } from "../ui/primitives";
+import { PageHeader } from "../ui/primitives";
 
 /**
- * La scheda della **sede attiva**, più l'elenco di tutte le sedi del titolare.
+ * I locali del titolare.
  *
- * Resta raggiungibile anche senza nessun locale (`VENUE_FREE` in `AppLayout`), ma
- * non è più il posto da cui si crea: quello è `/locale/nuovo`. Chi arriva qui a
- * mani vuote trova il pulsante per andarci.
+ * Fino al 14/09/2026 questa pagina era la scheda della **sede attiva**, con
+ * l'elenco delle altre in coda. Non c'è più una sede attiva: con un locale solo
+ * la pagina resta la sua scheda (non c'è altro da mostrare), con più locali
+ * diventa l'elenco, e la scheda di ciascuno vive su `/locale/:id`.
  */
 export function LocalePage() {
-  const venue = useVenueOptional();
-  const { venues } = useActiveVenue();
-  const navigate = useNavigate();
+  const { venues } = useOwnerVenues();
 
-  if (!venue) {
+  if (venues.length === 0) {
     return (
       <>
         <PageHeader
           title="Nessun locale"
-          subtitle="Serve un locale per pubblicare turni e gestire il personale."
+          subtitle="Serve un locale per organizzare i turni e gestire il personale."
         />
-        <Card className="max-w-2xl">
-          <Button variant="gold" onClick={() => navigate("/locale/nuovo")}>
-            Crea il tuo locale
-          </Button>
-        </Card>
+        <NoVenues detail="Serve per organizzare i turni e gestire il personale." />
+      </>
+    );
+  }
+
+  if (venues.length === 1) {
+    return (
+      <>
+        <PageHeader
+          title="Locale"
+          subtitle="Questi dati sono ciò che i professionisti vedono di te."
+        />
+        <VenueFormCard venue={venues[0]} />
+        <div className="mt-6 max-w-2xl">
+          <VenuesCard />
+        </div>
       </>
     );
   }
@@ -37,13 +45,10 @@ export function LocalePage() {
   return (
     <>
       <PageHeader
-        title={venues.length > 1 ? venue.name : "Locale"}
-        subtitle="Questi dati sono ciò che i professionisti vedono di te."
+        title="I tuoi locali"
+        subtitle="Apri un locale per modificarne la scheda."
       />
-
-      <VenueFormCard venue={venue} />
-
-      <div className={cn("mt-6 max-w-2xl")}>
+      <div className="max-w-2xl">
         <VenuesCard />
       </div>
     </>

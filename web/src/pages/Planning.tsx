@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useSearchParams } from "react-router-dom";
 import {
   useMoveShiftToDate,
   useShift,
-  useVenueShiftsRange,
+  useOwnerShiftsRange,
 } from "@/features/shifts/hooks";
 import { useReassignShiftAssignment } from "@/features/assignments/hooks";
 import {
@@ -22,8 +22,9 @@ import {
 import { cn } from "@/lib/cn";
 import { shiftCoverage, shiftCounts } from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
-import type { StaffMemberWithWaiter } from "@/features/staff/api";
-import { useVenue } from "../lib/venue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import { NoVenues } from "../venues/NoVenues";
 import {
   addDays,
   addMonths,
@@ -50,6 +51,7 @@ import {
   useShiftDrag,
   type MoveDragPayload,
   type ReassignDragPayload,
+  type ReassignTarget,
 } from "../shifts/dragContext";
 
 const VIEWS = ["settimana", "mese", "persone"] as const;
@@ -67,7 +69,10 @@ function storedView(): View {
 }
 
 /**
- * Planning. Tre viste sullo stesso dato, tutte da `useVenueShiftsRange`:
+ * Planning. Tre viste sullo stesso dato, tutte da `useOwnerShiftsRange` — che
+ * porta i turni di **tutti** i locali del titolare: il planning non è più di una
+ * sede, e ogni turno dice a quale appartiene.
+ *
  * - **settimana** per lavorare (celle alte, si legge tutto);
  * - **mese** per vedere la forma del periodo e trovare i giorni scoperti;
  * - **persone** per la domanda che le altre due non pongono, «chi lavora
@@ -76,15 +81,26 @@ function storedView(): View {
  * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
-  const venue = useVenue();
+  const { venues, isMultiVenue } = useOwnerVenues();
+  /** Il locale di un turno: nome e colore. `undefined` con un locale solo. */
+  const venueOf = useCallback(
+    (venueId: string) => {
+      if (!isMultiVenue) return undefined;
+      const i = venues.findIndex((v) => v.id === venueId);
+      return i < 0
+        ? undefined
+        : { name: venues[i].name, accent: venueAccent(i) };
+    },
+    [venues, isMultiVenue]
+  );
   const [view, setView] = useState<View>(storedView);
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [panel, setPanel] = useState<{
     date: string;
     shift?: Shift;
-    /** Preselezione in creazione, usata dalla vista per persona. */
-    staffIds?: string[];
+    /** Preselezione in creazione (id di persona), dalla vista per persona. */
+    personIds?: string[];
   } | null>(null);
   const [duplicating, setDuplicating] = useState(false);
 
@@ -105,8 +121,7 @@ export function PlanningPage() {
     [isWeekly, monday, month]
   );
 
-  const { data, isPending, isError, error } = useVenueShiftsRange(
-    venue.id,
+  const { data, isPending, isError, error } = useOwnerShiftsRange(
     days[0],
     days[days.length - 1]
   );
@@ -126,7 +141,7 @@ export function PlanningPage() {
   // Quante persone mancano sul periodo che si ha davanti. Era il sottotitolo di
   // una pagina "Copertura" a parte, che però ripeteva questa stessa griglia: il
   // numero vale di più qui, sopra i turni a cui si riferisce. I dati sono già
-  // caricati — `getVenueShiftsRange` porta con sé fabbisogni e assegnazioni.
+  // caricati — `getOwnerShiftsRange` porta con sé fabbisogni e assegnazioni.
   const missing = useMemo(
     () =>
       (data ?? [])
@@ -139,8 +154,8 @@ export function PlanningPage() {
   );
 
   const toast = useToast();
-  const move = useMoveShiftToDate(venue.id);
-  const reassign = useReassignShiftAssignment(venue.id);
+  const move = useMoveShiftToDate();
+  const reassign = useReassignShiftAssignment();
   const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
   const busy = move.isPending || reassign.isPending;
 
@@ -169,7 +184,7 @@ export function PlanningPage() {
     setPendingDrop({ kind: "move", payload, toDate, notify });
   }
 
-  function runReassign(payload: ReassignDragPayload, to: StaffMemberWithWaiter) {
+  function runReassign(payload: ReassignDragPayload, to: ReassignTarget) {
     setPendingDrop(null);
     reassign.mutate(
       {
@@ -179,11 +194,9 @@ export function PlanningPage() {
           id: to.id,
           person_id: to.person_id,
           display_name: to.display_name,
-          // Le sue mansioni: la patch ottimistica riproduce con queste la regola
-          // che il server applica per scegliere il ruolo di chi entra.
-          roles: to.staff_member_roles
-            .map((r) => r.role)
-            .filter((r): r is NonNullable<typeof r> => !!r),
+          // Le sue mansioni **in quella sede**: la patch ottimistica riproduce
+          // con queste la regola che il server applica per il ruolo di chi entra.
+          roles: to.roles,
         },
       },
       {
@@ -193,7 +206,7 @@ export function PlanningPage() {
     );
   }
 
-  function requestReassign(payload: ReassignDragPayload, to: StaffMemberWithWaiter) {
+  function requestReassign(payload: ReassignDragPayload, to: ReassignTarget) {
     if (busy) return;
     // `unique (shift_id, staff_member_id)`: è l'unico rifiuto che vale la pena
     // spiegare, perché guardando la griglia non si deduce.
@@ -224,6 +237,15 @@ export function PlanningPage() {
   function goToday() {
     setMonday(startOfWeek(new Date()));
     setMonth(startOfMonth(new Date()));
+  }
+
+  if (venues.length === 0) {
+    return (
+      <>
+        <PageHeader title="Planning" />
+        <NoVenues detail="Ti serve un locale prima di programmare i turni." />
+      </>
+    );
   }
 
   return (
@@ -309,6 +331,7 @@ export function PlanningPage() {
           <WeekGrid
             days={days}
             byDay={byDay}
+            venueOf={venueOf}
             onCreate={(day) => setPanel({ date: day })}
             onOpen={(day, shift) => setPanel({ date: day, shift })}
             onMove={requestMove}
@@ -318,8 +341,8 @@ export function PlanningPage() {
             days={days}
             shifts={data ?? []}
             onOpen={(shift) => setPanel({ date: shift.date, shift })}
-            onCreate={(day, staffMemberId) =>
-              setPanel({ date: day, staffIds: [staffMemberId] })
+            onCreate={(day, personId) =>
+              setPanel({ date: day, personIds: [personId] })
             }
             onReassign={requestReassign}
           />
@@ -328,6 +351,7 @@ export function PlanningPage() {
             days={days}
             month={month}
             byDay={byDay}
+            venueOf={venueOf}
             onCreate={(day) => setPanel({ date: day })}
             onOpen={(day, shift) => setPanel({ date: day, shift })}
             onMove={requestMove}
@@ -360,7 +384,7 @@ export function PlanningPage() {
         <ShiftPanel
           date={panel.date}
           shift={panel.shift}
-          initialStaffIds={panel.staffIds}
+          initialPersonIds={panel.personIds}
           onClose={() => setPanel(null)}
         />
       ) : null}
@@ -412,7 +436,7 @@ type PendingDrop =
   | {
       kind: "reassign";
       payload: ReassignDragPayload;
-      to: StaffMemberWithWaiter;
+      to: ReassignTarget;
       plan: ReassignNotifyPlan;
     };
 
@@ -449,7 +473,7 @@ const SKIP_REASON: Record<NonNullable<ReassignNotifyPlan["fromSkip"]>, string> =
 
 function reassignMessage(
   payload: ReassignDragPayload,
-  to: StaffMemberWithWaiter,
+  to: ReassignTarget,
   plan: ReassignNotifyPlan
 ): string {
   const head = `«${payload.title}» del ${formatDate(payload.date)} passa da ${payload.fromStaffName} a ${to.display_name}.`;
@@ -473,12 +497,15 @@ function WeekGrid({
   onCreate,
   onOpen,
   onMove,
+  venueOf,
 }: {
   days: string[];
   byDay: Map<string, ShiftWithAssignees[]>;
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
   onMove: (payload: MoveDragPayload, toDate: string) => void;
+  /** Il locale di un turno, per il bordo colorato. Vuoto con un locale solo. */
+  venueOf: (venueId: string) => { name: string; accent: string } | undefined;
 }) {
   const dnd = useShiftDrag();
 
@@ -522,6 +549,8 @@ function WeekGrid({
                 <ShiftCell
                   key={shift.id}
                   shift={shift}
+                  accent={venueOf(shift.venue_id)?.accent}
+                  venueName={venueOf(shift.venue_id)?.name}
                   onOpen={() => onOpen(day, shift)}
                 />
               ))}
@@ -550,6 +579,7 @@ function MonthGrid({
   onCreate,
   onOpen,
   onMove,
+  venueOf,
 }: {
   days: string[];
   month: Date;
@@ -557,6 +587,8 @@ function MonthGrid({
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
   onMove: (payload: MoveDragPayload, toDate: string) => void;
+  /** Il locale di un turno, per il bordo colorato. Vuoto con un locale solo. */
+  venueOf: (venueId: string) => { name: string; accent: string } | undefined;
 }) {
   const dnd = useShiftDrag();
   // Nel mese lo spazio per cella è poco: si mostrano i primi tre turni e si
@@ -655,7 +687,14 @@ function MonthGrid({
                       title={
                         cancelled
                           ? `${shift.title} · annullato: riattivalo dal pannello per spostarlo`
-                          : `${shift.title} · ${formatShiftRange(shift.start_time, shift.end_time)} · ${counts.filled}/${counts.total}`
+                          : [
+                              venueOf(shift.venue_id)?.name,
+                              shift.title,
+                              formatShiftRange(shift.start_time, shift.end_time),
+                              `${counts.filled}/${counts.total}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
                       }
                       className={cn(
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
@@ -667,6 +706,18 @@ function MonthGrid({
                         dnd.isSource(shift.id) && "opacity-40"
                       )}
                     >
+                      {/* Il bordo sinistro qui dice già la copertura: la sede
+                          prende un pallino, che è l'unico spazio rimasto. Il
+                          nome sta nel tooltip. */}
+                      {venueOf(shift.venue_id) ? (
+                        <span
+                          aria-hidden
+                          className="size-1.5 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: venueOf(shift.venue_id)!.accent,
+                          }}
+                        />
+                      ) : null}
                       <span className="shrink-0 font-mono text-[10px] text-t4">
                         {formatTime(shift.start_time)}
                         {/* Qui c'è posto solo per l'ora d'inizio: senza questo,
@@ -715,9 +766,14 @@ function MonthGrid({
 
 function ShiftCell({
   shift,
+  accent,
+  venueName,
   onOpen,
 }: {
   shift: ShiftWithAssignees;
+  /** Il colore del locale. Assente con un locale solo. */
+  accent?: string;
+  venueName?: string;
   onOpen: () => void;
 }) {
   const dnd = useShiftDrag();
@@ -732,7 +788,7 @@ function ShiftCell({
     .join(" · ");
   const hint = cancelled
     ? "Turno annullato: riattivalo dal pannello per spostarlo."
-    : roles || undefined;
+    : [venueName, roles].filter(Boolean).join(" · ") || undefined;
 
   return (
     <button
@@ -755,11 +811,16 @@ function ShiftCell({
             shift.title
           ))}
       title={hint}
+      // Il bordo sinistro colorato è il segnale **secondario** della sede: si
+      // stampa in grigio, quindi il nome resta nel tooltip e nel pannello. In una
+      // cella larga un settimo di schermo non c'è spazio per scriverlo.
+      style={accent && !cancelled ? { borderLeftColor: accent } : undefined}
       className={cn(
         "focus-gold rounded-lg border p-2 text-left transition hover:border-border-gold",
         cancelled
           ? "border-border bg-bg-1 opacity-50"
           : "cursor-grab border-border-2 bg-bg-1 hover:bg-bg-2 active:cursor-grabbing",
+        accent && !cancelled && "border-l-[3px]",
         dnd.isSource(shift.id) && "opacity-40"
       )}
     >

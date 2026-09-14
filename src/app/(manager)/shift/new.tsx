@@ -2,14 +2,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useActiveVenueId } from "@/features/venues/ActiveVenue";
 import { StaffShiftForm } from "@/features/assignments/StaffShiftForm";
 
 /** "YYYY-MM-DD" dal calendario dell'agenda, se si arriva da lì. */
 const DATE_PARAM = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function NewShiftScreen() {
-  const venueId = useActiveVenueId();
   const insets = useSafeAreaInsets();
   const { date } = useLocalSearchParams<{ date?: string }>();
   // Chi tocca «+» avendo un giorno selezionato sta creando un turno *per quel
@@ -28,7 +26,8 @@ export default function NewShiftScreen() {
         />
       </View>
 
-      <StaffShiftForm venueId={venueId} initialDate={initialDate} />
+      {/* La sede la sceglie il form: è un campo del turno, non del contesto. */}
+      <StaffShiftForm initialDate={initialDate} />
     </View>
   );
 }

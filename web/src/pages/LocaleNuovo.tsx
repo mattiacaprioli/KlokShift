@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { canCreateVenue } from "@/features/venues/gate";
 import { VenueFormCard } from "../venues/VenueFormCard";
 import { PageHeader, Placeholder } from "../ui/primitives";
@@ -9,15 +9,16 @@ import { PageHeader, Placeholder } from "../ui/primitives";
  * Creazione di un locale: il primo, o il terzo.
  *
  * Con `(manager)/venue/new.tsx` è uno dei **due soli** punti che chiamano
- * `canCreateVenue` (vedi `features/venues/gate.ts`). Appena creato diventa la sede
- * attiva: chi ha appena aperto Milano si aspetta di trovarsi a Milano.
+ * `canCreateVenue` (vedi `features/venues/gate.ts`). Non c'è niente da attivare
+ * dopo il salvataggio: il locale nuovo entra in `venues` e compare da sé nel
+ * planning, nell'organico e nel picker del form turno.
  *
  * `plan` si legge da `profile` invece di `usePlan()` perché quell'hook importa
  * `expo-router`, che qui non esiste.
  */
 export function LocaleNuovoPage() {
   const { profile } = useAuth();
-  const { venues, setActiveVenue } = useActiveVenue();
+  const { venues } = useOwnerVenues();
   const navigate = useNavigate();
 
   const gate = canCreateVenue({
@@ -44,13 +45,7 @@ export function LocaleNuovoPage() {
             : "Serve per pubblicare turni e gestire il personale."
         }
       />
-      <VenueFormCard
-        venue={null}
-        onSaved={(created) => {
-          setActiveVenue(created.id);
-          navigate("/locale");
-        }}
-      />
+      <VenueFormCard venue={null} onSaved={() => navigate("/locale")} />
     </>
   );
 }

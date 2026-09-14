@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/cn";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
 import {
   useMyClosedVenues,
@@ -11,15 +11,16 @@ import { useToast } from "../ui/Toast";
 import { Button, Card } from "../ui/primitives";
 
 /**
- * Tutte le sedi del titolare: quella attiva, le altre, e quelle chiuse.
+ * Tutti i locali del titolare, aperti e chiusi.
  *
- * Qui si **gestiscono** le sedi; per *passarci* c'è lo switcher in sidebar, che è
- * a portata di mano da ogni pagina.
+ * Non c'è più un locale "attivo" da scegliere: la riga apre la scheda, e basta.
+ * Il pallino colorato è lo stesso con cui quel locale si riconosce nel planning —
+ * questo è l'unico posto in cui quella legenda si può imparare.
  */
 export function VenuesCard() {
   const { session } = useAuth();
   const ownerId = session!.user.id;
-  const { venue, venues, setActiveVenue } = useActiveVenue();
+  const { venues } = useOwnerVenues();
   const closed = useMyClosedVenues(ownerId).data ?? [];
   const setClosed = useSetVenueClosed(ownerId);
   const navigate = useNavigate();
@@ -47,43 +48,37 @@ export function VenuesCard() {
       </div>
 
       <ul className="mt-3 flex flex-col gap-2">
-        {venues.map((v) => {
-          const active = v.id === venue?.id;
-          return (
-            <li key={v.id}>
-              <button
-                type="button"
-                onClick={() => setActiveVenue(v.id)}
-                className={cn(
-                  "focus-gold flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition",
-                  active
-                    ? "border-gold/40 bg-gold/10"
-                    : "border-border-2 bg-bg-1 hover:bg-bg-2"
-                )}
-              >
-                <Avatar url={v.logo_url} name={v.name} size={36} />
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={cn(
-                      "block truncate text-sm font-medium",
-                      active ? "text-gold" : "text-t1"
-                    )}
-                  >
-                    {v.name}
-                  </span>
-                  {v.city ? (
-                    <span className="block truncate text-xs text-t4">
-                      {v.city}
-                    </span>
-                  ) : null}
+        {venues.map((v, i) => (
+          <li key={v.id}>
+            <button
+              type="button"
+              onClick={() => navigate(`/locale/${v.id}`)}
+              className="focus-gold flex w-full items-center gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2.5 text-left transition hover:bg-bg-2"
+            >
+              <Avatar url={v.logo_url} name={v.name} size={36} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-t1">
+                  {v.name}
                 </span>
-                {active ? (
-                  <span className="shrink-0 text-xs text-gold">attivo</span>
+                {v.city ? (
+                  <span className="block truncate text-xs text-t4">
+                    {v.city}
+                  </span>
                 ) : null}
-              </button>
-            </li>
-          );
-        })}
+              </span>
+              {venues.length > 1 ? (
+                <span
+                  aria-hidden
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: venueAccent(i) }}
+                />
+              ) : null}
+              <span aria-hidden className="shrink-0 text-t3">
+                ›
+              </span>
+            </button>
+          </li>
+        ))}
       </ul>
 
       {closed.length > 0 ? (

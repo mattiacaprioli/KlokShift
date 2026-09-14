@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useCopyInternalShifts } from "@/features/assignments/hooks";
-import { useVenueShiftsRange } from "@/features/shifts/hooks";
+import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
 import type { Shift } from "@/features/shifts/api";
-import { useVenue } from "../lib/venue";
 import { addDays, weekDays, weekLabel } from "../lib/week";
 import { Button, Pill } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
@@ -37,9 +36,12 @@ export function DuplicateWeekDialog({
   shifts: SourceShift[];
   onClose: () => void;
 }) {
-  const venue = useVenue();
   const toast = useToast();
-  const copy = useCopyInternalShifts(venue.id);
+  // ⚠️ Ogni copia resta nella sede del turno che l'ha generata: la settimana
+  // duplicata può contenere Roma e Milano, e un `venue_id` unico le spingerebbe
+  // tutte in una sede sola. Se ne occupa `getInternalShiftPlans`, che porta il
+  // `venue_id` **per piano**.
+  const copy = useCopyInternalShifts();
 
   const [weekOffset, setWeekOffset] = useState(1);
   const [withStaff, setWithStaff] = useState(true);
@@ -63,11 +65,7 @@ export function DuplicateWeekDialog({
   // **aggiunge**, non sostituisce, quindi va detto prima e non dopo. Gli
   // annullati non contano: non sono doppioni di cui preoccuparsi.
   const targetDays = weekDays(targetMonday);
-  const targetShifts = useVenueShiftsRange(
-    venue.id,
-    targetDays[0],
-    targetDays[6]
-  ).data;
+  const targetShifts = useOwnerShiftsRange(targetDays[0], targetDays[6]).data;
   const targetExisting = (targetShifts ?? []).filter(
     (s) => s.status !== "cancelled"
   ).length;

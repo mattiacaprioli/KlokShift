@@ -3,7 +3,7 @@ import { qk } from "@/lib/queryKeys";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 import {
   addPersonToVenue,
-  addStaffToVenue,
+  addStaffToVenues,
   findWaiterByEmail,
   getMyDocumentScopes,
   getMyEmployers,
@@ -73,11 +73,11 @@ export function useStaffPerson(personId: string | undefined) {
   });
 }
 
-/** Persona nuova + prima appartenenza (scheda manuale, o invito per email). */
-export function useAddStaffToVenue() {
+/** Persona nuova + le sue sedi (scheda manuale, o invito per email). */
+export function useAddStaffToVenues() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: addStaffToVenue,
+    mutationFn: addStaffToVenues,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
   });
 }

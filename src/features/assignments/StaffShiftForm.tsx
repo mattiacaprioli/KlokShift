@@ -13,6 +13,8 @@ import {
   toTimeString,
 } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
+import { VenuePicker } from "@/features/venues/VenuePicker";
+import { useLastVenue } from "@/features/venues/useLastVenue";
 import { useVenueStaff } from "@/features/staff/hooks";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import { useVenueRoles } from "@/features/roles/hooks";
@@ -32,15 +34,24 @@ function defaultTime(hour: number) {
 }
 
 type Props = {
-  venueId: string | undefined;
   /** Il giorno da cui partire, se si arriva dall'agenda con una data scelta. */
   initialDate?: Date;
 };
 
-/** Assegna un turno a uno o più membri dell'organico. */
-export function StaffShiftForm({ venueId, initialDate }: Props) {
+/**
+ * Assegna un turno a uno o più membri dell'organico.
+ *
+ * ⚠️ **La sede è un campo del form, non un contesto.** È il perno del
+ * riposizionamento del 14/09/2026: non si "entra" in un locale per creare i suoi
+ * turni — si crea un turno e si dice dove. Il form la possiede (`useLastVenue`,
+ * che ricorda l'ultima usata), e da lì discendono organico e mansioni
+ * selezionabili: `useVenueStaff`/`useVenueRoles` filtrano già per sede, e non
+ * hanno avuto bisogno di cambiare di una riga.
+ */
+export function StaffShiftForm({ initialDate }: Props) {
   const router = useRouter();
   const toast = useToast();
+  const { venueId, choose } = useLastVenue();
   const staffQuery = useVenueStaff(venueId);
   // Solo staff confermato: gli inviti ancora da accettare non sono assegnabili.
   const staff = (staffQuery.data ?? []).filter(
@@ -48,7 +59,7 @@ export function StaffShiftForm({ venueId, initialDate }: Props) {
   );
   const rolesQuery = useVenueRoles(venueId);
   const roles = rolesQuery.data ?? [];
-  const create = useCreateInternalShift(venueId);
+  const create = useCreateInternalShift();
 
   const [date, setDate] = useState(() => initialDate ?? new Date());
   const [start, setStart] = useState(defaultTime(18));
@@ -83,6 +94,31 @@ export function StaffShiftForm({ venueId, initialDate }: Props) {
 
   const selectedIds = Object.keys(selected);
 
+  /**
+   * Cambiare sede azzera persone e fabbisogni.
+   *
+   * Non è pulizia estetica: le chiavi di `selected` sono `staff_members.id`
+   * della sede precedente e quelle di `targets` sono `venue_roles.id` della
+   * sede precedente. Portarle su un turno di un'altra sede produce
+   * assegnazioni incoerenti che **il database accetta** — nessuna FK lega
+   * `shift_assignments.staff_member_id` alla sede del turno — e che poi nessuna
+   * schermata sa leggere.
+   *
+   * Reset silenzioso, con un avviso solo se c'era qualcosa da perdere: una
+   * conferma a ogni cambio punirebbe l'uso normale, e la selezione si rifà in
+   * tre tocchi.
+   */
+  function chooseVenue(id: string) {
+    if (id === venueId) return;
+    const hadSelection = selectedIds.length > 0 || Object.keys(targets).length > 0;
+    setSelected({});
+    setTargets({});
+    choose(id);
+    if (hadSelection) {
+      toast.show("Persone e fabbisogni azzerati: erano di un'altra sede.");
+    }
+  }
+
   function onSubmit() {
     if (!venueId) {
       toast.show("Configura prima il tuo locale.", "error");
@@ -102,6 +138,7 @@ export function StaffShiftForm({ venueId, initialDate }: Props) {
       .filter((t) => t.count > 0);
     create.mutate(
       {
+        venue_id: venueId,
         // La fascia oraria, non la data: la data è già una colonna del turno,
         // e ripeterla nel titolo riempiva la riga più in vista di ogni card
         // con l'informazione che la riga sotto dava di nuovo.
@@ -137,6 +174,9 @@ export function StaffShiftForm({ venueId, initialDate }: Props) {
         contentContainerClassName="p-6 gap-7"
         keyboardShouldPersistTaps="handled"
       >
+        {/* Primo campo: tutto il resto del form dipende da questa risposta. */}
+        <VenuePicker value={venueId} onChange={chooseVenue} />
+
         <View className="gap-3">
           <Mono>Giorno</Mono>
           <DayPicker value={date} onChange={setDate} />

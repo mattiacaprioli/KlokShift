@@ -10,7 +10,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
@@ -22,8 +21,10 @@ import type { ShiftWithCount } from "@/features/shifts/types";
 import { cn } from "@/lib/cn";
 import { addDaysToDate, startOfWeek, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
-import { useMyShifts, useVenuePastShifts } from "@/features/shifts/hooks";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import { useOwnerPastShifts, useOwnerShifts } from "@/features/shifts/hooks";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -38,7 +39,13 @@ function isShort(shift: ShiftWithCount): boolean {
 }
 
 /**
- * L'agenda del locale: i turni organizzati per giorno sotto un calendario.
+ * L'agenda dell'azienda: i turni organizzati per giorno sotto un calendario.
+ *
+ * Dal 14/09/2026 mostra **tutte le sedi insieme**. Non è un dettaglio di
+ * visualizzazione: è il verso del prodotto. Il titolare non "entra" in Roma per
+ * vedere i turni di Roma — guarda il suo mercoledì, e ogni turno dice a quale
+ * sede appartiene. Chi ha un locale solo non vede alcuna differenza: i badge e i
+ * filtri compaiono da due sedi in su.
  *
  * Stesso impianto dell'agenda del professionista, e per le stesse ragioni:
  * scegliere un giorno **fa ripartire la lista da lì** invece di farla scorrere
@@ -60,10 +67,10 @@ export default function ManagerShiftsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const venueQuery = useActiveVenue();
-  const venue = venueQuery.venue;
-  const upcomingQuery = useMyShifts(venue?.id);
-  const pastQuery = useVenuePastShifts(venue?.id);
+  const venueQuery = useOwnerVenues();
+  const { venues, isMultiVenue } = venueQuery;
+  const upcomingQuery = useOwnerShifts();
+  const pastQuery = useOwnerPastShifts();
   const pull = usePullToRefresh(() =>
     Promise.all([upcomingQuery.refetch(), pastQuery.refetch()])
   );
@@ -76,17 +83,42 @@ export default function ManagerShiftsScreen() {
   const [expanded, setExpanded] = useState(false);
   /** L'agenda ridotta a ciò che manca da coprire. */
   const [onlyShort, setOnlyShort] = useState(false);
+  /**
+   * Le sedi nascoste dai chip. Si tiene l'insieme **escluso** e non quello
+   * incluso di proposito: così una sede appena aperta compare da sé, mentre con
+   * un insieme di inclusi resterebbe invisibile finché qualcuno non la spunta.
+   *
+   * ⚠️ Non persiste e non tocca le query — i turni sono già tutti in cache. È un
+   * filtro di vista, non una sede attiva sotto mentite spoglie.
+   */
+  const [hiddenVenues, setHiddenVenues] = useState<Set<string>>(new Set());
 
   const listRef = useRef<SectionList<ShiftWithCount, ShiftSection>>(null);
   const syncing = useRef(false);
 
+  /** Il badge di una sede, o niente se il titolare ne ha una sola. */
+  const venueBadge = useCallback(
+    (venueId: string) => {
+      if (!isMultiVenue) return undefined;
+      const i = venues.findIndex((v) => v.id === venueId);
+      if (i < 0) return undefined;
+      return { name: venues[i].name, accent: venueAccent(i) };
+    },
+    [venues, isMultiVenue]
+  );
+
+  const visible = useCallback(
+    (s: { venue_id: string }) => !hiddenVenues.has(s.venue_id),
+    [hiddenVenues]
+  );
+
   const upcoming = useMemo(
-    () => upcomingQuery.data ?? [],
-    [upcomingQuery.data]
+    () => (upcomingQuery.data ?? []).filter(visible),
+    [upcomingQuery.data, visible]
   );
   const pastShifts = useMemo(
-    () => pastQuery.data?.pages.flatMap((p) => p.rows) ?? [],
-    [pastQuery.data]
+    () => (pastQuery.data?.pages.flatMap((p) => p.rows) ?? []).filter(visible),
+    [pastQuery.data, visible]
   );
 
   // I giorni con turni e, fra questi, quelli con un buco: i due insiemi che
@@ -169,13 +201,13 @@ export default function ManagerShiftsScreen() {
 
   const title = (
     <View>
-      <Mono gold>Il tuo locale</Mono>
+      <Mono gold>{isMultiVenue ? "I tuoi locali" : "Il tuo locale"}</Mono>
       <Display className="mt-1 text-3xl">I tuoi turni</Display>
     </View>
   );
 
-  // Gate locale: senza venue non ha senso la lista.
-  if (venueQuery.isLoading || venueQuery.isError || !venue) {
+  // Senza nessuna sede non c'è niente da organizzare.
+  if (venueQuery.isLoading || venueQuery.isError || venues.length === 0) {
     return (
       <ScrollView
         className="flex-1 bg-bg-0"
@@ -192,17 +224,7 @@ export default function ManagerShiftsScreen() {
         ) : venueQuery.isError ? (
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
         ) : (
-          <View className="mt-6">
-            <EmptyState
-              title="Configura il tuo locale"
-              subtitle="Ti serve un locale prima di pubblicare turni."
-            />
-            <GoldButton
-              className="mt-2"
-              label="Configura locale"
-              onPress={() => router.push("/(manager)/venue/new")}
-            />
-          </View>
+          <NoVenuesState subtitle="Ti serve un locale prima di organizzare i turni." />
         )}
       </ScrollView>
     );
@@ -265,6 +287,63 @@ export default function ManagerShiftsScreen() {
             ) : null
           }
         />
+
+        {/* Un chip per sede, tutti accesi all'apertura. Riduce la vista, non il
+            perimetro: i turni sono già in cache e spegnere una sede non fa
+            partire nessuna query. Sta sotto il calendario perché è un filtro
+            dell'agenda, non una scelta che precede il resto. */}
+        {isMultiVenue ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mt-3 -mx-5"
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
+          >
+            {venues.map((v, i) => {
+              const on = !hiddenVenues.has(v.id);
+              return (
+                <Pressable
+                  key={v.id}
+                  onPress={() =>
+                    setHiddenVenues((prev) => {
+                      const next = new Set(prev);
+                      // Spegnere l'ultima sede accesa lascerebbe un'agenda vuota
+                      // senza dire perché: l'ultima resta accesa.
+                      if (!on) next.delete(v.id);
+                      else if (venues.length - next.size > 1) next.add(v.id);
+                      return next;
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={`${v.name}: ${on ? "mostrata" : "nascosta"}`}
+                  style={on ? { borderColor: venueAccent(i) } : undefined}
+                  className={cn(
+                    "flex-row items-center gap-2 rounded-full border px-3 py-1.5",
+                    on ? "bg-bg-2" : "border-border bg-transparent"
+                  )}
+                >
+                  <View
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: on ? venueAccent(i) : "transparent",
+                      borderWidth: on ? 0 : 1,
+                      borderColor: "#8C8579",
+                    }}
+                  />
+                  <Text
+                    className={cn(
+                      "text-[13px]",
+                      on ? "font-sans-semibold text-t1" : "text-t3"
+                    )}
+                  >
+                    {v.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
       </View>
 
       {upcomingQuery.isLoading ? (
@@ -348,6 +427,7 @@ export default function ManagerShiftsScreen() {
               <ManagerShiftCard
                 shift={item}
                 onPress={() => openShift(item.id)}
+                venue={venueBadge(item.venue_id)}
               />
             </View>
           )}

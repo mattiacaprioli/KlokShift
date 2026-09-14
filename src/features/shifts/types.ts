@@ -53,25 +53,6 @@ export type ShiftWithAssignees = Shift & {
   }[];
 };
 
-/**
- * Un turno in un'**altra** sede del titolare, ridotto all'osso.
- *
- * Serve a una cosa sola: sommare le ore già programmate altrove alla stessa
- * persona. Nessun fabbisogno di ruolo, nessun `waiter_id` — non si pianifica una
- * sede che non stai guardando, e quello che non serve non si scarica.
- */
-export type ElsewhereShift = Pick<
-  Shift,
-  "id" | "venue_id" | "date" | "start_time" | "end_time" | "status"
-> & {
-  venue: { id: string; name: string } | null;
-  shift_assignments: {
-    id: string;
-    status: AssignmentStatus;
-    staff_member: { id: string; person_id: string } | null;
-  }[];
-};
-
 export type ShiftWithVenue = Shift & {
   venue: Tables<"venues"> | null;
 };

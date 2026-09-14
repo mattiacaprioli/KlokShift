@@ -17,6 +17,12 @@ import { SHIFT_RANGE_ERROR, isValidShiftRange } from "@/lib/format";
  */
 export const internalShiftSchema = z
   .object({
+    /**
+     * La sede del turno. Dal 14/09/2026 è **un campo del form** e non più il
+     * contesto in cui il form vive: non si entra in un locale per creare i suoi
+     * turni, si crea un turno e si dice dove.
+     */
+    venue_id: z.string().uuid("Scegli una sede."),
     title: z.string().trim().min(1, "Inserisci un titolo per il turno."),
     date: z.string().min(1, "Scegli la data."),
     start_time: z.string().min(1, "Scegli l'orario di inizio."),

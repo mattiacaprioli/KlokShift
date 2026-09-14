@@ -11,15 +11,16 @@ import {
 
 /**
  * Le sedi del titolare. Passare `""` come ownerId tiene la query spenta (è così
- * che `ActiveVenueProvider` sta zitto quando l'utente è un professionista).
+ * che `OwnerVenuesProvider` sta zitto quando l'utente è un professionista).
  *
  * Tiene la chiave `qk.venues.mine(ownerId)` del vecchio `useMyVenue`: la forma è
  * cambiata (una lista invece di una riga) ma l'identità della query no, quindi
  * `useSaveVenue` e `useUpdateVenueLogo` continuano a invalidare la cosa giusta
  * senza una riga di modifica.
  *
- * ⚠️ Non usarlo direttamente nelle schermate: passa da `useActiveVenue()`, che
- * sa anche **quale** sede è quella attiva.
+ * ⚠️ Non usarlo direttamente nelle schermate: passa da `useOwnerVenues()`, che
+ * espone anche `venueIds` e `venuesKey` — le due forme che servono a interrogare
+ * e a mettere in cache i turni di tutte le sedi insieme.
  */
 export function useMyVenues(ownerId: string) {
   return useQuery({

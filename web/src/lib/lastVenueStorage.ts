@@ -1,16 +1,17 @@
 /**
- * Controparte web di `src/features/venues/activeVenueStorage.ts`, sostituita da
- * un alias in `web/vite.config.mts` — stesso trucco di `@/lib/supabase` e
+ * Controparte web di `src/features/venues/lastVenueStorage.ts`, sostituita da un
+ * alias in `web/vite.config.mts` — stesso trucco di `@/lib/supabase` e
  * `@/features/push/api`. Le due firme devono restare identiche.
  *
+ * ⚠️ La stringa della chiave resta `topwaitr.activeVenue.` di proposito: vedi la
+ * spiegazione in testa alla controparte mobile.
+ *
  * Tutto in try/catch: in Safari in navigazione privata `localStorage` esiste ma
- * lancia in scrittura, e non ricordare la sede non deve impedire di cambiarla.
+ * lancia in scrittura, e non ricordare la sede non deve impedire di sceglierla.
  */
 const key = (ownerId: string) => `topwaitr.activeVenue.${ownerId}`;
 
-export async function loadActiveVenueId(
-  ownerId: string
-): Promise<string | null> {
+export async function loadLastVenueId(ownerId: string): Promise<string | null> {
   if (!ownerId) return null;
   try {
     return window.localStorage.getItem(key(ownerId));
@@ -19,7 +20,7 @@ export async function loadActiveVenueId(
   }
 }
 
-export async function saveActiveVenueId(
+export async function saveLastVenueId(
   ownerId: string,
   venueId: string | null
 ): Promise<void> {

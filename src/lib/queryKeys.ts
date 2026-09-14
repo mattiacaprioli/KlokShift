@@ -18,24 +18,32 @@ export const qk = {
       ["experiences", "byWaiter", waiterId] as const,
     detail: (id: string) => ["experiences", "detail", id] as const,
   },
+  /**
+   * I turni sono dell'**azienda**, non di una sede: `scope` è `venuesKey`, cioè
+   * gli id delle sedi aperte ordinati e uniti (vedi `OwnerVenues.tsx`).
+   *
+   * È così che «aprire una sede fa comparire i suoi turni» funziona da sé:
+   * l'insieme delle sedi cambia → lo scope cambia → è una chiave nuova, e React
+   * Query va a prenderla senza che nessuno scriva un `invalidateQueries`.
+   *
+   * ⚠️ **Chi invalida usa i prefissi `…Any`/`…All`, mai lo scope.** RealtimeSync
+   * e le mutation non hanno `venuesKey` a portata di mano e prima o poi lo
+   * sbaglierebbero; e in una sessione c'è al massimo uno scope vivo, quindi il
+   * prefisso invalida esattamente una cosa.
+   */
   shifts: {
     all: ["shifts"] as const,
-    byVenue: (venueId: string) => ["shifts", "byVenue", venueId] as const,
-    range: (venueId: string, from: string, to: string) =>
-      ["shifts", "range", venueId, from, to] as const,
-    // Prefisso: invalida ogni intervallo già in cache per quel locale (la vista
-    // calendario ne tiene più di uno mentre si naviga tra le settimane).
-    rangeAll: (venueId: string) => ["shifts", "range", venueId] as const,
-    /**
-     * I turni della settimana nelle **altre** sedi del titolare: servono alle
-     * soglie 40/48h, che sono della persona e non del locale.
-     */
-    elsewhereRange: (venueId: string, from: string, to: string) =>
-      ["shifts", "elsewhereRange", venueId, from, to] as const,
-    /** Prefisso: un turno che cambia può alterare il carico visto altrove. */
-    elsewhereAll: ["shifts", "elsewhereRange"] as const,
-    past: (venueId: string) => ["shifts", "past", venueId] as const,
-    pastCount: (venueId: string) => ["shifts", "pastCount", venueId] as const,
+    byOwner: (scope: string) => ["shifts", "byOwner", scope] as const,
+    byOwnerAll: ["shifts", "byOwner"] as const,
+    range: (scope: string, from: string, to: string) =>
+      ["shifts", "range", scope, from, to] as const,
+    // Prefisso: ogni intervallo già in cache (la vista calendario ne tiene più
+    // di uno mentre si naviga tra le settimane).
+    rangeAny: ["shifts", "range"] as const,
+    past: (scope: string) => ["shifts", "past", scope] as const,
+    pastAll: ["shifts", "past"] as const,
+    pastCount: (scope: string) => ["shifts", "pastCount", scope] as const,
+    pastCountAll: ["shifts", "pastCount"] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
   },
   reviews: {
@@ -107,7 +115,9 @@ export const qk = {
     personWorked: (personId: string, limit: number) =>
       ["assignments", "personWorked", personId, limit] as const,
     roleReqs: (shiftId: string) => ["assignments", "roleReqs", shiftId] as const,
-    today: (venueId: string) => ["assignments", "today", venueId] as const,
+    /** Chi lavora oggi, in tutte le sedi: `scope` è `venuesKey`, come i turni. */
+    today: (scope: string) => ["assignments", "today", scope] as const,
+    todayAll: ["assignments", "today"] as const,
     mineUpcoming: (waiterId: string) =>
       ["assignments", "mineUpcoming", waiterId] as const,
     mineForShift: (shiftId: string, waiterId: string) =>

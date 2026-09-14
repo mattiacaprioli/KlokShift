@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
-import { useTodayAssignments } from "@/features/assignments/hooks";
+import {
+  useOwnerPastShiftsCount,
+  useOwnerShifts,
+} from "@/features/shifts/hooks";
+import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
 import {
   formatDate,
@@ -12,7 +15,9 @@ import {
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
-import { useVenue } from "../lib/venue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import { NoVenues } from "../venues/NoVenues";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
 
@@ -26,6 +31,8 @@ type Worker = {
   date: string;
   start: string;
   end: string;
+  /** Dove lavora oggi. `null` con una sede sola. */
+  venue: string | null;
 };
 
 /**
@@ -34,17 +41,25 @@ type Worker = {
  * schermi.
  */
 export function HomePage() {
-  const venue = useVenue();
+  const { venues, isMultiVenue } = useOwnerVenues();
+  /** Il nome della sede, o niente se il titolare ne ha una sola. */
+  const venueName = useCallback(
+    (venueId: string | undefined) => {
+      if (!isMultiVenue || !venueId) return null;
+      return venues.find((v) => v.id === venueId)?.name ?? null;
+    },
+    [venues, isMultiVenue]
+  );
   const navigate = useNavigate();
   // Il turno si apre nel pannello qui sopra: restare sulla home è meno
   // spaesante che finire sul Planning, che si riposiziona da solo.
   const [panel, setPanel] = useState<Shift | null>(null);
 
-  const shifts = useMyShifts(venue.id).data ?? [];
-  const pastCount = useVenuePastShiftsCount(venue.id).data ?? 0;
-  const todayAssignments = useTodayAssignments(venue.id).data ?? [];
+  const shifts = useOwnerShifts().data ?? [];
+  const pastCount = useOwnerPastShiftsCount().data ?? 0;
+  const todayAssignments = useOwnerTodayAssignments().data ?? [];
 
-  // `getMyShifts` torna già solo i turni non conclusi (turni notturni inclusi):
+  // `getOwnerShifts` torna già solo i turni non conclusi (turni notturni inclusi):
   // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
   const upcoming = shifts;
   // Gli annullati non hanno posti da coprire: esclusi dai KPI.
@@ -73,18 +88,35 @@ export function HomePage() {
           date: a.shift?.date ?? "",
           start: a.shift?.start_time ?? "",
           end: a.shift?.end_time ?? "",
+          venue: venueName(a.shift?.venue_id),
         }))
         .sort((a, b) =>
           `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
         ),
-    [todayAssignments]
+    [todayAssignments, venueName]
   );
 
   const nextShifts = activeUpcoming.slice(0, 5);
 
+  if (venues.length === 0) {
+    return (
+      <>
+        <PageHeader title="Home" subtitle="Come sta andando la tua azienda" />
+        <NoVenues />
+      </>
+    );
+  }
+
   return (
     <>
-      <PageHeader title={venue.name} subtitle="Come sta andando il locale" />
+      <PageHeader
+        title={isMultiVenue ? "Home" : venues[0].name}
+        subtitle={
+          isMultiVenue
+            ? `Come stanno andando i tuoi ${venues.length} locali`
+            : "Come sta andando il locale"
+        }
+      />
 
       <div className="mb-6 grid grid-cols-4 gap-3">
         <Stat value={activeUpcoming.length} label="turni in programma" />
@@ -124,7 +156,9 @@ export function HomePage() {
                       {w.name}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-t4">
-                      {w.role ?? "Ruolo non indicato"}
+                      {[w.role ?? "Ruolo non indicato", w.venue]
+                        .filter(Boolean)
+                        .join(" · ")}
                       {REVIEWS_ENABLED && w.ratingCount ? (
                         <span className="ml-2 text-gold">
                           ★ {w.ratingAvg?.toFixed(1)}
@@ -170,8 +204,23 @@ export function HomePage() {
                     className="focus-gold rounded-2xl border border-border-2 bg-bg-card p-3 text-left transition hover:border-border-gold hover:bg-bg-1"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="truncate text-sm font-semibold text-t1">
-                        {s.title}
+                      <span className="flex min-w-0 items-center gap-2">
+                        {/* Il pallino della sede: in un elenco che mescola tre
+                            locali, due turni identici vanno distinti. */}
+                        {isMultiVenue ? (
+                          <span
+                            aria-hidden
+                            className="size-2 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor: venueAccent(
+                                venues.findIndex((v) => v.id === s.venue_id)
+                              ),
+                            }}
+                          />
+                        ) : null}
+                        <span className="truncate text-sm font-semibold text-t1">
+                          {s.title}
+                        </span>
                       </span>
                       <Pill tone={short ? "warning" : "success"}>
                         {covered}/{total}
@@ -182,9 +231,11 @@ export function HomePage() {
                       <span className="font-mono">
                         {formatShiftRange(s.start_time, s.end_time)}
                       </span>
-                      <span className="ml-2 text-t4">
-                        {s.kind === "internal" ? "Staff" : "Extra"}
-                      </span>
+                      {venueName(s.venue_id) ? (
+                        <span className="ml-2 text-t4">
+                          {venueName(s.venue_id)}
+                        </span>
+                      ) : null}
                     </p>
                   </button>
                 );

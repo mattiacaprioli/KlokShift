@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { RealtimeSync } from "@/features/realtime/RealtimeSync";
-import { ActiveVenueProvider } from "@/features/venues/ActiveVenue";
+import { OwnerVenuesProvider } from "@/features/venues/OwnerVenues";
 import { Spinner } from "./ui/primitives";
 import { AppLayout } from "./AppLayout";
 import { NotificationsWatcher } from "./NotificationsWatcher";
@@ -20,6 +20,7 @@ import { RuoliPage } from "./pages/Ruoli";
 import { ProfessionistaPage } from "./pages/Professionista";
 import { LocalePage } from "./pages/Locale";
 import { LocaleNuovoPage } from "./pages/LocaleNuovo";
+import { LocaleDettaglioPage } from "./pages/LocaleDettaglio";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 
 export function App() {
@@ -54,9 +55,9 @@ export function App() {
   if (!profile) return <Spinner label="Caricamento profilo…" />;
 
   return (
-    // Sopra tutto il resto: `RealtimeSync` deve sapere quale sede ascoltare, e
-    // `AppLayout` quale mostrare nello switcher.
-    <ActiveVenueProvider>
+    // Sopra tutto il resto: `RealtimeSync` deve sapere quali sedi ascoltare, e
+    // `AppLayout` quante sono.
+    <OwnerVenuesProvider>
       {/* Stesso listener dell'app: la dashboard si aggiorna sola quando il
           gestore tocca qualcosa dal telefono. */}
       <RealtimeSync userId={session.user.id} role={profile.role} />
@@ -83,10 +84,12 @@ export function App() {
           <Route path="/chat/:id" element={<ChatPage />} />
           <Route path="/locale" element={<LocalePage />} />
           <Route path="/locale/nuovo" element={<LocaleNuovoPage />} />
+          {/* Dopo "nuovo", o il match lo intercetterebbe come un id. */}
+          <Route path="/locale/:id" element={<LocaleDettaglioPage />} />
           <Route path="/impostazioni" element={<ImpostazioniPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </ActiveVenueProvider>
+    </OwnerVenuesProvider>
   );
 }

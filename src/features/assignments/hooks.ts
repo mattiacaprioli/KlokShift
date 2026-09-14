@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { addDaysToDate } from "@/lib/format";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
 import type {
   InternalShiftPlan,
@@ -19,7 +20,7 @@ import {
   STAFF_RECENT_SHIFTS,
   getPersonPerformance,
   getPersonWorkedShifts,
-  getTodayAssignments,
+  getOwnerTodayAssignments,
   getOwnerHoursSummary,
   reassignShiftAssignment,
   setAssignmentPresence,
@@ -65,31 +66,39 @@ export function useShiftAssignments(shiftId: string, enabled = true) {
   });
 }
 
-export function useTodayAssignments(venueId: string | undefined) {
+/** Chi lavora oggi, in tutte le sedi dell'azienda. */
+export function useOwnerTodayAssignments() {
+  const { venueIds, venuesKey } = useOwnerVenues();
   return useQuery({
-    queryKey: qk.assignments.today(venueId ?? ""),
-    queryFn: () => getTodayAssignments(venueId as string),
-    enabled: !!venueId,
+    queryKey: qk.assignments.today(venuesKey),
+    queryFn: () => getOwnerTodayAssignments(venueIds),
+    enabled: venueIds.length > 0,
   });
 }
 
-/** Viste manager toccate da qualunque creazione di turni interni. */
-function invalidateAfterShiftWrite(
-  qc: ReturnType<typeof useQueryClient>,
-  venueId: string | undefined
-) {
-  if (venueId) {
-    qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
-    qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
-  }
+/**
+ * Viste manager toccate da qualunque creazione di turni interni.
+ *
+ * Prefissi e non chiavi complete: lo scope è `venuesKey`, che qui non si ha, e
+ * in una sessione ce n'è uno solo vivo.
+ */
+function invalidateAfterShiftWrite(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: qk.shifts.byOwnerAll });
+  qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
   qc.invalidateQueries({ queryKey: qk.assignments.all });
 }
 
-/** Create an internal shift + assignments, then refresh the manager's views. */
-export function useCreateInternalShift(venueId: string | undefined) {
+/**
+ * Crea un turno interno + le assegnazioni, poi aggiorna le viste del gestore.
+ *
+ * ⚠️ `venue_id` sta **nell'input**, non nell'hook: è il turno ad avere una sede,
+ * e gliela passa il form, dove la sede è il primo campo.
+ */
+export function useCreateInternalShift() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: {
+      venue_id: string;
       title: string;
       date: string;
       start_time: string;
@@ -97,21 +106,20 @@ export function useCreateInternalShift(venueId: string | undefined) {
       description: string | null;
       staff: StaffAssignmentInput[];
       roleTargets?: RoleTargetInput[];
-    }) => createInternalShift({ venue_id: venueId as string, ...input }),
-    onSuccess: () => invalidateAfterShiftWrite(qc, venueId),
+    }) => createInternalShift(input),
+    onSuccess: () => invalidateAfterShiftWrite(qc),
   });
 }
 
 /**
  * Crea **più** turni interni in una volta (es. lo stesso turno su lun-mar-ven).
- * Stesse invalidazioni della creazione singola.
+ * Stesse invalidazioni della creazione singola. Ogni piano porta la sua sede.
  */
-export function useCreateInternalShifts(venueId: string | undefined) {
+export function useCreateInternalShifts() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (plans: InternalShiftPlan[]) =>
-      createInternalShifts({ venue_id: venueId as string, plans }),
-    onSuccess: () => invalidateAfterShiftWrite(qc, venueId),
+    mutationFn: (plans: InternalShiftPlan[]) => createInternalShifts(plans),
+    onSuccess: () => invalidateAfterShiftWrite(qc),
   });
 }
 
@@ -123,8 +131,12 @@ export function useCreateInternalShifts(venueId: string | undefined) {
  * `withStaff: false` copia la griglia (orari e fabbisogno per ruolo) lasciando
  * i turni da assegnare: utile quando le persone cambiano ma la struttura no, e
  * soprattutto **non manda notifiche a nessuno**.
+ *
+ * ⚠️ Ogni copia resta **nella sede del turno che l'ha generata** (`p.venue_id`
+ * arriva dal piano). La settimana duplicata può contenere Roma e Milano: un
+ * `venue_id` unico le spingerebbe tutte in una sede sola, in silenzio.
  */
-export function useCopyInternalShifts(venueId: string | undefined) {
+export function useCopyInternalShifts() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
@@ -133,16 +145,15 @@ export function useCopyInternalShifts(venueId: string | undefined) {
       withStaff: boolean;
     }) => {
       const plans = await getInternalShiftPlans(input.sourceIds);
-      return createInternalShifts({
-        venue_id: venueId as string,
-        plans: plans.map((p) => ({
+      return createInternalShifts(
+        plans.map((p) => ({
           ...p,
           date: addDaysToDate(p.date, input.dayShift),
           staff: input.withStaff ? p.staff : [],
-        })),
-      });
+        }))
+      );
     },
-    onSuccess: () => invalidateAfterShiftWrite(qc, venueId),
+    onSuccess: () => invalidateAfterShiftWrite(qc),
   });
 }
 
@@ -168,7 +179,7 @@ export function useUpdateInternalShift(shiftId: string) {
  * verde ad arancione. È corretto — `shiftCoverage()` guarda i ruoli — e si vede
  * subito, che è il punto.
  */
-export function useReassignShiftAssignment(venueId: string | undefined) {
+export function useReassignShiftAssignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: {
@@ -185,8 +196,7 @@ export function useReassignShiftAssignment(venueId: string | undefined) {
     }) => reassignShiftAssignment(vars.assignmentId, vars.toStaffMember.id),
 
     onMutate: async ({ assignmentId, shiftId, toStaffMember }) => {
-      if (!venueId) return;
-      const queryKey = qk.shifts.rangeAll(venueId);
+      const queryKey = qk.shifts.rangeAny;
       await qc.cancelQueries({ queryKey });
       const previous = qc.getQueriesData<ShiftWithAssignees[]>({ queryKey });
       qc.setQueriesData<ShiftWithAssignees[]>({ queryKey }, (rows) =>
@@ -240,7 +250,7 @@ export function useReassignShiftAssignment(venueId: string | undefined) {
     onSettled: (_data, _error, { shiftId }) => {
       qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
       qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
-      invalidateAfterShiftWrite(qc, venueId);
+      invalidateAfterShiftWrite(qc);
       // Le statistiche per persona cambiano da entrambi i lati.
       qc.invalidateQueries({ queryKey: qk.staff.all });
     },

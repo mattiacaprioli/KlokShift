@@ -1,12 +1,9 @@
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
-import {
-  groupHoursByPerson,
-  venueCount,
-} from "@/features/assignments/hoursSummary";
+import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
   buildHoursCsv,
   buildHoursHtml,
@@ -34,40 +31,31 @@ function recentMonths(): string[] {
 /**
  * Le ore del mese di **tutta l'azienda**, una riga per persona.
  *
- * Nessun selettore di sede: chi lavora in due locali dello stesso titolare ha una
- * sola busta paga. Con più sedi ogni riga si espande sul dettaglio, che è quel che
- * serve al titolare per allocare il costo del lavoro — al commercialista servono le
- * ore, e il CSV gli dà una riga per persona.
+ * Nessun selettore di sede e nessuno split: chi lavora in due locali dello stesso
+ * titolare ha **una** busta paga, e il numero che serve è il totale. Fino al
+ * 14/09/2026 ogni riga si apriva sul dettaglio per sede; è stato tolto perché
+ * rispondeva a una domanda che questa pagina non fa — esiste per pagare le
+ * persone, non per allocare il costo fra i locali.
  */
 export function OrePage() {
   const { profile } = useAuth();
-  const { ownerId, venues } = useActiveVenue();
+  const { ownerId, venues } = useOwnerVenues();
   const months = useMemo(() => recentMonths(), []);
   const [month, setMonth] = useState(months[0]);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { data, isPending, isError, error } = useOwnerHoursSummary(
     ownerId,
     month
   );
 
   const rows = data ?? [];
+  // La RPC torna righe (persona × sede); questa le somma per persona, ed è
+  // quello che si mostra. Lo split resta nei dati (serve a comporre i ruoli) e
+  // non arriva in pagina.
   const people = groupHoursByPerson(rows);
-  // La forma della tabella la decide il DATO, non l'account: un mese in cui si è
-  // lavorato solo a Roma è un mese a una sede anche per chi ne ha tre.
-  const multi = venueCount(rows) > 1;
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const maxHours = Math.max(1, ...people.map((p) => p.hours));
   const label = monthLabel(month);
   const company = companyName(venues, profile?.full_name);
-
-  function toggle(personId: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(personId)) next.delete(personId);
-      else next.add(personId);
-      return next;
-    });
-  }
 
   function downloadCsv() {
     // Stessa funzione pura dell'app: i due file devono coincidere.
@@ -146,9 +134,6 @@ export function OrePage() {
             <thead>
               <tr className="border-b border-border-2 text-left text-[11px] uppercase tracking-wider text-t3">
                 <th className="px-5 py-3 font-semibold">Nome</th>
-                {multi ? (
-                  <th className="px-5 py-3 font-semibold">Sede</th>
-                ) : null}
                 <th className="px-5 py-3 font-semibold">Ruolo</th>
                 <th className="px-5 py-3 text-right font-semibold">Turni</th>
                 <th className="px-5 py-3 text-right font-semibold">Ore</th>
@@ -156,81 +141,33 @@ export function OrePage() {
               </tr>
             </thead>
             <tbody>
-              {people.map((p) => {
-                const splittable = p.venues.length > 1;
-                const open = expanded.has(p.person_id);
-                return (
-                  <Fragment key={p.person_id}>
-                    <tr className="border-b border-border last:border-0">
-                      <td className="px-5 py-2.5 text-t1">
-                        {splittable ? (
-                          <button
-                            onClick={() => toggle(p.person_id)}
-                            className="focus-gold -mx-1 rounded px-1 text-left font-semibold hover:text-gold"
-                            aria-expanded={open}
-                          >
-                            {open ? "▾" : "▸"} {p.person_name}
-                          </button>
-                        ) : (
-                          p.person_name
-                        )}
-                      </td>
-                      {multi ? (
-                        <td className="px-5 py-2.5 text-t3">
-                          {splittable
-                            ? `${p.venues.length} sedi`
-                            : (p.venues[0]?.venue_name ?? "—")}
-                        </td>
-                      ) : null}
-                      <td className="px-5 py-2.5 text-t3">{p.roles ?? "—"}</td>
-                      <td className="px-5 py-2.5 text-right font-mono text-t2">
-                        {p.shifts_count}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono text-t1">
-                        {formatHours(p.hours)}
-                      </td>
-                      <td className="px-5 py-2.5">
-                        <div className="h-1.5 w-full rounded-full bg-bg-2">
-                          <div
-                            className="h-1.5 rounded-full bg-gold"
-                            style={{ width: `${(p.hours / maxHours) * 100}%` }}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-
-                    {splittable && open
-                      ? p.venues.map((v) => (
-                          <tr
-                            key={v.venue_id}
-                            className="border-b border-border bg-bg-1/40 text-xs last:border-0"
-                          >
-                            <td className="py-2 pl-10 pr-5 text-t4">↳</td>
-                            <td className="px-5 py-2 text-t2">
-                              {v.venue_name}
-                              {v.venue_closed ? " (chiusa)" : ""}
-                            </td>
-                            <td className="px-5 py-2 text-t3">
-                              {v.roles ?? "—"}
-                            </td>
-                            <td className="px-5 py-2 text-right font-mono text-t3">
-                              {v.shifts_count}
-                            </td>
-                            <td className="px-5 py-2 text-right font-mono text-t2">
-                              {formatHours(v.hours)}
-                            </td>
-                            <td />
-                          </tr>
-                        ))
-                      : null}
-                  </Fragment>
-                );
-              })}
+              {people.map((p) => (
+                <tr
+                  key={p.person_id}
+                  className="border-b border-border last:border-0"
+                >
+                  <td className="px-5 py-2.5 text-t1">{p.person_name}</td>
+                  <td className="px-5 py-2.5 text-t3">{p.roles ?? "—"}</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-t2">
+                    {p.shifts_count}
+                  </td>
+                  <td className="px-5 py-2.5 text-right font-mono text-t1">
+                    {formatHours(p.hours)}
+                  </td>
+                  <td className="px-5 py-2.5">
+                    <div className="h-1.5 w-full rounded-full bg-bg-2">
+                      <div
+                        className="h-1.5 rounded-full bg-gold"
+                        style={{ width: `${(p.hours / maxHours) * 100}%` }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold/40">
                 <td className="px-5 py-3 font-semibold text-t1">Totale</td>
-                {multi ? <td /> : null}
                 <td />
                 <td className="px-5 py-3 text-right font-mono text-t2">
                   {people.reduce((s, p) => s + p.shifts_count, 0)}

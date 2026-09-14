@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Display } from "@/components/ui/Display";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
@@ -12,7 +11,9 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { cn } from "@/lib/cn";
 import { PlanCard } from "@/features/plan/ProLock";
-import { useActiveVenue } from "@/features/venues/ActiveVenue";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
 import type { Venue } from "@/features/venues/api";
 
 function InfoLine({ label, value }: { label: string; value: string }) {
@@ -25,23 +26,23 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Le sedi del titolare: qui si **gestiscono** (si apre, si modifica, si aggiunge),
- * mentre lo switcher in home serve a *passare* da una all'altra.
+ * I locali del titolare: l'elenco da cui si aprono, si modificano, se ne
+ * aggiungono.
  *
- * Sempre visibile, anche con una sede sola: è da qui che si scopre di poterne
- * aggiungere una seconda, e un titolare con tre locali non deve indovinare dove
- * andare a cercarle.
+ * Non c'è più niente da "selezionare": fino al 14/09/2026 toccare una riga la
+ * rendeva la sede attiva, e il resto dell'app la seguiva. Ora l'app le guarda
+ * tutte insieme, quindi la riga fa una cosa sola — apre il locale. Un bersaglio
+ * solo, com'era giusto fin dall'inizio.
+ *
+ * Sempre visibile, anche con un locale solo: è da qui che si scopre di poterne
+ * aggiungere un secondo.
  */
 function VenuesCard({
   venues,
-  activeId,
-  onSelect,
   onEdit,
   onAdd,
 }: {
   venues: Venue[];
-  activeId: string | undefined;
-  onSelect: (id: string) => void;
   onEdit: (id: string) => void;
   onAdd: () => void;
 }) {
@@ -51,49 +52,32 @@ function VenuesCard({
         {venues.length === 1 ? "Il tuo locale" : `I tuoi locali · ${venues.length}`}
       </Mono>
 
-      {venues.map((v) => {
-        const active = v.id === activeId;
-        return (
-          <View key={v.id} className="flex-row items-center gap-2">
-            {/* Toccare la riga attiva la sede; la chevron la apre in modifica.
-                Due bersagli distinti perché sono due intenzioni distinte. */}
-            <Pressable
-              onPress={() => onSelect(v.id)}
-              className={cn(
-                "flex-1 flex-row items-center gap-3 rounded-2xl border px-4 py-3",
-                active ? "border-gold/40 bg-gold/10" : "border-border bg-bg-1"
-              )}
-            >
-              <Avatar uri={v.logo_url ?? undefined} name={v.name} size={32} />
-              <View className="flex-1">
-                <Text
-                  className={cn(
-                    "text-sm",
-                    active
-                      ? "font-sans-semibold text-gold"
-                      : "font-sans-medium text-t1"
-                  )}
-                >
-                  {v.name}
-                </Text>
-                {v.city ? (
-                  <Text className="mt-0.5 text-xs text-t3">{v.city}</Text>
-                ) : null}
-              </View>
-              {active ? <Icon name="check" size={16} color="#EAB54C" /> : null}
-            </Pressable>
-            <Pressable
-              onPress={() => onEdit(v.id)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={`Modifica ${v.name}`}
-              className="p-2"
-            >
-              <Icon name="chevR" size={18} color="#8C8579" />
-            </Pressable>
+      {venues.map((v, i) => (
+        <Pressable
+          key={v.id}
+          onPress={() => onEdit(v.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Apri ${v.name}`}
+          className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-1 px-4 py-3"
+        >
+          <Avatar uri={v.logo_url ?? undefined} name={v.name} size={32} />
+          <View className="flex-1">
+            <Text className="text-sm font-sans-medium text-t1">{v.name}</Text>
+            {v.city ? (
+              <Text className="mt-0.5 text-xs text-t3">{v.city}</Text>
+            ) : null}
           </View>
-        );
-      })}
+          {/* Lo stesso colore con cui questo locale si riconosce nell'agenda:
+              è l'unico posto in cui la legenda si può imparare. */}
+          {venues.length > 1 ? (
+            <View
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: venueAccent(i) }}
+            />
+          ) : null}
+          <Icon name="chevR" size={18} color="#8C8579" />
+        </Pressable>
+      ))}
 
       <Pressable onPress={onAdd} className="items-center pt-1">
         <Text className="text-sm font-sans-semibold text-t2">
@@ -156,8 +140,15 @@ export default function ManagerProfiloScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const venueQuery = useActiveVenue();
-  const venue = venueQuery.venue;
+  const venueQuery = useOwnerVenues();
+  const { venues } = venueQuery;
+  /**
+   * Con **un** locale solo il Profilo resta quello di prima: la sua identità in
+   * grande, la scheda da completare, i suoi dati. Con più locali quella pagina
+   * non si può scrivere — non c'è "il" locale — e il Profilo diventa l'elenco,
+   * da cui si entra nella scheda della singola sede.
+   */
+  const venue = venues.length === 1 ? venues[0] : null;
 
   return (
     <ScrollView
@@ -184,18 +175,21 @@ export default function ManagerProfiloScreen() {
         <ActivityIndicator color="#EAB54C" className="mt-16" />
       ) : venueQuery.isError ? (
         <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
+      ) : venues.length === 0 ? (
+        <NoVenuesState
+          className="mt-4"
+          subtitle="Aggiungi le informazioni del tuo locale per iniziare a organizzare i turni."
+        />
       ) : !venue ? (
-        <View className="mt-4">
-          <EmptyState
-            title="Configura il tuo locale"
-            subtitle="Aggiungi le informazioni del tuo locale per iniziare a pubblicare turni."
+        /* Più locali: l'elenco è la pagina. */
+        <>
+          <VenuesCard
+            venues={venues}
+            onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
+            onAdd={() => router.push("/(manager)/venue/new")}
           />
-          <GoldButton
-            className="mt-2"
-            label="Configura locale"
-            onPress={() => router.push("/(manager)/venue/new")}
-          />
-        </View>
+          <PlanCard />
+        </>
       ) : (
         <>
           {/* Identità locale */}
@@ -228,9 +222,7 @@ export default function ManagerProfiloScreen() {
           />
 
           <VenuesCard
-            venues={venueQuery.venues}
-            activeId={venue.id}
-            onSelect={venueQuery.setActiveVenue}
+            venues={venues}
             onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
             onAdd={() => router.push("/(manager)/venue/new")}
           />

@@ -42,12 +42,11 @@ export default defineConfig(({ mode }) => ({
         find: "@/features/push/api",
         replacement: resolve(here, "src/lib/pushStub.ts"),
       },
-      // Quale sede il titolare stava guardando: SecureStore sul telefono,
-      // localStorage qui. Stessa firma, così `ActiveVenueProvider` si riusa
-      // verbatim.
+      // L'ultima sede usata in un form: SecureStore sul telefono, localStorage
+      // qui. Stessa firma, così `useLastVenue` si riusa verbatim.
       {
-        find: "@/features/venues/activeVenueStorage",
-        replacement: resolve(here, "src/lib/activeVenueStorage.ts"),
+        find: "@/features/venues/lastVenueStorage",
+        replacement: resolve(here, "src/lib/lastVenueStorage.ts"),
       },
       { find: /^@\//, replacement: `${repoRoot}/src/` },
     ],
