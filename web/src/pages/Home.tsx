@@ -1,25 +1,25 @@
-import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { shiftCounts } from "@/features/assignments/coverage";
+import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
+import type { Shift } from "@/features/shifts/api";
 import {
   useOwnerPastShiftsCount,
   useOwnerShifts,
 } from "@/features/shifts/hooks";
-import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
-import { shiftCounts } from "@/features/assignments/coverage";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import { cn } from "@/lib/cn";
 import {
   formatDate,
   formatShiftRange,
   formatTime,
   toDateString,
 } from "@/lib/format";
-import { cn } from "@/lib/cn";
-import type { Shift } from "@/features/shifts/api";
-import { REVIEWS_ENABLED } from "@/features/reviews/config";
-import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { venueAccent } from "@/features/venues/venueColor";
-import { NoVenues } from "../venues/NoVenues";
+import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
+import { NoVenues } from "../venues/NoVenues";
 
 type Worker = {
   key: string;
@@ -48,7 +48,7 @@ export function HomePage() {
       if (!isMultiVenue || !venueId) return null;
       return venues.find((v) => v.id === venueId)?.name ?? null;
     },
-    [venues, isMultiVenue]
+    [venues, isMultiVenue],
   );
   const navigate = useNavigate();
   // Il turno si apre nel pannello qui sopra: restare sulla home è meno
@@ -91,9 +91,9 @@ export function HomePage() {
           venue: venueName(a.shift?.venue_id),
         }))
         .sort((a, b) =>
-          `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
+          `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
         ),
-    [todayAssignments, venueName]
+    [todayAssignments, venueName],
   );
 
   const nextShifts = activeUpcoming.slice(0, 5);
@@ -122,7 +122,7 @@ export function HomePage() {
         <Stat value={activeUpcoming.length} label="turni in programma" />
         <Stat
           value={`${filled}/${totalPos}`}
-          label="posti coperti"
+          label="turni coperti"
           tone={totalPos > 0 && filled < totalPos ? "warning" : "normal"}
         />
         <Stat
@@ -213,7 +213,7 @@ export function HomePage() {
                             className="size-2 shrink-0 rounded-full"
                             style={{
                               backgroundColor: venueAccent(
-                                venues.findIndex((v) => v.id === s.venue_id)
+                                venues.findIndex((v) => v.id === s.venue_id),
                               ),
                             }}
                           />
@@ -273,7 +273,7 @@ function Stat({
       onClick={onClick}
       className={cn(
         "rounded-2xl border border-border-2 bg-bg-card p-4 text-left",
-        onClick && "focus-gold transition hover:border-border-gold"
+        onClick && "focus-gold transition hover:border-border-gold",
       )}
     >
       <p
@@ -281,7 +281,7 @@ function Stat({
           "font-mono text-3xl",
           tone === "gold" && "text-gold",
           tone === "warning" && "text-warning",
-          tone === "normal" && "text-t1"
+          tone === "normal" && "text-t1",
         )}
       >
         {value}

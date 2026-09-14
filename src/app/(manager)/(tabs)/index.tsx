@@ -1,7 +1,3 @@
-import { useRouter } from "expo-router";
-import { ActivityIndicator, RefreshControl } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
@@ -12,23 +8,27 @@ import { NotificationBell } from "@/components/ui/NotificationBell";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { RatingBadge } from "@/components/ui/RatingBadge";
-import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { StatCard } from "@/components/ui/StatCard";
-import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
+import { shiftCounts } from "@/features/assignments/coverage";
+import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
+import { useUnreadCount } from "@/features/notifications/hooks";
 import { ProUpsellCard } from "@/features/plan/ProLock";
-import { useAuth } from "@/lib/auth";
-import { usePullToRefresh } from "@/lib/usePullToRefresh";
-import { formatShiftRange, todayString } from "@/lib/format";
-import { NoVenuesState } from "@/features/venues/NoVenuesState";
-import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { venueAccent } from "@/features/venues/venueColor";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
   useOwnerPastShiftsCount,
   useOwnerShifts,
 } from "@/features/shifts/hooks";
-import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
-import { shiftCounts } from "@/features/assignments/coverage";
-import { useUnreadCount } from "@/features/notifications/hooks";
+import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import { useAuth } from "@/lib/auth";
+import { formatShiftRange, todayString } from "@/lib/format";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
+import { Pressable, ScrollView, Text, View } from "@/tw";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, RefreshControl } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PREVIEW_COUNT = 3;
 
@@ -110,14 +110,16 @@ export default function ManagerHome() {
           : undefined,
       };
     })
-    .sort((a, b) => `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`));
+    .sort((a, b) =>
+      `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
+    );
 
   const { refreshing, onRefresh } = usePullToRefresh(() =>
     Promise.all([
       venueQuery.refetch(),
       shiftsQuery.refetch(),
       assignQuery.refetch(),
-    ])
+    ]),
   );
 
   return (
@@ -153,11 +155,7 @@ export default function ManagerHome() {
               className="mt-1 flex-row items-center gap-1"
             >
               <Text className="text-sm text-t3">{venues.length} locali</Text>
-              <Icon
-                name="chevR"
-                size={14}
-                color="#8C8579"
-              />
+              <Icon name="chevR" size={14} color="#8C8579" />
             </Pressable>
           ) : (
             <Text className="mt-1 text-sm text-t3">{venues[0].name}</Text>
@@ -194,7 +192,7 @@ export default function ManagerHome() {
             <View className="flex-row gap-2.5">
               <StatCard
                 value={totalPos > 0 ? `${filled}/${totalPos}` : "—"}
-                label="posti coperti"
+                label="turni coperti"
               />
               <StatCard value={String(pastCount)} label="turni svolti" />
             </View>
