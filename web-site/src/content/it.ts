@@ -291,7 +291,7 @@ export const it: Content = {
     steps: [
       {
         title: "Registrati come locale",
-        body: "Scegli «Gestisco un locale»: è il tipo di account che apre la gestione.",
+        body: "Dall'app scegli «Gestisco un locale». Dalla dashboard l'account è già quello.",
       },
       {
         title: "Usa l'email dell'invito",

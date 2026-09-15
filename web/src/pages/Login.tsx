@@ -3,6 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
+import {
+  resendLabel,
+  useResendConfirmation,
+} from "@/features/auth/useResendConfirmation";
 import { useToast } from "../ui/Toast";
 import { LINK_ERRORS } from "../lib/recovery";
 
@@ -15,6 +19,8 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
+  /** L'ultimo tentativo è fallito perché l'email non è confermata. */
+  const [unconfirmed, setUnconfirmed] = useState(false);
 
   // Un link scaduto riporta qui (vedi lib/recovery): il motivo va detto,
   // altrimenti sembra che l'email non sia mai arrivata.
@@ -25,6 +31,12 @@ export function LoginPage() {
     if (searchParams.has("link")) setSearchParams({}, { replace: true });
   }
 
+  /**
+   * Il link deve tornare su questa dashboard, non al Site URL che porta
+   * all'app: vale la stessa allowlist della conferma alla registrazione.
+   */
+  const resend = useResendConfirmation(email, `${window.location.origin}/`);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -34,8 +46,15 @@ export function LoginPage() {
     // si mostra e basta. Questa riga per un po' ha mostrato il messaggio grezzo
     // di Supabase — "Invalid login credentials" — fidandosi di un commento che
     // diceva il contrario di quello che il codice faceva.
-    const { error: err } = await signIn(email.trim(), password);
+    const { error: err, needsConfirmation } = await signIn(
+      email.trim(),
+      password
+    );
     if (err) setError(err);
+    // L'account esiste, l'email non è mai stata confermata. Il messaggio da
+    // solo lascia in un vicolo cieco chi quella mail non l'ha mai ricevuta: si
+    // apre il rinvio, sull'indirizzo che ha appena scritto.
+    setUnconfirmed(needsConfirmation);
     setBusy(false);
   }
 
@@ -105,6 +124,29 @@ export function LoginPage() {
             </p>
           ) : null}
 
+          {unconfirmed ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-border bg-bg-card px-3 py-3">
+              <p className="text-xs leading-5 text-t2">
+                Non hai ricevuto il link di conferma? Controlla lo spam, poi
+                possiamo rimandarlo a{" "}
+                <span className="font-semibold text-t1">{email.trim()}</span>.
+              </p>
+              {resend.sent ? (
+                <p className="text-xs text-success">Email rimandata.</p>
+              ) : null}
+              {resend.error ? (
+                <p className="text-xs text-error">{resend.error}</p>
+              ) : null}
+              <Button
+                type="button"
+                disabled={resend.busy || resend.secondsLeft > 0}
+                onClick={resend.resend}
+              >
+                {resendLabel(resend)}
+              </Button>
+            </div>
+          ) : null}
+
           <Button type="submit" variant="gold" disabled={busy}>
             {busy ? "Accesso…" : "Accedi"}
           </Button>
@@ -122,7 +164,7 @@ export function LoginPage() {
           to="/registrati"
           className="focus-gold font-semibold text-gold hover:underline"
         >
-          Registra il tuo locale
+          Crea un account
         </Link>
       </p>
     </AuthShell>

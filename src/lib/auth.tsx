@@ -32,7 +32,17 @@ type AuthState = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /**
+   * `needsConfirmation`: l'account esiste ma l'email non è mai stata
+   * confermata. È un flag e non un confronto sulla stringa tradotta, perché la
+   * schermata di login su quel caso deve offrire il rinvio — e legare
+   * un'interazione al testo di un messaggio vuol dire romperla la prima volta
+   * che qualcuno lo riscrive.
+   */
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signUp: (params: SignUpParams) => Promise<{
     error: string | null;
     needsConfirmation: boolean;
@@ -46,6 +56,19 @@ type AuthState = {
   resetPassword: (
     email: string,
     redirectTo?: string
+  ) => Promise<{ error: string | null }>;
+  /**
+   * Rimanda l'email di conferma a chi si è registrato e non l'ha mai ricevuta.
+   *
+   * ⚠️ La risposta è **sempre** senza errore quando l'indirizzo non è
+   * rimandabile (non esiste, o è già confermato): GoTrue non distingue i due
+   * casi di proposito, e nemmeno noi — dire «questa email non esiste» a chi
+   * non è loggato è un oracolo di enumerazione. L'unico errore che torna
+   * davvero è il rate limit, che l'utente deve poter leggere.
+   */
+  resendConfirmation: (
+    email: string,
+    emailRedirectTo?: string
   ) => Promise<{ error: string | null }>;
   /** Cambia la password dell'utente in sessione (anche di sola recovery). */
   updatePassword: (password: string) => Promise<{ error: string | null }>;
@@ -216,6 +239,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       email,
       password,
     });
+    return {
+      error: error ? authErrorMessage(error.message) : null,
+      needsConfirmation: !!error?.message
+        .toLowerCase()
+        .includes("email not confirmed"),
+    };
+  }
+
+  async function resendConfirmation(email: string, emailRedirectTo?: string) {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: emailRedirectTo ? { emailRedirectTo } : undefined,
+    });
     return { error: error ? authErrorMessage(error.message) : null };
   }
 
@@ -290,6 +327,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         signIn,
         signUp,
         resetPassword,
+        resendConfirmation,
         updatePassword,
         signOut,
         refreshProfile,
@@ -320,8 +358,16 @@ export function authErrorMessage(message: string): string {
   if (m.includes("different from the old password")) {
     return "La nuova password deve essere diversa dalla precedente.";
   }
-  // GoTrue limita le email di recupero: "For security purposes, you can only
-  // request this after N seconds" / "email rate limit exceeded".
+  // ⚠️ Due limiti diversi, e l'attesa non è la stessa. Il servizio email
+  // integrato di Supabase manda **2 email all'ora per progetto**: chi ci
+  // sbatte non è «uno che insiste», è il secondo utente che si registra
+  // nella stessa ora. Dirgli «qualche minuto» lo fa solo riprovare a vuoto.
+  // Si toglie configurando un SMTP proprio in Authentication → Emails.
+  if (m.includes("email rate limit")) {
+    return "Abbiamo mandato troppe email nell'ultima ora. Riprova più tardi.";
+  }
+  // Questo invece è il freno per singolo indirizzo ("For security purposes,
+  // you can only request this after N seconds"): lì i minuti sono giusti.
   if (m.includes("rate limit") || m.includes("you can only request this")) {
     return "Troppi tentativi. Aspetta qualche minuto e riprova.";
   }

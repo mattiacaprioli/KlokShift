@@ -173,10 +173,11 @@ function buildTeamEmail(p: TeamPayload) {
     `${p.owner_name} ti ha dato accesso alla gestione di ${p.venue_name} su`,
     `topWaitr: da lì organizzi i turni e segui l'organico del locale.`,
     ``,
-    `Scarica l'app: ${link}`,
+    `Come entrare: ${link}`,
     ``,
-    `Registrati con questo indirizzo (${p.email}) scegliendo "Gestisco un locale":`,
-    `è così che il tuo account si collega all'accesso già pronto.`,
+    `Registrati con questo indirizzo (${p.email}): è così che il tuo account si`,
+    `collega all'accesso già pronto. Dall'app scegli "Gestisco un locale"; dalla`,
+    `dashboard l'account è già quello.`,
     ``,
     `---`,
     `Ricevi questa email perché ${p.owner_name} ti ha aggiunto ai collaboratori di`,
@@ -201,12 +202,12 @@ function buildTeamEmail(p: TeamPayload) {
   <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione di <strong>${e.venue}</strong> su topWaitr — da lì organizzi i turni e segui l'organico del locale.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
-      <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Scarica l'app</a>
+      <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Come entrare</a>
     </td></tr>
   </table>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F5F2EC;border-radius:12px;">
     <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;">
-      Registrati con <strong>questo indirizzo</strong> (${e.email}) scegliendo <strong>"Gestisco un locale"</strong>: è così che il tuo account si collega all'accesso già pronto.
+      Registrati con <strong>questo indirizzo</strong> (${e.email}): è così che il tuo account si collega all'accesso già pronto. Dall'app scegli <strong>"Gestisco un locale"</strong>; dalla dashboard l'account è già quello.
     </td></tr>
   </table>
   <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">

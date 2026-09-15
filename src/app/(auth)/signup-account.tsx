@@ -10,10 +10,15 @@ import { Display } from "@/components/ui/Display";
 import { Mono } from "@/components/ui/Mono";
 import { Icon } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
 import { signupSchema, type SignupForm } from "@/features/auth/schema";
 import { PasswordChecklist } from "@/features/auth/PasswordChecklist";
+import {
+  resendLabel,
+  useResendConfirmation,
+} from "@/features/auth/useResendConfirmation";
 import type { Enums } from "@/types/database";
 
 type Role = Enums<"user_role">;
@@ -64,48 +69,7 @@ export default function SignupAccount() {
     // in caso di sessione attiva, i guard nel root layout reindirizzano
   });
 
-  if (sentTo) {
-    return (
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerClassName="flex-grow justify-center px-6 pb-10"
-      >
-        <View className="items-center">
-          <View className="overflow-hidden rounded-[22px] border border-border-2">
-            <LinearGradient
-              colors={["#362E24", "#1F1A13"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                width: 72,
-                height: 72,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon name="send" size={30} color="#EAB54C" />
-            </LinearGradient>
-          </View>
-          <Display className="mt-6 text-[26px]">Controlla la posta</Display>
-          <Text className="mt-3 text-center font-sans text-sm leading-6 text-t3">
-            Ti abbiamo inviato un link di conferma a
-          </Text>
-          <Text className="text-center font-sans-semibold text-sm text-t1">
-            {sentTo}
-          </Text>
-          <Text className="mt-3 text-center font-sans text-[13px] leading-5 text-t3">
-            Apri il link per attivare l&apos;account, poi accedi.
-          </Text>
-        </View>
-        <GoldButton
-          className="mt-9"
-          size="lg"
-          label="Vai all'accesso"
-          onPress={() => router.replace("/(auth)/login")}
-        />
-      </ScrollView>
-    );
-  }
+  if (sentTo) return <CheckYourMail email={sentTo} />;
 
   return (
     <KeyboardAvoidingView
@@ -201,5 +165,88 @@ export default function SignupAccount() {
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * «Controlla la posta», con la via d'uscita per quando la posta non arriva.
+ *
+ * Componente a parte e non un ramo dentro la schermata: il rinvio ha bisogno di
+ * un hook, e un hook dentro un `if (sentTo)` è un hook condizionale.
+ *
+ * Senza il rinvio, chi non riceve il messaggio — casella piena, spam, un filtro
+ * aziendale — resta con un account che esiste e non può usare, e l'unica uscita
+ * sarebbe registrarsi con un altro indirizzo: proprio quello da evitare, perché
+ * è l'indirizzo a collegarlo alla scheda che il locale gli ha preparato.
+ */
+function CheckYourMail({ email }: { email: string }) {
+  const router = useRouter();
+  // `true`: l'email della registrazione è appena partita, quindi il contatore
+  // parte da fermo. Offrire subito il bottone vorrebbe dire offrire un 429.
+  const resend = useResendConfirmation(email, undefined, true);
+
+  return (
+    <ScrollView
+      className="flex-1 bg-bg-0"
+      contentContainerClassName="flex-grow justify-center px-6 pb-10"
+    >
+      <View className="items-center">
+        <View className="overflow-hidden rounded-[22px] border border-border-2">
+          <LinearGradient
+            colors={["#362E24", "#1F1A13"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              width: 72,
+              height: 72,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon name="send" size={30} color="#EAB54C" />
+          </LinearGradient>
+        </View>
+        <Display className="mt-6 text-[26px]">Controlla la posta</Display>
+        <Text className="mt-3 text-center font-sans text-sm leading-6 text-t3">
+          Ti abbiamo inviato un link di conferma a
+        </Text>
+        <Text className="text-center font-sans-semibold text-sm text-t1">
+          {email}
+        </Text>
+        <Text className="mt-3 text-center font-sans text-[13px] leading-5 text-t3">
+          Apri il link per attivare l&apos;account, poi accedi.
+        </Text>
+      </View>
+
+      <View className="mt-8 gap-2 rounded-2xl border border-border-2 bg-bg-1 p-4">
+        <Text className="text-center font-sans text-[13px] leading-5 text-t3">
+          Non è arrivata? Controlla lo spam. Se non c&apos;è nemmeno lì,
+          possiamo rimandarla.
+        </Text>
+        {resend.sent ? (
+          <Text className="text-center font-sans text-[13px] text-success">
+            Email rimandata.
+          </Text>
+        ) : null}
+        {resend.error ? (
+          <Text className="text-center font-sans text-[13px] text-error">
+            {resend.error}
+          </Text>
+        ) : null}
+        <GhostButton
+          className="mt-1"
+          label={resendLabel(resend)}
+          disabled={resend.busy || resend.secondsLeft > 0}
+          onPress={resend.resend}
+        />
+      </View>
+
+      <GoldButton
+        className="mt-6"
+        size="lg"
+        label="Vai all'accesso"
+        onPress={() => router.replace("/(auth)/login")}
+      />
+    </ScrollView>
   );
 }

@@ -11,12 +11,23 @@ import {
 import { cn } from "@/lib/cn";
 import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
+import {
+  resendLabel,
+  useResendConfirmation,
+} from "@/features/auth/useResendConfirmation";
 
 /**
  * Registrazione dalla dashboard. Il ruolo non si sceglie: questa interfaccia
  * esiste per chi gestisce un locale, quindi l'account nasce `manager` (un
- * professionista finirebbe su NotForWaitersPage al primo accesso). Il locale
- * vero e proprio si crea dopo, dal gate di AppLayout.
+ * professionista finirebbe su NotForWaitersPage al primo accesso).
+ *
+ * ⚠️ Da qui passano **due persone diverse**, e il copy deve valere per
+ * entrambe: il titolare che apre il suo locale, e il collaboratore che qualcuno
+ * ha invitato a gestirne uno (F1). Il secondo non crea nessuna sede — anzi, non
+ * può: `venues_owner_not_delegate` glielo vieta. Quello che deve sapere è una
+ * cosa sola, e va detta qui: **registrarsi con l'indirizzo a cui è arrivato
+ * l'invito**, perché è il match su quell'email a collegarlo
+ * (`link_venue_access_for_user`). È la stessa frase che porta `invito.html`.
  *
  * `signupSchema` e `passwordRules` arrivano dall'app: regole di validazione e
  * requisiti password restano una sola fonte, allineata a Supabase Auth.
@@ -72,30 +83,12 @@ export function RegistrazionePage() {
     // AuthProvider, e <App /> passa da sé alla dashboard.
   });
 
-  if (sentTo) {
-    return (
-      <AuthShell title="Controlla la posta">
-        <AuthPanel>
-          <p className="text-sm leading-6 text-t2">
-            Abbiamo inviato un link di conferma a{" "}
-            <span className="font-semibold text-t1">{sentTo}</span>. Aprilo per
-            attivare l&apos;account, poi torna qui e accedi.
-          </p>
-          <Link
-            to="/login"
-            className="focus-gold mt-5 inline-flex w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-          >
-            Vai all&apos;accesso
-          </Link>
-        </AuthPanel>
-      </AuthShell>
-    );
-  }
+  if (sentTo) return <CheckYourMail email={sentTo} />;
 
   return (
     <AuthShell
-      title="Registra il tuo locale"
-      subtitle="Crea l'account: il locale si compila subito dopo."
+      title="Crea il tuo account"
+      subtitle="La dashboard di chi organizza i turni di un locale."
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -169,8 +162,12 @@ export function RegistrazionePage() {
           </Button>
 
           <p className="text-center text-xs leading-5 text-t4">
-            Stai creando un account da locale. Se lavori come professionista, la
-            registrazione si fa dall&apos;app topWaitr sul telefono.
+            Stai creando un account da locale. Se ti ha invitato qualcuno a
+            gestire il suo, usa l&apos;indirizzo a cui è arrivato l&apos;invito:
+            è quello che ti collega al suo locale.
+            <br />
+            Se lavori come professionista, la registrazione si fa
+            dall&apos;app topWaitr sul telefono.
           </p>
         </form>
       </AuthPanel>
@@ -184,6 +181,69 @@ export function RegistrazionePage() {
           Accedi
         </Link>
       </p>
+    </AuthShell>
+  );
+}
+
+/**
+ * «Controlla la posta», con la via d'uscita per quando la posta non arriva.
+ *
+ * Senza il rinvio, chi non riceve il messaggio — casella piena, spam, un
+ * filtro aziendale — resta con un account che esiste e non può usare, e
+ * l'unica uscita sarebbe registrarsi con un altro indirizzo: proprio quello da
+ * evitare, perché è l'indirizzo a collegarlo all'accesso che gli hanno
+ * preparato.
+ */
+function CheckYourMail({ email }: { email: string }) {
+  // `true`: l'email della registrazione è appena partita, quindi il contatore
+  // parte da fermo. Offrire subito il bottone vorrebbe dire offrire un 429.
+  const resend = useResendConfirmation(
+    email,
+    `${window.location.origin}/`,
+    true
+  );
+
+  return (
+    <AuthShell title="Controlla la posta">
+      <AuthPanel>
+        <p className="text-sm leading-6 text-t2">
+          Abbiamo inviato un link di conferma a{" "}
+          <span className="font-semibold text-t1">{email}</span>. Aprilo per
+          attivare l&apos;account, poi torna qui e accedi. Se ti hanno invitato,
+          al primo accesso troverai già il locale che gestisci.
+        </p>
+
+        <p className="mt-4 text-xs leading-5 text-t4">
+          Non è arrivata? Controlla lo spam. Se non c&apos;è nemmeno lì,
+          possiamo rimandarla.
+        </p>
+
+        {resend.sent ? (
+          <p className="mt-3 rounded-xl border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
+            Email rimandata a {email}.
+          </p>
+        ) : null}
+        {resend.error ? (
+          <p className="mt-3 rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
+            {resend.error}
+          </p>
+        ) : null}
+
+        <Button
+          className="mt-3 w-full"
+          disabled={resend.busy || resend.secondsLeft > 0}
+          onClick={resend.resend}
+        >
+          {resendLabel(resend)}
+        </Button>
+
+        <Link
+          to="/login"
+          className="focus-gold mt-3 inline-flex w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
+        >
+          Vai all&apos;accesso
+        </Link>
+      </AuthPanel>
     </AuthShell>
   );
 }

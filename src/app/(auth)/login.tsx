@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
@@ -11,6 +11,11 @@ import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { loginSchema, type LoginForm } from "@/features/auth/schema";
+import {
+  resendLabel,
+  useResendConfirmation,
+} from "@/features/auth/useResendConfirmation";
+import { GhostButton } from "@/components/ui/GhostButton";
 
 export default function Login() {
   const { signIn, resetPassword } = useAuth();
@@ -18,6 +23,8 @@ export default function Login() {
   const toast = useToast();
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  /** L'ultimo tentativo è fallito perché l'email non è confermata. */
+  const [unconfirmed, setUnconfirmed] = useState(false);
 
   const { control, handleSubmit, getValues } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -31,6 +38,10 @@ export default function Login() {
     const res = await signIn(values.email.trim(), values.password);
     setLoading(false);
     if (res.error) setApiError(res.error);
+    // L'account esiste, l'email non è mai stata confermata. Il messaggio da
+    // solo lascia in un vicolo cieco chi quella mail non l'ha mai ricevuta: si
+    // apre il rinvio, sull'indirizzo che ha appena scritto.
+    setUnconfirmed(res.needsConfirmation);
     // in caso di successo la navigazione è gestita dai guard nel root layout
   });
 
@@ -93,6 +104,8 @@ export default function Login() {
             <Text className="font-sans text-sm text-error">{apiError}</Text>
           ) : null}
 
+          {unconfirmed ? <ResendBlock control={control} /> : null}
+
           <GoldButton
             className="mt-2"
             size="lg"
@@ -111,5 +124,41 @@ export default function Login() {
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * Il rinvio della conferma, sull'indirizzo scritto nel form.
+ *
+ * `useWatch` e non `getValues`: il contatore e l'etichetta del bottone devono
+ * rifare il render, e `getValues` non li farebbe muovere. Componente a parte
+ * perché l'hook non può stare dentro il ramo condizionale che lo mostra.
+ */
+function ResendBlock({ control }: { control: Control<LoginForm> }) {
+  const email = useWatch({ control, name: "email" }) ?? "";
+  const resend = useResendConfirmation(email);
+
+  return (
+    <View className="gap-2 rounded-2xl border border-border-2 bg-bg-1 p-4">
+      <Text className="font-sans text-[13px] leading-5 text-t3">
+        Non hai ricevuto il link di conferma? Controlla lo spam, poi possiamo
+        rimandarlo a {email.trim()}.
+      </Text>
+      {resend.sent ? (
+        <Text className="font-sans text-[13px] text-success">
+          Email rimandata.
+        </Text>
+      ) : null}
+      {resend.error ? (
+        <Text className="font-sans text-[13px] text-error">{resend.error}</Text>
+      ) : null}
+      <GhostButton
+        className="mt-1"
+        size="sm"
+        label={resendLabel(resend)}
+        disabled={resend.busy || resend.secondsLeft > 0}
+        onPress={resend.resend}
+      />
+    </View>
   );
 }
