@@ -250,4 +250,37 @@ export const it: Content = {
     ],
     rights: "Tutti i diritti riservati.",
   },
+
+  invite: {
+    eyebrow: "Invito",
+    title: "Ti hanno aggiunto a un organico.",
+    lead: "Il locale che ti ha invitato usa topWaitr per organizzare i turni. Scarica l'app e trovi i tuoi.",
+    steps: [
+      {
+        title: "Scarica l'app",
+        body: "Su iPhone o su Android. Sta arrivando su entrambi gli store.",
+      },
+      {
+        title: "Registrati con l'email dell'invito",
+        body: "È quella a cui è arrivato il messaggio che ti ha portato qui.",
+      },
+      {
+        title: "Trovi il locale e i tuoi turni",
+        body: "Nessuna richiesta da accettare: la tua scheda è già pronta.",
+      },
+    ],
+    calloutTitle: "Usa lo stesso indirizzo",
+    calloutBody:
+      "Con un indirizzo diverso ti registri lo stesso, ma non ti colleghiamo alla scheda che il locale ha già preparato.",
+    storesSoon: "In arrivo su App Store e Google Play.",
+    iosLabel: "Scarica su App Store",
+    androidLabel: "Disponibile su Google Play",
+    whatTitle: "Cosa ci trovi",
+    whatItems: [
+      "I tuoi turni, giorno per giorno, con orari e ruolo.",
+      "Le ore che hai fatto, contate senza doverle scrivere a mano.",
+      "I messaggi con il locale, per cambi e imprevisti.",
+    ],
+    homeLabel: "Scopri topWaitr",
+  },
 };

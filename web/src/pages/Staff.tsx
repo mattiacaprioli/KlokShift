@@ -131,6 +131,12 @@ export function StaffPage() {
                     <Pill tone="warning">Invito in attesa</Pill>
                   ) : person.waiter ? (
                     <Pill tone="success">Collegato</Pill>
+                  ) : person.email ? (
+                    // Nessun account ancora, ma l'indirizzo c'è: si sta
+                    // aspettando che si registri con quello.
+                    <Pill tone="warning">
+                      {person.invited_at ? "Invito inviato" : "Invito da inviare"}
+                    </Pill>
                   ) : (
                     <Pill tone="neutral">Scheda</Pill>
                   )}

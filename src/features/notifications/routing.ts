@@ -17,6 +17,10 @@ export function routeForNotification(
 ): Href | null {
   if (role === "waiter") {
     if (type === "staff_invite") return "/(waiter)/inviti";
+    // Niente da accettare: la scheda che il locale aveva preparato è già sua. Il
+    // `related_id` è una `staff_members`, quindi il ramo finale la scambierebbe
+    // per un turno e aprirebbe una schermata vuota.
+    if (type === "staff_linked") return "/(waiter)/(tabs)";
     // Per i messaggi related_id è la conversazione, non un turno. Vale anche per
     // l'esito di un cambio turno: la card con la risposta vive nel thread, ed è
     // lì che ha senso atterrare — il turno, se approvato, non è più suo.

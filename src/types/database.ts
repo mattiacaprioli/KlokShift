@@ -749,8 +749,12 @@ export type Database = {
           contract_hours: number | null
           contract_period: string | null
           created_at: string
+          email: string | null
           full_name: string
           id: string
+          invite_conflict_at: string | null
+          invite_count: number
+          invited_at: string | null
           note: string | null
           owner_id: string
           phone: string | null
@@ -761,8 +765,12 @@ export type Database = {
           contract_hours?: number | null
           contract_period?: string | null
           created_at?: string
+          email?: string | null
           full_name: string
           id?: string
+          invite_conflict_at?: string | null
+          invite_count?: number
+          invited_at?: string | null
           note?: string | null
           owner_id: string
           phone?: string | null
@@ -773,8 +781,12 @@ export type Database = {
           contract_hours?: number | null
           contract_period?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
+          invite_conflict_at?: string | null
+          invite_count?: number
+          invited_at?: string | null
           note?: string | null
           owner_id?: string
           phone?: string | null
@@ -996,6 +1008,10 @@ export type Database = {
       can_access_staff_person_documents: {
         Args: { p_person: string }
         Returns: boolean
+      }
+      claim_staff_invites: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       chat_counterpart: {
         Args: { p_is_manager: boolean; p_user: string }
@@ -1242,6 +1258,7 @@ export type Database = {
         | "shift_change_request"
         | "shift_change_response"
         | "shift_declined"
+        | "staff_linked"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       staff_link_status: "pending" | "active" | "left"

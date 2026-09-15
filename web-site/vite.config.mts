@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => ({
     // `process` non esiste nel browser: quelle che il codice legge davvero
     // hanno quindi un default dichiarato qui.
     "process.env.EXPO_PUBLIC_APP_URL": JSON.stringify(""),
+    "process.env.EXPO_PUBLIC_IOS_URL": JSON.stringify(""),
+    "process.env.EXPO_PUBLIC_ANDROID_URL": JSON.stringify(""),
     ...Object.fromEntries(
       Object.entries(loadEnv(mode, repoRoot, "EXPO_PUBLIC_")).map(([k, v]) => [
         `process.env.${k}`,
@@ -36,5 +38,17 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: resolve(here, "dist"),
     emptyOutDir: true,
+    // Due pagine, non una SPA: `invito.html` è l'atterraggio dell'email
+    // d'invito, e Pages non fa fallback SPA — deve essere un file vero.
+    // Sta alla radice e non in `invito/index.html` di proposito: con
+    // `base: "./"` un entry annidato cambierebbe la profondità dei path
+    // relativi, e gli `./privacy.html` del footer punterebbero dentro la
+    // sottocartella.
+    rollupOptions: {
+      input: {
+        main: resolve(here, "index.html"),
+        invito: resolve(here, "invito.html"),
+      },
+    },
   },
 }));

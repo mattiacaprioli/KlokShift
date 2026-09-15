@@ -6,5 +6,8 @@
 declare const process: {
   env: {
     EXPO_PUBLIC_APP_URL?: string;
+    /* Le schede store, vuote finché l'app non è pubblicata (M8). */
+    EXPO_PUBLIC_IOS_URL?: string;
+    EXPO_PUBLIC_ANDROID_URL?: string;
   };
 };

@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
@@ -19,6 +20,7 @@ import { useToast } from "@/providers/Toast";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
   useRemoveStaffMember,
+  useSendStaffInvite,
   useStaffPerson,
   useUpdateStaffMember,
   useUpdateStaffPerson,
@@ -216,6 +218,7 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
   const update = useUpdateStaffPerson();
   const [name, setName] = useState(person.full_name);
   const [phone, setPhone] = useState(person.phone ?? "");
+  const [email, setEmail] = useState(person.email ?? "");
   const [note, setNote] = useState(person.note ?? "");
 
   async function onSave() {
@@ -226,12 +229,25 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
         fields: {
           full_name: name.trim(),
           phone: phone.trim() || null,
+          // L'email non si tocca più una volta che l'account è collegato:
+          // l'indirizzo vero è quello di `auth.users`, e riscriverlo qui
+          // cambierebbe solo la rubrica del titolare dando l'idea di poter
+          // spostare l'account di qualcun altro.
+          ...(person.waiter_id ? {} : { email: email.trim() || null }),
           note: note.trim() || null,
         },
       });
       toast.show("Anagrafica aggiornata");
-    } catch {
-      toast.show("Impossibile salvare. Riprova.", "error");
+    } catch (e) {
+      // L'unique (owner_id, email) è il vincolo che tiene l'aggancio non
+      // ambiguo: detto in chiaro, altrimenti arriva un 23505 grezzo.
+      const msg = e instanceof Error ? e.message : "";
+      toast.show(
+        msg.includes("staff_people_owner_email_uq")
+          ? "Hai già una scheda con questa email."
+          : "Impossibile salvare. Riprova.",
+        "error"
+      );
     }
   }
 
@@ -251,6 +267,17 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
         keyboardType="phone-pad"
         placeholder="Es. 333 1234567"
       />
+      {person.waiter_id ? null : (
+        <Input
+          label="Email (facoltativa)"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="nome@email.com"
+        />
+      )}
       <Input
         label="Note (facoltative)"
         value={note}
@@ -267,7 +294,92 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
         onPress={() => void onSave()}
       />
 
+      <PersonInviteRow person={person} />
       <PersonBirthdayRow person={person} />
+    </View>
+  );
+}
+
+/**
+ * A che punto è l'invito: la riga che dice se questa scheda è collegata a un
+ * account, e che permette di (ri)spedire l'email.
+ *
+ * Lo stato non è una colonna: si legge da `email`, `invited_at` e `waiter_id`.
+ * Una scheda creata prima che questa feature esistesse entra nel flusso senza
+ * migrazione di dati — le si aggiunge un'email e il bottone compare.
+ */
+function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
+  const toast = useToast();
+  const send = useSendStaffInvite();
+
+  if (person.waiter_id) {
+    return (
+      <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
+        <Icon name="check" size={18} color="#7BAE7F" />
+        <Text className="flex-1 text-[15px] font-sans-semibold text-t1">
+          Account collegato
+        </Text>
+      </View>
+    );
+  }
+
+  if (person.invite_conflict_at) {
+    return (
+      <View className="gap-1 rounded-2xl border border-border bg-bg-card px-4 py-3">
+        <Mono>Invito</Mono>
+        <Text className="text-sm leading-5 text-t2">
+          Questa email appartiene a un account già collegato a un&apos;altra
+          scheda del tuo organico. Controlla se sono la stessa persona: in tal
+          caso usa quella scheda ed elimina questa.
+        </Text>
+      </View>
+    );
+  }
+
+  if (!person.email) return null;
+
+  // Nessun countdown lato client: il limite (uno ogni 15 minuti, 5 in tutto) sta
+  // nella RPC `claim_staff_invite_send`, che risponde con un messaggio già
+  // pronto. Calcolarlo anche qui vorrebbe dire due verità che possono
+  // divergere — e `Date.now()` in render non è puro.
+  function onSend() {
+    send.mutate(person.id, {
+      onSuccess: () => toast.show("Invito spedito"),
+      onError: (e) =>
+        toast.show(
+          e instanceof Error ? e.message : "Invito non spedito.",
+          "error"
+        ),
+    });
+  }
+
+  return (
+    <View className="gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
+      <View className="flex-row items-center gap-3">
+        <Icon name="sparkle" size={18} color="#EAB54C" />
+        <View className="flex-1">
+          <Mono>Invito</Mono>
+          <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
+            {person.invited_at
+              ? `Inviato il ${formatDate(person.invited_at)}`
+              : "Non ancora inviato"}
+          </Text>
+        </View>
+      </View>
+      <Text className="text-xs leading-4 text-t3">
+        Quando si registrerà con {person.email}, questa scheda diventerà la sua.
+      </Text>
+      <GhostButton
+        label={
+          send.isPending
+            ? "Invio…"
+            : person.invited_at
+              ? "Reinvia invito"
+              : "Invia invito"
+        }
+        disabled={send.isPending}
+        onPress={onSend}
+      />
     </View>
   );
 }

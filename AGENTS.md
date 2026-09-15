@@ -70,6 +70,7 @@ nominare recensioni, candidature, paghe o prezzi: vedi `web-site/README.md`.
 ## Auth & navigazione
 - Pattern ufficiale Expo Router v56: `Stack.Protected` con 3 guard — `!session` → `(auth)`, `session && role==='manager'` → `(manager)`, `session && role==='waiter'` → `(waiter)`. Nessun `index.tsx` root.
 - `AuthProvider`/`useAuth()` in `src/lib/auth.tsx`: `getSession()` + `onAuthStateChange` → `ensureProfile()` (select-or-insert in `profiles`, RLS `id=auth.uid()`). Ruolo letto da `user_metadata`. Nessun trigger su `auth.users`.
+- ⚠️ **"Confirm email" su Supabase Auth non si disattiva.** L'aggancio automatico delle schede staff (`link_staff_invites_for_user`, 20260916100200) collega un account alla scheda che un locale ha preparato per quell'indirizzo. Il controllo `email_confirmed_at is not null` è l'unica cosa che separa «ti colleghiamo alla tua scheda» da «chiunque scriva l'email di un altro entra nel suo organico». Senza conferma email la funzione smette di agganciare — rottura visibile, non un buco silenzioso — ma la protezione va lasciata dov'è.
 
 ## Dati (Supabase)
 - Query/mutation nel data layer `src/lib/*.ts` (`getX`/`saveX`/`createX`/`updateX`), **mai** fetch diretti nei componenti.

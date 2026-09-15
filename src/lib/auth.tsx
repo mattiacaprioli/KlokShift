@@ -82,6 +82,26 @@ async function ensureProfile(user: User): Promise<Profile | null> {
     .insert({ id: user.id, full_name: meta.full_name ?? null, role })
     .select("*")
     .single();
+
+  // Rete di sicurezza per l'aggancio alle schede staff che aspettavano questa
+  // email. Il percorso normale è il trigger `profiles_link_staff_invites` sulla
+  // insert qui sopra; questa chiamata copre il caso in cui il trigger non possa
+  // ripassare (scheda creata dal titolare **dopo** la registrazione). Solo sul
+  // ramo di insert — una volta per account, mai a ogni cold start — ed errore
+  // ignorato: se fallisce, il titolare ha comunque il bottone «Reinvia invito».
+  // Non attesa di proposito: il profilo è già pronto, e farci aspettare un
+  // round-trip in più ritarderebbe il primo render per una chiamata che nel
+  // caso normale non ha niente da fare.
+  if (created) {
+    void (async () => {
+      try {
+        await supabase.rpc("claim_staff_invites");
+      } catch {
+        // Il titolare ha comunque il bottone «Reinvia invito» sulla scheda.
+      }
+    })();
+  }
+
   return created ?? null;
 }
 

@@ -320,6 +320,7 @@ export async function addStaffToVenues(args: {
   fullName: string;
   employmentType: Enums<"employment_type">;
   phone?: string | null;
+  email?: string | null;
   waiterId?: string | null;
   linkStatus?: Enums<"staff_link_status">;
 }): Promise<StaffMember[]> {
@@ -348,6 +349,7 @@ export async function addStaffToVenues(args: {
         owner_id: args.ownerId,
         full_name: args.fullName,
         phone: args.phone ?? null,
+        email: args.email ?? null,
         waiter_id: args.waiterId ?? null,
       })
       .select("id")
@@ -473,6 +475,116 @@ export async function findWaiterByEmail(
   if (error) throw new Error(error.message);
   const row = (data as WaiterLookup[] | null)?.[0];
   return row ?? null;
+}
+
+/**
+ * Manda l'email d'invito a una persona in organico che non ha ancora un
+ * account. Il server prende l'indirizzo dalla riga: qui si passa solo la
+ * persona, così nessuna chiamata può spedire a un indirizzo arbitrario.
+ */
+export async function sendStaffInvite(personId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("invite-staff", {
+    body: { personId },
+  });
+  // `functions.invoke` non solleva sui 4xx/5xx: l'errore sta nel corpo, e
+  // leggerlo è l'unico modo per distinguere "riprova tra un po'" da "riprova
+  // adesso".
+  const code = (error as { message?: string } | null)?.message
+    ?? (data as { error?: string } | null)?.error;
+  if (!code && !error) return;
+
+  if (code?.includes("rate_limited")) {
+    throw new Error("Invito già inviato da poco. Potrai reinviarlo più tardi.");
+  }
+  if (code?.includes("already_linked")) {
+    throw new Error("Questa persona ha già un account collegato.");
+  }
+  if (code?.includes("no_email")) {
+    throw new Error("Questa scheda non ha un'email.");
+  }
+  throw new Error(
+    "Non siamo riusciti a spedire l'invito. Riprova tra qualche minuto."
+  );
+}
+
+/**
+ * Come è finita l'aggiunta di una persona. Serve alla UI per dire la cosa
+ * giusta: "Aggiunto allo staff" e "Invito spedito" non sono la stessa frase, e
+ * `already` non è nemmeno un successo.
+ */
+export type AddStaffResult =
+  | { kind: "manual"; members: StaffMember[] }
+  | { kind: "app_invite"; members: StaffMember[] }
+  | { kind: "email_invite"; members: StaffMember[]; emailSent: boolean }
+  | { kind: "already"; personId: string };
+
+/**
+ * Aggiunge una persona all'organico, email o no.
+ *
+ * ⚠️ La domanda «questa persona ha già topWaitr?» **non è del titolare**: lui ha
+ * un'email e basta. Prima erano due modalità nel form — Manuale e Invita — e
+ * sceglierle male voleva dire o un invito che non partiva o una scheda muta.
+ * Ora si scrive l'email e la decisione è qui, in un posto solo, condiviso da app
+ * e dashboard web:
+ *
+ * - niente email  → scheda e basta (si potrà invitare dopo, dalla sua scheda);
+ * - account trovato → invito in-app da accettare (`link_status = 'pending'`);
+ * - nessun account → scheda con l'email + email d'invito. Quando quella persona
+ *   si registrerà con quell'indirizzo, il trigger `profiles_link_staff_invites`
+ *   la aggancerà a questa scheda.
+ */
+export async function addStaff(args: {
+  ownerId: string;
+  venueIds: string[];
+  fullName: string;
+  employmentType: Enums<"employment_type">;
+  phone?: string | null;
+  email?: string | null;
+}): Promise<AddStaffResult> {
+  const email = args.email?.trim() || null;
+  if (!email) {
+    const members = await addStaffToVenues({ ...args, email: null });
+    return { kind: "manual", members };
+  }
+
+  const found = await findWaiterByEmail(email);
+
+  if (found) {
+    // Se l'accordo con lei esiste già, un secondo invito creerebbe una seconda
+    // scheda della stessa persona: le sue ore e i suoi documenti resterebbero
+    // sulla prima. Si manda la UI ad aprire quella.
+    const { data: mine, error } = await supabase
+      .from("staff_people")
+      .select("id")
+      .eq("owner_id", args.ownerId)
+      .eq("waiter_id", found.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (mine) return { kind: "already", personId: mine.id };
+
+    const members = await addStaffToVenues({
+      ...args,
+      fullName: found.full_name ?? args.fullName,
+      email,
+      waiterId: found.id,
+      linkStatus: "pending",
+    });
+    return { kind: "app_invite", members };
+  }
+
+  const members = await addStaffToVenues({ ...args, email });
+
+  // La scheda è valida anche senza l'email spedita: l'SMTP che rifiuta non è un
+  // buon motivo per buttare via il lavoro appena fatto dal titolare. Si dice che
+  // l'invito non è partito e si lascia il bottone «Reinvia» sulla scheda.
+  const personId = members[0]?.person_id;
+  if (!personId) return { kind: "email_invite", members, emailSent: false };
+  try {
+    await sendStaffInvite(personId);
+    return { kind: "email_invite", members, emailSent: true };
+  } catch {
+    return { kind: "email_invite", members, emailSent: false };
+  }
 }
 
 /** Waiter: a pending staff invite joined with the venue. */

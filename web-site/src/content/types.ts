@@ -105,4 +105,24 @@ export type Content = {
     links: Link[];
     rights: string;
   };
+
+  /*
+   * La pagina d'atterraggio dell'email d'invito (`/invito/`). Non è una sezione
+   * della landing: è un entry point a sé, e chi ci arriva ha già deciso — gli
+   * manca solo l'app e l'avvertenza sull'indirizzo da usare.
+   */
+  invite: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    steps: Feature[];
+    calloutTitle: string;
+    calloutBody: string;
+    storesSoon: string;
+    iosLabel: string;
+    androidLabel: string;
+    whatTitle: string;
+    whatItems: string[];
+    homeLabel: string;
+  };
 };

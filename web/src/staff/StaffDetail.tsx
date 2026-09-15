@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
   useRemoveStaffMember,
+  useSendStaffInvite,
   useStaffPerson,
   useUpdateStaffMember,
   useUpdateStaffPerson,
@@ -196,6 +197,7 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
   const toast = useToast();
   const [name, setName] = useState(person.full_name);
   const [phone, setPhone] = useState(person.phone ?? "");
+  const [email, setEmail] = useState(person.email ?? "");
   const [notes, setNotes] = useState(person.note ?? "");
 
   async function onSave() {
@@ -205,12 +207,24 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
         fields: {
           full_name: name.trim(),
           phone: phone.trim() || null,
+          // Con un account collegato l'indirizzo vero è quello di `auth.users`:
+          // riscriverlo qui cambierebbe solo la rubrica, dando l'idea di poter
+          // spostare l'account di qualcun altro.
+          ...(person.waiter_id ? {} : { email: email.trim() || null }),
           note: notes.trim() || null,
         },
       });
       toast.show("Anagrafica aggiornata");
     } catch (e) {
-      toast.show(userErrorMessage(e), "error");
+      // L'unique (owner_id, email) tiene l'aggancio non ambiguo: detto in
+      // chiaro, altrimenti arriva un 23505 grezzo.
+      const msg = e instanceof Error ? e.message : "";
+      toast.show(
+        msg.includes("staff_people_owner_email_uq")
+          ? "Hai già una scheda con questa email."
+          : userErrorMessage(e),
+        "error"
+      );
     }
   }
 
@@ -229,6 +243,17 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
         </Field>
       </div>
 
+      {person.waiter_id ? null : (
+        <Field label="Email" hint="Serve a collegarle il suo account.">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="nome@esempio.it"
+          />
+        </Field>
+      )}
+
       <Field label="Note" hint="Private, visibili solo a te.">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
@@ -243,8 +268,78 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
         </Button>
       </div>
 
+      <InviteRow person={person} />
       <BirthdayRow person={person} />
     </section>
+  );
+}
+
+/**
+ * A che punto è l'invito. Lo stato non è una colonna: si legge da `email`,
+ * `invited_at` e `waiter_id`, così una scheda creata prima che questa feature
+ * esistesse entra nel flusso appena le si aggiunge un indirizzo.
+ */
+function InviteRow({ person }: { person: StaffPersonDetail }) {
+  const send = useSendStaffInvite();
+  const toast = useToast();
+
+  if (person.waiter_id) {
+    return (
+      <div className="flex items-baseline gap-2 rounded-xl border border-border bg-bg-card px-4 py-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+          Invito
+        </span>
+        <span className="text-sm font-semibold text-t1">Account collegato</span>
+      </div>
+    );
+  }
+
+  if (person.invite_conflict_at) {
+    return (
+      <p className="rounded-xl border border-border bg-bg-card px-4 py-3 text-sm text-t2">
+        Questa email appartiene a un account già collegato a un&apos;altra scheda
+        del tuo organico. Controlla se sono la stessa persona: in tal caso usa
+        quella scheda ed elimina questa.
+      </p>
+    );
+  }
+
+  if (!person.email) return null;
+
+  // Nessun countdown lato client: il limite (uno ogni 15 minuti, 5 in tutto) sta
+  // nella RPC `claim_staff_invite_send`, che risponde con un messaggio già
+  // pronto. Calcolarlo anche qui vorrebbe dire due verità che possono
+  // divergere — e `Date.now()` in render non è puro.
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-bg-card px-4 py-3">
+      <div className="min-w-52 flex-1">
+        <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+          Invito
+        </span>
+        <p className="mt-0.5 text-sm text-t2">
+          {person.invited_at
+            ? `Inviato il ${formatDate(person.invited_at)}. `
+            : "Non ancora inviato. "}
+          Quando si registrerà con {person.email}, questa scheda diventerà la
+          sua.
+        </p>
+      </div>
+      <Button
+        disabled={send.isPending}
+        onClick={() =>
+          send.mutate(person.id, {
+            onSuccess: () => toast.show("Invito spedito"),
+            onError: (e) => toast.show(userErrorMessage(e), "error"),
+          })
+        }
+      >
+        {send.isPending
+          ? "Invio…"
+          : person.invited_at
+            ? "Reinvia invito"
+            : "Invia invito"}
+      </Button>
+    </div>
   );
 }
 

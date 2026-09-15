@@ -75,6 +75,16 @@ function PersonRow({
             <View className="mt-1 flex-row">
               <Pill label="Invito in attesa" variant="pending" />
             </View>
+          ) : !linked && person.email ? (
+            // Invito per email: nessun account ancora, ma l'indirizzo c'è. Si
+            // vede da qui che si sta aspettando che si registri — senza dover
+            // aprire la scheda per scoprirlo.
+            <View className="mt-1 flex-row">
+              <Pill
+                label={person.invited_at ? "Invito inviato" : "Invito da inviare"}
+                variant="pending"
+              />
+            </View>
           ) : null}
         </View>
         {/* Assente quando le sedi non concordano: vedi `personEmploymentType`. */}

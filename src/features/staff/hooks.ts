@@ -3,8 +3,8 @@ import { qk } from "@/lib/queryKeys";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 import {
   addPersonToVenue,
+  addStaff,
   addStaffToVenues,
-  findWaiterByEmail,
   getMyDocumentScopes,
   getMyEmployers,
   getMyPendingInvites,
@@ -14,6 +14,7 @@ import {
   leaveVenue,
   removeStaffMember,
   respondToInvite,
+  sendStaffInvite,
   updateStaffMember,
   updateStaffPerson,
 } from "./api";
@@ -82,6 +83,30 @@ export function useAddStaffToVenues() {
   });
 }
 
+/**
+ * L'aggiunta dal form: decide da sola tra scheda, invito in-app ed email.
+ * È quella che usano le due schermate di creazione — `useAddStaffToVenues`
+ * resta per chi ha già deciso cosa scrivere.
+ */
+export function useAddStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: addStaff,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
+  });
+}
+
+/** Reinvia l'email d'invito dalla scheda della persona. */
+export function useSendStaffInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (personId: string) => sendStaffInvite(personId),
+    // `invited_at` e `invite_count` sono appena cambiati: senza invalidare, la
+    // scheda continuerebbe a offrire «Invia invito» come se nulla fosse.
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
+  });
+}
+
 /** Una persona che il titolare ha già, aggiunta a un'altra delle sue sedi. */
 export function useAddPersonToVenue() {
   const qc = useQueryClient();
@@ -127,13 +152,6 @@ export function useRemoveStaffMember() {
       qc.invalidateQueries({ queryKey: qk.assignments.all });
       qc.invalidateQueries({ queryKey: qk.shifts.all });
     },
-  });
-}
-
-/** Manager: search a waiter by exact email (on-demand). */
-export function useFindWaiterByEmail() {
-  return useMutation({
-    mutationFn: (email: string) => findWaiterByEmail(email),
   });
 }
 
