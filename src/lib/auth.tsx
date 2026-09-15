@@ -130,6 +130,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true;
 
+    /**
+     * Chi era loggato un attimo fa. `undefined` = non lo sappiamo ancora.
+     *
+     * ⚠️ Serve perché diverse query key **non portano l'id dell'utente**
+     * (`qk.venues.mine`, `qk.team.mine`): la loro identità è la sessione, e
+     * l'unica cosa che le separa fra due account è lo svuotamento della cache.
+     */
+    let currentUserId: string | null | undefined;
+
+    /**
+     * Svuota la cache quando cambia la persona dietro la sessione.
+     *
+     * ⚠️ Non basta `SIGNED_OUT`, ed è il bug che questo sostituisce:
+     * registrarsi — o fare login — mentre un altro account è ancora aperto
+     * nello stesso browser emette **`SIGNED_IN` e basta**. Senza uscire prima,
+     * la cache restava quella di chi c'era prima, e il nuovo account apriva
+     * l'app trovandosi in lista i locali di un altro. Nessun dato nuovo
+     * arrivava dal server — la RLS regge — ma quello vecchio era già lì, e a
+     * schermo non c'è differenza.
+     */
+    function syncAccount(next: Session | null) {
+      const nextId = next?.user.id ?? null;
+      if (currentUserId !== undefined && currentUserId !== nextId) {
+        queryClient.clear();
+      }
+      currentUserId = nextId;
+    }
+
     async function loadProfile(next: Session | null) {
       if (!active) return;
       const nextProfile = next?.user ? await resolveProfile(next.user) : null;
@@ -141,6 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // Initial load runs outside the auth lock, so DB reads are safe to await.
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
+      syncAccount(data.session);
       setSession(data.session);
       loadProfile(data.session);
     });
@@ -150,9 +179,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // they deadlock against the same lock. INITIAL_SESSION is handled above.
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       if (!active) return;
+      // Prima di `setSession`: chi legge la cache al render successivo deve
+      // trovarla già vuota, non i dati di chi c'era prima.
+      syncAccount(next);
       setSession(next);
-      // Drop the previous account's cached data so a new sign-in starts clean.
-      if (event === "SIGNED_OUT") queryClient.clear();
       // INITIAL_SESSION → handled by getSession(); TOKEN_REFRESHED → just refresh
       // the session token, no need to re-fetch the profile or blank the UI.
       if (

@@ -95,9 +95,9 @@ export function ViewModeProvider({ children }: PropsWithChildren) {
        * Questo valore trattiene lo splash (`src/app/_layout.tsx`). Aspettare
        * `isPending` per tutti vorrebbe dire che ogni avvio dell'app — titolare,
        * professionista, chiunque — resta sullo splash finché una query di rete
-       * non risponde. Offline è peggio che lento: React Query riprova tre volte
-       * con backoff prima di dichiarare l'errore, e `isPending` resta vero per
-       * tutto quel tempo.
+       * non risponde. Offline è peggio che lento: `retry: 1` (vedi
+       * `lib/queryClient.ts`) significa due tentativi prima dell'errore, e
+       * `isPending` resta vero per entrambi.
        *
        * Chi ha scritto "manager" sul disco è l'unico per cui la risposta cambia
        * dove atterra, ed è anche l'unico che paga l'attesa. Per tutti gli altri
