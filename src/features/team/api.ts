@@ -138,6 +138,7 @@ export async function getTeam(ownerId: string): Promise<TeamMember[]> {
     if (found) {
       found.rows.push(row);
       found.venueIds.push(row.venue_id);
+      if (row.status === "active") found.status = "active";
       // Il più recente dei due: è quello che decide se il pulsante "Reinvia" è
       // ancora bloccato dal rate limit.
       if (row.invited_at && (!found.invitedAt || row.invited_at > found.invitedAt)) {
@@ -152,7 +153,9 @@ export async function getTeam(ownerId: string): Promise<TeamMember[]> {
       email: row.email,
       fullName: profile?.full_name ?? null,
       avatarUrl: profile?.avatar_url ?? null,
-      status: row.user_id ? "active" : "pending",
+      // Dalla riga, non dedotto da `user_id`: sono due sorgenti di verità che
+      // oggi coincidono e domani no (una riga può essere collegata e in attesa).
+      status: row.status === "active" ? "active" : "pending",
       rows: [row],
       venueIds: [row.venue_id],
       invitedAt: row.invited_at,
@@ -179,15 +182,31 @@ export async function getMyVenueAccess(userId: string): Promise<VenueAccess[]> {
   return data ?? [];
 }
 
-/** Un gestore già registrato, cercato per indirizzo. `null` se non esiste. */
-export async function findManagerByEmail(
+/** L'account di un indirizzo, se esiste e ha confermato l'email. */
+export type TeamCandidate = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: string;
+};
+
+/**
+ * Chi c'è dietro un indirizzo. `null` se nessuno.
+ *
+ * Torna anche il **ruolo**, che è la differenza fra "mandiamogli un invito" e
+ * "questo invito non servirà a niente": chi ha già un account da professionista
+ * non può registrarsi di nuovo, e `link_venue_access_for_user` aggancia solo i
+ * `manager`. Senza il ruolo la riga resterebbe `pending` per sempre e il
+ * titolare non saprebbe perché.
+ */
+export async function findTeamCandidate(
   email: string
-): Promise<{ id: string; full_name: string | null; avatar_url: string | null } | null> {
-  const { data, error } = await supabase.rpc("find_manager_by_email", {
+): Promise<TeamCandidate | null> {
+  const { data, error } = await supabase.rpc("find_team_candidate", {
     p_email: email,
   });
   if (error) throw new Error(error.message);
-  return data?.[0] ?? null;
+  return (data?.[0] as TeamCandidate | undefined) ?? null;
 }
 
 export type AddTeamMemberInput = {
@@ -202,7 +221,7 @@ export type AddTeamMemberResult =
   | { kind: "linked"; name: string | null }
   /** Nessun account: riga in attesa e invito spedito (o no, se l'SMTP ha detto no). */
   | { kind: "invited"; emailSent: boolean }
-  /** Ha già accesso a quelle sedi. */
+  /** Aveva già accesso a **tutte** le sedi scelte: niente da fare. */
   | { kind: "already" };
 
 /**
@@ -211,44 +230,96 @@ export type AddTeamMemberResult =
  * Un solo punto d'ingresso con dentro la decisione, invece di due modalità da
  * scegliere a mano: chi invita non sa — e non deve sapere — se la persona ha già
  * un account topWaitr. È la stessa forma di `addStaff()` per l'organico.
+ *
+ * Le sedi si trattano una per una perché i tre casi convivono nella stessa
+ * chiamata: su una c'è già, su una c'era e gli è stato tolto, su una è nuovo.
+ * ⚠️ Un solo `insert` di tutte le righe fallirebbe **per intero** alla prima
+ * unique violata, e il titolare vedrebbe "ha già accesso" mentre le sedi nuove
+ * non gliele ha date nessuno.
  */
 export async function addTeamMember(
   input: AddTeamMemberInput
 ): Promise<AddTeamMemberResult> {
   const email = input.email.trim().toLowerCase();
-  const existing = await findManagerByEmail(email);
+  const existing = await findTeamCandidate(email);
 
-  const rows = input.venueIds.map((venueId) => ({
-    venue_id: venueId,
-    owner_id: input.ownerId,
+  // ⚠️ Un professionista non diventa collaboratore per email: non può
+  // registrarsi di nuovo (l'account c'è) e `link_venue_access_for_user` aggancia
+  // solo i `manager`. Senza questo controllo la riga resta `pending` per sempre.
+  if (existing && existing.role !== "manager") {
+    throw new UserFacingError(
+      "Questo indirizzo ha già un account da professionista. Per farla entrare nella gestione serve un account da locale, con un'altra email."
+    );
+  }
+
+  // Le righe che questo titolare ha già su quelle sedi. La revoca non cancella,
+  // e le due unique non escludono le righe revocate: senza guardarle prima,
+  // reinvitare chi era stato tolto darebbe 23505 e nessuna via d'uscita.
+  const { data: onVenues, error: readError } = await supabase
+    .from("venue_access")
+    .select("id, venue_id, status, user_id, email")
+    .eq("owner_id", input.ownerId)
+    .in("venue_id", input.venueIds);
+  if (readError) throw new Error(readError.message);
+
+  const mine = (onVenues ?? []).filter(
+    (r) =>
+      (existing != null && r.user_id === existing.id) ||
+      (r.email ?? "").trim().toLowerCase() === email
+  );
+  const revived = mine.filter((r) => r.status === "revoked");
+  const taken = new Set(mine.map((r) => r.venue_id));
+  const missing = input.venueIds.filter((id) => !taken.has(id));
+
+  if (revived.length === 0 && missing.length === 0) return { kind: "already" };
+
+  const state = {
     user_id: existing?.id ?? null,
     email,
     status: existing ? "active" : "pending",
     ...input.permissions,
-  }));
+  };
 
-  const { error } = await supabase.from("venue_access").insert(rows);
-  if (error) {
-    // Le due unique (per account e per indirizzo) dicono la stessa cosa: quella
-    // persona su quella sede c'è già.
-    if (error.code === "23505") return { kind: "already" };
-    throw teamError(error.message);
+  const touched: string[] = [];
+
+  if (revived.length > 0) {
+    // `invite_count` e `invited_at` ripartono da zero: è un invito nuovo, non il
+    // sesto tentativo di quello vecchio. Il tetto che conta resta quello del
+    // titolare (20 email in 24 ore, in `claim_venue_access_send`), che questo
+    // giro non azzera.
+    const ids = revived.map((r) => r.id);
+    const { error } = await supabase
+      .from("venue_access")
+      .update({ ...state, invite_count: 0, invited_at: null })
+      .in("id", ids);
+    if (error) throw teamError(error.message);
+    touched.push(...ids);
+  }
+
+  if (missing.length > 0) {
+    const { data: created, error } = await supabase
+      .from("venue_access")
+      .insert(
+        missing.map((venueId) => ({
+          venue_id: venueId,
+          owner_id: input.ownerId,
+          ...state,
+        }))
+      )
+      // ⚠️ Gli id arrivano da qui e non da una select successiva per indirizzo:
+      // lo stesso indirizzo può avere righe su più sedi, e la "prima per
+      // `created_at`" era quella di un invito precedente — l'email nominava la
+      // sede sbagliata e bruciava i rate limit su una riga che non c'entrava.
+      .select("id");
+    if (error) throw teamError(error.message);
+    touched.push(...(created ?? []).map((r) => r.id));
   }
 
   if (existing) return { kind: "linked", name: existing.full_name };
 
   // L'invito si manda a una riga sola: l'email nomina una sede, e cinque email
-  // per cinque sedi sono cinque email. Si sceglie la prima, che è anche quella
-  // che il titolare ha spuntato per prima.
-  const { data: created } = await supabase
-    .from("venue_access")
-    .select("id")
-    .eq("owner_id", input.ownerId)
-    .eq("email", email)
-    .order("created_at", { ascending: true })
-    .limit(1);
-
-  const accessId = created?.[0]?.id;
+  // per cinque sedi sono cinque email.
+  const accessId = touched[0];
   if (!accessId) return { kind: "invited", emailSent: false };
 
   try {
@@ -278,6 +349,13 @@ function teamError(message: string): Error {
   if (message.includes("already_owns_venues")) {
     return new UserFacingError("Questa persona ha già un locale suo su topWaitr.");
   }
+  // I due controlli di `venue_access_user_matches_email`: l'app non dovrebbe mai
+  // vederli — li produce chi scrive un `user_id` che non corrisponde all'email.
+  if (message.includes("user_email_mismatch") || message.includes("not_a_manager")) {
+    return new UserFacingError(
+      "Questo indirizzo non corrisponde a un account da locale."
+    );
+  }
   return new Error(message);
 }
 
@@ -299,21 +377,52 @@ export async function updateTeamPermissions(
   if (error) throw new Error(error.message);
 }
 
-/** Aggiunge una sede a un collaboratore che già c'è. */
+/**
+ * Aggiunge una sede a un collaboratore che già c'è.
+ *
+ * Come in `addTeamMember`, una riga revocata su quella sede si riapre invece di
+ * essere reinserita: la unique `(venue_id, lower(email))` non esclude le
+ * revocate, e un `insert` cieco darebbe 23505 a chi sta solo ridando una sede
+ * che aveva tolto.
+ */
 export async function addTeamVenue(
   ownerId: string,
   member: TeamMember,
   venueId: string,
   permissions: TeamPermissions
 ): Promise<void> {
-  const { error } = await supabase.from("venue_access").insert({
-    venue_id: venueId,
-    owner_id: ownerId,
+  const state = {
     user_id: member.userId,
     email: member.email,
     status: member.userId ? "active" : "pending",
     ...permissions,
-  });
+  };
+
+  // ⚠️ Il confronto si fa qui e non con un `.or()`: l'indirizzo finirebbe dentro
+  // la sintassi dei filtri PostgREST, dove una virgola o una parentesi nel testo
+  // cambia il significato della query. Le righe revocate di una sede sono poche.
+  const email = (member.email ?? "").trim().toLowerCase();
+  const { data: existing, error: readError } = await supabase
+    .from("venue_access")
+    .select("id, user_id, email")
+    .eq("owner_id", ownerId)
+    .eq("venue_id", venueId)
+    .eq("status", "revoked");
+  if (readError) throw new Error(readError.message);
+
+  const revoked = (existing ?? []).find(
+    (r) =>
+      (member.userId != null && r.user_id === member.userId) ||
+      (r.email ?? "").trim().toLowerCase() === email
+  )?.id;
+  const { error } = revoked
+    ? await supabase
+        .from("venue_access")
+        .update({ ...state, invite_count: 0, invited_at: null })
+        .eq("id", revoked)
+    : await supabase
+        .from("venue_access")
+        .insert({ venue_id: venueId, owner_id: ownerId, ...state });
   if (error) throw teamError(error.message);
 }
 

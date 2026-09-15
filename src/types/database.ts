@@ -1104,12 +1104,13 @@ export type Database = {
         Returns: string
       }
       delete_account: { Args: { p_user: string }; Returns: undefined }
-      find_manager_by_email: {
+      find_team_candidate: {
         Args: { p_email: string }
         Returns: {
           avatar_url: string
           full_name: string
           id: string
+          role: string
         }[]
       }
       find_waiter_by_email: {

@@ -69,7 +69,7 @@ export default function TeamNewScreen() {
       {
         onSuccess: (res) => {
           if (res.kind === "already") {
-            toast.show("Ha già accesso a queste sedi.", "error");
+            toast.show("Ha già accesso a tutte le sedi scelte.", "error");
             return;
           }
           toast.show(
