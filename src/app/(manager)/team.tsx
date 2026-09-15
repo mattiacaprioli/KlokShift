@@ -133,14 +133,19 @@ function MemberCard({
             {member.email ?? "Account collegato"}
           </Text>
         </View>
-        {pending ? <Pill label="In attesa" /> : null}
+        {pending ? <Pill label="Invito mandato" /> : null}
       </View>
 
       {pending ? (
         <View className="gap-2 border-t border-border-1 px-4 py-3">
+          {/* Due strade, e vanno dette tutt'e due: a chi non aveva un account
+              l'abbiamo preparato noi e gli basta aprire il link, chi ce l'ha già
+              entra al primo accesso dopo l'invito (`claimInvites` in
+              lib/auth.tsx). Nominarne una sola fa sembrare l'invito rotto
+              all'altra metà. */}
           <Text className="text-[12px] leading-4 text-t3">
-            Si collegherà da solo quando si registrerà con questa email
-            scegliendo «Gestisco una sede».
+            Entra aprendo il link che gli abbiamo mandato e scegliendo una
+            password. Se aveva già un account, gli basta rientrare.
           </Text>
           <GhostButton
             label={invite.isPending ? "Invio…" : "Reinvia l'invito"}

@@ -106,26 +106,40 @@ async function ensureProfile(user: User): Promise<Profile | null> {
     .select("*")
     .single();
 
-  // Rete di sicurezza per l'aggancio alle schede staff che aspettavano questa
-  // email. Il percorso normale è il trigger `profiles_link_staff_invites` sulla
-  // insert qui sopra; questa chiamata copre il caso in cui il trigger non possa
-  // ripassare (scheda creata dal titolare **dopo** la registrazione). Solo sul
-  // ramo di insert — una volta per account, mai a ogni cold start — ed errore
-  // ignorato: se fallisce, il titolare ha comunque il bottone «Reinvia invito».
-  // Non attesa di proposito: il profilo è già pronto, e farci aspettare un
-  // round-trip in più ritarderebbe il primo render per una chiamata che nel
-  // caso normale non ha niente da fare.
-  if (created) {
-    void (async () => {
-      try {
-        await supabase.rpc("claim_staff_invites");
-      } catch {
-        // Il titolare ha comunque il bottone «Reinvia invito» sulla scheda.
-      }
-    })();
-  }
-
   return created ?? null;
+}
+
+/**
+ * Aggancia gli inviti che aspettavano questo indirizzo — le schede
+ * dell'organico e gli accessi da collaboratore — e ricarica le liste se ne ha
+ * agganciato qualcuno.
+ *
+ * ⚠️ **A ogni accesso, non solo alla creazione del profilo.** Prima questa
+ * chiamata stava dentro `ensureProfile`, sul solo ramo di insert: copriva
+ * «prima mi invitano, poi mi registro» e mancava il caso opposto, che è quello
+ * comune — l'account esiste già e il titolare invita dopo. Lì l'aggancio
+ * immediato dipende da `find_team_candidate`, che non trova l'indirizzo finché
+ * l'email non è confermata: la riga resta `pending`, il profilo non viene più
+ * inserito, nessun trigger ci ripassa. Un invito lettera morta, senza un errore
+ * da nessuna parte — né per chi invita né per chi è invitato.
+ *
+ * Il costo è una RPC per accesso: due select indicizzate che nel caso normale
+ * non trovano niente. Sta nel ramo `SIGNED_IN` e non nel ripristino di sessione
+ * di proposito — un login è raro, un cold start no.
+ *
+ * L'errore si ignora: se fallisce, il titolare ha ancora il pulsante «Reinvia».
+ */
+async function claimInvites(): Promise<void> {
+  try {
+    const { data } = await supabase.rpc("claim_staff_invites");
+    // Invalidazione larga e non mirata: agganciare un invito cambia le sedi, i
+    // collaboratori, l'organico e le notifiche insieme, e capita una volta
+    // nella vita di un account. Elencare le chiavi vorrebbe dire dimenticarne
+    // una alla prossima feature.
+    if ((data ?? 0) > 0) await queryClient.invalidateQueries();
+  } catch {
+    // Vedi sopra.
+  }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -181,12 +195,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       currentUserId = nextId;
     }
 
-    async function loadProfile(next: Session | null) {
+    async function loadProfile(next: Session | null, claim = false) {
       if (!active) return;
       const nextProfile = next?.user ? await resolveProfile(next.user) : null;
       if (!active) return;
       setProfile(nextProfile);
       setLoading(false);
+      // Dopo il profilo, non prima: `link_venue_access_for_user` legge
+      // `profiles.role`, e su una registrazione appena fatta la riga potrebbe
+      // non esserci ancora. Non attesa: la UI è già pronta e l'invalidazione
+      // arriva da sé quando la RPC risponde.
+      if (claim && nextProfile) void claimInvites();
     }
 
     // Initial load runs outside the auth lock, so DB reads are safe to await.
@@ -214,7 +233,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         event === "USER_UPDATED"
       ) {
         setLoading(true);
-        setTimeout(() => loadProfile(next), 0);
+        setTimeout(() => loadProfile(next, event === "SIGNED_IN"), 0);
       }
     });
 

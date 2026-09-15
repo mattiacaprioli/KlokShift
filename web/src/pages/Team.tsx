@@ -154,14 +154,19 @@ function MemberCard({ member }: { member: TeamMember }) {
             {member.email ?? "Account collegato"}
           </p>
         </div>
-        {pending ? <Pill tone="warning">In attesa</Pill> : null}
+        {pending ? <Pill tone="warning">Invito mandato</Pill> : null}
       </div>
 
       {pending ? (
         <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+          {/* Due strade, e vanno dette tutt'e due: a chi non aveva un account
+              l'abbiamo preparato noi e gli basta aprire il link, chi ce l'ha già
+              entra al primo accesso dopo l'invito (`claimInvites` in
+              lib/auth.tsx). Nominarne una sola — com'era fino al 16/09 — fa
+              sembrare l'invito rotto all'altra metà. */}
           <p className="text-xs text-t3">
-            Si collega da solo quando si registra con questa email scegliendo
-            «Gestisco una sede».
+            Entra aprendo il link che gli abbiamo mandato e scegliendo una
+            password. Se aveva già un account, gli basta rientrare.
           </p>
           <Button
             variant="ghost"
@@ -236,6 +241,12 @@ function InviteForm({ ownerId }: { ownerId: string }) {
           placeholder="nome@email.com"
         />
       </Field>
+
+      <p className="text-xs text-t3">
+        Se ha già un account da sede con l&apos;email confermata, l&apos;accesso
+        parte subito. Altrimenti gli prepariamo noi l&apos;account e gli mandiamo
+        un link: lo apre, sceglie una password ed è dentro. Non deve registrarsi.
+      </p>
 
       {isMultiVenue ? (
         <Field label="Su quali sedi">

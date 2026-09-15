@@ -9,15 +9,15 @@ import { AuthProvider } from "@/lib/auth";
 import { App } from "./App";
 import { ToastProvider } from "./ui/Toast";
 import { AppErrorBoundary } from "./ui/ErrorBoundary";
-import { consumeRecoveryLink } from "./lib/recovery";
+import { consumeAuthLink } from "./lib/recovery";
 import "./index.css";
 
 const root = createRoot(document.getElementById("root")!);
 
-// Prima del mount: chi arriva dal link di recupero password ha i token nel
-// fragment, e HashRouter li cancellerebbe al primo redirect. Sul giro normale
-// la funzione esce subito.
-void consumeRecoveryLink().then(() =>
+// Prima del mount: chi arriva dal link di recupero password o da quello d'invito
+// ha i token nel fragment, e HashRouter li cancellerebbe al primo redirect. Sul
+// giro normale la funzione esce subito.
+void consumeAuthLink().then(() =>
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
