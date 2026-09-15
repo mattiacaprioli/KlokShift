@@ -24,7 +24,12 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  // `apikey` e `x-client-info` li aggiunge supabase-js da sé a ogni richiesta:
+  // se non sono in allowlist il browser annulla la POST subito dopo un
+  // preflight riuscito, e dall'app non si vede perché fetch nativo non fa
+  // preflight. Sintomo: OPTIONS 200 nei log, POST mai arrivata.
+  "Access-Control-Allow-Headers":
+    "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 

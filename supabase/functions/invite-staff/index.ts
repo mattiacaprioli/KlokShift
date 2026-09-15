@@ -37,7 +37,10 @@ const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/$/, "");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  // Vedi `delete-account`: senza `apikey` e `x-client-info` il browser blocca
+  // la POST dopo un preflight riuscito.
+  "Access-Control-Allow-Headers":
+    "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
