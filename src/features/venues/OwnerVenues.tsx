@@ -159,7 +159,19 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
   // Le sedi solo a chi ne può avere: il titolare, o chi è stato delegato. Per
   // tutti gli altri la query resta spenta, come faceva `useMyVenue` con
   // l'ownerId vuoto.
-  const query = useMyVenues(!!myId && (isManager || hasVenueAccess));
+  //
+  // Gli id delegati si passano alla query: `getMyVenues` li usa come seconda
+  // serratura accanto alla RLS (vedi il commento lì — il 15/09 una policy di
+  // troppo su `venues` rendeva quella select un elenco di tutti i locali).
+  const accessVenueIds = useMemo(
+    () => access.map((row) => row.venue_id),
+    [access]
+  );
+  const query = useMyVenues(
+    !!myId && (isManager || hasVenueAccess),
+    myId,
+    accessVenueIds
+  );
 
   // Memoizzato e non `query.data ?? []` inline: quel fallback crea un array nuovo
   // a ogni render, che finirebbe nelle dipendenze del `useMemo` sotto e nel valore

@@ -31,6 +31,10 @@ export async function updateVenueLogo(
   if (error) throw new Error(error.message);
 }
 
+/** Un uuid e nient'altro: vedi `getMyVenues`. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Tutte le sedi **aperte** a cui si ha accesso, la più vecchia prima.
  *
@@ -42,26 +46,55 @@ export async function updateVenueLogo(
  * è il tie-break perché due sedi create nello stesso istante non devono poter
  * invertirsi tra due caricamenti (la sede attiva ballerebbe da sola).
  *
- * ⚠️ **Niente `.eq("owner_id", …)`, e non è una dimenticanza.** Da quando
+ * ⚠️ **`.eq("owner_id", …)` da solo non basta e non va rimesso.** Da quando
  * esistono i collaboratori (`venue_access`), "le mie sedi" non sono più "le sedi
- * di cui sono proprietario": il filtro escluderebbe proprio le sedi delegate.
- * Il perimetro lo fa la RLS — su `venues` esistono due sole policy, "owner crud"
- * e "delegate read", e nessuna delle due è aperta a tutti. Rimettere il filtro
- * qui significa rompere l'accesso dei collaboratori; toglierlo altrove (su
- * `shifts`, per dire) significa il contrario, e lì il filtro va tenuto.
+ * di cui sono proprietario": quel filtro escluderebbe proprio le sedi delegate.
+ * Il filtro giusto è la coppia — le mie **oppure** quelle su cui mi hanno dato
+ * accesso — ed è quello che questa funzione fa.
+ *
+ * ⚠️ **E non è il perimetro: è la seconda serratura.** Il perimetro resta la
+ * RLS. Questo filtro c'è perché il 2026-09-15 la RLS su `venues` aveva una
+ * policy di troppo — `venues: public read`, `using (true)`, residuo del
+ * marketplace che nessuna migration aveva mai droppato (20260916150000) — e
+ * questa funzione, che era una `select *` nuda, restituiva a ogni account
+ * appena creato i locali di tutti. Una policy sbagliata non deve poter
+ * diventare da sola una fuga di dati.
+ *
+ * Regola opposta su `shifts`: lì il filtro `venue_id` è il perimetro e non si
+ * toglie mai (vedi `features/shifts/api.ts`).
  */
-export async function getMyVenues(): Promise<Venue[]> {
-  const { data, error } = await supabase
+export async function getMyVenues(
+  /** L'utente in sessione: le sedi di cui è proprietario. */
+  userId: string,
+  /** Le sedi su cui ha un accesso delegato attivo, da `venue_access`. */
+  accessVenueIds: readonly string[] = []
+): Promise<Venue[]> {
+  // ⚠️ Gli id finiscono dentro la sintassi dei filtri PostgREST, dove una
+  // virgola o una parentesi cambiano il significato della query. Arrivano da una
+  // nostra select, non dall'utente, ma si validano lo stesso: è il posto in cui
+  // un giorno qualcuno passerà una stringa presa da altrove.
+  if (!UUID_RE.test(userId)) return [];
+  const delegated = accessVenueIds.filter((id) => UUID_RE.test(id));
+
+  let query = supabase
     .from("venues")
     .select("*")
     // Le sedi chiuse restano consultabili, ma non sono posti in cui si lavora:
     // fuori dallo switcher e fuori da ogni query operativa.
-    .is("closed_at", null)
+    .is("closed_at", null);
+
+  query =
+    delegated.length > 0
+      ? query.or(`owner_id.eq.${userId},id.in.(${delegated.join(",")})`)
+      : query.eq("owner_id", userId);
+
+  const { data, error } = await query
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
 
 /** Le sedi archiviate, per la sezione "Sedi chiuse". */
 export async function getMyClosedVenues(ownerId: string): Promise<Venue[]> {

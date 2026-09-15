@@ -1,43 +1,65 @@
--- ⚠️ `public.venues` non aveva la row level security attiva.
+-- ⚠️ `venues: public read` — l'ultimo residuo del marketplace, e una fuga di dati.
 --
--- Le due policy c'erano ed erano scritte bene (`venues: owner crud` dal
--- 20260910120000, `venues: delegate read` dal 20260916110000). Ma una policy su
--- una tabella con `relrowsecurity = false` non filtra niente: è documentazione.
--- Risultato, verificato con una chiamata REST **senza nessun login**, con la
--- sola anon key che viaggia nel bundle del client:
+-- `public.venues` era leggibile da **chiunque**, senza login, con la sola anon
+-- key che viaggia nel bundle del client:
 --
 --     GET /rest/v1/venues?select=*
 --     → 200, tutti i locali del progetto: nome, indirizzo, città, descrizione,
 --       logo e `owner_id`.
 --
--- Non è un buco nato oggi, ma dal 16/09/2026 è diventato visibile **e** molto
--- peggio. `getMyVenues()` aveva un `.eq("owner_id", …)` esplicito che mascherava
--- tutto: la F1 l'ha tolto di proposito, perché con i collaboratori il perimetro
--- non è più «le sedi di X» ma «le sedi che vedo io», e quel perimetro è la RLS.
--- Tolto il filtro applicativo senza che la RLS fosse accesa, la select è tornata
--- quello che la query dice: tutte le righe. È così che un account appena
--- registrato si è trovato in lista i due locali di un altro.
+-- Non era la RLS spenta — una POST anonima sulla stessa tabella rispondeva
+-- «new row violates row-level security policy», quindi la RLS era ed è attiva.
+-- Era una policy, una sola, nata in M1 e mai più toccata:
 --
--- Da qui la lezione, che vale oltre questa tabella: **una policy non è una
--- prova**. La prova è `relrowsecurity`, e la verifica è una GET anonima.
+--     CREATE POLICY "venues: public read" ON public.venues
+--       FOR SELECT USING (true);          -- supabase/schema.sql:410
 --
--- ⚠️ Prerequisito: 20260916110000 (la policy del delegato).
+-- Serviva al marketplace: il professionista che sfogliava i turni aperti doveva
+-- vedere di che locale si trattasse. Il marketplace è stato rimosso dal codice
+-- il 2026-09-12 e le sue policy sono state chiuse una per una — `shifts: waiter
+-- reads non-cancelled` in 20260715160000, `profiles: manager sees applicant
+-- profiles` e `waiter_profiles: manager reads applicants` in 20260912130000, le
+-- tre di `applications` altrove. Questa è sfuggita, perché `getMyVenues()` aveva
+-- un `.eq("owner_id", …)` che la copriva: nessuno vedeva mai righe altrui.
+--
+-- La F1 dei collaboratori ha tolto quel filtro **di proposito** — con i delegati
+-- il perimetro non è più «le sedi di X» ma «le sedi che vedo io», e quel
+-- perimetro doveva essere la RLS. Tolto il filtro applicativo sopra una policy
+-- `using (true)`, la select ha iniziato a restituire quello che la query dice:
+-- tutte le righe. È così che un account appena registrato, senza alcun invito,
+-- ha aperto la dashboard trovandosi in lista i due locali di un estraneo.
+--
+-- La lezione, che vale oltre questa tabella: **le policy giuste non bastano, se
+-- accanto ne resta una vecchia**. Sono permissive e vanno in OR: la più larga
+-- vince, sempre. Quando si sposta un controllo dal client alla RLS, si guarda
+-- l'elenco **completo** delle policy di quella tabella, non solo quella che si
+-- sta scrivendo.
+--
+-- ⚠️ Prerequisito: 20260916110000 (`venues: delegate read`).
 
 -- ---------------------------------------------------------------------------
--- 1. Il professionista deve continuare a vedere i locali per cui lavora
+-- 1. PRIMA il sostituto, poi il drop
 -- ---------------------------------------------------------------------------
--- Prima di accendere l'interruttore: con le sole due policy esistenti — titolare
--- e delegato — accendere la RLS **romperebbe tutto il lato professionista**, e lo
--- romperebbe in silenzio. `getMyPendingInvites`, `getMyEmployers`,
--- `getMyDocumentScopes` e `getShiftWithVenue` leggono il locale con un embed
--- (`venue:venues(...)`), e PostgREST non distingue «riga filtrata dalla RLS» da
--- «riga assente»: l'embed torna `null`. Niente errori, niente log — solo i
--- «I tuoi locali» vuoti e le card turno senza nome né logo. È esattamente il
+-- ⚠️ L'ordine non è estetica. `venues: public read` è ciò che oggi fa vedere al
+-- **professionista** i locali per cui lavora: droppandola senza rimpiazzo si
+-- rompe tutto il suo lato, e si rompe in silenzio. `getMyPendingInvites`,
+-- `getMyEmployers`, `getMyDocumentScopes` (src/features/staff/api.ts) e
+-- `getShiftWithVenue` (src/features/shifts/api.ts) leggono il locale con un
+-- embed `venue:venues(...)`, e PostgREST non distingue «riga filtrata dalla RLS»
+-- da «riga assente»: l'embed torna `null`. Niente errori, niente log — solo
+-- «I tuoi locali» vuoto e le card turno senza nome né logo. È esattamente il
 -- guasto che 20260912130000 era andato a riparare sui profili.
 --
--- Nessun filtro su `link_status`, di proposito: l'invito **in attesa** è proprio
--- il momento in cui serve sapere quale locale ti sta chiamando, e una scheda
--- chiusa (`left`) resta attaccata allo storico delle ore.
+-- `setof uuid` e non un predicato booleano `is_my_staff_venue(uuid)`: la forma
+-- booleana si legge meglio e sarebbe l'errore, perché dentro una policy dipende
+-- dalla riga e Postgres la chiamerebbe una volta per riga. `venues.id in (select
+-- …)` non dipende dalla riga e viene valutato una volta per statement
+-- (InitPlan). Stessa ragione di `my_venue_ids` (20260916110000) e
+-- `my_staff_member_ids` (20260916140000): su questo progetto l'IO del database è
+-- già finito una volta.
+--
+-- `security definer`: dentro una policy su `venues`, una funzione invoker che
+-- legge `staff_members` ricadrebbe nelle policy di quella tabella.
 create or replace function public.my_staff_venue_ids()
 returns setof uuid
 language sql
@@ -53,8 +75,11 @@ revoke execute on function public.my_staff_venue_ids() from anon, public;
 grant  execute on function public.my_staff_venue_ids() to authenticated;
 
 comment on function public.my_staff_venue_ids() is
-  'Le sedi in cui chi chiama è (o è stato) in organico. DEFINER perché dentro una policy su venues una funzione invoker che legge staff_members ricadrebbe nelle policy di quella tabella; setof uuid e non un predicato perché `venues.id in (select …)` non dipende dalla riga e Postgres lo valuta una volta per statement.';
+  'Le sedi in cui chi chiama è (o è stato) in organico. È il perimetro con cui un professionista legge public.venues da quando la lettura pubblica è stata chiusa.';
 
+-- Nessun filtro su `link_status`, di proposito: l'invito **in attesa** è proprio
+-- il momento in cui serve sapere quale locale ti sta chiamando, e una scheda
+-- chiusa (`left`) resta attaccata allo storico delle ore.
 drop policy if exists "venues: staff read" on public.venues;
 create policy "venues: staff read"
   on public.venues for select
@@ -62,25 +87,20 @@ create policy "venues: staff read"
   using (venues.id in (select public.my_staff_venue_ids()));
 
 -- ---------------------------------------------------------------------------
--- 2. L'interruttore
+-- 2. Il drop
 -- ---------------------------------------------------------------------------
--- ⚠️ `enable`, non `force`: `force` vale anche per il proprietario della tabella,
--- e tutte le funzioni `security definer` che leggono `venues` (le notifiche, le
--- ore, la chat) girano come `postgres`. Attivarlo le spegnerebbe.
-alter table public.venues enable row level security;
+drop policy if exists "venues: public read" on public.venues;
 
 -- ---------------------------------------------------------------------------
--- 3. E tutte le altre che fossero nella stessa condizione
+-- 3. Rete di sicurezza
 -- ---------------------------------------------------------------------------
--- Il sondaggio anonimo del 15/09 ha trovato **solo** `venues` (e
--- `waiter_experiences`, che è pubblica di proposito: è il CV del
--- professionista). Ma le tabelle vuote non si distinguono da quelle protette
--- guardando una risposta a zero righe, quindi il controllo va fatto sul
--- catalogo, non sui dati.
---
--- ⚠️ Il filtro `exists (… pg_policies …)` non è prudenza generica, è la
--- condizione che rende questo blocco sicuro: accende la RLS **solo** dove
--- qualcuno ha già scritto almeno una policy, cioè dove l'intenzione di
+-- Idempotente: su `venues` la RLS è già attiva. Sta qui perché una policy non è
+-- una prova — la prova è `relrowsecurity` — e questa riga costa nulla.
+alter table public.venues enable row level security;
+
+-- E le altre tabelle che avessero policy ma l'interruttore spento. ⚠️ Il filtro
+-- `exists (… pg_policies …)` non è prudenza generica: accende la RLS **solo**
+-- dove qualcuno ha già scritto almeno una policy, cioè dove l'intenzione di
 -- proteggere c'era ed è rimasta a metà. Una tabella deliberatamente pubblica non
 -- ha policy e non viene toccata — accenderle la RLS la renderebbe muta per
 -- tutti, che è il modo di rompere qualcosa mentre si crede di ripararlo.
@@ -103,5 +123,31 @@ begin
     raise notice 'RLS non attiva su public.%: la accendo', r.relname;
     execute format('alter table public.%I enable row level security', r.relname);
   end loop;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Dire cosa è rimasto
+-- ---------------------------------------------------------------------------
+-- Le migration descrivono le policy che il repo conosce; la dashboard di
+-- Supabase permette di crearne altre a mano, che in nessun file compaiono. Dopo
+-- una fuga nata proprio da una policy invisibile, la migration stampa l'elenco
+-- vero: devono essere **tre** — `venues: owner crud`, `venues: delegate read`,
+-- `venues: staff read`. Qualunque altra riga qui sotto va guardata.
+do $$
+declare
+  r record;
+  n integer := 0;
+begin
+  for r in
+    select policyname, cmd, coalesce(qual::text, '—') as qual
+      from pg_policies
+     where schemaname = 'public' and tablename = 'venues'
+     order by policyname
+  loop
+    n := n + 1;
+    raise notice 'venues → % [%] using %', r.policyname, r.cmd, r.qual;
+  end loop;
+  raise notice 'venues: % policy totali (attese: 3)', n;
 end;
 $$;

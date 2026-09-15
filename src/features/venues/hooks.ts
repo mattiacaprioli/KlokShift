@@ -18,10 +18,21 @@ import {
  * espone anche `venueIds` e `venuesKey` — le due forme che servono a interrogare
  * e a mettere in cache i turni di tutte le sedi insieme.
  */
-export function useMyVenues(enabled: boolean) {
+export function useMyVenues(
+  enabled: boolean,
+  userId: string,
+  /**
+   * Le sedi delegate, da `venue_access`. ⚠️ Non entrano nella query key: la
+   * chiave resta `qk.venues.mine` perché l'identità di questa lista è la
+   * sessione, e la cache si svuota al cambio di persona (`syncAccount` in
+   * `lib/auth.tsx`). Aggiungerle qui vorrebbe dire una voce di cache nuova ogni
+   * volta che il titolare tocca un permesso.
+   */
+  accessVenueIds: readonly string[]
+) {
   return useQuery({
     queryKey: qk.venues.mine,
-    queryFn: getMyVenues,
+    queryFn: () => getMyVenues(userId, accessVenueIds),
     enabled,
   });
 }
