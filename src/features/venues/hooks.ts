@@ -51,7 +51,7 @@ export function useSetVenueClosed(ownerId: string) {
 }
 
 /**
- * Logo del locale. Invalida solo `venues.mine`: il logo compare anche sulle
+ * Logo della sede. Invalida solo `venues.mine`: il logo compare anche sulle
  * card turno del professionista, ma quelle sono query sue, su un altro
  * dispositivo — le rivedrà al prossimo caricamento.
  */

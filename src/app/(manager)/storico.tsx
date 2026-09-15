@@ -244,7 +244,7 @@ export default function ManagerHistoryScreen() {
             </View>
 
             {isMultiVenue ? (
-              <ChipRow label="Locale">
+              <ChipRow label="Sede">
                 <FilterChip
                   label="Tutti"
                   active={!filters.venueIds}

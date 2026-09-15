@@ -13,10 +13,10 @@ import { useToast } from "../ui/Toast";
 import { Button, Card, Field, Input, Textarea } from "../ui/primitives";
 
 /**
- * Logo + modulo di un locale, in creazione o in modifica.
+ * Logo + modulo di una sede, in creazione o in modifica.
  *
- * Estratto da `pages/Locale.tsx` quando un account ha smesso di avere un solo
- * locale: ora lo usano `/locale` (la sede attiva) e `/locale/nuovo`.
+ * Estratto da `pages/Sede.tsx` quando un account ha smesso di avere un solo
+ * sede: ora lo usano `/sede` (la sede attiva) e `/sede/nuovo`.
  */
 export function VenueFormCard({
   venue,
@@ -35,11 +35,11 @@ export function VenueFormCard({
   const fileRef = useRef<HTMLInputElement>(null);
 
   /**
-   * Stesso ordine della foto profilo in Impostazioni: prima il locale punta al
+   * Stesso ordine della foto profilo in Impostazioni: prima la sede punta al
    * file nuovo, poi si cancella il vecchio. Al contrario, un errore a metà
-   * lascerebbe il locale a puntare a un file che non c'è più.
+   * lascerebbe la sede a puntare a un file che non c'è più.
    *
-   * Il file va nella cartella dell'**utente** e non del locale: la policy del
+   * Il file va nella cartella dell'**utente** e non della sede: la policy del
    * bucket `avatars` accetta scritture solo in `<auth.uid()>/…`.
    */
   async function onPickLogo(file: File | undefined) {
@@ -93,7 +93,7 @@ export function VenueFormCard({
 
   return (
     <>
-      {/* Il logo si carica solo su un locale già creato: prima non c'è una riga
+      {/* Il logo si carica solo su una sede già creata: prima non c'è una riga
           su cui scriverlo. Sta fuori dal form perché si salva da sé — passarlo
           dal modulo avrebbe voluto dire o salvare campi a metà, o perdere la
           foto uscendo senza salvare. */}
@@ -148,7 +148,7 @@ export function VenueFormCard({
           )}
           className="flex flex-col gap-4"
         >
-          <Field label="Nome del locale" error={errors.name?.message}>
+          <Field label="Nome della sede" error={errors.name?.message}>
             <Input {...register("name")} placeholder="Trattoria da Mario" />
           </Field>
 
@@ -162,7 +162,7 @@ export function VenueFormCard({
           </div>
 
           <Field
-            label="Tipo di locale"
+            label="Tipo di sede"
             hint="Ristorante, hotel, catering, pub, discoteca…"
             error={errors.cuisine_type?.message}
           >
@@ -188,7 +188,7 @@ export function VenueFormCard({
                 ? "Salvataggio…"
                 : venue
                   ? "Salva modifiche"
-                  : "Crea locale"}
+                  : "Crea sede"}
             </Button>
           </div>
         </form>

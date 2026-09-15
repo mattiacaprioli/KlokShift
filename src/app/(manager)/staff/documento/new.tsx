@@ -8,7 +8,7 @@ import { DocumentFormView } from "@/features/documents/DocumentFormView";
 import { useCreateStaffDocument } from "@/features/documents/hooks";
 
 /**
- * Aggiunta di un documento a un dipendente, lato locale. Resta il locale a poter
+ * Aggiunta di un documento a un dipendente, lato sede. Resta la sede a poter
  * caricare per conto suo, perché metà dell'organico è fatto di schede senza
  * account e quelle persone non possono caricarsi niente da sole.
  *

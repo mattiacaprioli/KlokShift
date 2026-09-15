@@ -65,7 +65,7 @@ export function PeopleWeekList({
   /** Domenica della stessa settimana, estremo incluso. */
   to: string;
   /**
-   * Le sedi da contare. È il filtro per locale della tab: qui filtra **sul
+   * Le sedi da contare. È il filtro per sede della tab: qui filtra **sul
    * server**, e ogni scope ha la sua chiave di cache.
    *
    * ⚠️ Solo sedi del titolare — la policy SELECT su `shifts` è larga.
@@ -106,7 +106,7 @@ export function PeopleWeekList({
     return computeWeekLoad(shiftsQuery.data ?? [], roster);
   }, [shiftsQuery.data, peopleQuery.data, scope]);
 
-  /** Nome e colore della sede di un turno, con più locali. */
+  /** Nome e colore della sede di un turno, con più sedi. */
   const venueOf = (venueId: string) => {
     if (!isMultiVenue) return null;
     const i = venues.findIndex((v) => v.id === venueId);

@@ -16,7 +16,7 @@ import {
  * paga. Chi fa 20 ore a Roma e 20 a Milano per lo stesso titolare ne ha 40, e la
  * 41ª è straordinario anche se nessuna delle due sedi da sola ci arriva.
  *
- * `showVenue` mostra il locale su ogni turno recente: serve solo a chi ha più di
+ * `showVenue` mostra la sede su ogni turno recente: serve solo a chi ha più di
  * una sede — altrimenti sarebbe la stessa parola ripetuta sotto ogni riga.
  */
 export function PersonHoursSection({

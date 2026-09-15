@@ -28,7 +28,7 @@ export type WorkHistoryItem = {
  * I due totali dello storico: turni svolti e ore. Nient'altro.
  *
  * La schermata Profilo mostra solo questi, e prima per averli scaricava
- * l'intera storia dei turni con locale annidato, per poi contarla in memoria.
+ * l'intera storia dei turni con sede annidata, per poi contarla in memoria.
  */
 export function useMyWorkHistoryTotals(waiterId: string) {
   const query = useQuery({
@@ -70,7 +70,7 @@ export function useMyWorkHistory(waiterId: string) {
     () =>
       (list.data?.pages ?? []).flat().map((r) => ({
         key: r.key,
-        venueName: r.venue_name ?? "Locale",
+        venueName: r.venue_name ?? "Sede",
         logoUrl: r.logo_url,
         title: r.title,
         date: r.date,

@@ -47,11 +47,11 @@ function monthLabel(month: string): string {
 /**
  * Le ore del mese di **tutta l'azienda**, una riga per persona.
  *
- * Nessun selettore di sede e nessuno split: chi lavora in due locali dello stesso
+ * Nessun selettore di sede e nessuno split: chi lavora in due sedi dello stesso
  * titolare ha **una** busta paga, e il numero che serve è il totale. Fino al
  * 14/09/2026 ogni riga si apriva sul dettaglio per sede; è stato tolto perché
  * rispondeva a una domanda che qui non si fa — quella pagina esiste per pagare le
- * persone, non per allocare il costo fra i locali.
+ * persone, non per allocare il costo fra le sedi.
  *
  * Con una sola sede la pagina è identica a prima del multi-sede.
  */

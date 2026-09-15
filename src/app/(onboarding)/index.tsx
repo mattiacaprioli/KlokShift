@@ -23,10 +23,10 @@ import {
  * Setup del profilo professionista: **un passo solo**.
  *
  * Ce n'erano due: il secondo chiedeva competenze auto-dichiarate e attestati. Era
- * roba da marketplace — servivano a farsi scegliere da un locale sconosciuto — e
+ * roba da marketplace — servivano a farsi scegliere da una sede sconosciuta — e
  * nessuna delle due veniva mai riletta: `waiter_profiles.skills` non compariva in
  * una sola schermata, e gli attestati finivano in un bucket che solo chi li
- * caricava poteva leggere. Chi viene invitato da un locale deve arrivare ai suoi
+ * caricava poteva leggere. Chi viene invitato da una sede deve arrivare ai suoi
  * turni, non compilare una vetrina che nessuno guarda. I documenti, che nel
  * gestionale contano davvero, vivono ora sulla scheda staff con le scadenze.
  */
@@ -97,12 +97,12 @@ export default function OnboardingScreen() {
           </Mono>
           <Display className="mt-2 text-center text-[30px]">{doneTitle}</Display>
           <Text className="mt-2 text-center font-sans text-[13.5px] leading-5 text-t3">
-            I locali per cui lavori ti assegneranno i turni: li trovi tutti qui.
+            Le sedi per cui lavori ti assegneranno i turni: li trovi tutti qui.
           </Text>
 
           {/* QR e recensioni **non** compaiono qui di proposito: è la prima cosa
               che si vede dopo la registrazione, e chi arriva su invito di un
-              locale deve capire che il prodotto sono i suoi turni. La
+              sede deve capire che il prodotto sono i suoi turni. La
               reputazione la scopre dal profilo, quando ha qualcosa da mostrare.
 
               Niente chevron: queste righe non sono tappabili, e non possono

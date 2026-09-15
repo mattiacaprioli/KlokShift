@@ -136,7 +136,7 @@ function PersonPanel({
               )}
               {liveMemberships.map((m) => (
                 <Pill key={m.id} tone="neutral">
-                  {m.venue?.name ?? "Locale"}
+                  {m.venue?.name ?? "Sede"}
                 </Pill>
               ))}
             </div>
@@ -556,7 +556,7 @@ function WorkplaceCard({
   );
   const [confirming, setConfirming] = useState(false);
 
-  const venueName = membership.venue?.name ?? "Locale";
+  const venueName = membership.venue?.name ?? "Sede";
   const busy = update.isPending || setRoles.isPending || remove.isPending;
 
   async function onSave() {
@@ -621,7 +621,7 @@ function WorkplaceCard({
         </Select>
       </Field>
 
-      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa i locali. */}
+      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa le sedi. */}
       <Field label="Ruoli in questa sede">
         <RoleCheckboxes
           venueId={membership.venue_id}
@@ -686,7 +686,7 @@ function Performance({
 }: {
   personId: string;
   waiterId: string | null;
-  /** Il locale su ogni turno recente: serve solo a chi ha più di una sede. */
+  /** La sede su ogni turno recente: serve solo a chi ha più di una sede. */
   showVenue: boolean;
 }) {
   // Totali dal database; la lista sono solo le ultime righe, già limitate.
@@ -805,7 +805,7 @@ function Performance({
                     {formatShiftRange(a.start_time, a.end_time)}
                   </span>
                   {/* Senza la sede, due turni lo stesso giovedì alla stessa ora
-                      in due locali diversi sembrerebbero un doppione. */}
+                      in due sedi diverse sembrerebbero un doppione. */}
                   {showVenue ? (
                     <span className="ml-2 text-xs text-t4">
                       · {a.venue_name}

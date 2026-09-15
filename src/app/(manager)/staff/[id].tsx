@@ -81,7 +81,7 @@ function WorkplaceCard({
   );
   const [confirmVisible, setConfirmVisible] = useState(false);
 
-  const venueName = membership.venue?.name ?? "Locale";
+  const venueName = membership.venue?.name ?? "Sede";
   const busy = update.isPending || setRoles.isPending || remove.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
@@ -155,7 +155,7 @@ function WorkplaceCard({
         ) : null}
       </View>
 
-      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa i locali. */}
+      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa le sedi. */}
       <RoleMultiSelect
         venueId={membership.venue_id}
         value={roleIds}
@@ -542,7 +542,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
    *
    * Per il titolare sono tutte. Per un collaboratore no, ed è il punto: la
    * scheda è dell'azienda, ma lui la deve leggere dalla sua sede. Sapere che
-   * Marco lavora anche negli altri due locali del gruppo non gli serve, e la
+   * Marco lavora anche negli altre due sedi del gruppo non gli serve, e la
    * RLS lo lascerebbe vedere (le appartenenze arrivano in un embed sulla
    * persona, che lui può leggere).
    */

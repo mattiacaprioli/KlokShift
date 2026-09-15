@@ -30,7 +30,7 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 /**
  * Turni passati, dal più recente. Paginati (20 per volta) con la stessa infinite
- * query dell'app: lo storico di un locale attivo cresce senza limiti, caricarlo
+ * query dell'app: lo storico di una sede attiva cresce senza limiti, caricarlo
  * tutto sarebbe un problema in poche settimane.
  *
  * Per lo stesso motivo **i filtri stanno nella query**: cercare "Capodanno" fra

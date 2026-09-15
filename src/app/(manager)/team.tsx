@@ -43,7 +43,7 @@ function permissionSummary(row: VenueAccess): string {
 /**
  * Una sede del collaboratore: riepilogo, e gli interruttori quando si apre.
  *
- * I permessi si cambiano **per sede** e non per persona: chi gestisce due locali
+ * I permessi si cambiano **per sede** e non per persona: chi gestisce due sedi
  * può avere due mestieri diversi, e un unico interruttore "su tutte le sedi"
  * cancellerebbe la differenza senza dirlo.
  */
@@ -140,7 +140,7 @@ function MemberCard({
         <View className="gap-2 border-t border-border-1 px-4 py-3">
           <Text className="text-[12px] leading-4 text-t3">
             Si collegherà da solo quando si registrerà con questa email
-            scegliendo «Gestisco un locale».
+            scegliendo «Gestisco una sede».
           </Text>
           <GhostButton
             label={invite.isPending ? "Invio…" : "Reinvia l'invito"}
@@ -173,7 +173,7 @@ function MemberCard({
 /**
  * I collaboratori del titolare.
  *
- * Il caso che risolve: due persone che organizzano i turni dello stesso locale e
+ * Il caso che risolve: due persone che organizzano i turni dello stessa sede e
  * finora si passavano le credenziali di un account solo. Da qui ognuna ha il suo
  * accesso, sulle sedi che il titolare sceglie e con i permessi che sceglie.
  *

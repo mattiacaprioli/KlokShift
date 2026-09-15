@@ -87,12 +87,12 @@ function RoleRow({ role }: { role: VenueRole }) {
 }
 
 /**
- * I ruoli di un locale. Era una lista fissa uguale per tutti: un hotel non ha un
+ * I ruoli di una sede. Era una lista fissa uguale per tutti: un hotel non ha un
  * sommelier e una discoteca ha il PR, quindi ora la scrive chi gestisce.
  *
  * I ruoli restano **per sede** (`venue_roles.venue_id`), e la sede attiva non
  * esiste più: va chiesta qui. Un selettore in cima e non una sezione per sede
- * tutta in pagina — i nomi si ripetono quasi identici fra locali, e il campo
+ * tutta in pagina — i nomi si ripetono quasi identici fra sedi, e il campo
  * «Aggiungi un ruolo» dovrebbe comunque sapere a quale sezione appartiene:
  * sarebbe lo stesso selettore, ma nascosto.
  */
@@ -120,7 +120,7 @@ export function RuoliPage() {
     return (
       <>
         <PageHeader title="Ruoli" />
-        <NoVenues detail="Ti serve un locale prima di definirne i ruoli." />
+        <NoVenues detail="Ti serve una sede prima di definirne i ruoli." />
       </>
     );
   }
@@ -141,7 +141,7 @@ export function RuoliPage() {
         title="Ruoli"
         subtitle={
           isMultiVenue && venue
-            ? `Le mansioni di ${venue.name}: ogni locale ha le sue.`
+            ? `Le mansioni di ${venue.name}: ogni sede ha le sue.`
             : "Le mansioni che assegni allo staff e che chiedi sui turni."
         }
         actions={
@@ -199,7 +199,7 @@ export function RuoliPage() {
       {roles.length === 0 ? (
         <Placeholder
           title="Nessun ruolo"
-          detail="Aggiungi le mansioni del tuo locale: potrai assegnarle allo staff e chiederle sui turni."
+          detail="Aggiungi le mansioni della tua sede: potrai assegnarle allo staff e chiederle sui turni."
         />
       ) : (
         <div className="flex flex-col gap-2">

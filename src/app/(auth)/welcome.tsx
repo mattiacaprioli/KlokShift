@@ -29,7 +29,7 @@ export default function Welcome() {
 
       <Text className="mt-7 max-w-[320px] text-center font-sans text-base leading-7 text-t2">
         Turni sempre in tasca, ore sotto controllo e le recensioni dei clienti
-        che ti seguono di locale in locale.
+        che ti seguono di sede in sede.
       </Text>
 
       <GoldButton

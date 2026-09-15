@@ -141,7 +141,7 @@ export default function WaiterHomeScreen() {
                 ? "1 turno da confermare"
                 : `${daConfermare} turni da confermare`
             }
-            subtitle="Il locale sta aspettando la tua risposta"
+            subtitle="La sede sta aspettando la tua risposta"
             onPress={openAgenda}
           />
         ) : null}
@@ -159,7 +159,7 @@ export default function WaiterHomeScreen() {
           ) : next == null ? (
             <EmptyState
               title="Nessun turno in programma"
-              subtitle="Quando un locale ti assegna un turno lo trovi qui."
+              subtitle="Quando una sede ti assegna un turno lo trovi qui."
             />
           ) : (
             <View className="gap-3">
@@ -206,7 +206,7 @@ export default function WaiterHomeScreen() {
       <ConfirmModal
         visible={declining != null}
         title="Rifiutare il turno?"
-        message="Il locale verrà avvisato."
+        message="La sede verrà avvisata."
         confirmLabel="Rifiuta"
         destructive
         pending={respond.isPending}

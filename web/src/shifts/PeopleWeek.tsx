@@ -50,10 +50,10 @@ export function PeopleWeek({
   shifts: ShiftWithAssignees[];
   /**
    * Le sedi che `shifts` contiene: tutte quelle dell'azienda, o la sola sede
-   * scelta col filtro per locale del Planning. Qui serve a due cose — tenere
+   * scelta col filtro per sede del Planning. Qui serve a due cose — tenere
    * nelle righe solo chi lavora in quelle sedi, e dire che le ore sono parziali
    * quando il filtro è acceso (il contratto è **della persona**, su tutte le
-   * sedi: con un locale solo sotto gli occhi, un totale sotto il target non è
+   * sedi: con una sede sola sotto gli occhi, un totale sotto il target non è
    * una promessa che alla persona manchino delle ore).
    */
   venueIds: string[];
@@ -73,17 +73,17 @@ export function PeopleWeek({
   const peopleQuery = useOwnerPeople(ownerId);
   const dnd = useShiftDrag();
 
-  /** Il filtro per locale del Planning è acceso: si vede una sede sola. */
+  /** Il filtro per sede del Planning è acceso: si vede una sede sola. */
   const filtered = venueIds.length < venues.length;
   /**
-   * Più sedi **in questa griglia**: è la condizione per scrivere il locale sui
-   * turni. Con il filtro acceso il locale è già nel titolo della pagina, e
+   * Più sedi **in questa griglia**: è la condizione per scrivere la sede sui
+   * turni. Con il filtro acceso la sede è già nel titolo della pagina, e
    * ripeterlo su ogni chip toglierebbe spazio all'orario.
    */
   const showVenue = isMultiVenue && venueIds.length > 1;
 
   /**
-   * Nome e colore del locale di un turno. L'indice è quello di `venues`, non di
+   * Nome e colore della sede di un turno. L'indice è quello di `venues`, non di
    * `venueIds`: il colore di una sede non deve cambiare quando si filtra.
    */
   const venueOf = (venueId: string) => {
@@ -100,7 +100,7 @@ export function PeopleWeek({
    * uno `staff_members.id`, e quello giusto dipende dalla sede del turno che si
    * sta trascinando. Nessun vincolo del database lo impedisce — un'assegnazione
    * con `staff_member.venue_id ≠ shift.venue_id` passerebbe in silenzio, e poi
-   * `role_id` punterebbe a un ruolo di un altro locale.
+   * `role_id` punterebbe a un ruolo di un'altra sede.
    */
   const membershipOf = useMemo(() => {
     const map = new Map<string, ReassignTarget>();
@@ -148,7 +148,7 @@ export function PeopleWeek({
   if (rows.length === 0) {
     return filtered ? (
       <Placeholder
-        title="Nessuno lavora in questo locale"
+        title="Nessuno lavora in questa sede"
         detail="Assegna delle persone a questa sede dalla sezione Staff, oppure togli il filtro per vedere tutta l'azienda."
       />
     ) : (
@@ -334,7 +334,7 @@ export function PeopleWeek({
         {isMultiVenue && !filtered ? (
           <>
             {" "}
-            Le ore sono <b>della persona</b>: i turni di tutti i tuoi locali sono
+            Le ore sono <b>della persona</b>: i turni di tutte le tue sedi sono
             già contati qui, e un turno si può passare solo a chi lavora nella sua
             stessa sede.
           </>
@@ -342,7 +342,7 @@ export function PeopleWeek({
         {filtered ? (
           <>
             {" "}
-            Stai guardando <b>un locale solo</b>: le ore qui sotto sono quelle di
+            Stai guardando <b>una sede sola</b>: le ore qui sotto sono quelle di
             questa sede, non il totale della persona. Il contratto è della
             persona — per confrontarlo con tutte le sue ore, togli il filtro.
           </>
@@ -370,10 +370,10 @@ function PersonShiftChip({
 }: {
   personShift: PersonShift;
   fromStaffName: string;
-  /** Il locale del turno: nome e colore. `null` con un locale solo. */
+  /** La sede del turno: nome e colore. `null` con una sede sola. */
   venue: { name: string; accent: string } | null;
   /**
-   * Scrivere il nome del locale sul chip. Falso quando la griglia mostra una
+   * Scrivere il nome della sede sul chip. Falso quando la griglia mostra una
    * sede sola: il nome sarebbe uguale su ogni turno.
    */
   showVenue: boolean;
@@ -435,7 +435,7 @@ function PersonShiftChip({
           ? personShift.title
           : ASSIGNMENT_STATUS_LABEL[personShift.status]}
       </span>
-      {/* Il locale, terza riga. Qui il nome si **scrive**: questa è la vista in
+      {/* La sede, terza riga. Qui il nome si **scrive**: questa è la vista in
           cui una persona lavora in due sedi nella stessa settimana, e sapere
           dov'è giovedì è metà della domanda. Il pallino colorato è solo un
           appiglio — si stampa in grigio, il nome no. */}
@@ -475,7 +475,7 @@ function HoursCell({
   /** Le ore che la persona deve fare, se il titolare le ha registrate. */
   contract: Contract | null;
   /**
-   * Il filtro per locale è acceso: qui c'è **una parte** delle ore della
+   * Il filtro per sede è acceso: qui c'è **una parte** delle ore della
    * persona. "Oltre il contratto" resta vero quando scatta — le ore filtrate non
    * superano mai quelle vere — ma "sotto il contratto" no, e una cella
    * tranquilla non promette più niente: va detto.
@@ -492,7 +492,7 @@ function HoursCell({
         [
           explainer,
           partial
-            ? "Solo le ore di questo locale: togli il filtro per il totale della persona."
+            ? "Solo le ore di questa sede: togli il filtro per il totale della persona."
             : null,
           contract ? null : "Nessuna ora da contratto sulla scheda: qui non c'è niente da confrontare.",
         ]

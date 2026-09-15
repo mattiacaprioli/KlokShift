@@ -21,7 +21,7 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
     {
       icon: "calendar",
       title: "I tuoi turni, sempre con te",
-      body: "I locali per cui lavori ti assegnano i turni: li confermi con un tocco e li hai tutti qui.",
+      body: "Le sedi per cui lavori ti assegnano i turni: li confermi con un tocco e li hai tutti qui.",
     },
     {
       icon: "clock",
@@ -31,7 +31,7 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
     {
       icon: "message",
       title: "Nessuna sorpresa all'ultimo",
-      body: "Se un turno cambia o salta lo sai subito, e col locale ci parli direttamente da qui.",
+      body: "Se un turno cambia o salta lo sai subito, e con la sede ci parli direttamente da qui.",
     },
   ],
   manager: [

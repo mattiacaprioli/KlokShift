@@ -14,8 +14,8 @@ export type StaffMember = Tables<"staff_members">;
  * di impiego, lo stato dell'invito, i ruoli, i turni e le ore.
  *
  * Da 20260913110100 anche le **ore** sono di questo livello: `staff_members` resta
- * l'unità di *assegnazione* (il turno si fa in un locale, coi ruoli di quel
- * locale), `staff_people` è l'unità di *rendiconto* — 20 ore a Roma e 20 a Milano
+ * l'unità di *assegnazione* (il turno si fa in una sede, coi ruoli di quel
+ * sede), `staff_people` è l'unità di *rendiconto* — 20 ore a Roma e 20 a Milano
  * sono 40 ore e una busta paga.
  *
  * ⚠️ `staff_members.display_name`, `.waiter_id`, `.phone` e `.note` sono un
@@ -77,7 +77,7 @@ export type PersonMembership = Pick<
  * La persona con **tutte** le sue appartenenze: è la scheda del dipendente.
  *
  * Una scheda per persona, non una per sede. Prima Marco ne aveva due (una per
- * locale) e ognuna mostrava le ore di quella sola sede — un'assenza a Milano non
+ * sede) e ognuna mostrava le ore di quella sola sede — un'assenza a Milano non
  * scalfiva il 100% di affidabilità di Roma. Ore, presenze e affidabilità sono
  * dell'azienda; ruoli e tipo di impiego restano della sede, e stanno nelle
  * `memberships`.
@@ -134,7 +134,7 @@ export type OwnerPerson = StaffPerson & {
 /**
  * Le sedi (aperte) in cui la persona lavora: i chip della riga dell'organico.
  *
- * Le sedi chiuse restano fuori — un chip "Osteria Como" per un locale chiuso sei
+ * Le sedi chiuse restano fuori — un chip "Osteria Como" per una sede chiusa sei
  * mesi fa manda solo a cercare un turno che non si può fare.
  */
 export function personVenueNames(person: OwnerPerson): string[] {
@@ -148,7 +148,7 @@ export function personVenueNames(person: OwnerPerson): string[] {
 /**
  * Le mansioni della persona, **unite fra le sue sedi** ("Cameriere, Barman").
  *
- * L'unione e non un elenco per sede: `venue_roles` è per locale, quindi Marco
+ * L'unione e non un elenco per sede: `venue_roles` è per sede, quindi Marco
  * può essere "Cameriere" a Roma e "Barman" a Milano, e in una riga d'elenco
  * quello che si vuole sapere è cosa sa fare — non dove. Il dettaglio per sede
  * sta nella sua scheda, dove `WorkplaceCard` lo mostra già.
@@ -621,7 +621,7 @@ export async function getMyPendingInvites(
   return (data as PendingInvite[] | null) ?? [];
 }
 
-/** Waiter: a venue they're active staff for (their "I tuoi locali"). */
+/** Waiter: a venue they're active staff for (their "Le tue sedi"). */
 export type MyEmployer = StaffMember & {
   venue: Pick<
     Tables<"venues">,
@@ -643,7 +643,7 @@ export async function getMyEmployers(waiterId: string): Promise<MyEmployer[]> {
 
 /**
  * Una "cartella" di documenti del professionista: **una per datore di lavoro**,
- * non una per locale.
+ * non una per sede.
  *
  * Se Giuseppe ha tre sedi e tu lavori in due, la cartella è una sola e i
  * documenti valgono per entrambe. Le sedi servono solo a dare un nome alla
@@ -667,7 +667,7 @@ export function documentScopeLabel(scope: DocumentScope): string {
     .map((m) => m.venue?.name)
     .filter((n): n is string => !!n)
     .sort((a, b) => a.localeCompare(b, "it"));
-  return names.length > 0 ? names.join(" · ") : "Locale";
+  return names.length > 0 ? names.join(" · ") : "Sede";
 }
 
 /** Waiter: le sue cartelle documenti, una per titolare che lo ha in organico. */

@@ -22,7 +22,7 @@ export function isOvernightShift(start: string, end: string): boolean {
 }
 
 // Intervallo orario del turno, con il giorno dopo segnalato: "22:00–04:00 +1".
-// Un locale notturno non ha modo, altrimenti, di distinguere un turno di sei ore
+// Una sede notturna non ha modo, altrimenti, di distinguere un turno di sei ore
 // da uno che sembra finire diciotto ore prima di iniziare.
 export function formatShiftRange(start: string, end: string): string {
   const range = `${formatTime(start)}–${formatTime(end)}`;

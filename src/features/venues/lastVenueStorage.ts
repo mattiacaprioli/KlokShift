@@ -19,7 +19,7 @@ import * as SecureStore from "expo-secure-store";
  * alias di Vite: le due firme devono restare identiche.
  *
  * La chiave è per **account**: su un telefono condiviso due titolari non si
- * scambiano la sede, e chi cambia account non si ritrova un locale che non è suo.
+ * scambiano la sede, e chi cambia account non si ritrova una sede che non è suo.
  *
  * ⚠️ La stringa della chiave resta `activeVenue.` di proposito: così al primo
  * avvio dopo l'aggiornamento il form turno propone la sede che l'utente aveva

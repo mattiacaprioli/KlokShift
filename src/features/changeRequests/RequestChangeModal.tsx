@@ -80,7 +80,7 @@ export function RequestChangeModal({
         onSuccess: () => {
           setReason("");
           onClose();
-          toast.show("Richiesta inviata al locale");
+          toast.show("Richiesta inviata alla sede");
         },
         onError: (e) =>
           toast.show(
@@ -112,7 +112,7 @@ export function RequestChangeModal({
             Chiedi un cambio
           </Text>
           <Text className="mt-2 text-sm leading-5 text-t2">
-            Il locale riceve la richiesta in chat e decide lui: fino ad allora il
+            La sede riceve la richiesta in chat e decide: fino ad allora il
             turno di {shiftLabel} resta come sta.
           </Text>
 
@@ -148,7 +148,7 @@ export function RequestChangeModal({
                 >
                   {sameTime
                     ? "Inizio e fine coincidono: correggi l'orario."
-                    : "Se il locale accetta, aggiorna lui il turno: l'accordo resta scritto qui."}
+                    : "Se la sede accetta, aggiorna il turno: l'accordo resta scritto qui."}
                 </Text>
               </View>
             ) : null}

@@ -28,7 +28,7 @@ const ICONS: IconName[] = [
 export function ForVenues() {
   return (
     <Section
-      id="locali"
+      id="sedi"
       eyebrow={t.venue.eyebrow}
       title={t.venue.title}
       lead={t.venue.lead}

@@ -31,11 +31,11 @@ function recentMonths(): string[] {
 /**
  * Le ore del mese di **tutta l'azienda**, una riga per persona.
  *
- * Nessun selettore di sede e nessuno split: chi lavora in due locali dello stesso
+ * Nessun selettore di sede e nessuno split: chi lavora in due sedi dello stesso
  * titolare ha **una** busta paga, e il numero che serve è il totale. Fino al
  * 14/09/2026 ogni riga si apriva sul dettaglio per sede; è stato tolto perché
  * rispondeva a una domanda che questa pagina non fa — esiste per pagare le
- * persone, non per allocare il costo fra i locali.
+ * persone, non per allocare il costo fra le sedi.
  */
 export function OrePage() {
   const { profile } = useAuth();

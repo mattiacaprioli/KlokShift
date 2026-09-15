@@ -18,7 +18,7 @@ import { DocumentsSection } from "@/features/documents/DocumentsSection";
  * Non è una cartella personale unica: un documento sta sull'anagrafica che quel
  * datore ha di te, ed è l'unico modo in cui può tenerne una anche per chi l'app
  * non ce l'ha. Ma da 20260913100100 l'anagrafica è **una per titolare**, non per
- * sede: se Giuseppe ha tre locali e tu lavori in due, carichi l'HACCP una volta e
+ * sede: se Giuseppe ha tre sedi e tu lavori in due, carichi l'HACCP una volta e
  * vale per entrambi. Lasciando una sola delle sue sedi i documenti restano; se
  * lasci l'ultima, spariscono con l'anagrafica.
  *
@@ -63,7 +63,7 @@ export default function WaiterDocumentsScreen() {
         <QueryError onRetry={() => query.refetch()} />
       ) : scopes.length === 0 ? (
         <EmptyState
-          title="Non fai ancora parte di un locale"
+          title="Non fai ancora parte di una sede"
           subtitle="I documenti si caricano sull'anagrafica che il datore di lavoro ha di te: appena entri in un organico, li trovi qui."
         />
       ) : (

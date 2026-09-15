@@ -105,7 +105,7 @@ export type PersonLoad = {
  * chi non lavora nel periodo compare comunque a zero — che è metà
  * dell'informazione: senza quelle righe non si vede chi è rimasto fermo.
  *
- * Il contratto è della *persona*, non del locale: 30 ore a Roma più 25 a Milano
+ * Il contratto è della *persona*, non della sede: 30 ore a Roma più 25 a Milano
  * sono 55 ore su un contratto solo. Prima serviva un secondo insieme di turni
  * (`elsewhere`) per dirlo, perché la vista era di una sede sola; ora `shifts`
  * contiene già tutte le sedi del titolare e la somma è naturale.

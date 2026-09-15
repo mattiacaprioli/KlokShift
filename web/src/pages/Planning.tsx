@@ -81,7 +81,7 @@ function storedView(): View {
   }
 }
 
-/** Il filtro per locale scelto l'ultima volta. `null` = tutti. */
+/** Il filtro per sede scelto l'ultima volta. `null` = tutte. */
 function storedVenue(): string | null {
   try {
     return localStorage.getItem(VENUE_KEY);
@@ -92,7 +92,7 @@ function storedVenue(): string | null {
 
 /**
  * Planning. Tre viste sullo stesso dato, tutte da `useOwnerShiftsRange` — che
- * porta i turni di **tutti** i locali del titolare: il planning non è più di una
+ * porta i turni di **tutte** le sedi del titolare: il planning non è più di una
  * sede, e ogni turno dice a quale appartiene.
  *
  * - **settimana** per lavorare (celle alte, si legge tutto);
@@ -104,7 +104,7 @@ function storedVenue(): string | null {
  */
 export function PlanningPage() {
   const { venues, venueIds, isMultiVenue } = useOwnerVenues();
-  /** Il locale di un turno: nome e colore. `undefined` con un locale solo. */
+  /** La sede di un turno: nome e colore. `undefined` con una sede sola. */
   const venueOf = useCallback(
     (venueId: string) => {
       if (!isMultiVenue) return undefined;
@@ -164,7 +164,7 @@ export function PlanningPage() {
     [isWeekly, monday, month]
   );
 
-  // Il filtro per locale è **del server**: cambia l'insieme di `venue_id`
+  // Il filtro per sede è **del server**: cambia l'insieme di `venue_id`
   // interrogato, non nasconde righe già scaricate. Con dieci sedi e un mese
   // aperto la differenza è tutto il payload.
   const { data, isPending, isError, error } = useOwnerShiftsRange(
@@ -304,7 +304,7 @@ export function PlanningPage() {
     return (
       <>
         <PageHeader title="Planning" />
-        <NoVenues detail="Ti serve un locale prima di programmare i turni." />
+        <NoVenues detail="Ti serve una sede prima di programmare i turni." />
       </>
     );
   }
@@ -330,15 +330,15 @@ export function PlanningPage() {
         }
         actions={
           <>
-            {/* Il filtro per locale ha senso solo se i locali sono più d'uno. */}
+            {/* Il filtro per sede ha senso solo se le sedi sono più d'una. */}
             {isMultiVenue ? (
               <Select
-                aria-label="Filtra per locale"
+                aria-label="Filtra per sede"
                 value={activeVenueId ?? ""}
                 onChange={(e) => setVenueFilter(e.target.value || null)}
                 className="mr-2 w-auto"
               >
-                <option value="">Tutti i locali</option>
+                <option value="">Tutte le sedi</option>
                 {venues.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.name}
@@ -590,7 +590,7 @@ function WeekGrid({
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
   onMove: (payload: MoveDragPayload, toDate: string) => void;
-  /** Il locale di un turno, per il bordo colorato. Vuoto con un locale solo. */
+  /** La sede di un turno, per il bordo colorato. Vuoto con una sede sola. */
   venueOf: (venueId: string) => { name: string; accent: string } | undefined;
 }) {
   const dnd = useShiftDrag();
@@ -676,7 +676,7 @@ function MonthGrid({
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
   onMove: (payload: MoveDragPayload, toDate: string) => void;
-  /** Il locale di un turno, per il bordo colorato. Vuoto con un locale solo. */
+  /** La sede di un turno, per il bordo colorato. Vuoto con una sede sola. */
   venueOf: (venueId: string) => { name: string; accent: string } | undefined;
 }) {
   const dnd = useShiftDrag();
@@ -849,7 +849,7 @@ function ShiftCell({
   onOpen,
 }: {
   shift: ShiftWithAssignees;
-  /** Il colore del locale. Assente con un locale solo. */
+  /** Il colore della sede. Assente con una sede sola. */
   accent?: string;
   venueName?: string;
   onOpen: () => void;

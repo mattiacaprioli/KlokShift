@@ -9,7 +9,7 @@ import { useSetVenueSeesPlanning } from "./hooks";
 /**
  * «Planning visibile all'organico», sulla scheda della sede.
  *
- * Acceso di default (vedi la migration 20260914150000): chi lavora in un locale
+ * Acceso di default (vedi la migration 20260914150000): chi lavora in una sede
  * ha ragione di sapere chi c'è in turno con lui, e pretendere un'azione dal
  * titolare avrebbe reso la cosa invisibile quasi ovunque. Lo switch esiste per
  * chi non la vuole.

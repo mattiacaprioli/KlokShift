@@ -21,10 +21,10 @@ type AssignmentStatus = Enums<"assignment_status">;
 /**
  * Lo stato di un turno si legge dalla barra colorata a sinistra, non da
  * un'etichetta: la Pill costava un terzo della larghezza della card e su uno
- * schermo da 375pt troncava sia il nome del locale sia il ruolo. Resta solo
+ * schermo da 375pt troncava sia il nome della sede sia il ruolo. Resta solo
  * dove dice qualcosa che il colore non dice — un turno rifiutato o un'assenza.
  *
- * Gli stessi tre colori del lato locale (vedi `shiftTone`), letti però sul
+ * Gli stessi tre colori del lato sede (vedi `shiftTone`), letti però sul
  * **proprio** stato invece che sulla copertura: verde a posto, arancio c'è da
  * fare qualcosa, spento fuori gioco. Fino al 14/09/2026 un turno confermato era
  * oro e uno da confermare arancio — #EAB54C contro #E2922F, due ambre che su un
@@ -52,7 +52,7 @@ const STATUS: Record<
  * la sola cosa che si cerca davvero — in fondo alla gerarchia. Qui l'ora è
  * l'elemento più forte, in cifre tabellari così che le righe si incolonnino.
  *
- * Niente compenso: sui turni interni `hourly_rate` non è un dato che il locale
+ * Niente compenso: sui turni interni `hourly_rate` non è un dato che la sede
  * espone al professionista, ed è per questo che anche il dettaglio turno
  * (`(waiter)/shift/[id]`) non mostra la riga "Compenso".
  */
@@ -68,7 +68,7 @@ export function MyShiftCard({
 }: {
   shift: ShiftWithVenue;
   status: AssignmentStatus;
-  /** Il ruolo per cui è chiamato quel giorno, se il locale l'ha scelto. */
+  /** Il ruolo per cui è chiamato quel giorno, se la sede l'ha scelto. */
   role?: string | null;
   onPress: () => void;
   /** `compact` sta in una riga sola e porta il giorno con sé: è per la home. */
@@ -80,7 +80,7 @@ export function MyShiftCard({
   pending?: boolean;
 }) {
   const s = STATUS[status];
-  const venueName = shift.venue?.name ?? "Locale";
+  const venueName = shift.venue?.name ?? "Sede";
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
   const duration = formatHours(
     shiftDurationHours(shift.start_time, shift.end_time)

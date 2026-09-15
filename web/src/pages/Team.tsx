@@ -161,7 +161,7 @@ function MemberCard({ member }: { member: TeamMember }) {
         <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
           <p className="text-xs text-t3">
             Si collega da solo quando si registra con questa email scegliendo
-            «Gestisco un locale».
+            «Gestisco una sede».
           </p>
           <Button
             variant="ghost"
@@ -314,7 +314,7 @@ export function TeamPage() {
     <>
       <PageHeader
         title="Collaboratori"
-        subtitle="Chi altro gestisce i tuoi locali, e cosa può fare"
+        subtitle="Chi altro gestisce le tue sedi, e cosa può fare"
       />
 
       <div className="flex max-w-2xl flex-col gap-6">

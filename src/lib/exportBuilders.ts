@@ -84,7 +84,7 @@ function csvCell(v: string): string {
  * CSV separatore ';' e decimali con virgola (default Excel IT), con BOM UTF-8.
  *
  * **Una riga per persona, col totale.** Al commercialista serve quante ore ha fatto
- * Mattia, non in quale dei tre locali le ha fatte: è una busta paga sola. Lo split
+ * Mattia, non in quale delle tre sedi le ha fatte: è una busta paga sola. Lo split
  * per sede serve al titolare per allocare i costi, e sta nella pagina Ore e nel PDF.
  *
  * Lo schema non cambia mai — `Nome;Ruolo;Turni;Ore` con una sede come con tre —
@@ -107,7 +107,7 @@ export function buildHoursCsv(people: PersonHours[]): string {
 
 /**
  * Nome file condiviso mobile/web: "ore-osteria-milano-settembre-2026.csv" per chi
- * ha un locale solo, "ore-giuseppe-buffa-settembre-2026.csv" per chi ne ha tre.
+ * ha una sede sola, "ore-giuseppe-buffa-settembre-2026.csv" per chi ne ha tre.
  *
  * ⚠️ La versione precedente motivava il nome della sede con «sono tre buste paga
  * diverse». È **falso**, ed è l'errore corretto da 20260913110100: un dipendente

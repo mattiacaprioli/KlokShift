@@ -12,7 +12,7 @@ import { Button, Card, Field, Input, Select } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
 /**
- * In quali sedi lavora. Almeno una; con un locale solo non compare, perché la
+ * In quali sedi lavora. Almeno una; con una sede sola non compare, perché la
  * risposta è già nota.
  *
  * Ritorna anche `single`: l'id quando ne è selezionata **esattamente una**. I
@@ -217,7 +217,7 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
           </Field>
         ) : (
           <p className="text-xs text-t3">
-            I ruoli cambiano da un locale all&apos;altro: li assegnerai dalla sua
+            I ruoli cambiano da una sede all&apos;altra: li assegnerai dalla sua
             scheda, sede per sede.
           </p>
         )}

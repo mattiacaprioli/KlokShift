@@ -94,7 +94,7 @@ export function monthDays(monthStart: Date): string[] {
  * martedì di ottobre.
  *
  * È la regola giusta per un turnario, ed è la stessa del "duplica settimana":
- * un turno del venerdì deve ricadere di venerdì — il sabato sera di un locale
+ * un turno del venerdì deve ricadere di venerdì — il sabato sera di una sede
  * non somiglia al martedì. Tenere invece il giorno del mese (15 → 15) sposta i
  * turni di weekend in mezzo alla settimana.
  *

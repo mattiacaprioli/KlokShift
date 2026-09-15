@@ -99,7 +99,7 @@ export default function VenueRolesScreen() {
   const { venues, venueById, isMultiVenue } = venueQuery;
   // I ruoli sono **per sede** (`venue_roles.venue_id`), e la sede attiva non
   // esiste più: va chiesta qui. Un selettore in cima e non una sezione per sede
-  // tutta in pagina — i nomi si ripetono quasi identici fra locali, e il campo
+  // tutta in pagina — i nomi si ripetono quasi identici fra sedi, e il campo
   // "Aggiungi un ruolo" dovrebbe comunque sapere a quale sezione appartiene:
   // sarebbe lo stesso selettore, ma nascosto.
   const { venueId, choose } = useLastVenue();
@@ -167,11 +167,11 @@ export default function VenueRolesScreen() {
 
         <Text className="-mt-3 text-[13px] leading-5 text-t3">
           Le mansioni che assegni al tuo staff e che chiedi sui turni. Scrivi
-          quelle che usi davvero: ogni locale ha le sue
+          quelle che usi davvero: ogni sede ha le sue
           {isMultiVenue && venue ? `, e queste sono quelle di ${venue.name}` : ""}.
         </Text>
 
-        {/* Ogni locale ha il suo elenco: qui si sceglie di quale. */}
+        {/* Ogni sede ha il suo elenco: qui si sceglie di quale. */}
         <VenuePicker
           perm="can_manage_venue"
           value={venueId}
@@ -185,7 +185,7 @@ export default function VenueRolesScreen() {
         ) : rolesQuery.isError ? (
           <QueryError className="mt-6" onRetry={() => rolesQuery.refetch()} />
         ) : venues.length === 0 ? (
-          <NoVenuesState subtitle="Ti serve un locale prima di definirne i ruoli." />
+          <NoVenuesState subtitle="Ti serve una sede prima di definirne i ruoli." />
         ) : (
           <>
             <View className="gap-2">
@@ -218,7 +218,7 @@ export default function VenueRolesScreen() {
             {roles.length === 0 ? (
               <EmptyState
                 title="Nessun ruolo"
-                subtitle="Aggiungi le mansioni del tuo locale: potrai assegnarle allo staff e chiederle sui turni."
+                subtitle="Aggiungi le mansioni della tua sede: potrai assegnarle allo staff e chiederle sui turni."
               />
             ) : (
               <View className="gap-1 rounded-3xl border border-border-2 bg-bg-card px-4 py-2">

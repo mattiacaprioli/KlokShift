@@ -29,13 +29,13 @@ import {
  * Una riga dell'organico: **una persona**, non una sua scheda di sede.
  *
  * Fino al 14/09/2026 questa lista mostrava le `staff_members` della sede attiva,
- * e chi lavorava in tre locali ci compariva tre volte con un sottotitolo "anche
+ * e chi lavorava in tre sedi ci compariva tre volte con un sottotitolo "anche
  * a…" a rimediare. Ora la riga è la persona (`staff_people`) e le sedi sono i
  * suoi chip: la stessa informazione, detta nel verso in cui la si pensa.
  */
 function PersonRow({
   person,
-  /** Le sedi in cui lavora. Vuoto con un locale solo: sarebbe rumore. */
+  /** Le sedi in cui lavora. Vuoto con una sede sola: sarebbe rumore. */
   venueNames,
   onPress,
 }: {
@@ -145,7 +145,7 @@ export default function ManagerStaffScreen() {
             {people.length === 1
               ? "1 persona"
               : `${people.length} persone`}{" "}
-            · {venues.length} locali
+            · {venues.length} sedi
           </Text>
         ) : null}
       </View>
@@ -155,7 +155,7 @@ export default function ManagerStaffScreen() {
       ) : venueQuery.isError ? (
         <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
       ) : venues.length === 0 ? (
-        <NoVenuesState subtitle="Ti serve un locale prima di creare il tuo organico." />
+        <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
       ) : (
         <>
           {canStaff ? (
@@ -208,7 +208,7 @@ export default function ManagerStaffScreen() {
                 <Text className="text-base font-sans-bold text-t1">Ruoli</Text>
                 <Text className="text-xs text-t3">
                   {isMultiVenue
-                    ? "Le mansioni di ogni tuo locale"
+                    ? "Le mansioni di ogni tua sede"
                     : "Le mansioni che assegni allo staff e chiedi sui turni"}
                 </Text>
               </View>

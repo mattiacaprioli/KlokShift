@@ -12,7 +12,7 @@ export type AgendaItem = AssignmentWithShift & { shift: ShiftWithVenue };
 export type DaySection<T> = {
   /**
    * "YYYY-MM-DD" — la chiave, non l'etichetta. `null` per una sezione che non
-   * è un giorno (lo storico in coda all'agenda del locale): chi sincronizza il
+   * è un giorno (lo storico in coda all'agenda della sede): chi sincronizza il
    * calendario con lo scorrimento la salta.
    */
   date: string | null;
@@ -36,7 +36,7 @@ export function withShift(items: AssignmentWithShift[]): AgendaItem[] {
  * riduzione sequenziale: giorni in ordine, e turni in ordine dentro il giorno.
  *
  * Un turno notturno (22:00–04:00) sta sotto il giorno in cui **inizia**, che è
- * il giorno in cui ci si presenta al locale — stessa convenzione di
+ * il giorno in cui ci si presenta alla sede — stessa convenzione di
  * `shiftDurationHours` e `shiftEndsAt`.
  */
 export function groupByDay<T>(

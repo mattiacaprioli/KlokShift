@@ -40,7 +40,7 @@ export default function ManagerSettingsScreen() {
         <View className="gap-2">
           <SectionHeader title="Account" />
           <Card className="p-0">
-            {/* Il proprio nome e la propria foto, non quelli del locale: il
+            {/* Il proprio nome e la propria foto, non quelli della sede: il
                 Profilo parla della sede, e questa era l'unica cosa che dal
                 telefono non si poteva più sistemare. */}
             <Pressable
@@ -103,7 +103,7 @@ export default function ManagerSettingsScreen() {
                     Collaboratori
                   </Text>
                   <Text className="mt-0.5 text-[13px] text-t3">
-                    Chi altro gestisce i tuoi locali, e cosa può fare
+                    Chi altro gestisce le tue sedi, e cosa può fare
                   </Text>
                 </View>
                 <Icon name="chevR" size={18} color="#6A6358" />
@@ -143,7 +143,7 @@ export default function ManagerSettingsScreen() {
         <View style={{ marginTop: "auto" }} className="gap-6">
           <GhostButton label="Esci" onPress={signOut} />
           {/* Per un professionista promosso questo è l'account con cui lavora,
-              non un account da locale: cancellarlo da qui vorrebbe dire
+              non un account da sede: cancellarlo da qui vorrebbe dire
               chiudere la propria carriera dalla porta di servizio. Lo trova
               nelle impostazioni del suo lato. */}
           {canSwitch ? null : <DeleteAccountSection />}

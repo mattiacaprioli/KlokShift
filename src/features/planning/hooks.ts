@@ -6,7 +6,7 @@ import { getStaffPlanning, setVenueSeesPlanning } from "./api";
  * Il planning delle sedi del professionista, da `from` a `to` inclusi.
  *
  * `enabled` di proposito: la tab Turni lo carica solo quando si passa a «Il
- * locale». È una RPC in più su una schermata che si apre a ogni avvio, e la
+ * sede». È una RPC in più su una schermata che si apre a ogni avvio, e la
  * stragrande maggioranza delle aperture serve a guardare i **propri** turni.
  */
 export function useStaffPlanning(from: string, to: string, enabled = true) {

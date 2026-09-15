@@ -18,7 +18,7 @@ import { useToast } from "../ui/Toast";
 import { Button, Card, Pill } from "../ui/primitives";
 
 /**
- * «Fagli gestire il locale»: la promozione di un membro dell'organico.
+ * «Fagli gestire la sede»: la promozione di un membro dell'organico.
  *
  * Gemella di `src/features/team/PromoteSection.tsx`, che è l'app. Due file e non
  * uno perché la parte condivisa (api + hooks) è già condivisa: qui resta solo il
@@ -54,7 +54,7 @@ export function PromoteSection({
   return (
     <section className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Gestione del locale
+        Gestione della sede
       </span>
       <p className="-mt-1 text-xs leading-5 text-t3">
         {firstName} continua a essere un professionista con i suoi turni: gli si

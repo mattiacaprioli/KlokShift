@@ -36,7 +36,7 @@ type Worker = {
 };
 
 /**
- * Vista d'insieme del locale. Le definizioni dei KPI sono le stesse della home
+ * Vista d'insieme della sede. Le definizioni dei KPI sono le stesse della home
  * dell'app — se divergessero, gli stessi numeri direbbero cose diverse sui due
  * schermi.
  */
@@ -113,8 +113,8 @@ export function HomePage() {
         title={isMultiVenue ? "Home" : venues[0].name}
         subtitle={
           isMultiVenue
-            ? `Come stanno andando i tuoi ${venues.length} locali`
-            : "Come sta andando il locale"
+            ? `Come stanno andando le tue ${venues.length} sedi`
+            : "Come sta andando la sede"
         }
       />
 
@@ -206,7 +206,7 @@ export function HomePage() {
                     <div className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
                         {/* Il pallino della sede: in un elenco che mescola tre
-                            locali, due turni identici vanno distinti. */}
+                            sedi, due turni identici vanno distinti. */}
                         {isMultiVenue ? (
                           <span
                             aria-hidden

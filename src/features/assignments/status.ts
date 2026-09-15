@@ -14,7 +14,7 @@ export function isActiveAssignment(status: AssignmentStatus): boolean {
   return status === "assigned" || status === "confirmed";
 }
 
-/** Etichette lato locale (il professionista vede "Da confermare" al posto di "Assegnato"). */
+/** Etichette lato sede (il professionista vede "Da confermare" al posto di "Assegnato"). */
 export const ASSIGNMENT_STATUS_LABEL: Record<AssignmentStatus, string> = {
   assigned: "Assegnato",
   confirmed: "Confermato",

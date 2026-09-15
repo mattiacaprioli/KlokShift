@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const venueSchema = z.object({
-  name: z.string().trim().min(1, "Inserisci il nome del locale."),
+  name: z.string().trim().min(1, "Inserisci il nome della sede."),
   city: z.string().trim(),
   address: z.string().trim(),
   cuisine_type: z.string().trim(),

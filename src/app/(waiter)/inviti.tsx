@@ -20,7 +20,7 @@ import type { PendingInvite } from "@/features/staff/api";
 function InviteCard({ invite }: { invite: PendingInvite }) {
   const toast = useToast();
   const respond = useRespondToInvite();
-  const venueName = invite.venue?.name ?? "Un locale";
+  const venueName = invite.venue?.name ?? "Una sede";
 
   function accept() {
     respond.mutate(
@@ -109,7 +109,7 @@ export default function WaiterInvitesScreen() {
           <View className="mt-16">
             <EmptyState
               title="Nessuna richiesta"
-              subtitle="Quando un locale ti invita nel suo staff lo vedrai qui."
+              subtitle="Quando una sede ti invita nel suo staff lo vedrai qui."
             />
           </View>
         ) : (

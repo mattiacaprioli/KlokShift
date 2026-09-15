@@ -12,12 +12,12 @@ export type VenueInput = {
 };
 
 /**
- * Il logo del locale, scritto da solo.
+ * Il logo della sede, scritto da solo.
  *
  * Separato da `saveVenue` perché la foto si carica **prima** di salvare il
  * resto del modulo, e spesso senza toccarlo: farla passare dal form avrebbe
  * significato o salvare campi non ancora compilati, o perdere la foto uscendo
- * senza salvare. Serve un locale già esistente — chi non ce l'ha ancora
+ * senza salvare. Serve una sede già esistente — chi non ce l'ha ancora
  * compila prima il nome.
  */
 export async function updateVenueLogo(
@@ -54,7 +54,7 @@ export async function getMyVenues(): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")
     .select("*")
-    // I locali chiusi restano consultabili, ma non sono posti in cui si lavora:
+    // Le sedi chiuse restano consultabili, ma non sono posti in cui si lavora:
     // fuori dallo switcher e fuori da ogni query operativa.
     .is("closed_at", null)
     .order("created_at", { ascending: true })
@@ -63,7 +63,7 @@ export async function getMyVenues(): Promise<Venue[]> {
   return data ?? [];
 }
 
-/** I locali archiviati, per la sezione "Locali chiusi". */
+/** Le sedi archiviate, per la sezione "Sedi chiuse". */
 export async function getMyClosedVenues(ownerId: string): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")

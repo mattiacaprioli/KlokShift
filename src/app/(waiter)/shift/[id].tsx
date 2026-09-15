@@ -95,7 +95,7 @@ export default function WaiterShiftDetailScreen() {
    * Confermare la presenza a un turno già passato non significa niente, e da
    * 20260913110000 il database lo rifiuta: `freeze_assignment_payroll` congela lo
    * `status` una volta che il turno è finito, perché un `declined` scritto il
-   * giorno dopo cancellerebbe ore già lavorate e già viste dal locale. Senza
+   * giorno dopo cancellerebbe ore già lavorate e già viste dalla sede. Senza
    * questa guardia i bottoni resterebbero visibili e il tap sarebbe un no-op
    * silenzioso — il modo peggiore di comunicare una regola.
    */
@@ -160,7 +160,7 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
-  const venueName = shift.venue?.name ?? "Locale";
+  const venueName = shift.venue?.name ?? "Sede";
 
   return (
     <>
@@ -236,7 +236,7 @@ export default function WaiterShiftDetailScreen() {
             </View>
             {isOver ? (
               <Text className="mt-3 text-sm leading-5 text-t3">
-                Turno concluso. Le presenze e le ore le registra il locale.
+                Turno concluso. Le presenze e le ore le registra la sede.
               </Text>
             ) : myAssignment.status === "assigned" ? (
               <View className="mt-4 gap-2.5">
@@ -261,14 +261,14 @@ export default function WaiterShiftDetailScreen() {
                     ? "Hai confermato la presenza. A presto!"
                     : "Sei in turno. Non serve confermare."}
                 </Text>
-                {/* Dopo la conferma il turno non si molla da soli: il locale ci
+                {/* Dopo la conferma il turno non si molla da soli: la sede ci
                     ha pianificato sopra. Resta la richiesta di sostituzione, che
                     decide lui. Per il dipendente fisso è l'unica via d'uscita, ed
                     è esattamente come funziona con un dipendente. */}
                 {pendingRequest ? (
                   <Text className="text-sm text-gold">
                     Richiesta di sostituzione inviata: attendi la risposta del
-                    locale.
+                    sede.
                   </Text>
                 ) : (
                   <GhostButton
@@ -293,14 +293,14 @@ export default function WaiterShiftDetailScreen() {
         ) : (
           <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t3">
-              Questo è un turno riservato allo staff del locale.
+              Questo è un turno riservato allo staff della sede.
             </Text>
           </Card>
         )}
 
         {/* Sotto l'azione, non sopra: la schermata esiste per confermare la
             presenza, e la squadra è il contesto di quel gesto. Si toglie da sé
-            quando si è da soli o quando il locale non condivide il planning. */}
+            quando si è da soli o quando la sede non condivide il planning. */}
         <ShiftTeamSection
           className="mt-8"
           shiftId={shift.id}
@@ -310,7 +310,7 @@ export default function WaiterShiftDetailScreen() {
         {shift.venue ? (
           <GhostButton
             className="mt-4"
-            label={startConversation.isPending ? "Apertura chat…" : "Contatta il locale"}
+            label={startConversation.isPending ? "Apertura chat…" : "Contatta la sede"}
             disabled={startConversation.isPending}
             onPress={onContact}
           />
@@ -320,7 +320,7 @@ export default function WaiterShiftDetailScreen() {
       <ConfirmModal
         visible={declineVisible}
         title="Rifiutare il turno?"
-        message="Il locale verrà avvisato."
+        message="La sede verrà avvisata."
         confirmLabel="Rifiuta"
         destructive
         pending={respond.isPending}

@@ -11,10 +11,10 @@ import { useToast } from "../ui/Toast";
 import { Button, Card } from "../ui/primitives";
 
 /**
- * Tutti i locali del titolare, aperti e chiusi.
+ * Tutte le sedi del titolare, aperti e chiusi.
  *
- * Non c'è più un locale "attivo" da scegliere: la riga apre la scheda, e basta.
- * Il pallino colorato è lo stesso con cui quel locale si riconosce nel planning —
+ * Non c'è più una sede "attiva" da scegliere: la riga apre la scheda, e basta.
+ * Il pallino colorato è lo stesso con cui quella sede si riconosce nel planning —
  * questo è l'unico posto in cui quella legenda si può imparare.
  */
 export function VenuesCard() {
@@ -42,11 +42,11 @@ export function VenuesCard() {
     <Card>
       <div className="flex items-baseline justify-between gap-4">
         <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-          {venues.length === 1 ? "Il tuo locale" : `I tuoi locali · ${venues.length}`}
+          {venues.length === 1 ? "La tua sede" : `Le tue sedi · ${venues.length}`}
         </span>
         {isOwner ? (
-          <Button onClick={() => navigate("/locale/nuovo")}>
-            + Aggiungi locale
+          <Button onClick={() => navigate("/sede/nuovo")}>
+            + Aggiungi sede
           </Button>
         ) : null}
       </div>
@@ -56,7 +56,7 @@ export function VenuesCard() {
           <li key={v.id}>
             <button
               type="button"
-              onClick={() => navigate(`/locale/${v.id}`)}
+              onClick={() => navigate(`/sede/${v.id}`)}
               className="focus-gold flex w-full items-center gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2.5 text-left transition hover:bg-bg-2"
             >
               <Avatar url={v.logo_url} name={v.name} size={36} />
@@ -88,7 +88,7 @@ export function VenuesCard() {
       {closed.length > 0 ? (
         <details className="mt-4">
           <summary className="cursor-pointer text-xs text-t3">
-            Locali chiusi · {closed.length}
+            Sedi chiuse · {closed.length}
           </summary>
           <ul className="mt-2 flex flex-col gap-2">
             {closed.map((v) => (

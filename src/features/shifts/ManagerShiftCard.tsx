@@ -41,7 +41,7 @@ function shiftLabel(shift: ShiftWithCount): string {
 }
 
 /**
- * Un turno visto dal locale: quando, che fascia, quanta gente manca.
+ * Un turno visto dalla sede: quando, che fascia, quanta gente manca.
  *
  * Prima la card dedicava la riga più forte al titolo (che era la data) e la
  * metà inferiore a una barra dorata piena, cioè a confermare che andava tutto
@@ -131,7 +131,7 @@ export function ManagerShiftCard({
               alert ? "font-sans-semibold text-warning" : "text-t2"
             )}
           >
-            {/* La sede prima della copertura: nella home i turni di tre locali
+            {/* La sede prima della copertura: nella home i turni di tre sedi
                 si susseguono, e senza il nome due card identiche sono
                 indistinguibili. Nel suo colore, da quando la barra a sinistra
                 è tornata a dire la copertura. */}
@@ -182,7 +182,7 @@ export function ManagerShiftCard({
         <View className="flex-1">
           {/* Il nome della sede sopra il titolo, in mono come le altre
               etichette di contesto: è quello che si cerca per primo scorrendo
-              un'agenda che mescola tre locali. */}
+              un'agenda che mescola tre sedi. */}
           {venue ? (
             <Text
               className="mb-0.5 font-mono text-[9.5px] uppercase"

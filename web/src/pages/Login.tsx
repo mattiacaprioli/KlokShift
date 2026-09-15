@@ -86,7 +86,7 @@ export function LoginPage() {
   return (
     <AuthShell
       title="topWaitr"
-      subtitle="Gestione del locale — turni, copertura e ore."
+      subtitle="Gestione della sede — turni, copertura e ore."
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -97,7 +97,7 @@ export function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nome@locale.it"
+              placeholder="nome@sede.it"
             />
           </Field>
           <Field label="Password">

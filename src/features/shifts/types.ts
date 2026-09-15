@@ -16,7 +16,7 @@ export type ShiftWithCoverage = Shift & CoverageEmbeds;
 
 /**
  * Alias storico di `ShiftWithCoverage`: il nome resta perché è quello usato
- * dagli elenchi del locale. Portava anche `applications(count)` finché il turno
+ * dagli elenchi della sede. Portava anche `applications(count)` finché il turno
  * poteva essere un annuncio con delle candidature.
  */
 export type ShiftWithCount = ShiftWithCoverage;
@@ -44,7 +44,7 @@ export type ShiftWithAssignees = Shift & {
       /**
        * La **persona** dietro l'appartenenza: è la chiave con cui il carico
        * settimanale incrocia i turni delle altre sedi del titolare, perché le
-       * soglie 40/48h sono della persona e non del locale.
+       * soglie 40/48h sono della persona e non della sede.
        */
       person_id: string;
       /** Senza account collegato non c'è nessuno da notificare. */

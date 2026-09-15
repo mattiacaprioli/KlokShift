@@ -250,8 +250,8 @@ export async function getOwnerPastShiftsCount(
 }
 
 /**
- * Il turno con il suo locale: è la query del dettaglio turno lato
- * professionista, dove servono nome e logo del locale, e `venue.owner_id` per
+ * Il turno con la sua sede: è la query del dettaglio turno lato
+ * professionista, dove servono nome e logo della sede, e `venue.owner_id` per
  * aprire la chat.
  */
 export async function getShiftWithVenue(

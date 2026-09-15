@@ -16,7 +16,7 @@ export type MessageCursor = { created_at: string; id: string };
  * chat e la notifica non mostrano due mittenti diversi per lo stesso messaggio.
  *
  * Lato professionista viene da `get_waiter_public_card`. Lato gestore dipende da
- * quante sedi ha (20260913100200): con **una** è il nome del locale — si chatta
+ * quante sedi ha (20260913100200): con **una** è il nome della sede — si chatta
  * con "Trattoria da Mario", che è la UX giusta — con **più di una** è il nome del
  * titolare, perché il thread è uno per coppia e vale per tutte le sue sedi:
  * intestarlo a una delle tre sarebbe sbagliato due volte su tre.
@@ -36,7 +36,7 @@ export type ConversationDetail = Conversation & { other: ChatCounterpart };
 
 /**
  * Controparte per OGNI conversazione (chiave = id conversazione). La stessa
- * persona può essere cameriere in una conversazione e proprietario di un locale
+ * persona può essere cameriere in una conversazione e proprietario di una sede
  * in un'altra: si risolve per lato della conversazione, non per profilo. La
  * risoluzione (nome/avatar) è delegata al DB (`get_chat_counterparts` →
  * `chat_counterpart`), stessa fonte del trigger `notify_on_new_message`.

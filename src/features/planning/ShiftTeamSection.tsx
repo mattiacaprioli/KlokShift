@@ -10,12 +10,12 @@ import { TeamRow } from "./TeamRow";
 /**
  * «Con chi lavori» — la squadra di un turno, nel suo dettaglio.
  *
- * Passa dalla stessa RPC della vista «Il locale» (`get_staff_planning`) su un
+ * Passa dalla stessa RPC della vista «La sede» (`get_staff_planning`) su un
  * intervallo di un giorno solo, e non da una query dedicata: è l'unica fonte
  * che sa filtrare le colonne, e una seconda funzione con le stesse regole di
  * visibilità sarebbe la prima a divergere da questa.
  *
- * Non compare **niente** quando il locale non condivide il planning o quando il
+ * Non compare **niente** quando la sede non condivide il planning o quando il
  * turno è di una sede in cui non si è più in organico: la RPC non restituisce la
  * riga, `team` resta null e la sezione si toglie di mezzo. È voluto — un blocco
  * «non disponibile» spiegherebbe al professionista una scelta del titolare che
@@ -59,8 +59,8 @@ export function ShiftTeamSection({
         ))}
       </Card>
       <Text className="px-1 text-[12px] text-t4">
-        Chi il locale ha messo in turno con te. Gli orari individuali possono
-        cambiare: la parola definitiva è del locale.
+        Chi la sede ha messo in turno con te. Gli orari individuali possono
+        cambiare: la parola definitiva è della sede.
       </Text>
     </View>
   );

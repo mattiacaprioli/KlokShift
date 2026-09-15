@@ -45,7 +45,7 @@ function isShort(shift: ShiftWithCount): boolean {
  * Dal 14/09/2026 mostra **tutte le sedi insieme**. Non è un dettaglio di
  * visualizzazione: è il verso del prodotto. Il titolare non "entra" in Roma per
  * vedere i turni di Roma — guarda il suo mercoledì, e ogni turno dice a quale
- * sede appartiene. Chi ha un locale solo non vede alcuna differenza: i badge e i
+ * sede appartiene. Chi ha una sede sola non vede alcuna differenza: i badge e i
  * filtri compaiono da due sedi in su.
  *
  * Stesso impianto dell'agenda del professionista, e per le stesse ragioni:
@@ -54,7 +54,7 @@ function isShort(shift: ShiftWithCount): boolean {
  * il commento esteso in `(waiter)/(tabs)/turni.tsx`).
  *
  * La differenza è cosa si cerca: il professionista vuole sapere quando lavora,
- * il locale vuole sapere **cosa è scoperto**. Per questo il pallino sul
+ * la sede vuole sapere **cosa è scoperto**. Per questo il pallino sul
  * calendario diventa arancio sui giorni con un buco, sotto c'è il conto della
  * settimana, e un filtro riduce l'agenda ai soli turni da coprire: il quadro
  * d'insieme senza costruire una vista di pianificazione.
@@ -213,7 +213,7 @@ export default function ManagerShiftsScreen() {
 
   const title = (
     <View>
-      <Mono gold>{isMultiVenue ? "I tuoi locali" : "Il tuo locale"}</Mono>
+      <Mono gold>{isMultiVenue ? "Le tue sedi" : "La tua sede"}</Mono>
       <Display className="mt-1 text-3xl">I tuoi turni</Display>
     </View>
   );
@@ -236,7 +236,7 @@ export default function ManagerShiftsScreen() {
         ) : venueQuery.isError ? (
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
         ) : (
-          <NoVenuesState subtitle="Ti serve un locale prima di organizzare i turni." />
+          <NoVenuesState subtitle="Ti serve una sede prima di organizzare i turni." />
         )}
       </ScrollView>
     );

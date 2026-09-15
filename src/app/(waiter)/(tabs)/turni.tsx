@@ -50,7 +50,7 @@ const SYNC_SETTLE_MS = 400;
 const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
 
 /**
- * Quanti giorni di planning del locale si caricano in un colpo.
+ * Quanti giorni di planning della sede si caricano in un colpo.
  *
  * Sei settimane: copre il mese che si sfoglia più quello dopo, e sta dentro il
  * tetto di 62 giorni che `get_staff_planning` applica comunque lato server.
@@ -59,13 +59,13 @@ const PLANNING_WINDOW_DAYS = 42;
 
 const MODES = [
   { id: "mine", label: "I miei" },
-  { id: "venue", label: "Il locale" },
+  { id: "venue", label: "La sede" },
 ] as const;
 
 type Mode = (typeof MODES)[number]["id"];
 
 /**
- * L'agenda del professionista: i turni che i locali gli hanno assegnato,
+ * L'agenda del professionista: i turni che le sedi gli hanno assegnato,
  * raggruppati per giorno sotto un calendario.
  *
  * **Scegliere un giorno fa ripartire l'agenda da lì**, non la fa scorrere fino
@@ -84,9 +84,9 @@ type Mode = (typeof MODES)[number]["id"];
  * La conferma di presenza è inline perché è l'azione più frequente di tutta
  * l'app da questo lato — farla passare per il dettaglio turno significava due
  * tocchi in più per la cosa che si fa ogni settimana. Il rifiuto invece resta
- * dietro una conferma: avvisa il locale e non si torna indietro da soli.
+ * dietro una conferma: avvisa la sede e non si torna indietro da soli.
  *
- * ── «I miei» / «Il locale» ─────────────────────────────────────────────────
+ * ── «I miei» / «La sede» ─────────────────────────────────────────────────
  *
  * Un turno è un lavoro di squadra, e la seconda vista risponde alle due domande
  * che l'agenda personale non sa fare: chi c'è stasera con me, e chi è in turno
@@ -138,7 +138,7 @@ export default function WaiterShiftsScreen() {
   );
   const daConfermare = items.filter((a) => a.status === "assigned");
 
-  // Il planning del locale: una finestra che parte dal giorno da cui parte
+  // Il planning della sede: una finestra che parte dal giorno da cui parte
   // l'agenda, così scegliere una data lontana va a prendersi il periodo giusto
   // invece di mostrare un vuoto. Il server filtra già da `anchorDay` in avanti,
   // quindi qui non serve il `filter` che la vista «I miei» fa sulle sezioni.
@@ -155,7 +155,7 @@ export default function WaiterShiftsScreen() {
   const venueCount = employers.data?.length ?? 0;
 
   // I pallini del calendario seguono la vista: sono la mappa di **questa**
-  // lista, e lasciarli sui propri turni mentre si guarda il locale indicherebbe
+  // lista, e lasciarli sui propri turni mentre si guarda la sede indicherebbe
   // giorni che la lista sotto non ha.
   const myDays = useMemo(() => daysWithShifts(items), [items]);
   const planningDays = useMemo(
@@ -243,7 +243,7 @@ export default function WaiterShiftsScreen() {
                     : `${items.length} in programma`}
               </Mono>
               <Display className="mt-1 text-3xl">
-                {mode === "venue" ? "Turni del locale" : "I miei turni"}
+                {mode === "venue" ? "Turni della sede" : "I miei turni"}
               </Display>
             </View>
             {/* Il ritorno: una volta spostata l'ancora, "oggi" non è più a
@@ -328,7 +328,7 @@ export default function WaiterShiftsScreen() {
                       ? "1 turno da confermare"
                       : `${daConfermare.length} turni da confermare`
                   }
-                  subtitle="Il locale sta aspettando la tua risposta"
+                  subtitle="La sede sta aspettando la tua risposta"
                   onPress={() => goToDay(daConfermare[0].shift.date)}
                 />
               ) : null
@@ -364,7 +364,7 @@ export default function WaiterShiftsScreen() {
                   subtitle={
                     away
                       ? `Dal ${formatDayLabel(anchorDay).toLowerCase()} non hai turni assegnati. Tocca «Oggi» per tornare ai prossimi.`
-                      : "Quando un locale ti assegna un turno lo trovi qui. In «Le mie ore» c'è lo storico."
+                      : "Quando una sede ti assegna un turno lo trovi qui. In «Le mie ore» c'è lo storico."
                   }
                 />
               </View>
@@ -385,7 +385,7 @@ export default function WaiterShiftsScreen() {
       <ConfirmModal
         visible={declining != null}
         title="Rifiutare il turno?"
-        message="Il locale verrà avvisato."
+        message="La sede verrà avvisata."
         confirmLabel="Rifiuta"
         destructive
         pending={respond.isPending}

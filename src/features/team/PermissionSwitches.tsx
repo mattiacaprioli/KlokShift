@@ -13,7 +13,7 @@ import {
  * Le cinque aree di permesso, una riga per area.
  *
  * Interruttori e non ruoli preconfezionati ("gestore", "sola lettura") perché il
- * titolare sa già come si divide il lavoro nel suo locale: chi fa solo i turni,
+ * titolare sa già come si divide il lavoro nella sua sede: chi fa solo i turni,
  * chi tiene i documenti, chi guarda le ore a fine mese. Un preset avrebbe
  * costretto a scegliere il più largo dei due che servivano.
  *

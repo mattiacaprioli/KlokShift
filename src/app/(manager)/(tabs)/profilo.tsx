@@ -27,15 +27,15 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * I locali del titolare: l'elenco da cui si aprono, si modificano, se ne
+ * Le sedi del titolare: l'elenco da cui si aprono, si modificano, se ne
  * aggiungono.
  *
  * Non c'è più niente da "selezionare": fino al 14/09/2026 toccare una riga la
  * rendeva la sede attiva, e il resto dell'app la seguiva. Ora l'app le guarda
- * tutte insieme, quindi la riga fa una cosa sola — apre il locale. Un bersaglio
+ * tutte insieme, quindi la riga fa una cosa sola — apre la sede. Un bersaglio
  * solo, com'era giusto fin dall'inizio.
  *
- * Sempre visibile, anche con un locale solo: è da qui che si scopre di poterne
+ * Sempre visibile, anche con una sede sola: è da qui che si scopre di poterne
  * aggiungere un secondo.
  */
 function VenuesCard({
@@ -51,7 +51,7 @@ function VenuesCard({
   return (
     <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
       <Mono>
-        {venues.length === 1 ? "Il tuo locale" : `I tuoi locali · ${venues.length}`}
+        {venues.length === 1 ? "La tua sede" : `Le tue sedi · ${venues.length}`}
       </Mono>
 
       {venues.map((v, i) => (
@@ -69,7 +69,7 @@ function VenuesCard({
               <Text className="mt-0.5 text-xs text-t3">{v.city}</Text>
             ) : null}
           </View>
-          {/* Lo stesso colore con cui questo locale si riconosce nell'agenda:
+          {/* Lo stesso colore con cui questa sede si riconosce nell'agenda:
               è l'unico posto in cui la legenda si può imparare. */}
           {venues.length > 1 ? (
             <View
@@ -84,7 +84,7 @@ function VenuesCard({
       {onAdd ? (
         <Pressable onPress={onAdd} className="items-center pt-1">
           <Text className="text-sm font-sans-semibold text-t2">
-            + Aggiungi locale
+            + Aggiungi sede
           </Text>
         </Pressable>
       ) : null}
@@ -92,7 +92,7 @@ function VenuesCard({
   );
 }
 
-/** Barra + checklist dei campi mancanti del locale. Nascosta se la scheda è completa. */
+/** Barra + checklist dei campi mancanti della sede. Nascosta se la scheda è completa. */
 function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void }) {
   const items = [
     { label: "Città", done: !!venue.city },
@@ -141,7 +141,7 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
 }
 
 /**
- * Il proprio account, in mezzo a una pagina che parla del locale.
+ * Il proprio account, in mezzo a una pagina che parla della sede.
  *
  * Sta qui perché è qui che lo si cerca: questa schermata si chiama "Profilo", e
  * chi voleva cambiare il **proprio** nome o la propria foto non trovava che il
@@ -182,14 +182,14 @@ export default function ManagerProfiloScreen() {
   const venueQuery = useOwnerVenues();
   const { venues, isOwner } = venueQuery;
   /**
-   * Con **un** locale solo il Profilo resta quello di prima: la sua identità in
-   * grande, la scheda da completare, i suoi dati. Con più locali quella pagina
-   * non si può scrivere — non c'è "il" locale — e il Profilo diventa l'elenco,
+   * Con **una** sede sola il Profilo resta quello di prima: la sua identità in
+   * grande, la scheda da completare, i suoi dati. Con più sedi quella pagina
+   * non si può scrivere — non c'è "il" sede — e il Profilo diventa l'elenco,
    * da cui si entra nella scheda della singola sede.
    */
   const venue = venues.length === 1 ? venues[0] : null;
   // I dati della sede sono un permesso a sé: un collaboratore che organizza i
-  // turni non deve poter cambiare indirizzo e logo del locale.
+  // turni non deve poter cambiare indirizzo e logo della sede.
   const canEditVenue = !!venue && venueQuery.can(venue.id, "can_manage_venue");
 
   return (
@@ -203,7 +203,7 @@ export default function ManagerProfiloScreen() {
       }}
     >
       <View className="flex-row items-center justify-between">
-        <Mono>Profilo · Locale</Mono>
+        <Mono>Profilo · Sede</Mono>
         <Pressable
           onPress={() => router.push("/(manager)/impostazioni")}
           hitSlop={8}
@@ -213,8 +213,8 @@ export default function ManagerProfiloScreen() {
         </Pressable>
       </View>
 
-      {/* Prima del locale, e senza aspettare la query delle sedi: è l'identità
-          di chi sta guardando, e non dipende da quanti locali ha. */}
+      {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
+          di chi sta guardando, e non dipende da quante sedi ha. */}
       <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
 
       {venueQuery.isLoading ? (
@@ -224,10 +224,10 @@ export default function ManagerProfiloScreen() {
       ) : venues.length === 0 ? (
         <NoVenuesState
           className="mt-4"
-          subtitle="Aggiungi le informazioni del tuo locale per iniziare a organizzare i turni."
+          subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni."
         />
       ) : !venue ? (
-        /* Più locali: l'elenco è la pagina. */
+        /* Più sedi: l'elenco è la pagina. */
         <>
           <VenuesCard
             venues={venues}
@@ -238,7 +238,7 @@ export default function ManagerProfiloScreen() {
         </>
       ) : (
         <>
-          {/* Identità locale */}
+          {/* Identità sede */}
           <View className="items-center gap-4">
             <View
               className="rounded-full"
@@ -264,7 +264,7 @@ export default function ManagerProfiloScreen() {
 
           {canEditVenue ? (
             <GoldButton
-              label="Modifica locale"
+              label="Modifica sede"
               onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
             />
           ) : null}
@@ -288,7 +288,7 @@ export default function ManagerProfiloScreen() {
 
           {venue.cuisine_type || venue.address || venue.description ? (
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-              <Mono>Il tuo locale</Mono>
+              <Mono>La tua sede</Mono>
               {venue.cuisine_type ? (
                 <InfoLine label="Attività" value={venue.cuisine_type} />
               ) : null}

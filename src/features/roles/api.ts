@@ -4,8 +4,8 @@ import type { Tables } from "@/types/database";
 export type VenueRole = Tables<"venue_roles">;
 
 /**
- * I ruoli che un locale può assegnare. Li scrive il gestore: "Cameriere" e
- * "Barman" da una parte, "PR" e "Guardaroba" dall'altra — i locali non si
+ * I ruoli che una sede può assegnare. Li scrive il gestore: "Cameriere" e
+ * "Barman" da una parte, "PR" e "Guardaroba" dall'altra — le sedi non si
  * somigliano, e prima la lista era una costante uguale per tutti.
  *
  * Solo i non archiviati: un ruolo eliminato sparisce dalle scelte nuove ma resta
@@ -48,7 +48,7 @@ export async function getOwnerVenueRoles(
 
 /**
  * Nuovo ruolo in coda alla lista. `sort_order` lo calcola il client dal massimo
- * corrente: una sequenza DB darebbe numeri globali, e l'ordine è per locale.
+ * corrente: una sequenza DB darebbe numeri globali, e l'ordine è per sede.
  */
 export async function createVenueRole(
   venueId: string,

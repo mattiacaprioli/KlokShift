@@ -54,7 +54,7 @@ export function ImpostazioniPage() {
 
 /**
  * Nome e foto del profilo. Fino a ieri si cambiavano solo dall'app: chi gestisce
- * il locale dalla dashboard si vedeva comparire il proprio nome in chat e sui
+ * la sede dalla dashboard si vedeva comparire il proprio nome in chat e sui
  * turni senza avere un posto dove sistemarlo.
  *
  * La foto viene ritagliata e ridimensionata dal browser prima di partire (vedi
@@ -193,8 +193,8 @@ function AccountSection() {
       </Card>
       <p className="mt-2 px-1 text-xs text-t4">
         È lo stesso profilo dell&apos;app: nome e foto si vedono in chat e sui
-        turni. Il locale — nome, indirizzo, logo — si modifica dalla scheda
-        Locale.
+        turni. La sede — nome, indirizzo, logo — si modifica dalla scheda
+        Sede.
       </p>
     </section>
   );
@@ -324,7 +324,7 @@ function DeleteAccountSection() {
         <p className="text-sm font-semibold text-t1">Elimina l&apos;account</p>
         <p className="mt-1 text-xs leading-5 text-t3">
           I tuoi dati personali vengono rimossi e non potrai più accedere.
-          Turni e ore già registrati restano al locale in forma anonima, perché
+          Turni e ore già registrati restano alla sede in forma anonima, perché
           servono a chi ci ha lavorato. <b>L&apos;operazione non è reversibile.</b>
         </p>
 

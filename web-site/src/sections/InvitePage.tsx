@@ -12,12 +12,12 @@ import { t } from "../content";
  *
  * Chi arriva qui ha già deciso: qualcuno l'ha invitato e lui ha aperto il link.
  * Gli manca l'app e — soprattutto — sapere che deve registrarsi con **quell'**
- * indirizzo, perché è il match dell'email a collegarlo a ciò che il locale ha
+ * indirizzo, perché è il match dell'email a collegarlo a ciò che la sede ha
  * già preparato. Tutto il resto della pagina è contorno; quella frase è la
  * pagina.
  *
  * Due inviti, una pagina: `?r=gestione` è il collaboratore che gestirà il
- * locale, tutto il resto è la persona in organico. Un secondo entry HTML
+ * sede, tutto il resto è la persona in organico. Un secondo entry HTML
  * avrebbe voluto dire un secondo file in `rollupOptions.input` e due `<head>`
  * da tenere allineati, per una pagina che cambia solo il copy.
  *

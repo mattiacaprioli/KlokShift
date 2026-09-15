@@ -21,9 +21,9 @@ import { OrePage } from "./pages/Ore";
 import { StaffPage } from "./pages/Staff";
 import { RuoliPage } from "./pages/Ruoli";
 import { ProfessionistaPage } from "./pages/Professionista";
-import { LocalePage } from "./pages/Locale";
-import { LocaleNuovoPage } from "./pages/LocaleNuovo";
-import { LocaleDettaglioPage } from "./pages/LocaleDettaglio";
+import { SedePage } from "./pages/Sede";
+import { SedeNuovaPage } from "./pages/SedeNuova";
+import { SedeDettaglioPage } from "./pages/SedeDettaglio";
 import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 
@@ -87,7 +87,7 @@ function Dashboard({
   // un attimo di attesa.
   if (!isManager && isPending) return <Spinner label="Caricamento…" />;
 
-  // La dashboard è uno strumento da scrivania per chi gestisce un locale. Il
+  // La dashboard è uno strumento da scrivania per chi gestisce una sede. Il
   // professionista non ha nulla da farci: schermata esplicita, non un redirect
   // silenzioso che lo lascerebbe a chiedersi cosa è andato storto.
   if (!isManager && !hasVenueAccess) return <NotForWaitersPage />;
@@ -118,10 +118,10 @@ function Dashboard({
           {/* Stessa pagina con e senza thread aperto: la lista resta a sinistra. */}
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:id" element={<ChatPage />} />
-          <Route path="/locale" element={<LocalePage />} />
-          <Route path="/locale/nuovo" element={<LocaleNuovoPage />} />
+          <Route path="/sede" element={<SedePage />} />
+          <Route path="/sede/nuovo" element={<SedeNuovaPage />} />
           {/* Dopo "nuovo", o il match lo intercetterebbe come un id. */}
-          <Route path="/locale/:id" element={<LocaleDettaglioPage />} />
+          <Route path="/sede/:id" element={<SedeDettaglioPage />} />
           <Route path="/collaboratori" element={<TeamPage />} />
           <Route path="/impostazioni" element={<ImpostazioniPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -248,7 +248,7 @@ export async function addTeamMember(
   // solo i `manager`. Senza questo controllo la riga resta `pending` per sempre.
   if (existing && existing.role !== "manager") {
     throw new UserFacingError(
-      "Questo indirizzo ha già un account da professionista. Per farla entrare nella gestione serve un account da locale, con un'altra email."
+      "Questo indirizzo ha già un account da professionista. Per farla entrare nella gestione serve un account da sede, con un'altra email."
     );
   }
 
@@ -343,17 +343,17 @@ export async function addTeamMember(
 function teamError(message: string): Error {
   if (message.includes("already_in_other_company")) {
     return new UserFacingError(
-      "Questa persona collabora già con un altro locale su topWaitr."
+      "Questa persona collabora già con un'altra sede su topWaitr."
     );
   }
   if (message.includes("already_owns_venues")) {
-    return new UserFacingError("Questa persona ha già un locale suo su topWaitr.");
+    return new UserFacingError("Questa persona ha già una sede sua su topWaitr.");
   }
   // I due controlli di `venue_access_user_matches_email`: l'app non dovrebbe mai
   // vederli — li produce chi scrive un `user_id` che non corrisponde all'email.
   if (message.includes("user_email_mismatch") || message.includes("not_a_manager")) {
     return new UserFacingError(
-      "Questo indirizzo non corrisponde a un account da locale."
+      "Questo indirizzo non corrisponde a un account da sede."
     );
   }
   return new Error(message);

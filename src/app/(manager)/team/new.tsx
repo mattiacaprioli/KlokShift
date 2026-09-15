@@ -93,7 +93,7 @@ export default function TeamNewScreen() {
         style={{ paddingTop: insets.top + 8 }}
       >
         <ScreenHeader eyebrow="Collaboratori" title="Invita" />
-        <NoVenuesState subtitle="Ti serve un locale prima di far entrare qualcuno." />
+        <NoVenuesState subtitle="Ti serve una sede prima di far entrare qualcuno." />
       </View>
     );
   }
@@ -124,9 +124,9 @@ export default function TeamNewScreen() {
               placeholder="nome@email.com"
             />
             <Text className="text-xs leading-4 text-t3">
-              Se ha già un account da locale, l&apos;accesso parte subito.
+              Se ha già un account da sede, l&apos;accesso parte subito.
               Altrimenti gli mandiamo un invito: si registrerà con questa email
-              scegliendo «Gestisco un locale» e lo colleghiamo da soli.
+              scegliendo «Gestisco una sede» e lo colleghiamo da soli.
             </Text>
           </View>
 

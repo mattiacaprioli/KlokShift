@@ -46,7 +46,7 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 
 /** Una sede dentro la card del datore di lavoro: identità e "Lascia". */
 /**
- * «Passa alla gestione», per chi è stato promosso dal proprio locale.
+ * «Passa alla gestione», per chi è stato promosso dalla propria sede.
  *
  * Compare solo con un accesso delegato attivo (`venue_access`), quindi per la
  * quasi totalità dei professionisti questa riga non esiste. Cambiare vista non
@@ -63,7 +63,7 @@ function ManagerSwitchRow() {
     <NavRow
       icon="shield"
       title="Passa alla gestione"
-      subtitle={names || "Organizza i turni del locale"}
+      subtitle={names || "Organizza i turni della sede"}
       onPress={() => setMode("manager")}
     />
   );
@@ -80,13 +80,13 @@ function EmployerVenueRow({
   const toast = useToast();
   const leave = useLeaveVenue();
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const venueName = employer.venue?.name ?? "Locale";
+  const venueName = employer.venue?.name ?? "Sede";
 
   function onConfirm() {
     leave.mutate(employer.id, {
       onSuccess: () => {
         setConfirmVisible(false);
-        toast.show("Hai lasciato il locale");
+        toast.show("Hai lasciato la sede");
       },
       onError: () => {
         setConfirmVisible(false);
@@ -130,20 +130,20 @@ function EmployerVenueRow({
         className={standalone ? undefined : "mt-2"}
       >
         <Text className="text-sm font-sans-semibold text-error">
-          {standalone ? "Lascia il locale" : `Lascia ${venueName}`}
+          {standalone ? "Lascia la sede" : `Lascia ${venueName}`}
         </Text>
       </Pressable>
 
       <ConfirmModal
         visible={confirmVisible}
         title={`Lasciare ${venueName}?`}
-        // Il nome della sede nel titolo, non "questo locale": un datore di lavoro
+        // Il nome della sede nel titolo, non "questa sede": un datore di lavoro
         // può averne più di una, e chi si dimette da Milano deve vedere scritto
         // "Milano" prima di confermare.
         // Le due cose che cambiano davvero, dette prima: i turni futuri saltano
-        // (e il locale se lo vede scritto nella notifica), il lavoro già fatto
+        // (e la sede se lo vede scritto nella notifica), il lavoro già fatto
         // resta dov'è. Vedi `leave_venue` in 20260914102811.
-        message={`Non farai più parte dello staff di ${venueName}. I turni che hai in programma lì vengono annullati e il locale viene avvisato; le ore che hai già lavorato restano nel tuo storico. Se lavori in altre sedi dello stesso datore di lavoro, quelle restano — e con loro i tuoi documenti.`}
+        message={`Non farai più parte dello staff di ${venueName}. I turni che hai in programma lì vengono annullati e la sede viene avvisata; le ore che hai già lavorato restano nel tuo storico. Se lavori in altre sedi dello stesso datore di lavoro, quelle restano — e con loro i tuoi documenti.`}
         confirmLabel="Lascia"
         destructive
         pending={leave.isPending}
@@ -160,7 +160,7 @@ function EmployerVenueRow({
  * ⚠️ La chat è una sola per coppia professionista–titolare (indice unico
  * `conversations_waiter_manager_key`, e vedi 20260913100200: la decisione di
  * prodotto è un filo solo, non uno per edificio). Con due sedi dello stesso
- * titolare c'erano due "Scrivi al locale" che aprivano **la stessa**
+ * titolare c'erano due "Scrivi alla sede" che aprivano **la stessa**
  * conversazione: due bottoni diversi per la stessa cosa, cioè una promessa che
  * il prodotto non mantiene. Qui il bottone è uno, come il filo.
  *
@@ -214,7 +214,7 @@ function EmployerGroupCard({
                 ? "Apertura…"
                 : multi
                   ? "Scrivi al datore di lavoro"
-                  : "Scrivi al locale"}
+                  : "Scrivi alla sede"}
             </Text>
           </Pressable>
           {multi ? (
@@ -340,10 +340,10 @@ export default function WaiterProfiloScreen() {
         />
       )}
 
-      {/* I tuoi locali (staff fisso/a chiamata) */}
+      {/* Le tue sedi (staff fisso/a chiamata) */}
       {employers.length > 0 ? (
         <View className="gap-3">
-          <Mono>I tuoi locali</Mono>
+          <Mono>Le tue sedi</Mono>
           {groupByEmployer(employers).map((group) => (
             <EmployerGroupCard
               key={group[0].id}
@@ -354,13 +354,13 @@ export default function WaiterProfiloScreen() {
         </View>
       ) : null}
 
-      {/* Il secondo cappello, per chi ce l'ha: un locale gli ha dato la gestione
+      {/* Il secondo cappello, per chi ce l'ha: una sede gli ha dato la gestione
           di una sede. Non è un'altra app e non è un altro account — è lo stesso
           profilo visto dall'altra parte del bancone. */}
       <ManagerSwitchRow />
 
       {/* Fuori dai tab qui sotto, che sono la parte **pubblica** del profilo:
-          i documenti li vede solo il locale a cui li carichi. */}
+          i documenti li vede solo la sede a cui li carichi. */}
       <NavRow
         icon="clipboard"
         title="I tuoi documenti"

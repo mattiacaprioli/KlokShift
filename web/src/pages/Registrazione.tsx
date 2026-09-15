@@ -18,11 +18,11 @@ import {
 
 /**
  * Registrazione dalla dashboard. Il ruolo non si sceglie: questa interfaccia
- * esiste per chi gestisce un locale, quindi l'account nasce `manager` (un
+ * esiste per chi gestisce una sede, quindi l'account nasce `manager` (un
  * professionista finirebbe su NotForWaitersPage al primo accesso).
  *
  * ⚠️ Da qui passano **due persone diverse**, e il copy deve valere per
- * entrambe: il titolare che apre il suo locale, e il collaboratore che qualcuno
+ * entrambe: il titolare che apre la sua sede, e il collaboratore che qualcuno
  * ha invitato a gestirne uno (F1). Il secondo non crea nessuna sede — anzi, non
  * può: `venues_owner_not_delegate` glielo vieta. Quello che deve sapere è una
  * cosa sola, e va detta qui: **registrarsi con l'indirizzo a cui è arrivato
@@ -88,7 +88,7 @@ export function RegistrazionePage() {
   return (
     <AuthShell
       title="Crea il tuo account"
-      subtitle="La dashboard di chi organizza i turni di un locale."
+      subtitle="La dashboard di chi organizza i turni di una sede."
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -104,7 +104,7 @@ export function RegistrazionePage() {
               {...register("email")}
               type="email"
               autoComplete="email"
-              placeholder="nome@locale.it"
+              placeholder="nome@sede.it"
             />
           </Field>
           <Field label="Password" error={errors.password?.message}>
@@ -162,9 +162,9 @@ export function RegistrazionePage() {
           </Button>
 
           <p className="text-center text-xs leading-5 text-t4">
-            Stai creando un account da locale. Se ti ha invitato qualcuno a
+            Stai creando un account da sede. Se ti ha invitato qualcuno a
             gestire il suo, usa l&apos;indirizzo a cui è arrivato l&apos;invito:
-            è quello che ti collega al suo locale.
+            è quello che ti collega alla sua sede.
             <br />
             Se lavori come professionista, la registrazione si fa
             dall&apos;app topWaitr sul telefono.
@@ -210,7 +210,7 @@ function CheckYourMail({ email }: { email: string }) {
           Abbiamo inviato un link di conferma a{" "}
           <span className="font-semibold text-t1">{email}</span>. Aprilo per
           attivare l&apos;account, poi torna qui e accedi. Se ti hanno invitato,
-          al primo accesso troverai già il locale che gestisci.
+          al primo accesso troverai già la sede che gestisci.
         </p>
 
         <p className="mt-4 text-xs leading-5 text-t4">

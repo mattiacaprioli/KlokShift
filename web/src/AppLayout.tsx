@@ -36,7 +36,7 @@ const NAV: NavItem[] = [
   // scope dichiarato della delega, non una dimenticanza.
   { to: "/chat", label: "Messaggi", badge: "chat", ownerOnly: true },
   { to: "/notifiche", label: "Notifiche", badge: "notifiche" },
-  { to: "/locale", label: "Locale" },
+  { to: "/sede", label: "Sede" },
   { to: "/collaboratori", label: "Collaboratori", ownerOnly: true },
   { to: "/impostazioni", label: "Impostazioni" },
 ];
@@ -63,7 +63,7 @@ export function AppLayout() {
           <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
           <p className="font-serif text-lg leading-tight text-t1">{company}</p>
           <p className="mt-0.5 truncate text-xs text-t4">
-            {venues.length > 1 ? `${venues.length} locali · ${who}` : who}
+            {venues.length > 1 ? `${venues.length} sedi · ${who}` : who}
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export function AppLayout() {
       </aside>
 
       <main className="min-w-0 flex-1 p-8 print:p-0">
-        {/* Niente più gate "serve un locale": ogni pagina mostra il proprio stato
+        {/* Niente più gate "serve una sede": ogni pagina mostra il proprio stato
             vuoto (`NoVenues`), perché nessuna è più ancorata a una sede sola. */}
         {isPending ? (
           <Spinner />

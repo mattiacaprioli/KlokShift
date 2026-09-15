@@ -23,7 +23,7 @@ export type WaiterProfileInput = {
 /**
  * Esempi mostrati come placeholder sotto il campo "ruolo principale". Il campo è
  * **testo libero**: era una lista chiusa finché coincideva con quella
- * dell'organico, ma i ruoli ora li scrive ogni locale per sé e nessun elenco
+ * dell'organico, ma i ruoli ora li scrive ogni sede per sé e nessun elenco
  * fisso potrebbe descrivere tutti. Qui è comunque una vetrina, non un dato che
  * deve combaciare con qualcosa.
  */

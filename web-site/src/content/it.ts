@@ -29,20 +29,20 @@ export const it: Content = {
     menuLabel: "Apri il menu",
     closeLabel: "Chiudi il menu",
     links: [
-      { href: "#locali", label: "Per i locali" },
+      { href: "#sedi", label: "Per le sedi" },
       { href: "#professionisti", label: "Per i professionisti" },
       { href: "#come-funziona", label: "Come funziona" },
       { href: "#faq", label: "Domande" },
     ],
-    cta: "Crea il tuo locale",
+    cta: "Crea la tua sede",
   },
 
   hero: {
     eyebrow: "Gestione turni per l'ospitalità",
-    title: "I turni del tuo locale, in un posto solo.",
+    title: "I turni della tua sede, in un posto solo.",
     // I settori non stanno qui: hanno una sezione tutta loro più sotto.
     lead: "Organico, turni, ore e messaggi in un'unica app.",
-    ctaPrimary: "Crea il tuo locale",
+    ctaPrimary: "Crea la tua sede",
     ctaSecondary: "Guarda come funziona",
     note: "Gratis per iniziare. Nessuna carta richiesta.",
     shotAlt: "L'agenda dei turni della settimana",
@@ -69,13 +69,13 @@ export const it: Content = {
   },
 
   venue: {
-    eyebrow: "Per i locali",
+    eyebrow: "Per le sedi",
     title: "Pianifica con il tuo organico, non con i post-it.",
     lead: "Inserisci lo staff una volta. Turni, copertura e ore si tengono da sé.",
     features: [
       {
         title: "Il tuo organico, su più sedi",
-        body: "Ruoli, tipo di rapporto e ore da contratto. Una scheda per persona, anche con due locali.",
+        body: "Ruoli, tipo di rapporto e ore da contratto. Una scheda per persona, anche con due sedi.",
       },
       {
         title: "Copertura sotto controllo",
@@ -109,7 +109,7 @@ export const it: Content = {
     features: [
       {
         title: "Conferma con un tocco",
-        body: "Il locale assegna, tu rispondi dall'app.",
+        body: "La sede assegna, tu rispondi dall'app.",
       },
       {
         title: "Le tue ore, sempre aggiornate",
@@ -117,14 +117,14 @@ export const it: Content = {
       },
       {
         title: "Chiedi un cambio",
-        body: "Se non ce la fai, chiedi una sostituzione. Il locale la vede subito.",
+        body: "Se non ce la fai, chiedi una sostituzione. La sede la vede subito.",
       },
       {
         title: "Vedi i turni dei colleghi",
-        body: "Se il locale lo consente, sai con chi sei in servizio.",
+        body: "Se la sede lo consente, sai con chi sei in servizio.",
       },
     ],
-    shotAlt: "Una conversazione tra locale e professionista",
+    shotAlt: "Una conversazione tra sede e professionista",
   },
 
   how: {
@@ -132,7 +132,7 @@ export const it: Content = {
     title: "Quattro passi, poi va da sé.",
     steps: [
       {
-        title: "Crea il tuo locale",
+        title: "Crea la tua sede",
         body: "Nome, città, logo. Più sedi sullo stesso account.",
       },
       {
@@ -205,14 +205,14 @@ export const it: Content = {
     items: [
       {
         q: "Serve una carta di credito?",
-        a: "No. Crei il locale, aggiungi lo staff e inizi.",
+        a: "No. Crei la sede, aggiungi lo staff e inizi.",
       },
       {
         q: "Chi lavora con me deve pagare?",
         a: "No. L'app del professionista è gratuita.",
       },
       {
-        q: "Funziona con più locali?",
+        q: "Funziona con più sedi?",
         a: "Sì. Le sedi stanno sullo stesso account e chi lavora in due sedi resta una persona sola, con un unico conteggio delle ore.",
       },
       {
@@ -221,7 +221,7 @@ export const it: Content = {
       },
       {
         q: "Dove finiscono i dati del personale?",
-        a: "Su server nell'Unione Europea. Ogni locale vede solo i propri, e ognuno può chiedere la cancellazione del proprio account.",
+        a: "Su server nell'Unione Europea. Ogni sede vede solo i propri, e ognuno può chiedere la cancellazione del proprio account.",
       },
       {
         q: "Gestisce anche le paghe?",
@@ -232,10 +232,10 @@ export const it: Content = {
 
   finalCta: {
     title: "Il prossimo servizio, organizzato bene.",
-    lead: "Crea il tuo locale e pianifica la prossima settimana.",
-    cta: "Crea il tuo locale",
+    lead: "Crea la tua sede e pianifica la prossima settimana.",
+    cta: "Crea la tua sede",
     secondary: "Ho già un account",
-    note: "Sei un professionista? Scarica l'app e fatti invitare dal tuo locale.",
+    note: "Sei un professionista? Scarica l'app e fatti invitare dalla tua sede.",
   },
 
   footer: {
@@ -254,7 +254,7 @@ export const it: Content = {
   invite: {
     eyebrow: "Invito",
     title: "Ti hanno aggiunto a un organico.",
-    lead: "Il locale che ti ha invitato usa topWaitr per organizzare i turni. Scarica l'app e trovi i tuoi.",
+    lead: "La sede che ti ha invitato usa topWaitr per organizzare i turni. Scarica l'app e trovi i tuoi.",
     steps: [
       {
         title: "Scarica l'app",
@@ -265,13 +265,13 @@ export const it: Content = {
         body: "È quella a cui è arrivato il messaggio che ti ha portato qui.",
       },
       {
-        title: "Trovi il locale e i tuoi turni",
+        title: "Trovi la sede e i tuoi turni",
         body: "Nessuna richiesta da accettare: la tua scheda è già pronta.",
       },
     ],
     calloutTitle: "Usa lo stesso indirizzo",
     calloutBody:
-      "Con un indirizzo diverso ti registri lo stesso, ma non ti colleghiamo alla scheda che il locale ha già preparato.",
+      "Con un indirizzo diverso ti registri lo stesso, ma non ti colleghiamo alla scheda che la sede ha già preparato.",
     storesSoon: "In arrivo su App Store e Google Play.",
     iosLabel: "Scarica su App Store",
     androidLabel: "Disponibile su Google Play",
@@ -279,32 +279,32 @@ export const it: Content = {
     whatItems: [
       "I tuoi turni, giorno per giorno, con orari e ruolo.",
       "Le ore che hai fatto, contate senza doverle scrivere a mano.",
-      "I messaggi con il locale, per cambi e imprevisti.",
+      "I messaggi con la sede, per cambi e imprevisti.",
     ],
     homeLabel: "Scopri topWaitr",
   },
 
   inviteManager: {
     eyebrow: "Invito",
-    title: "Ti hanno dato accesso a un locale.",
-    lead: "Chi gestisce il locale ti ha aggiunto ai suoi collaboratori: da topWaitr organizzi i turni e segui l'organico.",
+    title: "Ti hanno dato accesso a una sede.",
+    lead: "Chi gestisce la sede ti ha aggiunto ai suoi collaboratori: da topWaitr organizzi i turni e segui l'organico.",
     steps: [
       {
-        title: "Registrati come locale",
-        body: "Dall'app scegli «Gestisco un locale». Dalla dashboard l'account è già quello.",
+        title: "Registrati come sede",
+        body: "Dall'app scegli «Gestisco una sede». Dalla dashboard l'account è già quello.",
       },
       {
         title: "Usa l'email dell'invito",
         body: "È quella a cui è arrivato il messaggio che ti ha portato qui.",
       },
       {
-        title: "Trovi il locale già pronto",
+        title: "Trovi la sede già pronta",
         body: "Niente da accettare: l'accesso e i permessi li ha già scelti chi ti ha invitato.",
       },
     ],
-    calloutTitle: "Registrati come locale, non come professionista",
+    calloutTitle: "Registrati come sede, non come professionista",
     calloutBody:
-      "Con un account da professionista, o con un indirizzo diverso, entri in topWaitr ma non nella gestione del locale che ti ha invitato.",
+      "Con un account da professionista, o con un indirizzo diverso, entri in topWaitr ma non nella gestione della sede che ti ha invitato.",
     webTitle: "Anche dal computer",
     webBody:
       "La gestione dei turni si fa dall'app o dalla dashboard, con la stessa registrazione.",
@@ -312,7 +312,7 @@ export const it: Content = {
     whatTitle: "Cosa ci trovi",
     whatItems: [
       "L'agenda dei turni delle sedi su cui ti hanno dato accesso.",
-      "L'organico del locale, con ruoli e disponibilità.",
+      "L'organico della sede, con ruoli e disponibilità.",
       "Solo quello che il titolare ti ha abilitato: il resto non compare.",
     ],
   },

@@ -516,12 +516,12 @@ function InternalForm({
       ) : null}
 
       {/* Il primo campo: da questa risposta discendono organico e mansioni
-          selezionabili. Con un locale solo non compare — la risposta è già nota.
+          selezionabili. Con una sede sola non compare — la risposta è già nota.
 
           ⚠️ In modifica è disabilitato, e deve restarci: `updateInternalShift`
           non tocca `venue_id`, perché assegnazioni e fabbisogni già scritti
           puntano a `staff_members` e `venue_roles` di **questa** sede, e
-          spostare il turno li lascerebbe appesi a righe di un altro locale —
+          spostare il turno li lascerebbe appesi a righe di un'altra sede —
           cosa che il database accetterebbe senza dire niente. */}
       {isMultiVenue ? (
         <Field label="Sede" error={errors.venue_id?.message}>

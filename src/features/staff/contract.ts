@@ -4,7 +4,7 @@ import { formatHours } from "@/lib/format";
  * Le ore che una persona **deve** fare, e il confronto con quelle programmate.
  *
  * Il contratto è della persona (`staff_people`), non della sede: chi lavora in
- * due locali dello stesso titolare ha un monte ore solo, ed è lo stesso motivo
+ * due sedi dello stesso titolare ha un monte ore solo, ed è lo stesso motivo
  * per cui `computeWeekLoad` somma cross-sede.
  *
  * ⚠️ Non è un vincolo. Serve a colorare una cella del planning: nessuna

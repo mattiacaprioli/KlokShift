@@ -46,7 +46,7 @@ function TypeChips({
 /**
  * In quali sedi lavora. Multi-selezione, almeno una.
  *
- * Con un locale solo non compare: la risposta è già nota e chiederla sarebbe un
+ * Con una sede sola non compare: la risposta è già nota e chiederla sarebbe un
  * passo in più per nulla.
  */
 function VenueMultiSelect({
@@ -214,7 +214,7 @@ export default function StaffNewScreen() {
         style={{ paddingTop: insets.top + 8 }}
       >
         <ScreenHeader eyebrow="Staff" title="Aggiungi" />
-        <NoVenuesState subtitle="Ti serve un locale prima di creare il tuo organico." />
+        <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
       </View>
     );
   }
@@ -283,8 +283,8 @@ export default function StaffNewScreen() {
             />
           ) : null}
 
-          {/* Solo con una sede sola: i ruoli appartengono al locale, e
-              chiederli per tre locali in un form di creazione lo renderebbe
+          {/* Solo con una sede sola: i ruoli appartengono alla sede, e
+              chiederli per tre sedi in un form di creazione lo renderebbe
               illeggibile. Con più sedi si assegnano dalla scheda persona. */}
           {singleVenue ? (
             <RoleMultiSelect
@@ -294,7 +294,7 @@ export default function StaffNewScreen() {
             />
           ) : (
             <Text className="text-xs leading-4 text-t3">
-              I ruoli cambiano da un locale all&apos;altro: li assegnerai dalla
+              I ruoli cambiano da una sede all&apos;altra: li assegnerai dalla
               sua scheda, sede per sede.
             </Text>
           )}

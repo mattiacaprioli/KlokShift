@@ -8,7 +8,7 @@
  * ricevere un file intestato "Trattoria Roma", o i due documenti non parlano della
  * stessa persona.
  *
- *   · UNA sede aperta → il nome della sede. Identico a prima per chi ha un locale
+ *   · UNA sede aperta → il nome della sede. Identico a prima per chi ha una sede
  *     solo, che continua a esportare "ore-osteria-milano-settembre-2026.csv".
  *   · PIÙ sedi → il nome del titolare (`profiles.full_name`), con fallback sul nome
  *     della sede più vecchia — il marchio con cui il gruppo è nato — e poi su una

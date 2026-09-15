@@ -3,7 +3,7 @@ import type { Tables } from "@/types/database";
 
 /**
  * Documenti di una **persona** dell'organico: HACCP, contratto, visita medica,
- * patentino. Quello che un locale deve poter esibire in un'ispezione.
+ * patentino. Quello che una sede deve poter esibire in un'ispezione.
  *
  * Stanno sulla persona (`staff_people`) e non sulla singola scheda, da
  * 20260913100100: chi lavora in due sedi dello stesso titolare li carica una

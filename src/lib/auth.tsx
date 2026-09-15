@@ -169,7 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
      * registrarsi — o fare login — mentre un altro account è ancora aperto
      * nello stesso browser emette **`SIGNED_IN` e basta**. Senza uscire prima,
      * la cache restava quella di chi c'era prima, e il nuovo account apriva
-     * l'app trovandosi in lista i locali di un altro. Nessun dato nuovo
+     * l'app trovandosi in lista le sedi di un altro. Nessun dato nuovo
      * arrivava dal server — la RLS regge — ma quello vecchio era già lì, e a
      * schermo non c'è differenza.
      */

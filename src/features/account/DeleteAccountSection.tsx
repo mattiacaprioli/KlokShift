@@ -13,9 +13,9 @@ import { deleteMyAccount } from "./api";
  * cancellare, da dentro l'app.
  *
  * La copy è diversa per ruolo perché le conseguenze lo sono: il cameriere perde
- * la reputazione ma il locale conserva le ore già lavorate; il
- * ristoratore chiude il locale e fa annullare i turni futuri, con lo storico
- * passato che resta al locale.
+ * la reputazione ma la sede conserva le ore già lavorate; il
+ * ristoratore chiude la sede e fa annullare i turni futuri, con lo storico
+ * passato che resta alla sede.
  */
 export function DeleteAccountSection() {
   const { profile, signOut } = useAuth();
@@ -26,8 +26,8 @@ export function DeleteAccountSection() {
   const isManager = profile?.role === "manager";
 
   const message = isManager
-    ? "I tuoi dati personali verranno eliminati e il tuo locale chiuso. I turni futuri saranno annullati e il personale assegnato riceverà una notifica. Lo storico dei turni passati e delle ore resta al locale, per gli obblighi contabili. L'operazione non è reversibile."
-    : "I tuoi dati personali e le recensioni ricevute verranno eliminati. I locali per cui hai lavorato conservano le ore già registrate, senza più il tuo account collegato. L'operazione non è reversibile.";
+    ? "I tuoi dati personali verranno eliminati e la tua sede chiusa. I turni futuri saranno annullati e il personale assegnato riceverà una notifica. Lo storico dei turni passati e delle ore resta alla sede, per gli obblighi contabili. L'operazione non è reversibile."
+    : "I tuoi dati personali e le recensioni ricevute verranno eliminati. Le sedi per cui hai lavorato conservano le ore già registrate, senza più il tuo account collegato. L'operazione non è reversibile.";
 
   async function onConfirm() {
     setPending(true);
@@ -48,7 +48,7 @@ export function DeleteAccountSection() {
       <SectionHeader title="Zona pericolosa" />
       <Text className="text-[13px] leading-5 text-t3">
         {isManager
-          ? "Eliminando l'account il locale viene chiuso e i turni futuri annullati."
+          ? "Eliminando l'account la sede viene chiusa e i turni futuri annullati."
           : "Eliminando l'account perdi profilo e recensioni."}
       </Text>
       <View className="mt-1">

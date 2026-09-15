@@ -33,7 +33,7 @@ type Props = {
  *
  * Il nome è **testo libero** di proposito — l'HACCP è solo il caso più comune, e
  * un elenco chiuso lascerebbe fuori il patentino carrelli o il nulla osta che
- * qualche locale chiede davvero.
+ * qualche sede chiede davvero.
  */
 export function DocumentFormView({
   initialName = "",

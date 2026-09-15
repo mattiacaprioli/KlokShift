@@ -1,5 +1,5 @@
 /*
- * L'agenda del locale, ricostruita: striscia della settimana + turni del giorno
+ * L'agenda della sede, ricostruita: striscia della settimana + turni del giorno
  * raggruppati sotto la data. La card ricalca `ManagerShiftCard` dell'app —
  * barra della copertura a sinistra (verde coperto, arancio manca qualcuno),
  * orario in evidenza, ruoli sotto — perché un mockup che promette un'altra

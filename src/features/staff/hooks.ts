@@ -34,7 +34,7 @@ export function useMyDocumentScopes(waiterId: string | undefined) {
   });
 }
 
-/** Waiter: the venues where they are confirmed staff ("I tuoi locali"). */
+/** Waiter: the venues where they are confirmed staff ("Le tue sedi"). */
 export function useMyEmployers(waiterId: string | undefined) {
   return useQuery({
     queryKey: qk.staff.employers(waiterId ?? ""),
@@ -177,7 +177,7 @@ export function useRespondToInvite() {
   });
 }
 
-/** Waiter: resign from a venue's staff, then refresh "I tuoi locali" + assignments. */
+/** Waiter: resign from a venue's staff, then refresh "Le tue sedi" + assignments. */
 export function useLeaveVenue() {
   const qc = useQueryClient();
   return useMutation({

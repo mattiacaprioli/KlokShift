@@ -51,9 +51,9 @@ export function useOwnerShifts() {
  * Turni in un intervallo di date — vista calendario/planning.
  *
  * `scope` restringe la query a un sottoinsieme delle sedi dell'azienda: è il
- * filtro per locale del Planning, e filtra **sul server** (`.in("venue_id", …)`
+ * filtro per sede del Planning, e filtra **sul server** (`.in("venue_id", …)`
  * sull'indice `shifts_venue_date_idx`), non a valle sui risultati. Ogni scope ha
- * la sua chiave di cache, quindi tornare su "tutti i locali" non rifà la query.
+ * la sua chiave di cache, quindi tornare su "tutte le sedi" non rifà la query.
  *
  * ⚠️ `scope` deve contenere solo id di sedi del titolare: la policy SELECT su
  * `shifts` è larga (vedi il commento in `api.ts`), e un id arbitrario qui

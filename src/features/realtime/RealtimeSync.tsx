@@ -78,14 +78,14 @@ function useBurstInvalidate(qc: QueryClient, ms = 300) {
  * Due principi, entrambi imparati risolvendo il Disk IO budget esaurito:
  *
  * 1. **Sottoscrivere il meno possibile.** Prima questo componente ascoltava
- *    `shifts` senza filtro, e ogni modifica di turno di *qualunque* locale
+ *    `shifts` senza filtro, e ogni modifica di turno di *qualunque* sede
  *    svegliava *tutti* i client — Realtime valuta la RLS per ogni subscriber
- *    su ogni riga cambiata. Ora il ristoratore ascolta solo il proprio locale e
+ *    su ogni riga cambiata. Ora il ristoratore ascolta solo la propria sede e
  *    il professionista non ascolta `shifts` affatto: quello che lo riguarda gli
  *    arriva già dal canale notifiche, filtrato per `user_id` (vedi
  *    `useNotificationsRealtime`).
  *
- * 2. **Invalidare stretto.** Si invalidano le chiavi del locale/utente
+ * 2. **Invalidare stretto.** Si invalidano le chiavi della sede/utente
  *    interessato, in una sola raffica raggruppata, invece di far cadere dalla
  *    cache ogni intervallo del planning, lo storico e ogni dettaglio turno.
  *

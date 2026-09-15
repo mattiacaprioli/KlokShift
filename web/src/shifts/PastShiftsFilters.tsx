@@ -64,7 +64,7 @@ export function PastShiftsFilters({
       {isMultiVenue ? (
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-            Locale
+            Sede
           </span>
           <Select
             value={value.venueIds?.[0] ?? ""}
@@ -75,7 +75,7 @@ export function PastShiftsFilters({
               })
             }
           >
-            <option value="">Tutti i locali</option>
+            <option value="">Tutte le sedi</option>
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}

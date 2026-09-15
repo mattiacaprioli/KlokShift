@@ -44,7 +44,7 @@ export default function VenueEditScreen() {
     return (
       <View className="flex-1 justify-center bg-bg-0 px-6">
         <EmptyState
-          title="Locale non trovato"
+          title="Sede non trovata"
           subtitle="Potrebbe essere stato chiuso da un altro dispositivo."
         />
       </View>
@@ -57,12 +57,12 @@ export default function VenueEditScreen() {
       {
         onSuccess: () => {
           setConfirmVisible(false);
-          toast.show("Locale chiuso");
+          toast.show("Sede chiusa");
           router.back();
         },
         onError: () => {
           setConfirmVisible(false);
-          toast.show("Impossibile chiudere il locale. Riprova.", "error");
+          toast.show("Impossibile chiudere la sede. Riprova.", "error");
         },
       }
     );
@@ -78,7 +78,7 @@ export default function VenueEditScreen() {
           <View className="gap-6">
             <VenuePlanningToggle venue={venue} ownerId={ownerId} />
             <GhostButton
-              label={close.isPending ? "Chiusura…" : "Chiudi questo locale"}
+              label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}
               disabled={close.isPending}
               onPress={() => setConfirmVisible(true)}
             />
@@ -93,7 +93,7 @@ export default function VenueEditScreen() {
         // ruoli, distruggendo ore già lavorate da altre persone. Chiudere lo
         // toglie dalla circolazione e lascia tutto consultabile.
         message="Sparisce dallo switcher e non potrai più programmarci turni. Lo storico di turni e ore resta consultabile, e puoi riaprirlo quando vuoi."
-        confirmLabel="Chiudi locale"
+        confirmLabel="Chiudi sede"
         onConfirm={doClose}
         onCancel={() => setConfirmVisible(false)}
       />

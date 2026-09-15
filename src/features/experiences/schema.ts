@@ -5,7 +5,7 @@ const currentYear = new Date().getFullYear();
 
 export const experienceSchema = z
   .object({
-    company_name: z.string().trim().min(1, "Inserisci il nome del locale"),
+    company_name: z.string().trim().min(1, "Inserisci il nome della sede"),
     role: z.string().trim(),
     start_year: z
       .string()

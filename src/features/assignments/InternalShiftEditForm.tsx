@@ -171,7 +171,7 @@ function EditForm({
             `updateInternalShift` non tocca `venue_id`: un turno non si sposta di
             sede. Le assegnazioni e i fabbisogni già scritti puntano a
             `staff_members` e `venue_roles` di **questa** sede, e spostare il
-            turno li lascerebbe appesi a righe di un altro locale — il database
+            turno li lascerebbe appesi a righe di un'altra sede — il database
             lo accetterebbe senza dire niente. Chi volesse quel turno altrove lo
             ricrea; è un'operazione rara, e il costo di sbagliarla è alto. */}
         {venue ? (

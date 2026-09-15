@@ -51,7 +51,7 @@ export function ExperienceFormView({
         <ControlledInput
           control={control}
           name="company_name"
-          label="Locale"
+          label="Sede"
           placeholder="Es. Trattoria da Gino"
         />
         <ControlledInput

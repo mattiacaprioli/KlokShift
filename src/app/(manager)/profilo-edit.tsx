@@ -20,10 +20,10 @@ import { useToast } from "@/providers/Toast";
 
 /**
  * Il proprio account, lato gestore: nome e foto della **persona**, non del
- * locale.
+ * sede.
  *
  * Sono due identità diverse e finivano per essere confuse: il Profilo del
- * gestore parla del locale (logo, città, scheda), mentre nome e foto personali
+ * gestore parla della sede (logo, città, scheda), mentre nome e foto personali
  * sono quelli che il professionista vede in chat e sotto i turni assegnati.
  * Fino al 14/09/2026 si potevano cambiare solo dalla dashboard web — chi usa
  * solo il telefono restava con il nome scritto in fase di registrazione.
@@ -119,8 +119,8 @@ export default function ManagerAccountEditScreen() {
           <View className="flex-row gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
             <Icon name="shield" size={20} color="#4FC97D" />
             <Text className="flex-1 text-sm leading-5 text-t3">
-              Nome e foto sono i tuoi, non del locale: è così che ti vede chi
-              lavora con te, in chat e sui turni. Il locale si modifica dal
+              Nome e foto sono i tuoi, non della sede: è così che ti vede chi
+              lavora con te, in chat e sui turni. La sede si modifica dal
               Profilo.
             </Text>
           </View>

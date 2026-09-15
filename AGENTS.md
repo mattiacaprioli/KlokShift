@@ -6,11 +6,11 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 
 # topWaitr
 
-Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. I **locali** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore e costruiscono la propria reputazione. Niente Stripe nel MVP.
+Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. Le **sedi** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore e costruiscono la propria reputazione. Niente Stripe nel MVP.
 
 > Il marketplace (professionisti che cercano turni e si candidano ad annunci) è stato rimosso dal codice il 2026-09-12. In DB restano inerti `applications`, l'enum `shift_kind` e i `notification_type` `application_*`: non vanno riesumati senza una decisione di prodotto.
 
-⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **locale** (non "ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (enum DB, rotte, tipi): non rinominarli.
+⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **sede** (non "locale"/"ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (enum DB, rotte, tipi): non rinominarli.
 
 ## Stack
 | Categoria | Tecnologia |
@@ -56,7 +56,7 @@ src/
 ├── constants/theme.ts    # colori, spacing, font (palette AURA)
 └── global.css            # import Tailwind v4 + @theme token
 
-web/        # dashboard desktop dei locali (Vite+React, /app/ su Pages)
+web/        # dashboard desktop delle sedi (Vite+React, /app/ su Pages)
 web-site/   # sito vetrina pubblico + pagine legali (radice su Pages)
 web-review/ # recensioni cliente (sospese, sotto /recensioni/)
 ```
@@ -70,7 +70,7 @@ nominare recensioni, candidature, paghe o prezzi: vedi `web-site/README.md`.
 ## Auth & navigazione
 - Pattern ufficiale Expo Router v56: `Stack.Protected` con 3 guard — `!session` → `(auth)`, `session && role==='manager'` → `(manager)`, `session && role==='waiter'` → `(waiter)`. Nessun `index.tsx` root.
 - `AuthProvider`/`useAuth()` in `src/lib/auth.tsx`: `getSession()` + `onAuthStateChange` → `ensureProfile()` (select-or-insert in `profiles`, RLS `id=auth.uid()`). Ruolo letto da `user_metadata`. Nessun trigger su `auth.users`.
-- ⚠️ **"Confirm email" su Supabase Auth non si disattiva.** L'aggancio automatico delle schede staff (`link_staff_invites_for_user`, 20260916100200) collega un account alla scheda che un locale ha preparato per quell'indirizzo. Il controllo `email_confirmed_at is not null` è l'unica cosa che separa «ti colleghiamo alla tua scheda» da «chiunque scriva l'email di un altro entra nel suo organico». Senza conferma email la funzione smette di agganciare — rottura visibile, non un buco silenzioso — ma la protezione va lasciata dov'è.
+- ⚠️ **"Confirm email" su Supabase Auth non si disattiva.** L'aggancio automatico delle schede staff (`link_staff_invites_for_user`, 20260916100200) collega un account alla scheda che una sede ha preparato per quell'indirizzo. Il controllo `email_confirmed_at is not null` è l'unica cosa che separa «ti colleghiamo alla tua scheda» da «chiunque scriva l'email di un altro entra nel suo organico». Senza conferma email la funzione smette di agganciare — rottura visibile, non un buco silenzioso — ma la protezione va lasciata dov'è.
 
 ## Dati (Supabase)
 - Query/mutation nel data layer `src/lib/*.ts` (`getX`/`saveX`/`createX`/`updateX`), **mai** fetch diretti nei componenti.

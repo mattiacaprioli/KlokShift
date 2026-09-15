@@ -13,7 +13,7 @@ import type { PlanningShift } from "./api";
 import { TeamAvatars, TeamRow } from "./TeamRow";
 
 /**
- * Un turno del locale, visto da chi ci lavora ma non necessariamente ci è sopra.
+ * Un turno della sede, visto da chi ci lavora ma non necessariamente ci è sopra.
  *
  * Stessa impaginazione di `MyShiftCard` — ora a sinistra in cifre tabellari,
  * contenuto a destra — perché le due viste si alternano sotto lo stesso
@@ -22,7 +22,7 @@ import { TeamAvatars, TeamRow } from "./TeamRow";
  *
  * Le differenze sono due, e dicono entrambe qualcosa:
  *   · la barra a sinistra è oro solo sui **propri** turni, così scorrendo la
- *     settimana del locale si ritrova la propria dentro;
+ *     settimana della sede si ritrova la propria dentro;
  *   · niente bottoni di conferma: il turno di un collega non si conferma.
  *
  * ⚠️ Il tocco **apre l'elenco qui dentro**, non porta al dettaglio turno. Non è
@@ -121,7 +121,7 @@ export function PlanningShiftCard({
             )
           ) : (
             // Un turno senza nessuno non è un errore di caricamento: è un turno
-            // che il locale non ha ancora coperto, ed è una delle cose che si
+            // che la sede non ha ancora coperto, ed è una delle cose che si
             // viene a cercare qui.
             <Text className="mt-2 text-[13px] text-t4">
               Nessuno in turno per ora

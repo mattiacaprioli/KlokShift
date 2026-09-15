@@ -26,7 +26,7 @@ import {
 } from "./api";
 
 /**
- * «Fagli gestire il locale»: la promozione di un membro dell'organico.
+ * «Fagli gestire la sede»: la promozione di un membro dell'organico.
  *
  * Sta sulla scheda della persona e non nella lista dei collaboratori perché è lì
  * che la decisione nasce — il titolare sta guardando chi è il suo capo sala, non
@@ -62,7 +62,7 @@ export function PromoteSection({
 
   return (
     <View className="gap-3">
-      <Mono>Gestione del locale</Mono>
+      <Mono>Gestione della sede</Mono>
       <Text className="-mt-1 px-1 text-[12px] leading-4 text-t4">
         {personName.split(/\s+/)[0]} continua a essere un professionista con i
         suoi turni: gli si aggiunge un secondo accesso, non gli si cambia
@@ -74,7 +74,7 @@ export function PromoteSection({
           ownerId={ownerId}
           waiterId={waiterId}
           venueId={venueId}
-          venueName={venueById(venueId)?.name ?? "Locale"}
+          venueName={venueById(venueId)?.name ?? "Sede"}
           row={rows.find((r) => r.venue_id === venueId) ?? null}
         />
       ))}

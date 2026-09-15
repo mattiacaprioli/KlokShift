@@ -6,7 +6,7 @@ import type { PlanTier } from "@/features/plan/devOverride";
  * Oggi non c'è alcun limite: un titolare può aprire tutte le sedi che vuole. Il
  * file esiste perché il giorno in cui il limite arriverà, il diff sia questo e
  * nient'altro — i due chiamanti (`(manager)/venue/new.tsx` e la pagina web
- * `/locale/nuovo`) non cambieranno di una riga.
+ * `/sede/nuovo`) non cambieranno di una riga.
  *
  * Puro di proposito: nessun router, nessun Expo, nessun hook. È la ragione per
  * cui la dashboard web lo importa verbatim.
@@ -40,7 +40,7 @@ export function canCreateVenue(args: {
     allowed: false,
     reason:
       limit === 1
-        ? "Il tuo piano include un solo locale. Passa a Pro per aggiungerne altri."
-        : `Il tuo piano include ${limit} locali. Passa a Pro per aggiungerne altri.`,
+        ? "Il tuo piano include una sola sede. Passa a Pro per aggiungerne altre."
+        : `Il tuo piano include ${limit} sedi. Passa a Pro per aggiungerne altre.`,
   };
 }

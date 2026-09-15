@@ -26,7 +26,7 @@ const ROLES: {
   {
     value: "manager",
     icon: "users",
-    title: "Gestisco un locale",
+    title: "Gestisco una sede",
     sub: "Ristorante, hotel, catering, eventi. Organizza i turni con il tuo organico.",
     chips: ["TURNI", "STAFF", "ORE"],
   },

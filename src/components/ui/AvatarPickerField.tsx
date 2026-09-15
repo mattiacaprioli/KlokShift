@@ -8,7 +8,7 @@ import { Icon } from "./Icon";
  * macchina fotografica, e le due azioni testuali sotto.
  *
  * Sta qui e non nella schermata del profilo perché la stessa cosa serve al
- * locale per il suo logo: sono lo stesso gesto sullo stesso bucket, e tenerne
+ * sede per il suo logo: sono lo stesso gesto sullo stesso bucket, e tenerne
  * due copie voleva dire due comportamenti che divergono al primo ritocco.
  * Il caricamento vero (scelta, ritaglio, upload) resta a chi chiama — questo
  * componente non sa da dove arriva l'immagine né dove va a finire.

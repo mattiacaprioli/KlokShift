@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import type { VenueRole } from "@/features/roles/api";
 
 type Props = {
-  /** I ruoli del locale (già caricati da chi ospita il form). */
+  /** I ruoli della sede (già caricati da chi ospita il form). */
   roles: VenueRole[];
   /** Fabbisogno corrente, per id di ruolo. Le voci a 0 valgono "non richiesto". */
   targets: Record<string, number>;
@@ -22,7 +22,7 @@ type Props = {
  * È **additivo**: mostra solo i ruoli già richiesti, più un pulsante che rivela
  * i restanti. Prima disegnava una riga con +/− per OGNI ruolo esistente, il che
  * funzionava con sei ruoli ma diventava un muro di selettori quasi tutti a zero
- * appena la lista cresceva — e ora la lista la scrive il locale, quindi può
+ * appena la lista cresceva — e ora la lista la scrive la sede, quindi può
  * essere lunga quanto vuole.
  */
 export function RoleRequirementsField({

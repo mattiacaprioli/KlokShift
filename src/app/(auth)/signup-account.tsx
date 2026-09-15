@@ -177,7 +177,7 @@ export default function SignupAccount() {
  * Senza il rinvio, chi non riceve il messaggio — casella piena, spam, un filtro
  * aziendale — resta con un account che esiste e non può usare, e l'unica uscita
  * sarebbe registrarsi con un altro indirizzo: proprio quello da evitare, perché
- * è l'indirizzo a collegarlo alla scheda che il locale gli ha preparato.
+ * è l'indirizzo a collegarlo alla scheda che la sede gli ha preparato.
  */
 function CheckYourMail({ email }: { email: string }) {
   const router = useRouter();

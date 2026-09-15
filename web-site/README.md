@@ -1,7 +1,7 @@
 # web-site — sito vetrina
 
 La pagina pubblica di topWaitr: cosa fa il prodotto, per chi, e il pulsante che
-porta alla registrazione del locale. È la **radice** del sito su GitHub Pages;
+porta alla registrazione della sede. È la **radice** del sito su GitHub Pages;
 la dashboard sta sotto `/app/` (vedi `web/README.md`).
 
 Qui dentro non c'è niente del prodotto: nessun Supabase, nessun `src/features`,

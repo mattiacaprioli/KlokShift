@@ -108,7 +108,7 @@ export function BirthdayField({
       ) : null}
 
       <Text className="text-[12px] text-t4">
-        Lo vedono i locali in cui sei in organico, per farti gli auguri. Non
+        Lo vedono le sedi in cui sei in organico, per farti gli auguri. Non
         salviamo l&apos;anno, quindi la tua età resta tua.
       </Text>
 

@@ -144,17 +144,17 @@ export default function ManagerHome() {
           <Mono gold>La tua area</Mono>
           <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
           {/* Non più uno switcher: non c'è più una sede da scegliere. Con un
-              locale solo è il suo nome, come è sempre stato; con più locali è il
+              sede sola è il suo nome, come è sempre stato; con più sedi è il
               conteggio, e porta dove si gestiscono — il Profilo. */}
           {venues.length === 0 ? null : isMultiVenue ? (
             <Pressable
               onPress={() => router.push("/(manager)/(tabs)/profilo")}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel={`${venues.length} locali. Tocca per gestirli.`}
+              accessibilityLabel={`${venues.length} sedi. Tocca per gestirle.`}
               className="mt-1 flex-row items-center gap-1"
             >
-              <Text className="text-sm text-t3">{venues.length} locali</Text>
+              <Text className="text-sm text-t3">{venues.length} sedi</Text>
               <Icon name="chevR" size={14} color="#8C8579" />
             </Pressable>
           ) : (
@@ -202,11 +202,11 @@ export default function ManagerHome() {
             </View>
           </View>
 
-          {/* Chi non ha ancora un locale vede i KPI a zero e questo invito, non
+          {/* Chi non ha ancora una sede vede i KPI a zero e questo invito, non
               un muro al posto della home: la prima schermata dell'app deve
               somigliare a quella che userà tutti i giorni. */}
           {venues.length === 0 ? (
-            <NoVenuesState subtitle="Aggiungi le informazioni del tuo locale per iniziare a organizzare i turni." />
+            <NoVenuesState subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni." />
           ) : null}
 
           {/* Upsell Pro — visibile solo agli utenti Free */}
@@ -232,7 +232,7 @@ export default function ManagerHome() {
                         <Text className="text-base font-sans-bold text-t1">
                           {w.name}
                         </Text>
-                        {/* Con più locali il ruolo da solo non basta: «Barman»
+                        {/* Con più sedi il ruolo da solo non basta: «Barman»
                             non dice in quale sala si presenta stasera. */}
                         {w.role || w.venue ? (
                           <Text className="text-xs text-t3">

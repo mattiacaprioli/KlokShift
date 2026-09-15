@@ -1,9 +1,9 @@
 /**
  * ⚠️ **Le recensioni sono NASCOSTE, non rimosse** (decisione 2026-09-12).
  *
- * Il prodotto si concentra su una cosa sola: il locale organizza i turni col
+ * Il prodotto si concentra su una cosa sola: la sede organizza i turni col
  * proprio organico, e il professionista li vede, tiene i propri dati e parla col
- * locale. Reputazione e QR sono un secondo prodotto dentro il primo, e finché
+ * sede. Reputazione e QR sono un secondo prodotto dentro il primo, e finché
  * non è deciso se ci sta, non deve confondere chi apre l'app.
  *
  * Spegnere non è cancellare: la tabella `reviews`, le sue RLS, il sito
@@ -13,7 +13,7 @@
  *
  * Cosa gating: la scheda «Cosa dicono di te» e le celle rating in home
  * professionista, il tab Recensioni e il bottone del QR nel suo profilo, il
- * rating in «Chi lavora oggi» e nella scheda staff lato locale, le recensioni
+ * rating in «Chi lavora oggi» e nella scheda staff lato sede, le recensioni
  * sulla scheda del professionista (app e dashboard).
  *
  * ⚠️ Riaccendendo, ricontrollare anche: le slide di `introContent.ts`, la copy

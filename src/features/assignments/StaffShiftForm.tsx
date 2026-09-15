@@ -43,7 +43,7 @@ type Props = {
  * Assegna un turno a uno o più membri dell'organico.
  *
  * ⚠️ **La sede è un campo del form, non un contesto.** È il perno del
- * riposizionamento del 14/09/2026: non si "entra" in un locale per creare i suoi
+ * riposizionamento del 14/09/2026: non si "entra" in una sede per creare i suoi
  * turni — si crea un turno e si dice dove. Il form la possiede (`useLastVenue`,
  * che ricorda l'ultima usata), e da lì discendono organico e mansioni
  * selezionabili: `useVenueStaff`/`useVenueRoles` filtrano già per sede, e non
@@ -123,7 +123,7 @@ export function StaffShiftForm({ initialDate }: Props) {
 
   function onSubmit() {
     if (!venueId) {
-      toast.show("Configura prima il tuo locale.", "error");
+      toast.show("Configura prima la tua sede.", "error");
       return;
     }
     if (selectedIds.length === 0) {

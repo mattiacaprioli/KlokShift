@@ -17,7 +17,7 @@ export function routeForNotification(
 ): Href | null {
   if (role === "waiter") {
     if (type === "staff_invite") return "/(waiter)/inviti";
-    // Niente da accettare: la scheda che il locale aveva preparato è già sua. Il
+    // Niente da accettare: la scheda che la sede aveva preparato è già sua. Il
     // `related_id` è una `staff_members`, quindi il ramo finale la scambierebbe
     // per un turno e aprirebbe una schermata vuota.
     if (type === "staff_linked") return "/(waiter)/(tabs)";
@@ -27,7 +27,7 @@ export function routeForNotification(
     if (type === "new_message" || type === "shift_change_response") {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
-    // Il professionista non riceve mai le altre due (sono per il locale), ma la
+    // Il professionista non riceve mai le altre due (sono per la sede), ma la
     // funzione è totale sui tipi: meglio dirlo che lasciarlo al ramo finale.
     if (type === "shift_change_request" || type === "shift_declined") return null;
     // shift_unassigned: la delete dell'assegnazione gli toglie anche la lettura

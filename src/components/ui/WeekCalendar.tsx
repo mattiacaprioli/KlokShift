@@ -155,7 +155,7 @@ export function WeekCalendar({
   /** I giorni con almeno un turno: ricevono il pallino. */
   marked: Set<string>;
   /**
-   * I giorni con qualcosa da sistemare — per il locale, quelli con un turno
+   * I giorni con qualcosa da sistemare — per la sede, quelli con un turno
    * scoperto. Il pallino diventa arancio, e il calendario smette di dire solo
    * *dove ci sono turni* per dire *dove c'è un problema*.
    */
@@ -164,7 +164,7 @@ export function WeekCalendar({
   onToggleExpand: () => void;
   /**
    * Slot a destra della riga del mese, per un dato che parla del periodo
-   * mostrato (per il locale: quanti turni ci sono e quanti sono scoperti).
+   * mostrato (per la sede: quanti turni ci sono e quanti sono scoperti).
    * Sta qui e non sotto il calendario perché sotto verrebbe letto come
    * l'intestazione di ciò che segue.
    */

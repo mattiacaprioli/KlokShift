@@ -8,7 +8,7 @@ import { Text, View } from "@/tw";
  * Riga che porta altrove: bolla icona, titolo, sottotitolo, chevron.
  *
  * È il pattern più riscritto a mano dell'app — «Le mie ore», «I tuoi
- * documenti», «Copertura turni», «Ruoli del locale» erano lo stesso markup in
+ * documenti», «Copertura turni», «Ruoli della sede» erano lo stesso markup in
  * cinque copie, con quattro misure diverse della bolla. Il `right` serve a chi
  * deve mostrare qualcos'altro al posto della chevron (un lucchetto Pro).
  */

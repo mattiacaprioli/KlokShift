@@ -1,13 +1,13 @@
-# web — dashboard dei locali
+# web — dashboard delle sedi
 
-Interfaccia **desktop** per chi gestisce un locale: programmazione turni,
+Interfaccia **desktop** per chi gestisce una sede: programmazione turni,
 copertura, ore e export contabile. Il professionista non la usa: per lui l'app
 mobile basta e avanza (chi apre questa dashboard con un account professionista
 riceve una schermata di cortesia, non un errore).
 
 Stesso backend Supabase dell'app, **stessa RLS, stessa anon key**: non esistono
 policy dedicate al web. L'accesso del gestore è già derivato ovunque dalla
-proprietà del locale (`venues.owner_id = auth.uid()`).
+proprietà della sede (`venues.owner_id = auth.uid()`).
 
 ## Comandi (dalla root del repo)
 
@@ -75,10 +75,10 @@ dashboard avrà un dominio proprio si passa a `BrowserRouter`.
 ## Scelte da conoscere prima di metterci mano
 
 - **La registrazione dal web crea solo account `manager`**: il ruolo non si
-  sceglie (a differenza dell'app), perché questa dashboard è per i locali e un
+  sceglie (a differenza dell'app), perché questa dashboard è per le sedi e un
   professionista finirebbe comunque su `NotForWaitersPage`. L'account si crea
-  con `signUp` condiviso di `src/lib/auth.tsx` e il locale arriva dopo, dal gate
-  di `AppLayout` → `/locale`: senza sessione (conferma email attiva) la RLS non
+  con `signUp` condiviso di `src/lib/auth.tsx` e la sede arriva dopo, dal gate
+  di `AppLayout` → `/sede`: senza sessione (conferma email attiva) la RLS non
   permetterebbe l'insert in `venues`.
   ⚠️ Il link di conferma punta all'URL della dashboard (`emailRedirectTo`): va
   aggiunto ai **Redirect URLs** del progetto Supabase, altrimenti si ripiega sul
@@ -130,6 +130,6 @@ dashboard avrà un dominio proprio si passa a `BrowserRouter`.
   browser danno già stringhe nel formato delle colonne DB. L'invariante che
   conta (fine dopo inizio) è la stessa, con lo stesso messaggio.
 - **`positions_filled` non si scrive mai dal client**: lo tengono i trigger DB.
-- Vocabolario delle stringhe utente: **professionista** e **locale**, mai
+- Vocabolario delle stringhe utente: **professionista** e **sede**, mai
   "cameriere"/"ristoratore" (vedi `AGENTS.md`). Gli identificatori interni
   restano `waiter`/`manager`.

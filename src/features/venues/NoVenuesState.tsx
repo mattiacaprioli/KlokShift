@@ -14,10 +14,10 @@ import { cn } from "@/lib/cn";
  * contenuto.
  *
  * ⚠️ La home **non** lo usa: saluta, mostra i KPI a zero e invita a creare il
- * primo locale. Chi apre l'app la prima volta non deve trovare un muro.
+ * prima sede. Chi apre l'app la prima volta non deve trovare un muro.
  */
 export function NoVenuesState({
-  subtitle = "Ti serve un locale prima di organizzare i turni.",
+  subtitle = "Ti serve una sede prima di organizzare i turni.",
   className,
 }: {
   subtitle?: string;
@@ -26,10 +26,10 @@ export function NoVenuesState({
   const router = useRouter();
   return (
     <View className={cn("mt-6", className)}>
-      <EmptyState title="Configura il tuo locale" subtitle={subtitle} />
+      <EmptyState title="Configura la tua sede" subtitle={subtitle} />
       <GoldButton
         className="mt-2"
-        label="Configura locale"
+        label="Configura sede"
         onPress={() => router.push("/(manager)/venue/new")}
       />
     </View>

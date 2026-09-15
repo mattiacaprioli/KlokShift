@@ -229,7 +229,7 @@ function StaffPicker({
                         {person.full_name}
                       </span>
                       {/* Le sedi e non i ruoli: qui serve sapere "chi è questo",
-                          e con più locali la sede lo dice meglio del ruolo. */}
+                          e con più sedi la sede lo dice meglio del ruolo. */}
                       <span className="block truncate text-xs text-t4">
                         {venuesLabel || "Nessuna sede"}
                       </span>

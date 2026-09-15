@@ -25,7 +25,7 @@ import {
  * sede.
  *
  * Fino al 14/09/2026 elencava le schede della sede attiva, e chi lavorava in tre
- * locali ci compariva tre volte con un «anche a…» a rimediare. L'organico è del
+ * sedi ci compariva tre volte con un «anche a…» a rimediare. L'organico è del
  * titolare — lo dice il database da quando esiste `staff_people` — e ora lo dice
  * anche questa pagina: le sedi sono le etichette della persona.
  */
@@ -43,7 +43,7 @@ export function StaffPage() {
     return (
       <>
         <PageHeader title="Staff" />
-        <NoVenues detail="Ti serve un locale prima di creare il tuo organico." />
+        <NoVenues detail="Ti serve una sede prima di creare il tuo organico." />
       </>
     );
   }
@@ -64,7 +64,7 @@ export function StaffPage() {
         title="Staff"
         subtitle={[
           `${people.length} nel tuo organico`,
-          isMultiVenue ? `${venues.length} locali` : null,
+          isMultiVenue ? `${venues.length} sedi` : null,
           pending > 0 ? `${pending} in attesa di risposta` : null,
         ]
           .filter(Boolean)

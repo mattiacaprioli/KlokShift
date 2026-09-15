@@ -21,7 +21,7 @@ type Props = {
   /** La **persona**, non la scheda: i documenti valgono in tutte le sue sedi. */
   personId: string;
   /**
-   * Dove si aggiunge un documento. Assente = sola lettura: il locale e il
+   * Dove si aggiunge un documento. Assente = sola lettura: la sede e il
    * professionista collegato hanno gli stessi diritti sulla scheda, ma sul
    * profilo pubblico di un professionista i documenti si guardano e basta.
    */

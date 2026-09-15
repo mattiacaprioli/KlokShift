@@ -12,7 +12,7 @@ import type { Tables } from "@/types/database";
  *
  * ⚠️ Non esiste una variante "per sede": la RPC restituisce da sé tutte le sedi
  * in cui chi chiama è in organico attivo, perché non c'è nessun parametro con
- * cui farsi dare il planning di un locale altrui.
+ * cui farsi dare il planning di una sede altrui.
  */
 
 /** Una riga piatta come la restituisce il database: una per persona in turno. */
@@ -38,7 +38,7 @@ export type PlanningPerson = {
   staffMemberId: string;
   name: string;
   avatarUrl: string | null;
-  /** La mansione di quel giorno, se il locale l'ha scelta. */
+  /** La mansione di quel giorno, se la sede l'ha scelta. */
   roleName: string | null;
   isMe: boolean;
 };

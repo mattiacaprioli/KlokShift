@@ -8,7 +8,7 @@ export function ConfirmMock() {
   return (
     <div className="px-3 pb-4 text-[0.78rem] leading-tight">
       <p className="px-1 font-serif text-[1.35em] font-semibold">Ciao, Sara</p>
-      <p className="mt-1 mb-3 px-1 text-t3">Il locale aspetta la tua risposta</p>
+      <p className="mt-1 mb-3 px-1 text-t3">La sede aspetta la tua risposta</p>
 
       <div className="rounded-2xl border border-gold/40 bg-bg-card p-3">
         <div className="flex items-center justify-between">

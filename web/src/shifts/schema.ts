@@ -19,7 +19,7 @@ export const internalShiftSchema = z
   .object({
     /**
      * La sede del turno. Dal 14/09/2026 è **un campo del form** e non più il
-     * contesto in cui il form vive: non si entra in un locale per creare i suoi
+     * contesto in cui il form vive: non si entra in una sede per creare i suoi
      * turni, si crea un turno e si dice dove.
      */
     venue_id: z.string().uuid("Scegli una sede."),

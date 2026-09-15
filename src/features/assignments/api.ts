@@ -449,7 +449,7 @@ export async function updateAssignmentStatus(
 }
 
 /**
- * Passa un'assegnazione a un'altra persona dello stesso locale.
+ * Passa un'assegnazione a un'altra persona dello stessa sede.
  *
  * Delete + insert dentro una transazione (RPC `reassign_shift_assignment`,
  * migration 20260911120000), non un update di `staff_member_id`: solo così
@@ -458,7 +458,7 @@ export async function updateAssignmentStatus(
  * "confermato") né le ore di chi esce. Il perché per esteso sta nella migration.
  *
  * Ritorna l'id della nuova riga. Gli errori arrivano già in italiano dalla RPC
- * (persona di un altro locale, persona già sul turno).
+ * (persona di un'altra sede, persona già sul turno).
  */
 export async function reassignShiftAssignment(
   assignmentId: string,
@@ -523,7 +523,7 @@ export async function getPersonPerformance(
  * Ultimi turni svolti dalla persona, già ordinati e limitati dal database.
  *
  * Porta la **sede**: senza, due turni lo stesso giovedì alla stessa ora in due
- * locali diversi sembrerebbero un doppione.
+ * sedi diverse sembrerebbero un doppione.
  */
 export type StaffWorkedShift = {
   id: string;
@@ -698,7 +698,7 @@ export async function getMyAssignmentForShift(
 }
 
 /**
- * Chi lavora in questo momento o più tardi oggi, sui turni interni del locale.
+ * Chi lavora in questo momento o più tardi oggi, sui turni interni della sede.
  *
  * La finestra comprende **ieri** perché chi è in sala all'una di notte sta
  * lavorando un turno datato ieri: è il caso in cui il ristoratore ha più bisogno

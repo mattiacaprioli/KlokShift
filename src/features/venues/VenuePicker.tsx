@@ -12,7 +12,7 @@ import { useOwnerVenues } from "./OwnerVenues";
  * fa da perimetro all'app: c'è un turno — o una mansione — che appartiene a una
  * sede, e lo si dice qui.
  *
- * ⚠️ **Con una sede sola non rende niente.** Chi ha un locale solo non deve
+ * ⚠️ **Con una sede sola non rende niente.** Chi ha una sede sola non deve
  * accorgersi che il multi-sede esiste, e un campo con un'unica scelta è rumore:
  * il chiamante ha comunque `venueId` da `useLastVenue()`, che cade su `venues[0]`.
  */
@@ -41,7 +41,7 @@ export function VenuePicker({
   return (
     <View className={cn("gap-2", className)}>
       <Mono gold>{label}</Mono>
-      {/* Orizzontale: i nomi dei locali sono liberi e mandare a capo dei chip
+      {/* Orizzontale: i nomi delle sedi sono liberi e mandare a capo dei chip
           lunghi spezzerebbe la riga in modo diverso a ogni sede aggiunta. */}
       <ScrollView
         horizontal

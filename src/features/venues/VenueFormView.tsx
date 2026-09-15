@@ -17,16 +17,16 @@ import { venueSchema, type VenueForm } from "./schema";
 import type { Venue } from "./api";
 
 /**
- * Il modulo di un locale, in creazione o in modifica.
+ * Il modulo di una sede, in creazione o in modifica.
  *
  * Estratto da `(manager)/venue.tsx` quando un account ha smesso di avere un solo
- * locale: ora lo usano `venue/new` e `venue/[id]`, come `ShiftFormView` fa per
+ * sede: ora lo usano `venue/new` e `venue/[id]`, come `ShiftFormView` fa per
  * `shift/new` e `shift/edit/[id]`.
  */
 export function VenueFormView({
   venue,
   ownerId,
-  eyebrow = "Locale",
+  eyebrow = "Sede",
   title,
   intro,
   onSaved,
@@ -39,7 +39,7 @@ export function VenueFormView({
   title?: string;
   intro?: string;
   onSaved: (venue: Venue) => void;
-  /** Sotto il pulsante: "Chiudi locale" sulla modifica, niente in creazione. */
+  /** Sotto il pulsante: "Chiudi sede" sulla modifica, niente in creazione. */
   footer?: ReactNode;
 }) {
   const toast = useToast();
@@ -83,7 +83,7 @@ export function VenueFormView({
         },
         venueId: venue?.id,
       });
-      toast.show(venue ? "Locale salvato" : "Locale creato");
+      toast.show(venue ? "Sede salvata" : "Sede creata");
       onSaved(saved);
     } catch {
       toast.show("Impossibile salvare. Riprova.", "error");
@@ -91,18 +91,18 @@ export function VenueFormView({
   });
 
   /**
-   * Stesso ordine della foto profilo: prima il locale punta al file nuovo, poi
-   * si cancella il vecchio. Al contrario, un errore a metà lascerebbe il locale
+   * Stesso ordine della foto profilo: prima la sede punta al file nuovo, poi
+   * si cancella il vecchio. Al contrario, un errore a metà lascerebbe la sede
    * a puntare a un file che non c'è più.
    *
-   * Il file va sotto la cartella dell'**utente** e non del locale: la policy del
+   * Il file va sotto la cartella dell'**utente** e non della sede: la policy del
    * bucket `avatars` accetta scritture solo in `<auth.uid()>/…`, e il titolare è
    * comunque l'unico che può caricarlo.
    */
   async function onLogo() {
     if (logoBusy) return;
     if (!venue) {
-      toast.show("Salva prima il nome del locale.", "error");
+      toast.show("Salva prima il nome della sede.", "error");
       return;
     }
     const previous = venue.logo_url ?? null;
@@ -152,7 +152,7 @@ export function VenueFormView({
       >
         <ScreenHeader
           eyebrow={eyebrow}
-          title={title ?? (venue ? venue.name : "Nuovo locale")}
+          title={title ?? (venue ? venue.name : "Nuova sede")}
         />
 
         <Text className="text-base text-t2">
@@ -160,7 +160,7 @@ export function VenueFormView({
             "Queste informazioni saranno visibili ai professionisti sui tuoi turni."}
         </Text>
 
-        {/* Il logo si può caricare solo su un locale già creato: prima non c'è
+        {/* Il logo si può caricare solo su una sede già creata: prima non c'è
             una riga su cui scriverlo. Chi sta compilando il modulo per la prima
             volta lo trova qui appena salva il nome. */}
         {venue ? (
@@ -178,7 +178,7 @@ export function VenueFormView({
         <ControlledInput
           control={control}
           name="name"
-          label="Nome del locale"
+          label="Nome della sede"
           placeholder="Trattoria da Mario"
         />
         <ControlledInput
@@ -205,7 +205,7 @@ export function VenueFormView({
           control={control}
           name="description"
           label="Descrizione"
-          placeholder="Racconta il tuo locale"
+          placeholder="Racconta la tua sede"
           multiline
           numberOfLines={4}
           className="h-28"
@@ -218,8 +218,8 @@ export function VenueFormView({
             save.isPending
               ? "Salvataggio…"
               : venue
-                ? "Salva locale"
-                : "Crea locale"
+                ? "Salva sede"
+                : "Crea sede"
           }
           disabled={save.isPending}
           onPress={onSubmit}

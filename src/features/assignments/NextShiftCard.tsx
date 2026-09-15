@@ -35,7 +35,7 @@ export function NextShiftCard({
   pending?: boolean;
 }) {
   const { shift } = item;
-  const venueName = shift.venue?.name ?? "Locale";
+  const venueName = shift.venue?.name ?? "Sede";
   const canRespond = item.status === "assigned";
 
   return (

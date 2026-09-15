@@ -7,7 +7,7 @@ export type SegmentedOption<T extends string> = { id: T; label: string };
  * Due o tre viste della stessa schermata, una sola alla volta.
  *
  * Estratto da `(manager)/staff/new` quando la tab Turni del professionista ha
- * avuto bisogno dello stesso controllo per «I miei» / «Il locale»: due copie
+ * avuto bisogno dello stesso controllo per «I miei» / «La sede»: due copie
  * dello stesso blocco sono il modo in cui due schermate iniziano a usare due
  * raggi d'angolo diversi.
  *

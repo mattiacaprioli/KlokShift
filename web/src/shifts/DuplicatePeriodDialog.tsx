@@ -44,7 +44,7 @@ const PREVIEW_ROWS = 24;
 /**
  * «Copia questa settimana su quella dopo» — e lo stesso per il mese.
  *
- * Un locale fa più o meno la stessa settimana ogni settimana: senza questo,
+ * Una sede fa più o meno la stessa settimana ogni settimana: senza questo,
  * programmare i prossimi sette giorni vuol dire riaprire quattordici volte lo
  * stesso pannello, e un mese ne vuole sessanta.
  *
@@ -67,7 +67,7 @@ export function DuplicatePeriodDialog({
   /** Il lunedì della settimana, o il 1° del mese, che si sta duplicando. */
   anchor: Date;
   shifts: SourceShift[];
-  /** Le sedi del planning che ha aperto il dialogo (filtro per locale incluso). */
+  /** Le sedi del planning che ha aperto il dialogo (filtro per sede incluso). */
   venueIds: string[];
   onClose: () => void;
 }) {

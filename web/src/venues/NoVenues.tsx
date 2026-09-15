@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, Placeholder } from "../ui/primitives";
 
 /**
- * Il titolare non ha (ancora) nessun locale.
+ * Il titolare non ha (ancora) nessuna sede.
  *
  * Controparte web di `src/features/venues/NoVenuesState.tsx`, e come quella non
  * è più un gate: fino al 14/09/2026 `AppLayout` bloccava tutta la dashboard
@@ -11,18 +11,18 @@ import { Button, Placeholder } from "../ui/primitives";
  * al posto del proprio contenuto.
  */
 export function NoVenues({
-  detail = "Crea il locale per iniziare a programmare i turni.",
+  detail = "Crea la sede per iniziare a programmare i turni.",
 }: {
   detail?: string;
 }) {
   const navigate = useNavigate();
   return (
     <Placeholder
-      title="Nessun locale collegato a questo account"
+      title="Nessuna sede collegata a questo account"
       detail={detail}
       action={
-        <Button variant="gold" onClick={() => navigate("/locale/nuovo")}>
-          Crea il locale
+        <Button variant="gold" onClick={() => navigate("/sede/nuovo")}>
+          Crea la sede
         </Button>
       }
     />

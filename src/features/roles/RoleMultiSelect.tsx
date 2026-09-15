@@ -15,11 +15,11 @@ type Props = {
 
 /**
  * I ruoli di una persona dell'organico: scelta **multipla** sui ruoli del
- * locale. Prima era un ruolo solo, ma chi fa il cameriere il venerdì e il barman
+ * sede. Prima era un ruolo solo, ma chi fa il cameriere il venerdì e il barman
  * il sabato non era rappresentabile — e sul turno si sceglie poi quale dei due
  * ricopre quel giorno.
  *
- * Se il locale non ha ancora creato nessun ruolo il campo non finge di essere
+ * Se la sede non ha ancora creato nessun ruolo il campo non finge di essere
  * vuoto: porta dove si creano.
  */
 export function RoleMultiSelect({
@@ -46,7 +46,7 @@ export function RoleMultiSelect({
       ) : roles.length === 0 ? (
         <Pressable onPress={() => router.push("/(manager)/ruoli")} hitSlop={8}>
           <Text className="text-[13px] leading-5 text-t3">
-            Non hai ancora creato i ruoli del tuo locale.{" "}
+            Non hai ancora creato i ruoli della tua sede.{" "}
             <Text className="font-sans-semibold text-gold">Creali ora</Text>
           </Text>
         </Pressable>

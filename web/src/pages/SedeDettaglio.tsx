@@ -4,12 +4,12 @@ import { VenueFormCard } from "../venues/VenueFormCard";
 import { PageHeader, Placeholder, QueryError, Spinner } from "../ui/primitives";
 
 /**
- * La scheda di **un** locale.
+ * La scheda di **una** sede.
  *
  * Gemella di `src/app/(manager)/venue/[id].tsx`: la sede si prende da
  * `venues.find(...)`, che è già in cache — aprirla non costa una query in più.
  */
-export function LocaleDettaglioPage() {
+export function SedeDettaglioPage() {
   const { id } = useParams<{ id: string }>();
   const { venues, isPending, isError, error } = useOwnerVenues();
   const venue = venues.find((v) => v.id === id) ?? null;
@@ -20,9 +20,9 @@ export function LocaleDettaglioPage() {
   if (!venue) {
     return (
       <>
-        <PageHeader title="Locale non trovato" />
+        <PageHeader title="Sede non trovata" />
         <Placeholder
-          title="Questo locale non esiste più"
+          title="Questa sede non esiste più"
           detail="Potrebbe essere stato chiuso da un altro dispositivo."
         />
       </>

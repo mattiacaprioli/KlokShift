@@ -9,7 +9,7 @@ import { canCreateVenue } from "@/features/venues/gate";
 import { usePlan, PAYWALL_ROUTE } from "@/features/plan/hooks";
 
 /**
- * Creazione di un locale: il primo, o il terzo.
+ * Creazione di una sede: la prima, o la terza.
  *
  * È l'**unico** punto dell'app che chiama `canCreateVenue` (vedi `gate.ts`).
  *
@@ -29,7 +29,7 @@ export default function VenueNewScreen() {
   if (!gate.allowed) {
     return (
       <View className="flex-1 justify-center bg-bg-0 px-6">
-        <EmptyState title="Più locali è una funzione Pro" subtitle={gate.reason} />
+        <EmptyState title="Più sedi è una funzione Pro" subtitle={gate.reason} />
         <GoldButton
           className="mt-6"
           label="Scopri Pro"
@@ -43,7 +43,7 @@ export default function VenueNewScreen() {
     <VenueFormView
       venue={null}
       ownerId={session!.user.id}
-      title="Nuovo locale"
+      title="Nuova sede"
       intro={
         venues.length > 0
           ? "Una sede in più: avrà un suo organico, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
