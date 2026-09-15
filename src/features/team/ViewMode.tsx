@@ -89,10 +89,21 @@ export function ViewModeProvider({ children }: PropsWithChildren) {
     return {
       effective: canSwitch && savedMode === "manager" ? "manager" : "waiter",
       canSwitch,
-      // Gli accessi fanno parte della risposta: prima che arrivino non si sa
-      // nemmeno se la domanda ha senso. Senza questo, un promosso vedrebbe
-      // lampeggiare la sua app da professionista a ogni avvio.
-      ready: savedMode !== undefined && !isPending,
+      /**
+       * ⚠️ Gli accessi si aspettano **solo** se la preferenza dice "manager".
+       *
+       * Questo valore trattiene lo splash (`src/app/_layout.tsx`). Aspettare
+       * `isPending` per tutti vorrebbe dire che ogni avvio dell'app — titolare,
+       * professionista, chiunque — resta sullo splash finché una query di rete
+       * non risponde. Offline è peggio che lento: React Query riprova tre volte
+       * con backoff prima di dichiarare l'errore, e `isPending` resta vero per
+       * tutto quel tempo.
+       *
+       * Chi ha scritto "manager" sul disco è l'unico per cui la risposta cambia
+       * dove atterra, ed è anche l'unico che paga l'attesa. Per tutti gli altri
+       * basta la lettura da disco, che è immediata.
+       */
+      ready: savedMode !== undefined && (savedMode !== "manager" || !isPending),
       setMode,
     };
   }, [canSwitch, savedMode, isPending, setMode]);

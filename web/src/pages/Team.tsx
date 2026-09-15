@@ -34,7 +34,7 @@ import {
   Spinner,
 } from "../ui/primitives";
 
-const DEFAULT_PERMISSIONS: TeamPermissions = {
+export const DEFAULT_PERMISSIONS: TeamPermissions = {
   can_manage_shifts: true,
   can_manage_staff: false,
   can_view_hours: false,
@@ -42,8 +42,14 @@ const DEFAULT_PERMISSIONS: TeamPermissions = {
   can_manage_venue: false,
 };
 
-/** Una casella per area di permesso. */
-function PermissionChecks({
+/**
+ * Una casella per area di permesso.
+ *
+ * Esportata perché la riusa `staff/StaffDetail.tsx`: la promozione di un membro
+ * dell'organico (F3) chiede esattamente le stesse cinque cose, e due copie
+ * divergerebbero alla prima area aggiunta.
+ */
+export function PermissionChecks({
   value,
   onChange,
   disabled,

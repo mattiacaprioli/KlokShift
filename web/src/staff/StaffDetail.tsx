@@ -11,6 +11,7 @@ import {
   useUpdateStaffPerson,
 } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { PromoteSection } from "./PromoteSection";
 import {
   usePersonPerformance,
   usePersonWorkedShifts,
@@ -165,6 +166,16 @@ function PersonPanel({
             personId={person.id}
             waiterId={person.waiter_id ?? null}
             showVenue={multiVenue}
+          />
+        ) : null}
+        {/* La promozione è del titolare e di nessun altro: un collaboratore che
+            potesse promuoverne altri sarebbe una catena di deleghe. */}
+        {isOwner && person.waiter_id ? (
+          <PromoteSection
+            ownerId={person.owner_id}
+            waiterId={person.waiter_id}
+            personName={person.full_name}
+            venueIds={liveMemberships.map((m) => m.venue_id)}
           />
         ) : null}
         <Workplaces memberships={memberships} multiVenue={multiVenue} person={person} />
