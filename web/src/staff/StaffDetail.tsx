@@ -317,9 +317,11 @@ function InviteRow({ person }: { person: StaffPersonDetail }) {
           Invito
         </span>
         <p className="mt-0.5 text-sm text-t2">
+          {/* Senza participio: «invitato/invitata» imporrebbe un genere che il
+              nome sulla scheda non garantisce. */}
           {person.invited_at
-            ? `Inviato il ${formatDate(person.invited_at)}. `
-            : "Non ancora inviato. "}
+            ? `Invito mandato il ${formatDate(person.invited_at)}. `
+            : "Invito non ancora mandato. "}
           Quando si registrerà con {person.email}, questa scheda diventerà la
           sua.
         </p>
@@ -328,16 +330,18 @@ function InviteRow({ person }: { person: StaffPersonDetail }) {
         disabled={send.isPending}
         onClick={() =>
           send.mutate(person.id, {
-            onSuccess: () => toast.show("Invito spedito"),
+            onSuccess: () => toast.show("Invito mandato"),
             onError: (e) => toast.show(userErrorMessage(e), "error"),
           })
         }
       >
+        {/* L'etichetta dice l'azione, non il meccanismo: «Invia invito»
+            lasciava il dubbio su cosa arrivi alla persona. */}
         {send.isPending
           ? "Invio…"
           : person.invited_at
-            ? "Reinvia invito"
-            : "Invia invito"}
+            ? "Rimanda l'invito"
+            : "Invita a scaricare l'app"}
       </Button>
     </div>
   );

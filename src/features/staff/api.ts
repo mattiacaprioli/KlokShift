@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { UserFacingError } from "@/lib/errors";
 import type { Enums, Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type StaffMember = Tables<"staff_members">;
@@ -483,27 +484,41 @@ export async function findWaiterByEmail(
  * persona, così nessuna chiamata può spedire a un indirizzo arbitrario.
  */
 export async function sendStaffInvite(personId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke("invite-staff", {
-    body: { personId },
-  });
-  // `functions.invoke` non solleva sui 4xx/5xx: l'errore sta nel corpo, e
-  // leggerlo è l'unico modo per distinguere "riprova tra un po'" da "riprova
-  // adesso".
-  const code = (error as { message?: string } | null)?.message
-    ?? (data as { error?: string } | null)?.error;
-  if (!code && !error) return;
+  const { data, error } = await supabase.functions.invoke<{ error?: string }>(
+    "invite-staff",
+    { body: { personId } }
+  );
+  if (!error) return;
 
-  if (code?.includes("rate_limited")) {
-    throw new Error("Invito già inviato da poco. Potrai reinviarlo più tardi.");
+  // `functions.invoke` non mette il corpo della risposta dentro `error` sui
+  // 4xx/5xx: il codice vero sta in `data`, ed è l'unico modo per distinguere
+  // "riprova tra un po'" da "riprova adesso".
+  const code = `${data?.error ?? ""} ${error.message ?? ""}`;
+
+  // ⚠️ `UserFacingError` e non `Error`: `userErrorMessage()` generalizza
+  // qualunque messaggio non marcato, e queste frasi sono scritte per essere
+  // lette così come sono (vedi src/lib/errors.ts).
+  if (code.includes("rate_limited")) {
+    throw new UserFacingError(
+      "Invito già mandato da poco. Potrai rimandarlo tra un quarto d'ora."
+    );
   }
-  if (code?.includes("already_linked")) {
-    throw new Error("Questa persona ha già un account collegato.");
+  if (code.includes("already_linked")) {
+    throw new UserFacingError("Questa persona ha già un account collegato.");
   }
-  if (code?.includes("no_email")) {
-    throw new Error("Questa scheda non ha un'email.");
+  if (code.includes("no_email")) {
+    throw new UserFacingError("Questa scheda non ha un'email.");
   }
-  throw new Error(
-    "Non siamo riusciti a spedire l'invito. Riprova tra qualche minuto."
+  if (code.includes("NOT_FOUND")) {
+    // La Edge Function non è deployata: nessun workflow la pubblica, va fatto
+    // a mano con `supabase functions deploy invite-staff`. Dirlo, invece di
+    // suggerire un "riprova" che non cambierebbe niente.
+    throw new UserFacingError(
+      "Gli inviti via email non sono ancora attivi su questo progetto."
+    );
+  }
+  throw new UserFacingError(
+    "Non siamo riusciti a mandare l'invito. Riprova tra qualche minuto."
   );
 }
 

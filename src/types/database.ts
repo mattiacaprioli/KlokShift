@@ -138,17 +138,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "messages_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "shift_change_requests"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "shift_change_requests"
             referencedColumns: ["id"]
           },
           {
@@ -1009,10 +1009,6 @@ export type Database = {
         Args: { p_person: string }
         Returns: boolean
       }
-      claim_staff_invites: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
       chat_counterpart: {
         Args: { p_is_manager: boolean; p_user: string }
         Returns: {
@@ -1020,6 +1016,21 @@ export type Database = {
           name: string
         }[]
       }
+      claim_staff_invite_send: {
+        Args: { p_owner: string; p_person: string }
+        Returns: {
+          email: string
+          full_name: string
+          owner_name: string
+          venue_names: string[]
+        }[]
+      }
+      claim_staff_invites: { Args: never; Returns: number }
+      conversation_for_pair: {
+        Args: { p_manager: string; p_shift: string; p_waiter: string }
+        Returns: string
+      }
+      delete_account: { Args: { p_user: string }; Returns: undefined }
       find_waiter_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -1037,10 +1048,7 @@ export type Database = {
           name: string
         }[]
       }
-      get_chat_unread_count: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      get_chat_unread_count: { Args: never; Returns: number }
       get_my_work_history: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
@@ -1056,7 +1064,7 @@ export type Database = {
         }[]
       }
       get_my_work_history_totals: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           total_count: number
           total_hours: number
@@ -1110,6 +1118,18 @@ export type Database = {
           rating: number
         }[]
       }
+      get_staff_performance: {
+        Args: { p_staff_member: string }
+        Returns: {
+          declined_count: number
+          month_hours: number
+          month_shifts: number
+          no_show_count: number
+          past_total: number
+          total_hours: number
+          worked_count: number
+        }[]
+      }
       get_staff_planning: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -1126,18 +1146,6 @@ export type Database = {
           venue_id: string
           venue_logo_url: string
           venue_name: string
-        }[]
-      }
-      get_staff_performance: {
-        Args: { p_staff_member: string }
-        Returns: {
-          declined_count: number
-          month_hours: number
-          month_shifts: number
-          no_show_count: number
-          past_total: number
-          total_hours: number
-          worked_count: number
         }[]
       }
       get_staff_worked_shifts: {
@@ -1187,6 +1195,8 @@ export type Database = {
       }
       is_my_assigned_shift: { Args: { p_shift: string }; Returns: boolean }
       leave_venue: { Args: { p_staff_id: string }; Returns: undefined }
+      link_staff_invites_for_user: { Args: { p_user: string }; Returns: number }
+      local_now: { Args: never; Returns: string }
       mark_conversation_read: {
         Args: { p_conversation: string }
         Returns: undefined
@@ -1199,6 +1209,11 @@ export type Database = {
         Args: { p_assignment: string; p_staff_member: string }
         Returns: string
       }
+      register_push_token: {
+        Args: { p_platform: string; p_token: string }
+        Returns: undefined
+      }
+      remove_staff_member: { Args: { p_staff_id: string }; Returns: undefined }
       request_shift_change: {
         Args: {
           p_assignment: string
@@ -1218,15 +1233,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      withdraw_shift_change_request: {
-        Args: { p_request: string }
-        Returns: undefined
-      }
-      register_push_token: {
-        Args: { p_platform: string; p_token: string }
-        Returns: undefined
-      }
-      remove_staff_member: { Args: { p_staff_id: string }; Returns: undefined }
       respond_to_staff_invite: {
         Args: { p_accept: boolean; p_staff_id: string }
         Returns: undefined
@@ -1234,6 +1240,14 @@ export type Database = {
       shift_duration_hours: {
         Args: { p_end: string; p_start: string }
         Returns: number
+      }
+      shift_ends_at: {
+        Args: { p_date: string; p_end: string; p_start: string }
+        Returns: string
+      }
+      withdraw_shift_change_request: {
+        Args: { p_request: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -1392,7 +1406,10 @@ export const Constants = {
     Enums: {
       application_status: ["pending", "accepted", "rejected", "cancelled"],
       assignment_status: ["assigned", "confirmed", "declined", "no_show"],
+      change_request_kind: ["substitution", "hours"],
+      change_request_status: ["pending", "approved", "rejected", "withdrawn"],
       employment_type: ["fisso", "a_chiamata"],
+      message_kind: ["text", "shift_change_request", "shift_change_response"],
       notification_type: [
         "application_received",
         "application_accepted",
@@ -1405,6 +1422,10 @@ export const Constants = {
         "shift_cancelled",
         "shift_updated",
         "shift_unassigned",
+        "shift_change_request",
+        "shift_change_response",
+        "shift_declined",
+        "staff_linked",
       ],
       shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],

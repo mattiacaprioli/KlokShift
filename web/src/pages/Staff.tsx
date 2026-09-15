@@ -135,7 +135,7 @@ export function StaffPage() {
                     // Nessun account ancora, ma l'indirizzo c'è: si sta
                     // aspettando che si registri con quello.
                     <Pill tone="warning">
-                      {person.invited_at ? "Invito inviato" : "Invito da inviare"}
+                      {person.invited_at ? "Invito mandato" : "Da invitare"}
                     </Pill>
                   ) : (
                     <Pill tone="neutral">Scheda</Pill>

@@ -15,6 +15,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
 import { formatBirthday, formatDate } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useStartConversation } from "@/features/chat/hooks";
@@ -240,12 +241,13 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
       toast.show("Anagrafica aggiornata");
     } catch (e) {
       // L'unique (owner_id, email) è il vincolo che tiene l'aggancio non
-      // ambiguo: detto in chiaro, altrimenti arriva un 23505 grezzo.
+      // ambiguo: vale la pena dirlo meglio del generico «esiste già un
+      // elemento con questi dati» a cui lo mapperebbe `userErrorMessage`.
       const msg = e instanceof Error ? e.message : "";
       toast.show(
         msg.includes("staff_people_owner_email_uq")
           ? "Hai già una scheda con questa email."
-          : "Impossibile salvare. Riprova.",
+          : userErrorMessage(e),
         "error"
       );
     }
@@ -344,12 +346,8 @@ function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
   // divergere — e `Date.now()` in render non è puro.
   function onSend() {
     send.mutate(person.id, {
-      onSuccess: () => toast.show("Invito spedito"),
-      onError: (e) =>
-        toast.show(
-          e instanceof Error ? e.message : "Invito non spedito.",
-          "error"
-        ),
+      onSuccess: () => toast.show("Invito mandato"),
+      onError: (e) => toast.show(userErrorMessage(e), "error"),
     });
   }
 
@@ -360,22 +358,26 @@ function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
         <View className="flex-1">
           <Mono>Invito</Mono>
           <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
+            {/* Senza participio: «invitato/invitata» imporrebbe un genere che
+                il nome sulla scheda non garantisce. */}
             {person.invited_at
-              ? `Inviato il ${formatDate(person.invited_at)}`
-              : "Non ancora inviato"}
+              ? `Invito mandato il ${formatDate(person.invited_at)}`
+              : "Invito non ancora mandato"}
           </Text>
         </View>
       </View>
       <Text className="text-xs leading-4 text-t3">
         Quando si registrerà con {person.email}, questa scheda diventerà la sua.
       </Text>
+      {/* L'etichetta dice l'azione, non il meccanismo: «Invia invito» lasciava
+          al titolare il dubbio su cosa arrivi alla persona. */}
       <GhostButton
         label={
           send.isPending
             ? "Invio…"
             : person.invited_at
-              ? "Reinvia invito"
-              : "Invia invito"
+              ? "Rimanda l'invito"
+              : "Invita a scaricare l'app"
         }
         disabled={send.isPending}
         onPress={onSend}

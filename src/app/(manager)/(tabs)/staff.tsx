@@ -81,7 +81,7 @@ function PersonRow({
             // aprire la scheda per scoprirlo.
             <View className="mt-1 flex-row">
               <Pill
-                label={person.invited_at ? "Invito inviato" : "Invito da inviare"}
+                label={person.invited_at ? "Invito mandato" : "Da invitare"}
                 variant="pending"
               />
             </View>
