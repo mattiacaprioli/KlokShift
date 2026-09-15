@@ -10,6 +10,7 @@ import {
   useUpdateStaffMember,
   useUpdateStaffPerson,
 } from "@/features/staff/hooks";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   usePersonPerformance,
   usePersonWorkedShifts,
@@ -100,7 +101,15 @@ function PersonPanel({
   person: StaffPersonDetail;
   onClose: () => void;
 }) {
-  const memberships = person.memberships;
+  const { isOwner, can, canAny } = useOwnerVenues();
+  /**
+   * Le sedi della persona che **chi guarda** gestisce: per il titolare tutte,
+   * per un collaboratore solo le sue. La scheda è dell'azienda, ma lui la deve
+   * leggere dalla sua sede.
+   */
+  const memberships = isOwner
+    ? person.memberships
+    : person.memberships.filter((m) => can(m.venue_id, "can_manage_staff"));
   // Le sedi dove lavora **adesso**: quelle lasciate restano nella scheda (sono
   // lo storico delle sue ore) ma non sono chip di dove trovarlo.
   const liveMemberships = memberships.filter((m) => m.link_status !== "left");
@@ -134,7 +143,11 @@ function PersonPanel({
           <div className="flex shrink-0 gap-2">
             {/* Scrivere a chi hai davanti è il gesto più frequente su questa
                 scheda: sta in testa, non in fondo alle performance. */}
-            {person.waiter_id ? (
+            {/* La conversazione è la coppia (professionista, titolare) e non è
+                scopata per sede: aprirla come collaboratore creerebbe un thread
+                che il titolare non vede e che al professionista arriva da uno
+                sconosciuto. */}
+            {person.waiter_id && isOwner ? (
               <MessageButton waiterId={person.waiter_id} />
             ) : null}
             <Button onClick={onClose}>Chiudi</Button>
@@ -142,15 +155,22 @@ function PersonPanel({
         </header>
 
         <Anagrafica person={person} />
-        <ContractSection person={person} />
-        <DocumentsPanel personId={person.id} />
-        <Performance
-          personId={person.id}
-          waiterId={person.waiter_id ?? null}
-          showVenue={multiVenue}
-        />
-        <Workplaces person={person} multiVenue={multiVenue} />
-        <RemoveSection person={person} onRemoved={onClose} />
+        {/* Le ore da contratto sono un accordo fra la persona e l'azienda. */}
+        {isOwner ? <ContractSection person={person} /> : null}
+        {canAny("can_manage_documents") ? (
+          <DocumentsPanel personId={person.id} />
+        ) : null}
+        {canAny("can_view_hours") ? (
+          <Performance
+            personId={person.id}
+            waiterId={person.waiter_id ?? null}
+            showVenue={multiVenue}
+          />
+        ) : null}
+        <Workplaces memberships={memberships} multiVenue={multiVenue} person={person} />
+        {isOwner ? (
+          <RemoveSection person={person} onRemoved={onClose} />
+        ) : null}
       </div>
     </div>
   );
@@ -474,19 +494,22 @@ function ContractSection({ person }: { person: StaffPersonDetail }) {
 /** Le sedi in cui la persona lavora: una card per sede, con il suo Salva. */
 function Workplaces({
   person,
+  memberships,
   multiVenue,
 }: {
   person: StaffPersonDetail;
+  /** Già filtrate su quel che chi guarda gestisce: vedi `PersonPanel`. */
+  memberships: StaffPersonDetail["memberships"];
   multiVenue: boolean;
 }) {
   return (
     <section className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
         {multiVenue
-          ? `Dove lavora · ${person.memberships.filter((m) => m.link_status !== "left").length}`
+          ? `Dove lavora · ${memberships.filter((m) => m.link_status !== "left").length}`
           : "Dove lavora"}
       </span>
-      {person.memberships.map((m) => (
+      {memberships.map((m) => (
         <WorkplaceCard
           key={m.id}
           person={person}

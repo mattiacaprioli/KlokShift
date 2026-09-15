@@ -233,7 +233,11 @@ function InternalForm({
   initialPersonIds?: string[];
   onClose: () => void;
 }) {
-  const { venues, isMultiVenue } = useOwnerVenues();
+  // Solo le sedi su cui si possono fare i turni: il selettore non deve offrire
+  // una sede su cui l'insert verrebbe poi rifiutato dalla RLS.
+  const { venuesWith } = useOwnerVenues();
+  const venues = venuesWith("can_manage_shifts");
+  const isMultiVenue = venues.length > 1;
   const { venueId: lastVenueId, choose } = useLastVenue();
   // In creazione non c'è ancora un turno: senza `enabled` il pannello faceva
   // due query con id vuoto ogni volta che si apriva.

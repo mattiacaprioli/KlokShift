@@ -31,7 +31,10 @@ const NAV: NavItem[] = [
   { to: "/ore", label: "Ore", perm: "can_view_hours" },
   { to: "/staff", label: "Staff", perm: "can_manage_staff" },
   { to: "/storico", label: "Storico" },
-  { to: "/chat", label: "Messaggi", badge: "chat" },
+  // La chat è la coppia (professionista, titolare): non è scopata per sede, e a
+  // un collaboratore mostrerebbe le conversazioni di qualcun altro. Fuori
+  // scope dichiarato della delega, non una dimenticanza.
+  { to: "/chat", label: "Messaggi", badge: "chat", ownerOnly: true },
   { to: "/notifiche", label: "Notifiche", badge: "notifiche" },
   { to: "/locale", label: "Locale" },
   { to: "/collaboratori", label: "Collaboratori", ownerOnly: true },

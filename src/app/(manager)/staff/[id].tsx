@@ -31,6 +31,7 @@ import { PersonPerformanceSection } from "@/features/assignments/PersonPerforman
 import { ProLockedCard } from "@/features/plan/ProLock";
 import { useIsPro } from "@/features/plan/hooks";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import {
@@ -532,8 +533,21 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   const startConversation = useStartConversation();
   const [confirmVisible, setConfirmVisible] = useState(false);
 
+  const { isOwner, can, canAny } = useOwnerVenues();
+
   const waiterId = person.waiter_id;
-  const memberships = person.memberships;
+  /**
+   * Le sedi della persona che **chi guarda** gestisce.
+   *
+   * Per il titolare sono tutte. Per un collaboratore no, ed è il punto: la
+   * scheda è dell'azienda, ma lui la deve leggere dalla sua sede. Sapere che
+   * Marco lavora anche negli altri due locali del gruppo non gli serve, e la
+   * RLS lo lascerebbe vedere (le appartenenze arrivano in un embed sulla
+   * persona, che lui può leggere).
+   */
+  const memberships = isOwner
+    ? person.memberships
+    : person.memberships.filter((m) => can(m.venue_id, "can_manage_staff"));
   // Le sedi dove lavora **adesso**. Le altre restano in elenco (sono lo storico
   // delle sue ore) ma non contano per "in quante sedi lavora" né per le azioni.
   const liveMemberships = memberships.filter((m) => m.link_status !== "left");
@@ -603,7 +617,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           </Pressable>
         ) : null}
 
-        {waiterId ? (
+        {/* La conversazione è la coppia (professionista, titolare) e non è
+            scopata per sede: aprirla come collaboratore creerebbe un thread che
+            il titolare non vede e che al professionista arriva da uno
+            sconosciuto. */}
+        {waiterId && isOwner ? (
           <Pressable
             disabled={startConversation.isPending}
             onPress={onMessage}
@@ -618,34 +636,44 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           </Pressable>
         ) : null}
 
-        {isPro ? (
-          <>
-            <PersonHoursSection personId={person.id} showVenue={multiVenue} />
-            <PersonPerformanceSection
-              personId={person.id}
-              waiterId={waiterId}
+        {/* Ore, affidabilità e presenze: dietro il permesso Ore. Senza, le RPC
+            tornerebbero comunque zero righe (`get_person_performance` è scopata
+            su `my_venue_ids('hours')`) e la scheda mostrerebbe un 0% che sembra
+            un dato. */}
+        {canAny("can_view_hours") ? (
+          isPro ? (
+            <>
+              <PersonHoursSection personId={person.id} showVenue={multiVenue} />
+              <PersonPerformanceSection
+                personId={person.id}
+                waiterId={waiterId}
+              />
+            </>
+          ) : (
+            <ProLockedCard
+              title="Ore e performance"
+              subtitle="Ore lavorate, affidabilità e statistiche di questa persona, su tutte le tue sedi."
             />
-          </>
-        ) : (
-          <ProLockedCard
-            title="Ore e performance"
-            subtitle="Ore lavorate, affidabilità e statistiche di questa persona, su tutte le tue sedi."
-          />
-        )}
+          )
+        ) : null}
 
-        <DocumentsSection
-          personId={person.id}
-          onAdd={() =>
-            router.push({
-              pathname: "/(manager)/staff/documento/new",
-              params: { personId: person.id },
-            })
-          }
-        />
+        {canAny("can_manage_documents") ? (
+          <DocumentsSection
+            personId={person.id}
+            onAdd={() =>
+              router.push({
+                pathname: "/(manager)/staff/documento/new",
+                params: { personId: person.id },
+              })
+            }
+          />
+        ) : null}
 
         <PersonIdentityForm person={person} />
 
-        <PersonContractForm person={person} />
+        {/* Le ore da contratto sono un accordo fra la persona e l'azienda, non
+            un dato della sede: le vede e le cambia solo il titolare. */}
+        {isOwner ? <PersonContractForm person={person} /> : null}
 
         <View className="gap-3">
           <Mono>
@@ -663,15 +691,20 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           ))}
         </View>
 
-        <Pressable
-          disabled={remove.isPending}
-          onPress={() => setConfirmVisible(true)}
-          className="items-center rounded-2xl border border-border-2 py-3.5"
-        >
-          <Text className="text-sm font-sans-semibold text-error">
-            Rimuovi dall&apos;organico
-          </Text>
-        </Pressable>
+        {/* Toglie la persona da **tutte** le sedi dell'azienda, comprese quelle
+            che un collaboratore non gestisce. Resta al titolare; il delegato la
+            toglie dalla propria sede dalla card qui sopra. */}
+        {isOwner ? (
+          <Pressable
+            disabled={remove.isPending}
+            onPress={() => setConfirmVisible(true)}
+            className="items-center rounded-2xl border border-border-2 py-3.5"
+          >
+            <Text className="text-sm font-sans-semibold text-error">
+              Rimuovi dall&apos;organico
+            </Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       <ConfirmModal

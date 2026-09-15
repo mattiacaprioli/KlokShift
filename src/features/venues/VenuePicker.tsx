@@ -2,6 +2,7 @@ import { ScrollView, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
 import { Mono } from "@/components/ui/Mono";
 import { cn } from "@/lib/cn";
+import type { TeamPermission } from "@/features/team/api";
 import { useOwnerVenues } from "./OwnerVenues";
 
 /**
@@ -18,16 +19,24 @@ import { useOwnerVenues } from "./OwnerVenues";
 export function VenuePicker({
   value,
   onChange,
+  perm = "can_manage_shifts",
   label = "In quale sede",
   className,
 }: {
   value: string | undefined;
   onChange: (venueId: string) => void;
-  label?: string;
+  /**
+   * Il permesso che serve per scrivere *quel* qualcosa. Per il titolare non
+   * cambia niente; per un collaboratore tiene fuori dai chip le sedi su cui la
+   * RLS rifiuterebbe la scrittura — un errore che l'utente non saprebbe leggere.
+   */
+  perm?: TeamPermission;
   className?: string;
+  label?: string;
 }) {
-  const { venues, isMultiVenue } = useOwnerVenues();
-  if (!isMultiVenue) return null;
+  const { venuesWith } = useOwnerVenues();
+  const venues = venuesWith(perm);
+  if (venues.length < 2) return null;
 
   return (
     <View className={cn("gap-2", className)}>

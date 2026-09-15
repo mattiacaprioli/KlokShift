@@ -173,6 +173,7 @@ export default function VenueRolesScreen() {
 
         {/* Ogni locale ha il suo elenco: qui si sceglie di quale. */}
         <VenuePicker
+          perm="can_manage_venue"
           value={venueId}
           onChange={choose}
           label="Ruoli di quale sede"

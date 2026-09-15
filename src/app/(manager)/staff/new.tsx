@@ -9,7 +9,6 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -92,12 +91,18 @@ function VenueMultiSelect({
  * d'invito. Vedi `src/features/staff/api.ts`.
  */
 export default function StaffNewScreen() {
-  const { session } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const userId = session!.user.id;
-  const { venues, isMultiVenue } = useOwnerVenues();
+  // ⚠️ L'azienda, non chi sta scrivendo: per un collaboratore `session.user.id`
+  // non è il titolare, e `staff_people.owner_id` deve restare quello della sede.
+  // Vedi `OwnerVenuesProvider`.
+  const { ownerId, venuesWith } = useOwnerVenues();
+  // Solo le sedi in cui si può gestire l'organico: un collaboratore con i soli
+  // turni non deve trovare fra i chip una sede su cui l'insert verrebbe
+  // rifiutato dalla RLS.
+  const venues = venuesWith("can_manage_staff");
+  const isMultiVenue = venues.length > 1;
   // L'ultima sede usata — la stessa del form turno: chi sta organizzando Milano
   // la trova già spuntata.
   const { venueId: lastVenueId } = useLastVenue();
@@ -155,11 +160,11 @@ export default function StaffNewScreen() {
   }
 
   function submit() {
-    if (venueIds.size === 0 || !name.trim()) return;
+    if (!ownerId || venueIds.size === 0 || !name.trim()) return;
     setAlready(null);
     add.mutate(
       {
-        ownerId: userId,
+        ownerId,
         venueIds: [...venueIds],
         fullName: name.trim(),
         employmentType: empType,
