@@ -41,11 +41,12 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 function VenuesCard({
   venues,
   onEdit,
+  /** `undefined` per un collaboratore: aprire una sede resta del titolare. */
   onAdd,
 }: {
   venues: Venue[];
   onEdit: (id: string) => void;
-  onAdd: () => void;
+  onAdd?: () => void;
 }) {
   return (
     <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
@@ -80,11 +81,13 @@ function VenuesCard({
         </Pressable>
       ))}
 
-      <Pressable onPress={onAdd} className="items-center pt-1">
-        <Text className="text-sm font-sans-semibold text-t2">
-          + Aggiungi locale
-        </Text>
-      </Pressable>
+      {onAdd ? (
+        <Pressable onPress={onAdd} className="items-center pt-1">
+          <Text className="text-sm font-sans-semibold text-t2">
+            + Aggiungi locale
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -177,7 +180,7 @@ export default function ManagerProfiloScreen() {
   const insets = useSafeAreaInsets();
 
   const venueQuery = useOwnerVenues();
-  const { venues } = venueQuery;
+  const { venues, isOwner } = venueQuery;
   /**
    * Con **un** locale solo il Profilo resta quello di prima: la sua identità in
    * grande, la scheda da completare, i suoi dati. Con più locali quella pagina
@@ -185,6 +188,9 @@ export default function ManagerProfiloScreen() {
    * da cui si entra nella scheda della singola sede.
    */
   const venue = venues.length === 1 ? venues[0] : null;
+  // I dati della sede sono un permesso a sé: un collaboratore che organizza i
+  // turni non deve poter cambiare indirizzo e logo del locale.
+  const canEditVenue = !!venue && venueQuery.can(venue.id, "can_manage_venue");
 
   return (
     <ScrollView
@@ -226,9 +232,9 @@ export default function ManagerProfiloScreen() {
           <VenuesCard
             venues={venues}
             onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
-            onAdd={() => router.push("/(manager)/venue/new")}
+            onAdd={isOwner ? () => router.push("/(manager)/venue/new") : undefined}
           />
-          <PlanCard />
+          {isOwner ? <PlanCard /> : null}
         </>
       ) : (
         <>
@@ -256,23 +262,29 @@ export default function ManagerProfiloScreen() {
             </View>
           </View>
 
-          <GoldButton
-            label="Modifica locale"
-            onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
-          />
+          {canEditVenue ? (
+            <GoldButton
+              label="Modifica locale"
+              onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
+            />
+          ) : null}
 
           <VenuesCard
             venues={venues}
             onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
-            onAdd={() => router.push("/(manager)/venue/new")}
+            onAdd={isOwner ? () => router.push("/(manager)/venue/new") : undefined}
           />
 
-          <PlanCard />
+          {isOwner ? <PlanCard /> : null}
 
-          <CompletenessCard
-            venue={venue}
-            onEdit={() => router.push(`/(manager)/venue/${venue.id}`)}
-          />
+          {/* Una checklist che non si può spuntare è solo un elenco di cose che
+              non vanno: fuori per chi non può modificare la sede. */}
+          {canEditVenue ? (
+            <CompletenessCard
+              venue={venue}
+              onEdit={() => router.push(`/(manager)/venue/${venue.id}`)}
+            />
+          ) : null}
 
           {venue.cuisine_type || venue.address || venue.description ? (
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">

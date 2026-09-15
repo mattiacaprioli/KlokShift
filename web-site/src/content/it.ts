@@ -283,4 +283,37 @@ export const it: Content = {
     ],
     homeLabel: "Scopri topWaitr",
   },
+
+  inviteManager: {
+    eyebrow: "Invito",
+    title: "Ti hanno dato accesso a un locale.",
+    lead: "Chi gestisce il locale ti ha aggiunto ai suoi collaboratori: da topWaitr organizzi i turni e segui l'organico.",
+    steps: [
+      {
+        title: "Registrati come locale",
+        body: "Scegli «Gestisco un locale»: è il tipo di account che apre la gestione.",
+      },
+      {
+        title: "Usa l'email dell'invito",
+        body: "È quella a cui è arrivato il messaggio che ti ha portato qui.",
+      },
+      {
+        title: "Trovi il locale già pronto",
+        body: "Niente da accettare: l'accesso e i permessi li ha già scelti chi ti ha invitato.",
+      },
+    ],
+    calloutTitle: "Registrati come locale, non come professionista",
+    calloutBody:
+      "Con un account da professionista, o con un indirizzo diverso, entri in topWaitr ma non nella gestione del locale che ti ha invitato.",
+    webTitle: "Anche dal computer",
+    webBody:
+      "La gestione dei turni si fa dall'app o dalla dashboard, con la stessa registrazione.",
+    webLabel: "Apri la dashboard",
+    whatTitle: "Cosa ci trovi",
+    whatItems: [
+      "L'agenda dei turni delle sedi su cui ti hanno dato accesso.",
+      "L'organico del locale, con ruoli e disponibilità.",
+      "Solo quello che il titolare ti ha abilitato: il resto non compare.",
+    ],
+  },
 };

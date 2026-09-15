@@ -45,7 +45,7 @@ export function VenueFormView({
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const save = useSaveVenue(ownerId);
-  const saveLogo = useUpdateVenueLogo(ownerId);
+  const saveLogo = useUpdateVenueLogo();
   const [logoBusy, setLogoBusy] = useState(false);
 
   const { control, handleSubmit, reset } = useForm<VenueForm>({

@@ -9,6 +9,7 @@ import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +18,7 @@ export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
+  const { isOwner } = useOwnerVenues();
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -58,6 +60,30 @@ export default function ManagerSettingsScreen() {
               </View>
               <Icon name="chevR" size={18} color="#6A6358" />
             </Pressable>
+
+            {/* Solo il titolare fa entrare qualcuno nel proprio account: un
+                collaboratore che potesse invitarne altri sarebbe una catena di
+                deleghe senza un modello di ruoli sotto. Nascondere la riga non
+                è la difesa — quella è la RLS su `venue_access`. */}
+            {isOwner ? (
+              <Pressable
+                onPress={() => router.push("/(manager)/team")}
+                className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
+              >
+                <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
+                  <Icon name="users" size={18} color="#EAB54C" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[15px] font-sans-semibold text-t1">
+                    Collaboratori
+                  </Text>
+                  <Text className="mt-0.5 text-[13px] text-t3">
+                    Chi altro gestisce i tuoi locali, e cosa può fare
+                  </Text>
+                </View>
+                <Icon name="chevR" size={18} color="#6A6358" />
+              </Pressable>
+            ) : null}
           </Card>
         </View>
 

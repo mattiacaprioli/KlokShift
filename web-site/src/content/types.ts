@@ -125,4 +125,22 @@ export type Content = {
     whatItems: string[];
     homeLabel: string;
   };
+  /**
+   * La stessa pagina, per chi è stato invitato a **gestire** un locale e non a
+   * lavorarci (`invito.html?r=gestione`). Cambia l'unica frase che conta: deve
+   * registrarsi come locale, non come professionista.
+   */
+  inviteManager: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    steps: Feature[];
+    calloutTitle: string;
+    calloutBody: string;
+    webTitle: string;
+    webBody: string;
+    webLabel: string;
+    whatTitle: string;
+    whatItems: string[];
+  };
 };

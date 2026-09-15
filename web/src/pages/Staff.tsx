@@ -30,7 +30,11 @@ import {
  * anche questa pagina: le sedi sono le etichette della persona.
  */
 export function StaffPage() {
-  const { ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const { ownerId, venues, isMultiVenue, canAny } = useOwnerVenues();
+  // Un collaboratore può essere entrato per i soli turni: i pulsanti che
+  // porterebbero a una schermata vuota non compaiono.
+  const canStaff = canAny("can_manage_staff");
+  const canVenue = canAny("can_manage_venue");
   const { data, isPending, isError, error } = useOwnerPeople(ownerId);
   const [adding, setAdding] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
@@ -67,12 +71,16 @@ export function StaffPage() {
           .join(" · ")}
         actions={
           <div className="flex gap-2">
-            <Link to="/ruoli">
-              <Button>Ruoli</Button>
-            </Link>
-            <Button variant="gold" onClick={() => setAdding((v) => !v)}>
-              {adding ? "Annulla" : "+ Aggiungi"}
-            </Button>
+            {canVenue ? (
+              <Link to="/ruoli">
+                <Button>Ruoli</Button>
+              </Link>
+            ) : null}
+            {canStaff ? (
+              <Button variant="gold" onClick={() => setAdding((v) => !v)}>
+                {adding ? "Annulla" : "+ Aggiungi"}
+              </Button>
+            ) : null}
           </div>
         }
       />

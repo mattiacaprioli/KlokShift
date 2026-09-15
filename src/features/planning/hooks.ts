@@ -30,7 +30,7 @@ export function useSetVenueSeesPlanning(ownerId: string) {
     mutationFn: (vars: { venueId: string; visible: boolean }) =>
       setVenueSeesPlanning(vars.venueId, vars.visible),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.venues.mine(ownerId) });
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
     },
   });
 }

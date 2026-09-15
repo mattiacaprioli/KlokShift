@@ -1,29 +1,47 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import type { TeamPermission } from "@/features/team/api";
 import { companyName } from "@/features/venues/companyName";
 import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { cn } from "@/lib/cn";
 import { Button, QueryError, Spinner } from "./ui/primitives";
 
-type NavItem = { to: string; label: string; badge?: "chat" | "notifiche" };
+type NavItem = {
+  to: string;
+  label: string;
+  badge?: "chat" | "notifiche";
+  /**
+   * Il permesso che serve per arrivarci. Assente = per tutti (il titolare li ha
+   * tutti, quindi vede sempre l'elenco intero).
+   *
+   * ⚠️ Nascondere una voce non è la difesa: un collaboratore che digita
+   * `/ore` a mano ci arriva lo stesso, e trova la pagina vuota perché la RLS
+   * non gli dà le righe. Qui si evita solo un menu pieno di vicoli ciechi.
+   */
+  perm?: TeamPermission;
+  /** Solo il titolare. */
+  ownerOnly?: boolean;
+};
 
 const NAV: NavItem[] = [
   { to: "/", label: "Home" },
   { to: "/planning", label: "Planning" },
-  { to: "/ore", label: "Ore" },
-  { to: "/staff", label: "Staff" },
+  { to: "/ore", label: "Ore", perm: "can_view_hours" },
+  { to: "/staff", label: "Staff", perm: "can_manage_staff" },
   { to: "/storico", label: "Storico" },
   { to: "/chat", label: "Messaggi", badge: "chat" },
   { to: "/notifiche", label: "Notifiche", badge: "notifiche" },
   { to: "/locale", label: "Locale" },
+  { to: "/collaboratori", label: "Collaboratori", ownerOnly: true },
   { to: "/impostazioni", label: "Impostazioni" },
 ];
 
 export function AppLayout() {
   const { session, profile, signOut } = useAuth();
-  const { venues, isPending, isError, error } = useOwnerVenues();
+  const { venues, isPending, isError, error, isOwner, canAny } =
+    useOwnerVenues();
   // Aggiornati in tempo reale da RealtimeSync (invalida chat.unreadAll) e dal
   // canale notifications.
   const chatUnread = useChatUnreadCount(session!.user.id).data ?? 0;
@@ -47,7 +65,10 @@ export function AppLayout() {
         </div>
 
         <nav className="flex flex-col gap-0.5">
-          {NAV.map((item) => {
+          {NAV.filter(
+            (item) =>
+              (!item.ownerOnly || isOwner) && (!item.perm || canAny(item.perm))
+          ).map((item) => {
             const count =
               item.badge === "chat"
                 ? chatUnread

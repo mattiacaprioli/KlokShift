@@ -70,6 +70,10 @@ export default function ManagerShiftsScreen() {
 
   const venueQuery = useOwnerVenues();
   const { venues, isMultiVenue } = venueQuery;
+  // Un collaboratore può essere entrato per *guardare* l'agenda: senza il
+  // permesso sui turni la RLS rifiuterebbe l'insert, e il form si chiuderebbe
+  // con un errore che non spiega niente.
+  const canCreateShift = venueQuery.canAny("can_manage_shifts");
   const upcomingQuery = useOwnerShifts();
   const pull = usePullToRefresh(() => upcomingQuery.refetch());
 
@@ -259,16 +263,18 @@ export default function ManagerShiftsScreen() {
             {/* Tondo e non a tutta larghezza: il bottone grande si prendeva lo
                 spazio che ora serve al calendario. Porta con sé il giorno
                 selezionato, così il form si apre già sulla data giusta. */}
-            <Pressable
-              onPress={() =>
-                router.push(`/(manager)/shift/new?date=${visibleDay}`)
-              }
-              className="h-12 w-12 items-center justify-center rounded-full bg-gold"
-              accessibilityRole="button"
-              accessibilityLabel="Nuovo turno"
-            >
-              <Icon name="close" size={24} color="#1a1206" style={{ transform: [{ rotate: "45deg" }] }} />
-            </Pressable>
+            {canCreateShift ? (
+              <Pressable
+                onPress={() =>
+                  router.push(`/(manager)/shift/new?date=${visibleDay}`)
+                }
+                className="h-12 w-12 items-center justify-center rounded-full bg-gold"
+                accessibilityRole="button"
+                accessibilityLabel="Nuovo turno"
+              >
+                <Icon name="close" size={24} color="#1a1206" style={{ transform: [{ rotate: "45deg" }] }} />
+              </Pressable>
+            ) : null}
           </View>
         </View>
 

@@ -107,7 +107,14 @@ export default function ManagerStaffScreen() {
   const { isPro, gate } = useProGate();
 
   const venueQuery = useOwnerVenues();
-  const { venues, isMultiVenue } = venueQuery;
+  const { venues, isMultiVenue, canAny } = venueQuery;
+  // Un collaboratore vede questa scheda solo per ciò che il titolare gli ha
+  // dato. Nascondere i pulsanti non è la difesa — quella è la RLS
+  // (`my_venue_ids('staff')`) — ma un bottone che porta a una schermata vuota è
+  // peggio di un bottone che non c'è.
+  const canStaff = canAny("can_manage_staff");
+  const canHours = canAny("can_view_hours");
+  const canVenue = canAny("can_manage_venue");
   // L'organico è dell'**azienda**: una riga per persona, tutte le sedi insieme.
   const peopleQuery = useOwnerPeople(venueQuery.ownerId);
   const people = peopleQuery.data ?? [];
@@ -151,11 +158,14 @@ export default function ManagerStaffScreen() {
         <NoVenuesState subtitle="Ti serve un locale prima di creare il tuo organico." />
       ) : (
         <>
-          <GoldButton
-            label="Aggiungi allo staff"
-            onPress={() => router.push("/(manager)/staff/new")}
-          />
+          {canStaff ? (
+            <GoldButton
+              label="Aggiungi allo staff"
+              onPress={() => router.push("/(manager)/staff/new")}
+            />
+          ) : null}
 
+          {canHours ? (
           <Card
             className="rounded-3xl border-border-2 p-4"
             onPress={gate(() => router.push("/(manager)/ore"))}
@@ -181,9 +191,11 @@ export default function ManagerStaffScreen() {
               )}
             </View>
           </Card>
+          ) : null}
 
           {/* Non è una funzione Pro: senza ruoli non si aggiunge nemmeno una
               persona all'organico. */}
+          {canVenue ? (
           <Card
             className="rounded-3xl border-border-2 p-4"
             onPress={() => router.push("/(manager)/ruoli")}
@@ -203,6 +215,7 @@ export default function ManagerStaffScreen() {
               <Icon name="chevR" size={18} color="#8c857a" />
             </View>
           </Card>
+          ) : null}
 
           {peopleQuery.isLoading ? (
             <ActivityIndicator color="#EAB54C" className="mt-6" />

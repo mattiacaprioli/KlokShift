@@ -1,6 +1,6 @@
 # topWaitr — Tasks & Roadmap
 
-Tracker delle attività. Aggiornato: **2026-09-14**.
+Tracker delle attività. Aggiornato: **2026-09-15**.
 
 > ⚠️ **Regola**: questo file è il tracker autorevole, ma il 2026-09-09 si è scoperto che tre voci del backlog erano già state implementate senza che nessuno le spuntasse (modifica turni interni, entry point chat da EmployerCard, paginazione candidature). **Aggiornare questo file nello stesso commit della feature**, altrimenti il backlog manda a lavorare su cose già fatte.
 
@@ -339,7 +339,27 @@ Il prodotto non aveva una porta d'ingresso: chi ne sentiva parlare non aveva un 
 
 ---
 
+### Sessione 2026-09-15 — Invito staff via email + aggancio automatico ✅ (3 migration applicate; **invio email non ancora attivo**)
+
+Il titolare aveva l'email di una persona e il prodotto non ne faceva niente. Una scheda creata a mano restava con `waiter_id = null` **per sempre** (nessun trigger, nessuna UI la ricollegava), e il ramo "Invita" funzionava solo con chi era **già registrato** — cioè mai, nel caso normale. Ora si scrive l'email e, quando quella persona si registra con quell'indirizzo, la scheda diventa la sua.
+
+- **`staff_people.email`** + `invited_at`, `invite_count`, `invite_conflict_at` (`20260916100000`). Niente tabella `staff_invites`: l'aggancio è per **match di email a registrazione confermata**, non per click sul link — un token che non autentica niente sarebbe stato teatro. L'unique parziale `staff_people_owner_email_uq (owner_id, lower(email))` è ciò che rende l'aggancio non ambiguo; l'email eredita la RLS di `phone` e la cancellazione di `delete_orphan_staff_person` (nessuna PII orfana).
+- **Aggancio** (`20260916100200`): `link_staff_invites_for_user(uuid)` DEFINER, chiamata dal trigger `profiles_link_staff_invites` (AFTER INSERT su `profiles`) e, come rete di sicurezza, dalla RPC `claim_staff_invites()` che `ensureProfile` chiama **solo sul ramo di insert**, fire-and-forget (mai un `await` in più nel flusso `onAuthStateChange`: è il deadlock che dava la schermata nera).
+- ⚠️ **`email_confirmed_at is not null` è il cardine di sicurezza.** Senza, chiunque si registri con l'email di un altro entra nel suo organico: sedi, turni, colleghi, chat, documenti. Se qualcuno disattiva "Confirm email" nella dashboard Supabase la feature diventa **inerte** invece che pericolosa. Annotato in `AGENTS.md`.
+- ⚠️ Il trigger ha `exception when others then null`: un AFTER INSERT su `profiles` che solleva **blocca la registrazione** di chiunque.
+- **`link_status` resta `'active'`** per l'aggancio automatico (il consenso è l'atto di registrarsi con quell'indirizzo). Non si usa `'pending'` perché `respond_to_staff_invite(id, false)` fa un **delete secco** che porterebbe via la scheda con ore e documenti — vedi il debito qui sotto. Chi è già registrato continua a ricevere `'pending'` + notifica `staff_invite`.
+- **Un solo form.** Spariti i due modi «Manuale / Invita» (`staff/new.tsx`, `AddStaffPanel.tsx`): chiedevano al titolare se quella persona avesse già topWaitr, cosa che non può sapere. `addStaff()` in `src/features/staff/api.ts` decide fra i tre rami, condiviso app+web.
+- **Landing** `web-site/invito.html` — **secondo entry Vite**, non una rotta (la vetrina non ha router e Pages non fa fallback SPA). Sta alla radice e non in `invito/index.html` perché con `base: "./"` un entry annidato romperebbe i `./privacy.html` del footer. Badge store spenti finché `EXPO_PUBLIC_IOS_URL`/`_ANDROID_URL` sono vuoti: a M8 si valorizzano due variabili, zero modifiche a codice e copy.
+- **Edge Function `invite-staff`** (denomailer + SMTP custom). **Non** `inviteUserByEmail`: creerebbe un utente `auth.users` senza password che poi **blocca il signup normale** dall'app. Il body porta solo `personId`, mai un indirizzo — per spedire a qualcuno il titolare deve prima averlo scritto su una propria scheda. Rate limit nella RPC `claim_staff_invite_send`: 1 ogni 15 min, 5 per scheda, 20/24h per titolare.
+- **Privacy** aggiornata: riga «Schede dell'organico» sui dati di terzi che il locale inserisce (email compresa) anche per chi non ha un account.
+
 ## 🔜 In sospeso — prossimi passi immediati
+
+- [ ] ⚠️ **L'invio dell'email d'invito NON è ancora attivo** (15/09). Il codice c'è, le migration sono applicate, ma `POST /functions/v1/invite-staff` risponde **404 `NOT_FOUND`**: `.github/workflows/supabase.yml` applica solo le migration, le Edge Function si deployano a mano. Il bottone «Invita a scaricare l'app» dice «Gli inviti via email non sono ancora attivi su questo progetto» finché non si fanno **due** cose:
+  1. **Mittente SMTP con SPF + DKIM + DMARC.** È il rischio vero, non il codice: il sito è su `github.io`, **non c'è un dominio proprio da autenticare**, e senza DKIM un'email a freddo con un link va in spam — la feature fallisce **in silenzio**, nessun errore, nessuno che si registra. O si registra un dominio, o si spedisce da un sottodominio del provider (deliverability inferiore).
+  2. `supabase secrets set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM/SITE_URL` + `supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg` (**con** verifica JWT, come `delete-account`).
+- [ ] **L'aggancio automatico invece è testabile da subito, senza email**: mettere un'email su una scheda senza account, registrarsi con quell'indirizzo come professionista, **confermare l'email**, e verificare che `staff_people.waiter_id` si valorizzi e che tutte le `staff_members` ereditino il `waiter_id` dal trigger mirror. Da provare anche: registrazione **non confermata** (deve restare scollegata) e registrazione **come titolare** (idem).
+- [ ] **`respond_to_staff_invite` sul rifiuto fa un `delete`**, non un soft-leave: cancella la `staff_members` e, se era l'ultima, `delete_orphan_staff_person` porta via la scheda con nome, contratto, ore e documenti. È il motivo per cui l'aggancio automatico non usa `'pending'`. Rimedio: allinearla a `remove_staff_member` (`link_status = 'left'` + `staff_people.waiter_id = null`).
 
 - [ ] ⚠️ **Rimuovere un'appartenenza cancella le ore di quella sede** (cascata di `shift_assignments` su `staff_members` + trigger degli orfani). Con le ore come input della busta paga è un rischio: rimuovere Marco da Milano a fine ottobre cancella le sue 25 ore di ottobre. Il copy di conferma ora lo dice esplicitamente, ma il rimedio vero è `staff_members.removed_at` con l'appartenenza **archiviata** e le RPC che filtrano l'operatività (organico, planning, assegnazioni) ma **non** il rendiconto. Non urgente: nulla è in produzione.
 - [ ] Le soglie 40/48h sono sulla **settimana visualizzata**. La media su 4 mesi dell'art. 4 D.Lgs. 66/2003 non è calcolata (né prima né ora).

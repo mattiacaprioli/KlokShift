@@ -845,6 +845,75 @@ export type Database = {
           },
         ]
       }
+      venue_access: {
+        Row: {
+          can_manage_documents: boolean
+          can_manage_shifts: boolean
+          can_manage_staff: boolean
+          can_manage_venue: boolean
+          can_view_hours: boolean
+          created_at: string
+          email: string | null
+          id: string
+          invite_count: number
+          invited_at: string | null
+          owner_id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+          venue_id: string
+        }
+        Insert: {
+          can_manage_documents?: boolean
+          can_manage_shifts?: boolean
+          can_manage_staff?: boolean
+          can_manage_venue?: boolean
+          can_view_hours?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          invite_count?: number
+          invited_at?: string | null
+          owner_id: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          venue_id: string
+        }
+        Update: {
+          can_manage_documents?: boolean
+          can_manage_shifts?: boolean
+          can_manage_staff?: boolean
+          can_manage_venue?: boolean
+          can_view_hours?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          invite_count?: number
+          invited_at?: string | null
+          owner_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_access_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           address: string | null
@@ -1025,12 +1094,24 @@ export type Database = {
           venue_names: string[]
         }[]
       }
+      can_manage_venue: {
+        Args: { p_perm?: string; p_venue: string }
+        Returns: boolean
+      }
       claim_staff_invites: { Args: never; Returns: number }
       conversation_for_pair: {
         Args: { p_manager: string; p_shift: string; p_waiter: string }
         Returns: string
       }
       delete_account: { Args: { p_user: string }; Returns: undefined }
+      find_manager_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+        }[]
+      }
       find_waiter_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -1273,6 +1354,9 @@ export type Database = {
         | "shift_change_response"
         | "shift_declined"
         | "staff_linked"
+        | "team_linked"
+        | "team_joined"
+        | "team_removed"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       staff_link_status: "pending" | "active" | "left"

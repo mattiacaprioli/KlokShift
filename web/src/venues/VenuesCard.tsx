@@ -20,7 +20,9 @@ import { Button, Card } from "../ui/primitives";
 export function VenuesCard() {
   const { session } = useAuth();
   const ownerId = session!.user.id;
-  const { venues } = useOwnerVenues();
+  // Aprire una sede resta del titolare: un collaboratore vede l'elenco, non il
+  // bottone. La difesa vera è il trigger `venues_owner_not_delegate`.
+  const { venues, isOwner } = useOwnerVenues();
   const closed = useMyClosedVenues(ownerId).data ?? [];
   const setClosed = useSetVenueClosed(ownerId);
   const navigate = useNavigate();
@@ -42,9 +44,11 @@ export function VenuesCard() {
         <span className="text-xs font-semibold uppercase tracking-wider text-t3">
           {venues.length === 1 ? "Il tuo locale" : `I tuoi locali · ${venues.length}`}
         </span>
-        <Button onClick={() => navigate("/locale/nuovo")}>
-          + Aggiungi locale
-        </Button>
+        {isOwner ? (
+          <Button onClick={() => navigate("/locale/nuovo")}>
+            + Aggiungi locale
+          </Button>
+        ) : null}
       </div>
 
       <ul className="mt-3 flex flex-col gap-2">

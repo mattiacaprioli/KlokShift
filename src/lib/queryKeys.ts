@@ -5,9 +5,30 @@
 export const qk = {
   venues: {
     all: ["venues"] as const,
-    /** Le sedi aperte del titolare. Una lista: un account può averne più di una. */
-    mine: (ownerId: string) => ["venues", "mine", ownerId] as const,
+    /**
+     * Le sedi aperte a cui si ha accesso: le proprie se si è il titolare, quelle
+     * delegate se si è un collaboratore (`venue_access`). Una lista: un account
+     * può averne più di una.
+     *
+     * Nessun id nella chiave, da quando la lista non è più "le sedi di X" ma
+     * "le sedi che vedo io": l'identità è la sessione, e l'uscita svuota la
+     * cache (`queryClient.clear()` su `SIGNED_OUT` in `auth.tsx`). Con l'id del
+     * titolare dentro, un collaboratore avrebbe invalidato la chiave sbagliata —
+     * quella del titolare, che non è la sua.
+     */
+    mine: ["venues", "mine"] as const,
+    /** Le sedi archiviate. Solo il titolare le vede: le sue, per definizione. */
     closed: (ownerId: string) => ["venues", "closed", ownerId] as const,
+  },
+  /**
+   * I collaboratori: `byOwner` è la lista che gestisce il titolare, `mine` sono
+   * i **miei** accessi delegati (senza id, come `venues.mine`: la RPC e la RLS
+   * partono da `auth.uid()`).
+   */
+  team: {
+    all: ["team"] as const,
+    byOwner: (ownerId: string) => ["team", "byOwner", ownerId] as const,
+    mine: ["team", "mine"] as const,
   },
   profile: {
     mine: (userId: string) => ["profile", "mine", userId] as const,

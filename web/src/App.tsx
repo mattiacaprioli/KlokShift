@@ -21,6 +21,7 @@ import { ProfessionistaPage } from "./pages/Professionista";
 import { LocalePage } from "./pages/Locale";
 import { LocaleNuovoPage } from "./pages/LocaleNuovo";
 import { LocaleDettaglioPage } from "./pages/LocaleDettaglio";
+import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 
 export function App() {
@@ -86,6 +87,7 @@ export function App() {
           <Route path="/locale/nuovo" element={<LocaleNuovoPage />} />
           {/* Dopo "nuovo", o il match lo intercetterebbe come un id. */}
           <Route path="/locale/:id" element={<LocaleDettaglioPage />} />
+          <Route path="/collaboratori" element={<TeamPage />} />
           <Route path="/impostazioni" element={<ImpostazioniPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

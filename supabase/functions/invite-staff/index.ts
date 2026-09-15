@@ -78,9 +78,19 @@ type Payload = {
   venue_names: string[];
 };
 
+/** Il payload di `claim_venue_access_send`: una sede sola, nessun nome. */
+type TeamPayload = {
+  email: string;
+  owner_name: string;
+  venue_name: string;
+};
+
 function buildEmail(p: Payload) {
   const venue = joinIt(p.venue_names);
-  const link = `${SITE_URL}/invito/`;
+  // ⚠️ `invito.html` e non `/invito/`: la vetrina è statica su Pages, senza
+  // fallback SPA, e l'entry sta alla radice (vedi `web-site/vite.config.mts`).
+  // La cartella non esiste, e il link dell'invito finirebbe su un 404.
+  const link = `${SITE_URL}/invito.html`;
   const firstName = p.full_name.trim().split(/\s+/)[0] || "ciao";
 
   const subject = `${venue} ti ha aggiunto al suo organico su topWaitr`;
@@ -140,6 +150,72 @@ function buildEmail(p: Payload) {
   return { subject, text, html };
 }
 
+/**
+ * L'email del collaboratore.
+ *
+ * Testo diverso e non un parametro dentro `buildEmail`: chi riceve questa non
+ * viene invitato a *lavorare* in un locale, ma a *gestirlo*. Deve registrarsi
+ * come locale, non come professionista — ed è l'unica frase che, sbagliata,
+ * rende l'invito inutilizzabile (l'aggancio richiede `role = 'manager'`).
+ */
+function buildTeamEmail(p: TeamPayload) {
+  // Stessa pagina, altro copy: `?r=gestione` non autorizza niente, sceglie il
+  // testo. Chi arriva qui deve registrarsi come **locale**.
+  const link = `${SITE_URL}/invito.html?r=gestione`;
+  const subject = `${p.owner_name} ti ha dato accesso a ${p.venue_name} su topWaitr`;
+
+  const text = [
+    `Ciao,`,
+    ``,
+    `${p.owner_name} ti ha dato accesso alla gestione di ${p.venue_name} su`,
+    `topWaitr: da lì organizzi i turni e segui l'organico del locale.`,
+    ``,
+    `Scarica l'app: ${link}`,
+    ``,
+    `Registrati con questo indirizzo (${p.email}) scegliendo "Gestisco un locale":`,
+    `è così che il tuo account si collega all'accesso già pronto.`,
+    ``,
+    `---`,
+    `Ricevi questa email perché ${p.owner_name} ti ha aggiunto ai collaboratori di`,
+    `${p.venue_name} su topWaitr. Se non ti riguarda, ignorala: senza registrazione`,
+    `non viene creato nessun account.`,
+    `Privacy: ${SITE_URL}/privacy.html`,
+  ].join("\n");
+
+  const e = {
+    venue: escapeHtml(p.venue_name),
+    owner: escapeHtml(p.owner_name),
+    email: escapeHtml(p.email),
+  };
+
+  const html = `<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:24px 12px;background:#F5F2EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#23201B;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;">
+<tr><td style="padding:32px 28px;">
+  <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">topWaitr</p>
+  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso a un locale</h1>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione di <strong>${e.venue}</strong> su topWaitr — da lì organizzi i turni e segui l'organico del locale.</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+    <tr><td style="border-radius:999px;background:#23201B;">
+      <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Scarica l'app</a>
+    </td></tr>
+  </table>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F5F2EC;border-radius:12px;">
+    <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;">
+      Registrati con <strong>questo indirizzo</strong> (${e.email}) scegliendo <strong>"Gestisco un locale"</strong>: è così che il tuo account si collega all'accesso già pronto.
+    </td></tr>
+  </table>
+  <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">
+    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori di ${e.venue} su topWaitr. Se non ti riguarda, ignorala: senza registrazione non viene creato nessun account.<br>
+    <a href="${SITE_URL}/privacy.html" style="color:#8A8070;">Privacy</a>
+  </p>
+</td></tr></table>
+</body></html>`;
+
+  return { subject, text, html };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -154,30 +230,43 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "invalid token" }, 401);
 
-  let personId: string | undefined;
+  // Due inviti, una function: il collaboratore (`kind: "team"`) e la persona in
+  // organico (tutto il resto, incluse le versioni dell'app che il campo `kind`
+  // non lo mandano). Stessa autenticazione, stessi rate limit, stesso SMTP —
+  // cambia il destinatario e il testo.
+  let body: { personId?: string; accessId?: string; kind?: string } = {};
   try {
-    personId = (await req.json())?.personId;
+    body = (await req.json()) ?? {};
   } catch {
     return json({ error: "invalid json" }, 400);
   }
-  if (!personId) return json({ error: "missing personId" }, 400);
+  const isTeam = body.kind === "team";
+  const rowId = isTeam ? body.accessId : body.personId;
+  if (!rowId) return json({ error: isTeam ? "missing accessId" : "missing personId" }, 400);
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // Proprietà, stato della scheda, rate limit e incremento: tutto qui dentro.
-  const { data, error } = await admin.rpc("claim_staff_invite_send", {
-    p_person: personId,
-    p_owner: userData.user.id,
-  });
+  // Proprietà, stato della riga, rate limit e incremento: tutto qui dentro.
+  const { data, error } = isTeam
+    ? await admin.rpc("claim_venue_access_send", {
+        p_access: rowId,
+        p_owner: userData.user.id,
+      })
+    : await admin.rpc("claim_staff_invite_send", {
+        p_person: rowId,
+        p_owner: userData.user.id,
+      });
   if (error) {
     const code = Object.keys(STATUS).find((k) => error.message.includes(k));
     return json({ error: code ?? "claim_failed" }, code ? STATUS[code] : 500);
   }
 
-  const payload = (data as Payload[] | null)?.[0];
+  const payload = (data as (Payload | TeamPayload)[] | null)?.[0];
   if (!payload) return json({ error: "not_owner" }, 403);
 
-  const mail = buildEmail(payload);
+  const mail = isTeam
+    ? buildTeamEmail(payload as TeamPayload)
+    : buildEmail(payload as Payload);
   const client = new SMTPClient({
     connection: {
       hostname: SMTP_HOST,

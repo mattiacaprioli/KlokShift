@@ -6,11 +6,13 @@ import {
   type PropsWithChildren,
 } from "react";
 import { useAuth } from "@/lib/auth";
+import { useMyVenueAccess } from "@/features/team/hooks";
+import type { TeamPermission } from "@/features/team/api";
 import { useMyVenues } from "./hooks";
 import type { Venue } from "./api";
 
 /**
- * Le sedi del titolare. Tutte insieme, senza una "sede attiva".
+ * Le sedi dell'azienda. Tutte insieme, senza una "sede attiva".
  *
  * Fino al 14/09/2026 questo file era `ActiveVenue.tsx` e teneva **una** sede alla
  * volta: uno switcher in cima, e ogni schermata del gestore scopata su quella.
@@ -27,6 +29,10 @@ import type { Venue } from "./api";
  * il form turno, la schermata dei ruoli — se la sceglie da sé con
  * `useLastVenue()`, che è una preferenza locale a quel form e non uno stato
  * globale.
+ *
+ * Dal 16/09/2026 dice anche **cosa** si può fare su ciascuna: chi entra qui può
+ * essere il titolare (che può tutto) o un collaboratore che il titolare ha
+ * invitato su una sede sola e con due permessi (`venue_access`).
  *
  * ⚠️ **Aprire o chiudere una sede non deve invalidare niente a mano.** Le chiavi
  * dei turni sono scopate per `venuesKey`: cambiando l'insieme delle sedi cambia
@@ -47,9 +53,13 @@ export type OwnerVenuesState = {
    * il commercialista. Sta qui perché il provider questo valore lo calcola già, e
    * i chiamanti altrimenti se lo ricavano ognuno per conto suo — da `useAuth()`
    * o da `venue.owner_id`, che però esiste solo se una sede esiste.
+   *
+   * ⚠️ **Non è più `session.user.id`.** Per un collaboratore è l'id del titolare
+   * che l'ha invitato: l'organico, le ore e i documenti sono dell'azienda, non
+   * di chi li sta guardando. Chi ha bisogno di "chi sono io" usa `useAuth()`.
    */
   ownerId: string | undefined;
-  /** Le sedi aperte, la più vecchia prima. Vuota per chi non è un titolare. */
+  /** Le sedi aperte, la più vecchia prima. Vuota per chi non è un gestore. */
   venues: Venue[];
   /** Gli id: è ciò che finisce in ogni `.in("venue_id", …)`. */
   venueIds: string[];
@@ -67,6 +77,26 @@ export type OwnerVenuesState = {
   venueById: (id: string) => Venue | undefined;
   /** Più di una sede: l'interruttore di tutta la UI multi-sede. */
   isMultiVenue: boolean;
+  /**
+   * Il titolare dell'azienda, non un collaboratore.
+   *
+   * È il permesso che non si delega: aprire e chiudere sedi, invitare altri
+   * collaboratori, il piano, l'eliminazione dell'account.
+   */
+  isOwner: boolean;
+  /**
+   * Cosa si può fare su una sede.
+   *
+   * ⚠️ **È una comodità per la UI, non una difesa.** Chi decide davvero è la RLS
+   * (`my_venue_ids()` in 20260916120000): nascondere un bottone senza la policy
+   * corrispondente lascia la porta aperta a una chiamata REST confezionata a
+   * mano — la anon key sta nel client.
+   */
+  can: (venueId: string, perm: TeamPermission) => boolean;
+  /** C'è almeno una sede con quel permesso: serve a mostrare o no una sezione. */
+  canAny: (perm: TeamPermission) => boolean;
+  /** Le sedi su cui si ha quel permesso: per i picker di sede dei form. */
+  venuesWith: (perm: TeamPermission) => Venue[];
   /** Gli stessi nomi di `UseQueryResult`: i call site cambiano una riga. */
   isPending: boolean;
   isLoading: boolean;
@@ -99,15 +129,19 @@ export function useVenueIds(): string[] {
 
 export function OwnerVenuesProvider({ children }: PropsWithChildren) {
   const { session, profile } = useAuth();
-  // Solo i gestori hanno sedi. `""` spegne la query, che è come RealtimeSync
-  // faceva con `useMyVenue` — qui però lo sa il provider, non ogni chiamante.
-  const ownerId = profile?.role === "manager" ? (session?.user.id ?? "") : "";
+  // Solo i gestori hanno sedi. `false` spegne la query, che è come `useMyVenue`
+  // faceva con l'ownerId vuoto — qui però lo sa il provider, non ogni chiamante.
+  const isManager = profile?.role === "manager";
+  const myId = session?.user.id ?? "";
 
-  const query = useMyVenues(ownerId);
-  // Memoizzato e non `query.data ?? []` inline: quel fallback crea un array nuovo
+  const query = useMyVenues(isManager && !!myId);
+  const accessQuery = useMyVenueAccess(isManager ? myId : "");
+
+  // Memoizzati e non `query.data ?? []` inline: quel fallback crea un array nuovo
   // a ogni render, che finirebbe nelle dipendenze del `useMemo` sotto e nel valore
   // del context — rifacendo render a tutte le schermate del gestore per niente.
   const venues = useMemo(() => query.data ?? [], [query.data]);
+  const access = useMemo(() => accessQuery.data ?? [], [accessQuery.data]);
 
   const byId = useMemo(() => {
     const map = new Map<string, Venue>();
@@ -117,8 +151,43 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
 
   const venueById = useCallback((id: string) => byId.get(id), [byId]);
 
+  // I permessi per sede, indicizzati. Il titolare non compare qui: per lui la
+  // risposta è sempre sì e non passa dalla mappa.
+  const accessByVenue = useMemo(() => {
+    const map = new Map<string, (typeof access)[number]>();
+    for (const row of access) map.set(row.venue_id, row);
+    return map;
+  }, [access]);
+
+  // L'azienda: per il titolare è lui stesso, per un collaboratore è chi l'ha
+  // invitato. `venues[0]` basta perché le due strade non si mescolano mai — il
+  // DB rifiuta sia il delegato di due aziende sia il delegato che apre una sede
+  // propria (`venue_access_one_company`, `venues_owner_not_delegate`).
+  const ownerId = venues[0]?.owner_id ?? (isManager ? myId : undefined);
+  const isOwner = !!ownerId && ownerId === myId;
+
+  const can = useCallback(
+    (venueId: string, perm: TeamPermission) => {
+      if (isOwner) return true;
+      return accessByVenue.get(venueId)?.[perm] ?? false;
+    },
+    [isOwner, accessByVenue]
+  );
+
+  // Le due `refetch` estratte e richiuse qui: dentro il `useMemo` sotto
+  // userebbero `query`/`accessQuery` interi, e la regola delle dipendenze
+  // vorrebbe gli oggetti — che cambiano a ogni render di React Query.
+  const refetchVenues = query.refetch;
+  const refetchAccess = accessQuery.refetch;
+  const refetch = useCallback(
+    () => Promise.all([refetchVenues(), refetchAccess()]),
+    [refetchVenues, refetchAccess]
+  );
+
   const value = useMemo<OwnerVenuesState>(() => {
     const venueIds = venues.map((v) => v.id);
+    const venuesWith = (perm: TeamPermission) =>
+      isOwner ? venues : venues.filter((v) => can(v.id, perm));
     return {
       ownerId: ownerId || undefined,
       venues,
@@ -126,20 +195,33 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
       venuesKey: venuesKeyOf(venueIds),
       venueById,
       isMultiVenue: venues.length > 1,
-      isPending: !!ownerId && query.isPending,
-      isLoading: !!ownerId && query.isPending,
-      isError: query.isError,
-      error: query.error,
-      refetch: query.refetch,
+      isOwner,
+      can,
+      canAny: (perm) => isOwner || venues.some((v) => can(v.id, perm)),
+      venuesWith,
+      // Finché non si sa **anche** cosa si può fare, la UI non è pronta: senza
+      // gli accessi un collaboratore vedrebbe per un istante ogni sezione
+      // nascosta, e poi sparire.
+      isPending: isManager && (query.isPending || accessQuery.isPending),
+      isLoading: isManager && (query.isPending || accessQuery.isPending),
+      isError: query.isError || accessQuery.isError,
+      error: query.error ?? accessQuery.error,
+      refetch,
     };
   }, [
+    isManager,
     ownerId,
+    isOwner,
     venues,
     venueById,
+    can,
     query.isPending,
     query.isError,
     query.error,
-    query.refetch,
+    accessQuery.isPending,
+    accessQuery.isError,
+    accessQuery.error,
+    refetch,
   ]);
 
   return (

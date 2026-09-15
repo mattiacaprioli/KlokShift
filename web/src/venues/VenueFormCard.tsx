@@ -30,7 +30,7 @@ export function VenueFormCard({
   const toast = useToast();
   const userId = session!.user.id;
   const save = useSaveVenue(userId);
-  const saveLogo = useUpdateVenueLogo(userId);
+  const saveLogo = useUpdateVenueLogo();
   const [logoBusy, setLogoBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 

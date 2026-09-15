@@ -10,23 +10,19 @@ import {
 } from "./api";
 
 /**
- * Le sedi del titolare. Passare `""` come ownerId tiene la query spenta (è così
- * che `OwnerVenuesProvider` sta zitto quando l'utente è un professionista).
- *
- * Tiene la chiave `qk.venues.mine(ownerId)` del vecchio `useMyVenue`: la forma è
- * cambiata (una lista invece di una riga) ma l'identità della query no, quindi
- * `useSaveVenue` e `useUpdateVenueLogo` continuano a invalidare la cosa giusta
- * senza una riga di modifica.
+ * Le sedi a cui si ha accesso — proprie o delegate. `enabled: false` tiene la
+ * query spenta (è così che `OwnerVenuesProvider` sta zitto quando l'utente è un
+ * professionista).
  *
  * ⚠️ Non usarlo direttamente nelle schermate: passa da `useOwnerVenues()`, che
  * espone anche `venueIds` e `venuesKey` — le due forme che servono a interrogare
  * e a mettere in cache i turni di tutte le sedi insieme.
  */
-export function useMyVenues(ownerId: string) {
+export function useMyVenues(enabled: boolean) {
   return useQuery({
-    queryKey: qk.venues.mine(ownerId),
-    queryFn: () => getMyVenues(ownerId),
-    enabled: !!ownerId,
+    queryKey: qk.venues.mine,
+    queryFn: getMyVenues,
+    enabled,
   });
 }
 
@@ -48,7 +44,7 @@ export function useSetVenueClosed(ownerId: string) {
     mutationFn: (vars: { venueId: string; closed: boolean }) =>
       setVenueClosed(vars.venueId, vars.closed),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.venues.mine(ownerId) });
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
       qc.invalidateQueries({ queryKey: qk.venues.closed(ownerId) });
     },
   });
@@ -59,13 +55,13 @@ export function useSetVenueClosed(ownerId: string) {
  * card turno del professionista, ma quelle sono query sue, su un altro
  * dispositivo — le rivedrà al prossimo caricamento.
  */
-export function useUpdateVenueLogo(ownerId: string) {
+export function useUpdateVenueLogo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { venueId: string; logoUrl: string | null }) =>
       updateVenueLogo(vars.venueId, vars.logoUrl),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.venues.mine(ownerId) });
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
     },
   });
 }
@@ -76,7 +72,7 @@ export function useSaveVenue(ownerId: string) {
     mutationFn: (vars: { input: VenueInput; venueId?: string }) =>
       saveVenue(ownerId, vars.input, vars.venueId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.venues.mine(ownerId) });
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
     },
   });
 }

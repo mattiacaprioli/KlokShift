@@ -51,6 +51,12 @@ export function routeForNotification(
 
   // manager
   if (type === "staff_response") return "/(manager)/(tabs)/staff";
+  // Chi è appena entrato in un'azienda atterra sulla sua home: il `related_id` è
+  // una sede, non un turno, e il ramo finale lo aprirebbe come tale.
+  if (type === "team_linked") return "/(manager)/(tabs)";
+  if (type === "team_joined") return "/(manager)/team";
+  // Revoca: non c'è più niente da aprire. Stessa scelta di `staff_removed`.
+  if (type === "team_removed") return null;
   // `shift_change_request` porta la conversazione, non il turno: la richiesta si
   // legge e si decide dalla card nel thread.
   if (type === "new_message" || type === "shift_change_request") {

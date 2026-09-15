@@ -32,7 +32,7 @@ export async function updateVenueLogo(
 }
 
 /**
- * Tutte le sedi **aperte** del titolare, la più vecchia prima.
+ * Tutte le sedi **aperte** a cui si ha accesso, la più vecchia prima.
  *
  * Sostituisce il vecchio `getMyVenue`, che faceva `.limit(1).maybeSingle()` e
  * scartava in silenzio le altre sedi: un hotel o un catering con più sedi — il
@@ -41,12 +41,19 @@ export async function updateVenueLogo(
  * Due ordinamenti e non uno: `created_at` decide chi è la sede di default, e `id`
  * è il tie-break perché due sedi create nello stesso istante non devono poter
  * invertirsi tra due caricamenti (la sede attiva ballerebbe da sola).
+ *
+ * ⚠️ **Niente `.eq("owner_id", …)`, e non è una dimenticanza.** Da quando
+ * esistono i collaboratori (`venue_access`), "le mie sedi" non sono più "le sedi
+ * di cui sono proprietario": il filtro escluderebbe proprio le sedi delegate.
+ * Il perimetro lo fa la RLS — su `venues` esistono due sole policy, "owner crud"
+ * e "delegate read", e nessuna delle due è aperta a tutti. Rimettere il filtro
+ * qui significa rompere l'accesso dei collaboratori; toglierlo altrove (su
+ * `shifts`, per dire) significa il contrario, e lì il filtro va tenuto.
  */
-export async function getMyVenues(ownerId: string): Promise<Venue[]> {
+export async function getMyVenues(): Promise<Venue[]> {
   const { data, error } = await supabase
     .from("venues")
     .select("*")
-    .eq("owner_id", ownerId)
     // I locali chiusi restano consultabili, ma non sono posti in cui si lavora:
     // fuori dallo switcher e fuori da ogni query operativa.
     .is("closed_at", null)
