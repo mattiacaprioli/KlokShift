@@ -4,7 +4,9 @@ import {
   addTeamMember,
   addTeamVenue,
   getMyVenueAccess,
+  getPersonAccess,
   getTeam,
+  promoteStaffPerson,
   revokeTeamAccess,
   sendTeamInvite,
   updateTeamPermissions,
@@ -48,6 +50,27 @@ function useTeamInvalidation() {
     qc.invalidateQueries({ queryKey: qk.team.all });
     qc.invalidateQueries({ queryKey: qk.venues.mine });
   };
+}
+
+/** Gli accessi che il titolare ha dato a una persona dell'organico (F3). */
+export function usePersonAccess(
+  ownerId: string | undefined,
+  userId: string | null | undefined
+) {
+  return useQuery({
+    queryKey: qk.team.person(ownerId ?? "", userId ?? ""),
+    queryFn: () => getPersonAccess(ownerId as string, userId as string),
+    enabled: !!ownerId && !!userId,
+  });
+}
+
+/** Promuove (o ripromuove) un membro dell'organico su una sede. */
+export function usePromoteStaffPerson() {
+  const invalidate = useTeamInvalidation();
+  return useMutation({
+    mutationFn: promoteStaffPerson,
+    onSuccess: invalidate,
+  });
 }
 
 export function useAddTeamMember() {

@@ -29,6 +29,9 @@ export const qk = {
     all: ["team"] as const,
     byOwner: (ownerId: string) => ["team", "byOwner", ownerId] as const,
     mine: ["team", "mine"] as const,
+    /** Gli accessi di **una** persona: la scheda da cui si promuove (F3). */
+    person: (ownerId: string, userId: string) =>
+      ["team", "person", ownerId, userId] as const,
   },
   profile: {
     mine: (userId: string) => ["profile", "mine", userId] as const,

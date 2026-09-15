@@ -85,6 +85,14 @@ export type OwnerVenuesState = {
    */
   isOwner: boolean;
   /**
+   * Ha almeno un accesso delegato attivo.
+   *
+   * Per un gestore è la differenza fra «titolare» e «collaboratore». Per un
+   * professionista è l'interruttore della **doppia vista** (F3): se è vero, è
+   * stato promosso dall'organico e può passare alla gestione.
+   */
+  hasVenueAccess: boolean;
+  /**
    * Cosa si può fare su una sede.
    *
    * ⚠️ **È una comodità per la UI, non una difesa.** Chi decide davvero è la RLS
@@ -134,14 +142,29 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
   const isManager = profile?.role === "manager";
   const myId = session?.user.id ?? "";
 
-  const query = useMyVenues(isManager && !!myId);
-  const accessQuery = useMyVenueAccess(isManager ? myId : "");
+  /**
+   * Gli accessi delegati si chiedono a **chiunque** sia loggato, non ai soli
+   * gestori.
+   *
+   * Dal 16/09/2026 (F3) un membro dell'organico può essere promosso a gestire la
+   * sede senza che il suo `profiles.role` cambi: resta `waiter`. Non c'è altro
+   * modo di sapere che ha un secondo cappello se non guardando qui, e guardare
+   * costa una select su `venue_access` indicizzata per `user_id` — che per un
+   * professionista normale torna zero righe.
+   */
+  const accessQuery = useMyVenueAccess(myId);
+  const access = useMemo(() => accessQuery.data ?? [], [accessQuery.data]);
+  const hasVenueAccess = access.length > 0;
 
-  // Memoizzati e non `query.data ?? []` inline: quel fallback crea un array nuovo
+  // Le sedi solo a chi ne può avere: il titolare, o chi è stato delegato. Per
+  // tutti gli altri la query resta spenta, come faceva `useMyVenue` con
+  // l'ownerId vuoto.
+  const query = useMyVenues(!!myId && (isManager || hasVenueAccess));
+
+  // Memoizzato e non `query.data ?? []` inline: quel fallback crea un array nuovo
   // a ogni render, che finirebbe nelle dipendenze del `useMemo` sotto e nel valore
   // del context — rifacendo render a tutte le schermate del gestore per niente.
   const venues = useMemo(() => query.data ?? [], [query.data]);
-  const access = useMemo(() => accessQuery.data ?? [], [accessQuery.data]);
 
   const byId = useMemo(() => {
     const map = new Map<string, Venue>();
@@ -196,14 +219,23 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
       venueById,
       isMultiVenue: venues.length > 1,
       isOwner,
+      hasVenueAccess,
       can,
       canAny: (perm) => isOwner || venues.some((v) => can(v.id, perm)),
       venuesWith,
       // Finché non si sa **anche** cosa si può fare, la UI non è pronta: senza
       // gli accessi un collaboratore vedrebbe per un istante ogni sezione
       // nascosta, e poi sparire.
-      isPending: isManager && (query.isPending || accessQuery.isPending),
-      isLoading: isManager && (query.isPending || accessQuery.isPending),
+      //
+      // Gli accessi si aspettano sempre: è da loro che si scopre se un
+      // professionista ha un secondo cappello, e quindi se le sedi vanno
+      // chieste. Le sedi solo quando la loro query è davvero accesa.
+      isPending:
+        accessQuery.isPending ||
+        ((isManager || hasVenueAccess) && query.isPending),
+      isLoading:
+        accessQuery.isPending ||
+        ((isManager || hasVenueAccess) && query.isPending),
       isError: query.isError || accessQuery.isError,
       error: query.error ?? accessQuery.error,
       refetch,
@@ -212,6 +244,7 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
     isManager,
     ownerId,
     isOwner,
+    hasVenueAccess,
     venues,
     venueById,
     can,

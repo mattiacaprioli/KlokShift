@@ -15,6 +15,8 @@ import { useExperiences } from "@/features/experiences/hooks";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
+import { useViewMode } from "@/features/team/ViewMode";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
 import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import type { MyEmployer } from "@/features/staff/api";
@@ -43,6 +45,30 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 /** Una sede dentro la card del datore di lavoro: identità e "Lascia". */
+/**
+ * «Passa alla gestione», per chi è stato promosso dal proprio locale.
+ *
+ * Compare solo con un accesso delegato attivo (`venue_access`), quindi per la
+ * quasi totalità dei professionisti questa riga non esiste. Cambiare vista non
+ * concede niente: i permessi li decide la RLS sede per sede, e questo tocco
+ * sceglie soltanto quale gruppo di rotte montare.
+ */
+function ManagerSwitchRow() {
+  const { canSwitch, setMode } = useViewMode();
+  const { venues } = useOwnerVenues();
+  if (!canSwitch) return null;
+
+  const names = venues.map((v) => v.name).join(", ");
+  return (
+    <NavRow
+      icon="shield"
+      title="Passa alla gestione"
+      subtitle={names || "Organizza i turni del locale"}
+      onPress={() => setMode("manager")}
+    />
+  );
+}
+
 function EmployerVenueRow({
   employer,
   standalone,
@@ -327,6 +353,11 @@ export default function WaiterProfiloScreen() {
           ))}
         </View>
       ) : null}
+
+      {/* Il secondo cappello, per chi ce l'ha: un locale gli ha dato la gestione
+          di una sede. Non è un'altra app e non è un altro account — è lo stesso
+          profilo visto dall'altra parte del bancone. */}
+      <ManagerSwitchRow />
 
       {/* Fuori dai tab qui sotto, che sono la parte **pubblica** del profilo:
           i documenti li vede solo il locale a cui li carichi. */}

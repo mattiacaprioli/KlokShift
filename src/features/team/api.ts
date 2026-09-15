@@ -427,6 +427,71 @@ export async function addTeamVenue(
 }
 
 /**
+ * Gli accessi che questo titolare ha dato a **questa persona**, sede per sede.
+ *
+ * Serve alla scheda di un membro dell'organico: la promozione si fa da lì, dove
+ * il titolare sta già guardando chi è quella persona e in quali sedi lavora.
+ * Torna anche le righe revocate: qui servono a dire «gliel'avevi tolta», che
+ * nella lista dei collaboratori invece è rumore.
+ */
+export async function getPersonAccess(
+  ownerId: string,
+  userId: string
+): Promise<VenueAccess[]> {
+  const { data, error } = await supabase
+    .from("venue_access")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Promuove un membro dell'organico a gestire una sede.
+ *
+ * Nessuna email e nessun invito: la persona è già nota, ha già un account, e il
+ * legame che la autorizza è la sua appartenenza all'organico di **quella** sede
+ * — che il trigger `venue_access_user_matches_email` va a verificare
+ * (20260916140000). È la ragione per cui questo non passa da `addTeamMember`:
+ * lì la chiave è l'indirizzo, qui è la persona.
+ *
+ * ⚠️ Il suo `profiles.role` resta `waiter`. In app cambia solo la vista, che
+ * sceglie lui (`features/team/ViewMode.tsx`).
+ */
+export async function promoteStaffPerson(input: {
+  ownerId: string;
+  venueId: string;
+  userId: string;
+  permissions: TeamPermissions;
+}): Promise<void> {
+  const existing = await supabase
+    .from("venue_access")
+    .select("id")
+    .eq("owner_id", input.ownerId)
+    .eq("venue_id", input.venueId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (existing.error) throw new Error(existing.error.message);
+
+  // Una revoca non cancella la riga, e la unique `(venue_id, user_id)` non
+  // esclude le revocate: ripromuovere è un update, non una insert.
+  const { error } = existing.data
+    ? await supabase
+        .from("venue_access")
+        .update({ status: "active", ...input.permissions })
+        .eq("id", existing.data.id)
+    : await supabase.from("venue_access").insert({
+        venue_id: input.venueId,
+        owner_id: input.ownerId,
+        user_id: input.userId,
+        status: "active",
+        ...input.permissions,
+      });
+  if (error) throw teamError(error.message);
+}
+
+/**
  * Revoca l'accesso, su una sede o su tutte.
  *
  * `status = 'revoked'` e non una delete: è il passaggio che fa scattare la

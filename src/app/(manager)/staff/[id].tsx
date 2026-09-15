@@ -32,6 +32,7 @@ import { ProLockedCard } from "@/features/plan/ProLock";
 import { useIsPro } from "@/features/plan/hooks";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { PromoteSection } from "@/features/team/PromoteSection";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import {
@@ -674,6 +675,17 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
         {/* Le ore da contratto sono un accordo fra la persona e l'azienda, non
             un dato della sede: le vede e le cambia solo il titolare. */}
         {isOwner ? <PersonContractForm person={person} /> : null}
+
+        {/* La promozione è del titolare e di nessun altro: un collaboratore che
+            potesse promuoverne altri sarebbe una catena di deleghe. */}
+        {isOwner && waiterId ? (
+          <PromoteSection
+            ownerId={person.owner_id}
+            waiterId={waiterId}
+            personName={person.full_name}
+            venueIds={liveMemberships.map((m) => m.venue_id)}
+          />
+        ) : null}
 
         <View className="gap-3">
           <Mono>

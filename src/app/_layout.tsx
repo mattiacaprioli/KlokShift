@@ -22,6 +22,7 @@ import { AppProviders } from "@/providers/AppProviders";
 import { NotificationsListener } from "@/features/notifications/NotificationsListener";
 import { PushRegistrar } from "@/features/push/PushRegistrar";
 import { RealtimeSync } from "@/features/realtime/RealtimeSync";
+import { useViewMode } from "@/features/team/ViewMode";
 import { IntroOverlay } from "@/features/onboarding/IntroOverlay";
 
 SplashScreen.preventAutoHideAsync();
@@ -56,6 +57,10 @@ function ProfileError() {
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
+  // La doppia vista: un professionista che il titolare ha promosso a gestire una
+  // sede resta `role = 'waiter'`, quindi il ruolo da solo non basta più a
+  // decidere dove mandarlo. Vedi `features/team/ViewMode.tsx`.
+  const view = useViewMode();
 
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_400Regular,
@@ -71,7 +76,10 @@ function RootNavigator() {
 
   // Don't let a font asset failure trap the app on the splash screen.
   const fontsReady = fontsLoaded || !!fontError;
-  const ready = !loading && fontsReady;
+  // `view.ready` entra nel gate dello splash solo quando c'è una sessione: senza
+  // login non c'è nessuna vista da risolvere, e aspettarla terrebbe lo splash su
+  // per una lettura da disco che riguarda un altro utente.
+  const ready = !loading && fontsReady && (!session || view.ready);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -88,14 +96,28 @@ function RootNavigator() {
   // Un cameriere senza onboarding completato passa prima dal wizard.
   const waiterOnboarding = isWaiter && !profile?.onboarding_complete;
   const waiterReady = isWaiter && !!profile?.onboarding_complete;
+  // Il professionista promosso che ha scelto la gestione. L'onboarding resta
+  // prima di tutto: è la sua scheda da professionista, e senza di quella non
+  // esiste come persona nell'app.
+  const waiterAsManager = waiterReady && view.effective === "manager";
+
+  /**
+   * Il cappello con cui girano realtime e push.
+   *
+   * ⚠️ Deriva dalla **vista**, non dal ruolo: un promosso in gestione deve
+   * ricevere gli aggiornamenti dei turni della sede, non quelli dei propri. Con
+   * `profile.role` resterebbe iscritto ai canali sbagliati e la dashboard non si
+   * aggiornerebbe da sola.
+   */
+  const activeRole = isManager || waiterAsManager ? "manager" : "waiter";
 
   return (
     <View style={{ flex: 1 }}>
       {session && profile ? (
         <>
           <NotificationsListener userId={session.user.id} />
-          <RealtimeSync userId={session.user.id} role={profile.role} />
-          <PushRegistrar role={profile.role} />
+          <RealtimeSync userId={session.user.id} role={activeRole} />
+          <PushRegistrar role={activeRole} />
         </>
       ) : null}
       <Stack screenOptions={screenOptions}>
@@ -103,7 +125,7 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={isManager}>
+      <Stack.Protected guard={isManager || waiterAsManager}>
         <Stack.Screen name="(manager)" options={{ headerShown: false }} />
       </Stack.Protected>
 
@@ -111,7 +133,7 @@ function RootNavigator() {
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={waiterReady}>
+      <Stack.Protected guard={waiterReady && !waiterAsManager}>
         <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
       </Stack.Protected>
 
