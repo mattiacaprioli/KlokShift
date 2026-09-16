@@ -101,6 +101,9 @@ export function StaffDetail({
  * Il guscio della scheda: un dialogo al centro, non più un cassetto laterale.
  * Con due sedi il cassetto superava i due schermi di scroll; qui l'altezza è
  * limitata e a scorrere è solo il contenuto del tab.
+ *
+ * Altezza fissa, non solo massima: col `max-h` il dialogo si stringeva e
+ * allungava a ogni tab, e l'header saltava su e giù sotto il cursore.
  */
 function PersonModalShell({
   label,
@@ -131,7 +134,7 @@ function PersonModalShell({
         role="dialog"
         aria-modal
         aria-label={label}
-        className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-0"
+        className="relative flex h-[min(90vh,52rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-0"
       >
         {children}
       </div>

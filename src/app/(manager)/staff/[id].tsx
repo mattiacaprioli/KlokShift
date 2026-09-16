@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView as RNScrollView,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
+import { Pressable, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,6 +19,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
 import { formatBirthday, formatDate } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
@@ -507,6 +512,26 @@ function PersonContractForm({ person }: { person: StaffPersonDetail }) {
   );
 }
 
+type PersonTab = "dati" | "sedi" | "ore" | "documenti" | "gestione";
+
+/**
+ * Una sezione della scheda. Nascosta e non smontata: vedi `StaffPersonView`.
+ * `display` in `style` perché dipende dal tab scelto.
+ */
+function TabPanel({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <View className="gap-5" style={{ display: active ? "flex" : "none" }}>
+      {children}
+    </View>
+  );
+}
+
 /**
  * La scheda di un dipendente: **una per persona**, non una per sede.
  *
@@ -533,6 +558,8 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   const remove = useRemoveStaffMember();
   const startConversation = useStartConversation();
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<PersonTab>("dati");
+  const scrollRef = useRef<RNScrollView>(null);
 
   const { isOwner, can, canAny } = useOwnerVenues();
 
@@ -586,138 +613,218 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
     }
   }
 
+  // Una sezione alla volta: impilate, con due sedi la scheda era una colonna
+  // di schermate. Un tab compare solo se chi guarda ha qualcosa da farci —
+  // stessi permessi che prima nascondevano le sezioni.
+  const tabs: { id: PersonTab; label: string }[] = [
+    { id: "dati", label: "Dati" },
+    { id: "sedi", label: multiVenue ? `Sedi · ${liveMemberships.length}` : "Sedi" },
+    ...(canAny("can_view_hours") ? [{ id: "ore" as const, label: "Ore" }] : []),
+    ...(canAny("can_manage_documents")
+      ? [{ id: "documenti" as const, label: "Documenti" }]
+      : []),
+    // La promozione è del titolare e di nessun altro: un collaboratore che
+    // potesse promuoverne altri sarebbe una catena di deleghe.
+    ...(isOwner && waiterId && liveMemberships.length > 0
+      ? [{ id: "gestione" as const, label: "Gestione" }]
+      : []),
+  ];
+  // Il tab scelto può sparire a scheda aperta (es. lascia l'ultima sede e
+  // «Gestione» non ha più senso): si torna ai dati.
+  const tab = tabs.some((t) => t.id === selectedTab) ? selectedTab : "dati";
+
+  function onTabChange(id: PersonTab) {
+    setSelectedTab(id);
+    // Ogni sezione riparte dall'alto: restare a metà delle ore e trovarsi a
+    // metà dei documenti non ha senso.
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 48,
-          gap: 20,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* "Dipendente" e non "Staff": la scheda non è più di una sede. */}
-        <ScreenHeader eyebrow="Dipendente" title={person.full_name} />
-
-        {waiterId ? (
-          <Pressable
-            onPress={() => router.push(`/(manager)/cameriere/${waiterId}`)}
-          >
-            <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
-              <Icon name="verified" size={18} color="#EAB54C" />
-              <View className="flex-1">
-                <Mono gold>Account app collegato</Mono>
-                <Text className="mt-0.5 text-sm text-t2">
-                  Vedi profilo ed esperienze
-                </Text>
-              </View>
-              <Icon name="chevR" size={18} color="#8c857a" />
-            </View>
-          </Pressable>
-        ) : null}
-
-        {/* La conversazione è la coppia (professionista, titolare) e non è
-            scopata per sede: aprirla come collaboratore creerebbe un thread che
-            il titolare non vede e che al professionista arriva da uno
-            sconosciuto. */}
-        {waiterId && isOwner ? (
-          <Pressable
-            disabled={startConversation.isPending}
-            onPress={onMessage}
-            className="-mt-2 flex-row items-center justify-center gap-2 rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-          >
-            <Icon name="message" size={16} color="#EAB54C" />
-            <Text className="text-sm font-sans-semibold text-t1">
-              {startConversation.isPending
-                ? "Apertura chat…"
-                : "Invia messaggio"}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        {/* Ore, affidabilità e presenze: dietro il permesso Ore. Senza, le RPC
-            tornerebbero comunque zero righe (`get_person_performance` è scopata
-            su `my_venue_ids('hours')`) e la scheda mostrerebbe un 0% che sembra
-            un dato. */}
-        {canAny("can_view_hours") ? (
-          isPro ? (
-            <>
-              <PersonHoursSection personId={person.id} showVenue={multiVenue} />
-              <PersonPerformanceSection
-                personId={person.id}
-                waiterId={waiterId}
-              />
-            </>
-          ) : (
-            <ProLockedCard
-              title="Ore e performance"
-              subtitle="Ore lavorate, affidabilità e statistiche di questa persona, su tutte le tue sedi."
+      <View className="flex-1 bg-bg-0">
+        {/* Header e tab restano fermi: a scorrere è solo la sezione. */}
+        <View
+          className="gap-4 border-b border-border pb-3"
+          style={{ paddingTop: insets.top + 8 }}
+        >
+          <View className="px-5">
+            {/* "Dipendente" e non "Staff": la scheda non è più di una sede. */}
+            <ScreenHeader
+              eyebrow="Dipendente"
+              title={person.full_name}
+              titleClassName="text-2xl"
+              right={
+                // La conversazione è la coppia (professionista, titolare) e
+                // non è scopata per sede: aprirla come collaboratore creerebbe
+                // un thread che il titolare non vede e che al professionista
+                // arriva da uno sconosciuto.
+                waiterId && isOwner ? (
+                  <Pressable
+                    disabled={startConversation.isPending}
+                    onPress={onMessage}
+                    hitSlop={8}
+                    accessibilityLabel="Invia messaggio"
+                    className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                  >
+                    {startConversation.isPending ? (
+                      <ActivityIndicator color="#EAB54C" />
+                    ) : (
+                      <Icon name="message" size={18} color="#EAB54C" />
+                    )}
+                  </Pressable>
+                ) : null
+              }
             />
-          )
-        ) : null}
+          </View>
 
-        {canAny("can_manage_documents") ? (
-          <DocumentsSection
-            personId={person.id}
-            onAdd={() =>
-              router.push({
-                pathname: "/(manager)/staff/documento/new",
-                params: { personId: person.id },
-              })
-            }
-          />
-        ) : null}
-
-        <PersonIdentityForm person={person} />
-
-        {/* Le ore da contratto sono un accordo fra la persona e l'azienda, non
-            un dato della sede: le vede e le cambia solo il titolare. */}
-        {isOwner ? <PersonContractForm person={person} /> : null}
-
-        {/* La promozione è del titolare e di nessun altro: un collaboratore che
-            potesse promuoverne altri sarebbe una catena di deleghe. */}
-        {isOwner && waiterId ? (
-          <PromoteSection
-            ownerId={person.owner_id}
-            waiterId={waiterId}
-            personName={person.full_name}
-            venueIds={liveMemberships.map((m) => m.venue_id)}
-          />
-        ) : null}
-
-        <View className="gap-3">
-          <Mono>
-            {multiVenue
-              ? `Dove lavora · ${liveMemberships.length}`
-              : "Dove lavora"}
-          </Mono>
-          {memberships.map((m) => (
-            <WorkplaceCard
-              key={m.id}
-              person={person}
-              membership={m}
-              isOnly={!multiVenue}
-            />
-          ))}
+          <RNScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          >
+            {tabs.map((t) => {
+              const active = t.id === tab;
+              return (
+                <Pressable
+                  key={t.id}
+                  onPress={() => onTabChange(t.id)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  className={cn(
+                    "rounded-full border px-4 py-2",
+                    active ? "border-gold bg-gold" : "border-border-2 bg-bg-2"
+                  )}
+                >
+                  <Text
+                    className={cn(
+                      "text-sm",
+                      active ? "font-sans-semibold text-gold-ink" : "text-t2"
+                    )}
+                  >
+                    {t.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </RNScrollView>
         </View>
 
-        {/* Toglie la persona da **tutte** le sedi dell'azienda, comprese quelle
-            che un collaboratore non gestisce. Resta al titolare; il delegato la
-            toglie dalla propria sede dalla card qui sopra. */}
-        {isOwner ? (
-          <Pressable
-            disabled={remove.isPending}
-            onPress={() => setConfirmVisible(true)}
-            className="items-center rounded-2xl border border-border-2 py-3.5"
-          >
-            <Text className="text-sm font-sans-semibold text-error">
-              Rimuovi dall&apos;organico
-            </Text>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+        <RNScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingTop: 20,
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 48,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* I pannelli inattivi restano montati e solo nascosti: i form tengono
+              gli edit in stato locale, e cambiare tab non deve buttarli via. */}
+          <TabPanel active={tab === "dati"}>
+            {waiterId ? (
+              <Pressable
+                onPress={() => router.push(`/(manager)/cameriere/${waiterId}`)}
+              >
+                <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
+                  <Icon name="verified" size={18} color="#EAB54C" />
+                  <View className="flex-1">
+                    <Mono gold>Account app collegato</Mono>
+                    <Text className="mt-0.5 text-sm text-t2">
+                      Vedi profilo ed esperienze
+                    </Text>
+                  </View>
+                  <Icon name="chevR" size={18} color="#8c857a" />
+                </View>
+              </Pressable>
+            ) : null}
+            <PersonIdentityForm person={person} />
+            {/* Le ore da contratto sono un accordo fra la persona e l'azienda,
+                non un dato della sede: le vede e le cambia solo il titolare. */}
+            {isOwner ? <PersonContractForm person={person} /> : null}
+          </TabPanel>
+
+          <TabPanel active={tab === "sedi"}>
+            <View className="gap-3">
+              {memberships.map((m) => (
+                <WorkplaceCard
+                  key={m.id}
+                  person={person}
+                  membership={m}
+                  isOnly={!multiVenue}
+                />
+              ))}
+            </View>
+
+            {/* Toglie la persona da **tutte** le sedi dell'azienda, comprese
+                quelle che un collaboratore non gestisce. Resta al titolare; il
+                delegato la toglie dalla propria sede dalla card qui sopra. */}
+            {isOwner ? (
+              <Pressable
+                disabled={remove.isPending}
+                onPress={() => setConfirmVisible(true)}
+                className="items-center rounded-2xl border border-border-2 py-3.5"
+              >
+                <Text className="text-sm font-sans-semibold text-error">
+                  Rimuovi dall&apos;organico
+                </Text>
+              </Pressable>
+            ) : null}
+          </TabPanel>
+
+          {/* Ore, affidabilità e presenze: dietro il permesso Ore. Senza, le RPC
+              tornerebbero comunque zero righe (`get_person_performance` è
+              scopata su `my_venue_ids('hours')`) e la scheda mostrerebbe un 0%
+              che sembra un dato. */}
+          {canAny("can_view_hours") ? (
+            <TabPanel active={tab === "ore"}>
+              {isPro ? (
+                <>
+                  <PersonHoursSection
+                    personId={person.id}
+                    showVenue={multiVenue}
+                  />
+                  <PersonPerformanceSection
+                    personId={person.id}
+                    waiterId={waiterId}
+                  />
+                </>
+              ) : (
+                <ProLockedCard
+                  title="Ore e performance"
+                  subtitle="Ore lavorate, affidabilità e statistiche di questa persona, su tutte le tue sedi."
+                />
+              )}
+            </TabPanel>
+          ) : null}
+
+          {canAny("can_manage_documents") ? (
+            <TabPanel active={tab === "documenti"}>
+              <DocumentsSection
+                personId={person.id}
+                onAdd={() =>
+                  router.push({
+                    pathname: "/(manager)/staff/documento/new",
+                    params: { personId: person.id },
+                  })
+                }
+              />
+            </TabPanel>
+          ) : null}
+
+          {tabs.some((t) => t.id === "gestione") && waiterId ? (
+            <TabPanel active={tab === "gestione"}>
+              <PromoteSection
+                ownerId={person.owner_id}
+                waiterId={waiterId}
+                personName={person.full_name}
+                venueIds={liveMemberships.map((m) => m.venue_id)}
+              />
+            </TabPanel>
+          ) : null}
+        </RNScrollView>
+      </View>
 
       <ConfirmModal
         visible={confirmVisible}
