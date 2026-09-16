@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { functionErrorCode } from "@/lib/functionError";
 import { isPasswordValid } from "@/features/auth/schema";
 import { Button, Field, Input, PasswordInput, Spinner } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
@@ -61,18 +62,23 @@ type State =
   | { status: "dead"; message: string };
 
 /**
- * `functions.invoke` non mette il corpo della risposta dentro `error` sui
- * 4xx/5xx: il codice vero sta in `data`. Stessa gestione di `sendTeamInvite`.
+ * Chiama `accept-invite` e riduce l'esito a «dati» oppure «codice d'errore».
+ *
+ * Il codice sta nel corpo della risposta dentro `error.context`, non in `data`
+ * (vedi `functionErrorCode`). Se la function non è deployata il gateway risponde
+ * `NOT_FOUND`, che qui diventa il messaggio generico: a chi apre un invito non
+ * serve sapere com'è fatto il backend.
  */
 async function callAcceptInvite<T>(
   body: Record<string, unknown>
 ): Promise<{ data: T } | { code: string }> {
-  const { data, error } = await supabase.functions.invoke<T & { error?: string }>(
-    "accept-invite",
-    { body }
-  );
+  const { data, error } = await supabase.functions.invoke<T>("accept-invite", {
+    body,
+  });
   if (!error && data) return { data };
-  return { code: (data as { error?: string } | null)?.error ?? "unknown" };
+  const raw = await functionErrorCode(error);
+  const known = Object.keys(ERRORS).find((k) => raw.includes(k));
+  return { code: known ?? "unknown" };
 }
 
 export function InvitoPage() {

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
+import { functionErrorCode } from "@/lib/functionError";
 import type { Tables } from "@/types/database";
 
 /**
@@ -519,16 +520,15 @@ export async function revokeTeamAccess(accessIds: string[]): Promise<void> {
  * `invite_count` lo tengono sotto controllo. Stessa scelta di `sendStaffInvite`.
  */
 export async function sendTeamInvite(accessId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ error?: string }>(
-    "invite-staff",
-    { body: { kind: "team", accessId } }
-  );
+  const { error } = await supabase.functions.invoke("invite-staff", {
+    body: { kind: "team", accessId },
+  });
   if (!error) return;
 
-  // `functions.invoke` non mette il corpo della risposta dentro `error` sui
-  // 4xx/5xx: il codice vero sta in `data`, ed è l'unico modo per distinguere
-  // "riprova tra un po'" da "riprova adesso".
-  const code = `${data?.error ?? ""} ${error.message ?? ""}`;
+  // Il codice vero sta nel corpo della risposta, dentro `error.context`: è
+  // l'unico modo per distinguere "riprova tra un po'" da "riprova adesso"
+  // (vedi `functionErrorCode`).
+  const code = `${await functionErrorCode(error)} ${error.message ?? ""}`;
 
   if (code.includes("rate_limited")) {
     throw new UserFacingError(

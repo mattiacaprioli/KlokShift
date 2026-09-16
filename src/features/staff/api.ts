@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
+import { functionErrorCode } from "@/lib/functionError";
 import type { Enums, Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type StaffMember = Tables<"staff_members">;
@@ -484,16 +485,15 @@ export async function findWaiterByEmail(
  * persona, così nessuna chiamata può spedire a un indirizzo arbitrario.
  */
 export async function sendStaffInvite(personId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ error?: string }>(
-    "invite-staff",
-    { body: { personId } }
-  );
+  const { error } = await supabase.functions.invoke("invite-staff", {
+    body: { personId },
+  });
   if (!error) return;
 
-  // `functions.invoke` non mette il corpo della risposta dentro `error` sui
-  // 4xx/5xx: il codice vero sta in `data`, ed è l'unico modo per distinguere
-  // "riprova tra un po'" da "riprova adesso".
-  const code = `${data?.error ?? ""} ${error.message ?? ""}`;
+  // Il codice vero sta nel corpo della risposta, dentro `error.context`: è
+  // l'unico modo per distinguere "riprova tra un po'" da "riprova adesso"
+  // (vedi `functionErrorCode`).
+  const code = `${await functionErrorCode(error)} ${error.message ?? ""}`;
 
   // ⚠️ `UserFacingError` e non `Error`: `userErrorMessage()` generalizza
   // qualunque messaggio non marcato, e queste frasi sono scritte per essere
