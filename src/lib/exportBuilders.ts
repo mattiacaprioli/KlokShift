@@ -6,6 +6,10 @@
 // Il rendering nativo sta in `src/lib/export.ts`, che importa da qui.
 
 import type { PersonHours } from "@/features/assignments/hoursSummary";
+import {
+  ABSENCE_SUMMARY_NOTE,
+  type AbsenceSummaryRow,
+} from "@/features/absences/summary";
 
 // Ore come numero italiano (virgola, senza suffisso): "12,5" · "5".
 function hoursNumber(h: number): string {
@@ -33,7 +37,9 @@ export function buildHoursHtml(
   companyName: string,
   monthLabel: string,
   people: PersonHours[],
-  totalHours: number
+  totalHours: number,
+  /** Ferie, permessi e malattia del mese: una seconda tabella, se ce ne sono. */
+  absences: AbsenceSummaryRow[] = []
 ): string {
   const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
 
@@ -55,6 +61,8 @@ export function buildHoursHtml(
     h1 { font-size: 22px; margin: 0 0 2px; }
     .sub { color: #6a6358; font-size: 13px; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    h2 { font-size: 16px; margin: 32px 0 2px; }
+    .note { color: #8c857a; font-size: 11px; margin-bottom: 12px; }
     th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e7e2d8; }
     th { color: #8c857a; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
     td.n, th.n { text-align: right; }
@@ -72,8 +80,40 @@ export function buildHoursHtml(
         totalHours
       )}</td></tr></tfoot>
     </table>
+    ${absences.length > 0 ? absencesHtmlSection(absences) : ""}
     <div class="foot">Documento generato da topWaitr · riepilogo ore/presenze del personale interno.</div>
   </body></html>`;
+}
+
+/** Un numero di giorni o ore nel documento: vuoto se zero, per leggere a colpo d'occhio. */
+function countCell(n: number): string {
+  return n > 0 ? hoursNumber(n) : "—";
+}
+
+/**
+ * La tabella delle assenze nel PDF, sotto quella delle ore. Una tabella a parte
+ * e non colonne in più: le ore sono il lavorato, le assenze il non lavorato, e il
+ * commercialista le legge in due momenti diversi.
+ */
+function absencesHtmlSection(rows: AbsenceSummaryRow[]): string {
+  const body = rows
+    .map(
+      (r) =>
+        `<tr><td>${escapeHtml(r.person_name)}</td>` +
+        `<td class="n">${countCell(r.ferie_days)}</td>` +
+        `<td class="n">${countCell(r.permesso_days)}</td>` +
+        `<td class="n">${countCell(r.permesso_hours)}</td>` +
+        `<td class="n">${countCell(r.malattia_days)}</td>` +
+        `<td>${escapeHtml(r.inps_protocols ?? "—")}</td></tr>`
+    )
+    .join("");
+  return `
+    <h2>Assenze</h2>
+    <div class="note">${escapeHtml(ABSENCE_SUMMARY_NOTE)}</div>
+    <table>
+      <thead><tr><th>Nome</th><th class="n">Ferie (gg)</th><th class="n">Permessi (gg)</th><th class="n">Permessi (h)</th><th class="n">Malattia (gg)</th><th>Protocolli INPS</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
 }
 
 function csvCell(v: string): string {
@@ -106,6 +146,39 @@ export function buildHoursCsv(people: PersonHours[]): string {
 }
 
 /**
+ * CSV delle assenze del mese: **un file a parte**, non colonne in più nel CSV
+ * delle ore, il cui schema non cambia mai (vedi `buildHoursCsv`).
+ *
+ * Stesse convenzioni: ';', decimali con virgola, BOM. I giorni sono di
+ * calendario, e l'intestazione lo dice, perché un CSV non ha una nota a piè di
+ * pagina. Le celle vuote valgono zero: un foglio le somma senza lamentarsi.
+ */
+export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
+  const header = [
+    "Nome",
+    "Ferie (giorni di calendario)",
+    "Permessi (giorni)",
+    "Permessi (ore)",
+    "Malattia (giorni di calendario)",
+    "Protocolli INPS",
+  ].join(";");
+  const num = (n: number) => (n > 0 ? hoursNumber(n) : "0");
+  const lines = rows.map((r) =>
+    [
+      r.person_name,
+      num(r.ferie_days),
+      num(r.permesso_days),
+      num(r.permesso_hours),
+      num(r.malattia_days),
+      r.inps_protocols ?? "",
+    ]
+      .map(csvCell)
+      .join(";")
+  );
+  return "\uFEFF" + [header, ...lines].join("\r\n");
+}
+
+/**
  * Nome file condiviso mobile/web: "ore-osteria-milano-settembre-2026.csv" per chi
  * ha una sede sola, "ore-giuseppe-buffa-settembre-2026.csv" per chi ne ha tre.
  *
@@ -126,6 +199,24 @@ export function hoursFileName(
   monthLabel: string,
   ext: string
 ): string {
+  return exportFileName("ore", companyName, monthLabel, ext);
+}
+
+/** "assenze-osteria-milano-settembre-2026.csv": stessa regola di `hoursFileName`. */
+export function absencesFileName(
+  companyName: string,
+  monthLabel: string,
+  ext: string
+): string {
+  return exportFileName("assenze", companyName, monthLabel, ext);
+}
+
+function exportFileName(
+  prefix: string,
+  companyName: string,
+  monthLabel: string,
+  ext: string
+): string {
   const slug = (v: string) =>
     v
       .toLowerCase()
@@ -134,5 +225,5 @@ export function hoursFileName(
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
-  return `ore-${slug(companyName)}-${slug(monthLabel)}.${ext}`;
+  return `${prefix}-${slug(companyName)}-${slug(monthLabel)}.${ext}`;
 }

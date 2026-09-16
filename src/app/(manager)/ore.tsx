@@ -12,13 +12,22 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { formatHours, todayString } from "@/lib/format";
-import { exportHoursCsv, exportHoursPdf } from "@/lib/export";
+import {
+  exportAbsencesCsv,
+  exportHoursCsv,
+  exportHoursPdf,
+} from "@/lib/export";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
+import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
+import {
+  ABSENCE_SUMMARY_NOTE,
+  formatSummaryDays,
+} from "@/features/absences/summary";
 
 const monthFmt = new Intl.DateTimeFormat("it-IT", {
   month: "long",
@@ -71,20 +80,24 @@ export default function VenueHoursScreen() {
   // la busta paga è una, e quante ore di quel totale siano state fatte a Roma
   // invece che a Milano non è una domanda che questa pagina deve rispondere.
   const people = groupHoursByPerson(rows);
+  // Ferie, permessi e malattia del mese: una sezione e un CSV a parte.
+  const absenceQuery = useOwnerAbsenceSummary(ownerId, month);
+  const absences = absenceQuery.data ?? [];
 
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
   const maxHours = people.reduce((m, p) => Math.max(m, p.hours), 0);
   const label = monthLabel(month);
 
-  async function onExport(kind: "pdf" | "csv") {
-    if (people.length === 0) return;
+  async function onExport(kind: "pdf" | "csv" | "absences") {
     const company = companyName(venues, profile?.full_name);
     try {
       if (kind === "pdf") {
-        await exportHoursPdf(company, label, people, totalHours);
-      } else {
+        await exportHoursPdf(company, label, people, totalHours, absences);
+      } else if (kind === "csv") {
         await exportHoursCsv(company, label, people);
+      } else {
+        await exportAbsencesCsv(company, label, absences);
       }
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
@@ -129,56 +142,120 @@ export default function VenueHoursScreen() {
         </Pressable>
       </View>
 
-      {query.isLoading ? (
+      {query.isLoading || absenceQuery.isLoading ? (
         <ActivityIndicator color="#EAB54C" className="mt-10" />
-      ) : query.isError ? (
-        <QueryError onRetry={() => query.refetch()} />
-      ) : people.length === 0 ? (
+      ) : query.isError || absenceQuery.isError ? (
+        <QueryError
+          onRetry={() => {
+            query.refetch();
+            absenceQuery.refetch();
+          }}
+        />
+      ) : people.length === 0 && absences.length === 0 ? (
         <EmptyState
           title="Nessuna ora registrata"
           subtitle="Le ore dei turni interni conclusi di questo mese, in tutte le tue sedi, compariranno qui."
         />
       ) : (
         <>
-          <Card className="rounded-3xl border-border-2 px-5 py-4">
-            <Mono>Totale mese</Mono>
-            <Text
-              className="mt-1 text-3xl font-sans-bold text-t1"
-              style={{ letterSpacing: -0.5 }}
-            >
-              {formatHours(totalHours)}
-            </Text>
-            <Text className="text-xs text-t3">
-              {totalShifts} turni · {people.length}{" "}
-              {people.length === 1 ? "persona" : "persone"}
-            </Text>
-          </Card>
+          {people.length > 0 ? (
+            <>
+              <Card className="rounded-3xl border-border-2 px-5 py-4">
+                <Mono>Totale mese</Mono>
+                <Text
+                  className="mt-1 text-3xl font-sans-bold text-t1"
+                  style={{ letterSpacing: -0.5 }}
+                >
+                  {formatHours(totalHours)}
+                </Text>
+                <Text className="text-xs text-t3">
+                  {totalShifts} turni · {people.length}{" "}
+                  {people.length === 1 ? "persona" : "persone"}
+                </Text>
+              </Card>
 
-          <View className="gap-4">
-            {people.map((p) => (
-              <View key={p.person_id} className="gap-2">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <Text className="text-sm font-sans-semibold text-t1">
-                      {p.person_name}
-                    </Text>
-                    <Text className="text-xs text-t3">
-                      {p.roles ?? "—"} · {p.shifts_count} turni
-                    </Text>
+              <View className="gap-4">
+                {people.map((p) => (
+                  <View key={p.person_id} className="gap-2">
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1">
+                        <Text className="text-sm font-sans-semibold text-t1">
+                          {p.person_name}
+                        </Text>
+                        <Text className="text-xs text-t3">
+                          {p.roles ?? "—"} · {p.shifts_count} turni
+                        </Text>
+                      </View>
+                      <Text className="text-sm font-sans-bold text-gold">
+                        {formatHours(p.hours)}
+                      </Text>
+                    </View>
+
+                    <ProgressBar progress={maxHours > 0 ? p.hours / maxHours : 0} />
                   </View>
-                  <Text className="text-sm font-sans-bold text-gold">
-                    {formatHours(p.hours)}
-                  </Text>
-                </View>
-
-                <ProgressBar progress={maxHours > 0 ? p.hours / maxHours : 0} />
+                ))}
               </View>
-            ))}
-          </View>
+            </>
+          ) : null}
+
+          {absences.length > 0 ? (
+            <View className="gap-3">
+              <View>
+                <Mono gold>Assenze del mese</Mono>
+                <Text className="mt-1 text-xs leading-4 text-t3">
+                  {ABSENCE_SUMMARY_NOTE}
+                </Text>
+              </View>
+              {absences.map((a) => (
+                <Card
+                  key={a.person_id}
+                  className="gap-1 rounded-2xl border-border-2 px-4 py-3"
+                >
+                  <Text className="text-sm font-sans-semibold text-t1">
+                    {a.person_name}
+                  </Text>
+                  <Text className="text-xs text-t2">
+                    {[
+                      a.ferie_days > 0
+                        ? `Ferie ${formatSummaryDays(a.ferie_days)}`
+                        : null,
+                      a.permesso_days > 0
+                        ? `Permessi ${formatSummaryDays(a.permesso_days)}`
+                        : null,
+                      a.permesso_hours > 0
+                        ? `Permessi ${formatHours(a.permesso_hours)}`
+                        : null,
+                      a.malattia_days > 0
+                        ? `Malattia ${formatSummaryDays(a.malattia_days)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Text>
+                  {a.inps_protocols ? (
+                    <Text className="text-xs text-t3">
+                      Protocolli INPS: {a.inps_protocols}
+                    </Text>
+                  ) : null}
+                </Card>
+              ))}
+            </View>
+          ) : null}
 
           <View className="mt-2 gap-2.5">
             <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
-            <GhostButton label="Esporta CSV" onPress={() => onExport("csv")} />
+            {people.length > 0 ? (
+              <GhostButton
+                label="Esporta CSV ore"
+                onPress={() => onExport("csv")}
+              />
+            ) : null}
+            {absences.length > 0 ? (
+              <GhostButton
+                label="Esporta CSV assenze"
+                onPress={() => onExport("absences")}
+              />
+            ) : null}
           </View>
         </>
       )}

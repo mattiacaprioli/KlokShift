@@ -603,7 +603,7 @@ export async function getMyWorkHistoryTotals(): Promise<WorkHistoryTotals> {
   return data ?? { total_count: 0, total_hours: 0 };
 }
 
-function monthBounds(month: string): { start: string; end: string } {
+export function monthBounds(month: string): { start: string; end: string } {
   const [y, m] = month.split("-").map(Number);
   const nextY = m === 12 ? y + 1 : y;
   const nextM = m === 12 ? 1 : m + 1;

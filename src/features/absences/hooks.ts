@@ -10,6 +10,7 @@ import {
   getAbsencesToHandle,
   getMyAbsenceEmployers,
   getMyAbsences,
+  getOwnerAbsenceSummary,
   getPersonAbsences,
   recordAbsence,
   requestAbsence,
@@ -168,5 +169,20 @@ export function useRemoveFromShifts() {
       qc.invalidateQueries({ queryKey: qk.shifts.all });
       qc.invalidateQueries({ queryKey: qk.planning.all });
     },
+  });
+}
+
+/**
+ * Il riepilogo assenze del mese. Come `useOwnerHoursSummary`, `ownerId` è solo
+ * la chiave di cache: la RPC usa `auth.uid()`.
+ */
+export function useOwnerAbsenceSummary(
+  ownerId: string | undefined,
+  month: string
+) {
+  return useQuery({
+    queryKey: qk.absences.summary(ownerId ?? "", month),
+    queryFn: () => getOwnerAbsenceSummary(month),
+    enabled: !!ownerId,
   });
 }

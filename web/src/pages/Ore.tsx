@@ -4,7 +4,11 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
+import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
+import { ABSENCE_SUMMARY_NOTE } from "@/features/absences/summary";
 import {
+  absencesFileName,
+  buildAbsencesCsv,
   buildHoursCsv,
   buildHoursHtml,
   hoursFileName,
@@ -56,23 +60,35 @@ export function OrePage() {
   const maxHours = Math.max(1, ...people.map((p) => p.hours));
   const label = monthLabel(month);
   const company = companyName(venues, profile?.full_name);
+  // Ferie, permessi e malattia del mese: tabella e CSV a parte.
+  const absenceQuery = useOwnerAbsenceSummary(ownerId, month);
+  const absences = absenceQuery.data ?? [];
 
-  function downloadCsv() {
-    // Stessa funzione pura dell'app: i due file devono coincidere.
-    const blob = new Blob([buildHoursCsv(people)], {
-      type: "text/csv;charset=utf-8",
-    });
+  function download(content: string, fileName: string) {
+    // Stesse funzioni pure dell'app: i file devono coincidere.
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = hoursFileName(company, label, "csv");
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  function downloadCsv() {
+    download(buildHoursCsv(people), hoursFileName(company, label, "csv"));
+  }
+
+  function downloadAbsencesCsv() {
+    download(
+      buildAbsencesCsv(absences),
+      absencesFileName(company, label, "csv")
+    );
+  }
+
   function printPdf() {
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
-    const html = buildHoursHtml(company, label, people, totalHours);
+    const html = buildHoursHtml(company, label, people, totalHours, absences);
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(html);
@@ -89,12 +105,18 @@ export function OrePage() {
         actions={
           <>
             <Button onClick={downloadCsv} disabled={people.length === 0}>
-              Esporta CSV
+              CSV ore
+            </Button>
+            <Button
+              onClick={downloadAbsencesCsv}
+              disabled={absences.length === 0}
+            >
+              CSV assenze
             </Button>
             <Button
               variant="gold"
               onClick={printPdf}
-              disabled={people.length === 0}
+              disabled={people.length === 0 && absences.length === 0}
             >
               Stampa / PDF
             </Button>
@@ -121,7 +143,10 @@ export function OrePage() {
       {isError ? <QueryError error={error} /> : null}
       {isPending ? <Spinner /> : null}
 
-      {!isPending && people.length === 0 ? (
+      {!isPending &&
+      !absenceQuery.isPending &&
+      people.length === 0 &&
+      absences.length === 0 ? (
         <Placeholder
           title={`Nessuna ora registrata a ${label}`}
           detail="Le ore arrivano dai turni interni conclusi di tutte le tue sedi. Segna le presenze aprendo un turno passato dal Planning."
@@ -180,6 +205,54 @@ export function OrePage() {
             </tfoot>
           </table>
         </Card>
+      ) : null}
+
+      {absences.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-t3">
+            Assenze del mese
+          </h2>
+          <p className="mb-3 text-xs text-t4">{ABSENCE_SUMMARY_NOTE}</p>
+          <Card className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border-2 text-left text-[11px] uppercase tracking-wider text-t3">
+                  <th className="px-5 py-3 font-semibold">Nome</th>
+                  <th className="px-5 py-3 text-right font-semibold">Ferie (gg)</th>
+                  <th className="px-5 py-3 text-right font-semibold">Permessi (gg)</th>
+                  <th className="px-5 py-3 text-right font-semibold">Permessi (h)</th>
+                  <th className="px-5 py-3 text-right font-semibold">Malattia (gg)</th>
+                  <th className="px-5 py-3 font-semibold">Protocolli INPS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {absences.map((a) => (
+                  <tr
+                    key={a.person_id}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-5 py-2.5 text-t1">{a.person_name}</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-t2">
+                      {a.ferie_days || "—"}
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-mono text-t2">
+                      {a.permesso_days || "—"}
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-mono text-t2">
+                      {a.permesso_hours ? formatHours(a.permesso_hours) : "—"}
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-mono text-t2">
+                      {a.malattia_days || "—"}
+                    </td>
+                    <td className="px-5 py-2.5 text-t3">
+                      {a.inps_protocols ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </section>
       ) : null}
     </>
   );

@@ -6,7 +6,10 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
+import type { AbsenceSummaryRow } from "@/features/absences/summary";
 import {
+  absencesFileName,
+  buildAbsencesCsv,
   buildHoursCsv,
   buildHoursHtml,
   hoursFileName,
@@ -19,9 +22,16 @@ export async function exportHoursPdf(
   companyName: string,
   monthLabel: string,
   people: PersonHours[],
-  totalHours: number
+  totalHours: number,
+  absences: AbsenceSummaryRow[] = []
 ): Promise<void> {
-  const html = buildHoursHtml(companyName, monthLabel, people, totalHours);
+  const html = buildHoursHtml(
+    companyName,
+    monthLabel,
+    people,
+    totalHours,
+    absences
+  );
   const { uri } = await Print.printToFileAsync({ html });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
@@ -48,6 +58,26 @@ export async function exportHoursCsv(
       UTI: "public.comma-separated-values-text",
       mimeType: "text/csv",
       dialogTitle: `Ore ${companyName} · ${monthLabel}`,
+    });
+  }
+}
+
+/** Genera il CSV delle assenze del mese (file separato) e lo condivide. */
+export async function exportAbsencesCsv(
+  companyName: string,
+  monthLabel: string,
+  rows: AbsenceSummaryRow[]
+): Promise<void> {
+  const csv = buildAbsencesCsv(rows);
+  const uri = `${FileSystem.cacheDirectory}${absencesFileName(companyName, monthLabel, "csv")}`;
+  await FileSystem.writeAsStringAsync(uri, csv, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      UTI: "public.comma-separated-values-text",
+      mimeType: "text/csv",
+      dialogTitle: `Assenze ${companyName} · ${monthLabel}`,
     });
   }
 }

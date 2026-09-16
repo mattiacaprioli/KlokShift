@@ -1,7 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { addDaysToDate, todayString } from "@/lib/format";
+import { monthBounds } from "@/features/assignments/api";
 import type { Enums, Tables } from "@/types/database";
+import type { AbsenceSummaryRow } from "./summary";
 
 export type Absence = Tables<"staff_absences">;
 export type AbsenceKind = Enums<"absence_kind">;
@@ -305,4 +307,25 @@ export async function removeFromShifts(assignmentIds: string[]): Promise<void> {
     .delete()
     .in("id", assignmentIds);
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Le assenze approvate del mese per persona, per la pagina Ore e l'export.
+ * Stesso intervallo di `getOwnerHoursSummary` (fine esclusa). Il perimetro è il
+ * permesso Ore, e lo decide la RPC (`auth.uid()`).
+ */
+export async function getOwnerAbsenceSummary(
+  month: string
+): Promise<AbsenceSummaryRow[]> {
+  const { start, end } = monthBounds(month);
+  const { data, error } = await supabase.rpc("get_owner_absence_summary", {
+    p_from: start,
+    p_to: end,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as AbsenceSummaryRow[]).map((r) => ({
+    ...r,
+    // `numeric` arriva come stringa o numero a seconda del valore.
+    permesso_hours: Number(r.permesso_hours),
+  }));
 }

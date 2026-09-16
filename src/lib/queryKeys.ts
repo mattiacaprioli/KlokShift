@@ -220,6 +220,9 @@ export const qk = {
     byPerson: (personId: string) =>
       ["absences", "byPerson", personId] as const,
     toHandle: ["absences", "toHandle"] as const,
+    /** Il riepilogo del mese per il commercialista (pagina Ore). */
+    summary: (ownerId: string, month: string) =>
+      ["absences", "summary", ownerId, month] as const,
     /** Chi non c'è, senza il perché: la fonte del planning. */
     availability: (from: string, to: string) =>
       ["absences", "availability", from, to] as const,

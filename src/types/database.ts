@@ -1366,6 +1366,18 @@ export type Database = {
           status: Database["public"]["Enums"]["absence_status"]
         }[]
       }
+      get_owner_absence_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          ferie_days: number
+          inps_protocols: string
+          malattia_days: number
+          permesso_days: number
+          permesso_hours: number
+          person_id: string
+          person_name: string
+        }[]
+      }
       get_waiter_public_card: {
         Args: { p_waiter: string }
         Returns: {
