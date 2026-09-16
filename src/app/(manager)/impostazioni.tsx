@@ -1,7 +1,7 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { GhostButton } from "@/components/ui/GhostButton";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
@@ -9,6 +9,7 @@ import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useViewMode } from "@/features/team/ViewMode";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -19,7 +20,7 @@ export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
-  const { isOwner } = useOwnerVenues();
+  const { isOwner, canAny } = useOwnerVenues();
   const { canSwitch, setMode } = useViewMode();
 
   return (
@@ -135,29 +136,35 @@ export default function ManagerSettingsScreen() {
           </Card>
         </View>
 
-        {/* Solo per il titolare, come la riga Collaboratori: la guida spiega un
-            gesto che un collaboratore non può fare. */}
-        {isOwner ? (
+        {/* Una guida compare solo a chi può fare quello che spiega: i
+            collaboratori sono del titolare, le assenze di chi gestisce
+            l'organico. */}
+        {isOwner || canAny("can_manage_staff") ? (
           <View className="gap-2">
             <SectionHeader title="Aiuto" />
             <Card className="p-0">
-              <Pressable
-                onPress={() => router.push("/(manager)/tutorial")}
-                className="flex-row items-center gap-3 px-4 py-3.5"
-              >
-                <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                  <Icon name="sparkle" size={18} color="#EAB54C" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[15px] font-sans-semibold text-t1">
-                    Tutorial
-                  </Text>
-                  <Text className="mt-0.5 text-[13px] text-t3">
-                    Come aggiungere un collaboratore
-                  </Text>
-                </View>
-                <Icon name="chevR" size={18} color="#6A6358" />
-              </Pressable>
+              {isOwner ? (
+                <TutorialRow
+                  icon="users"
+                  title="Aggiungere un collaboratore"
+                  subtitle="Invito, permessi e cosa succede dopo"
+                  onPress={() => router.push("/(manager)/tutorial")}
+                />
+              ) : null}
+              {canAny("can_manage_staff") ? (
+                <TutorialRow
+                  icon="calendar"
+                  title="Ferie, permessi e malattia"
+                  subtitle="Richieste, turni in conflitto ed export"
+                  divider={isOwner}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(manager)/tutorial",
+                      params: { id: "assenze" },
+                    })
+                  }
+                />
+              ) : null}
             </Card>
           </View>
         ) : null}
@@ -177,5 +184,40 @@ export default function ManagerSettingsScreen() {
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+/** Una riga della sezione Aiuto. */
+function TutorialRow({
+  icon,
+  title,
+  subtitle,
+  divider,
+  onPress,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle: string;
+  /** Linea sopra: la riga non è la prima della card. */
+  divider?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className={cn(
+        "flex-row items-center gap-3 px-4 py-3.5",
+        divider && "border-t border-border-1"
+      )}
+    >
+      <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
+        <Icon name={icon} size={18} color="#EAB54C" />
+      </View>
+      <View className="flex-1">
+        <Text className="text-[15px] font-sans-semibold text-t1">{title}</Text>
+        <Text className="mt-0.5 text-[13px] text-t3">{subtitle}</Text>
+      </View>
+      <Icon name="chevR" size={18} color="#6A6358" />
+    </Pressable>
   );
 }
