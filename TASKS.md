@@ -394,24 +394,27 @@ Ora l'email porta un **token nostro** a `#/invito`, e l'account nasce lì con `c
 ## 🔜 In sospeso — prossimi passi immediati
 
 - [ ] ⚠️ **ATTIVARE L'INVIO DELLE EMAIL** (verificato il 16/09: `invite-staff` e `accept-invite` rispondono **404 `NOT_FOUND`**, nessuna email è mai partita). Il codice c'è e la migration `20260917120000` è applicata; mancano solo servizio, secret e deploy. Supabase da solo spedisce **solo** le email di autenticazione, con un limite di **2 all'ora** e un mittente dichiarato «solo per test»: le email personalizzate (inviti) richiedono un SMTP esterno, e lo stesso SMTP va messo anche su Supabase Auth prima di avere utenti veri. Scelta: **Resend** (gratis 3.000/mese, max 100/giorno, regione EU; alternativa Brevo, 300/giorno). Passi, in ordine:
-  1. [ ] **Comprare un dominio** (~10 €/anno). Senza, Gmail/Outlook scartano o mettono in spam: nessun servizio spedisce bene da `@gmail.com`. Farlo per primo: tra acquisto e DNS ci può volere un giorno.
-  2. [ ] **Account Resend** con regione **EU** → *Domains* → *Add domain* → copiare i record DNS (SPF/DKIM/DMARC) nel pannello del registrar → aspettare «Verified».
-  3. [ ] Resend → *API Keys* → creare una chiave (`re_...`). Dati SMTP: host `smtp.resend.com`, porta `465`, utente `resend`, password = la chiave.
-  4. [ ] `npx supabase login` (il CLI non è installato globalmente: sempre via `npx`).
-  5. [ ] Secret (in alternativa: Dashboard → *Edge Functions* → *Secrets*):
+  1. [x] ~~**Comprare un dominio**~~ ✅ (16/09) `klokshift.com` su GoDaddy. DNS del sito già a posto (A → GitHub Pages, `www` → `mattiacaprioli.github.io`).
+  2. [~] **Account Resend** con regione **EU** → *Domains* → *Add domain* `klokshift.com` → copiare in GoDaddy (*DNS → Aggiungi record*) **i record che mostra Resend**, non valori presi da guide: al 16/09 sono TXT `resend._domainkey` (DKIM) e `send` che risolve su `forge.rmta.net` (MX `feedback.forge.rmta.net` + SPF), non più Amazon SES. Record pubblicati il 16/09 (verificato con `dig`); resta da vedere «Verified» su Resend.
+     - ⚠️ In GoDaddy il campo Nome va **senza** `.klokshift.com` (lo aggiunge da sé).
+     - ⚠️ **Non aggiungere un secondo `_dmarc`**: ce n'è già uno messo da GoDaddy (`p=quarantine`), e due record DMARC valgono come nessuno. Passa col DKIM di Resend. Conseguenza: finché il DKIM non è verificato ogni email finisce in spam, quindi niente prove prima di «Verified».
+     - Click tracking e open tracking **spenti**: il link del collaboratore porta un token monouso, che non deve passare da un redirect di terzi.
+  3. [ ] Resend → *API Keys* → chiave con **Sending access** limitata a `klokshift.com` (`re_...`). Dati SMTP: host `smtp.resend.com`, porta `465`, utente `resend`, password = la chiave.
+  4. [x] ✅ (16/09) Secret — Dashboard → *Edge Functions* → *Secrets*:
      ```
-     npx supabase secrets set SMTP_HOST=smtp.resend.com SMTP_PORT=465 SMTP_USER=resend \
-       SMTP_PASS=re_... SMTP_FROM='topWaitr <no-reply@DOMINIO>' \
-       SITE_URL=https://mattiacaprioli.github.io/topWaitr \
-       DASHBOARD_URL=https://mattiacaprioli.github.io/topWaitr/app \
-       --project-ref rmlobxjlqlpixkvrzmfg
+     SMTP_HOST=smtp.resend.com  SMTP_PORT=465  SMTP_USER=resend  SMTP_PASS=re_...
+     SMTP_FROM=KlokShift <no-reply@klokshift.com>
+     SITE_URL=https://klokshift.com  DASHBOARD_URL=https://klokshift.com/app
      ```
-     `DASHBOARD_URL` serve al solo invito collaboratore e **non** va negli allowlist «Redirect URLs» di Supabase Auth: quel link non passa da GoTrue.
-  6. [ ] **Due** deploy, con due comandi diversi e facili da sbagliare (`.github/workflows/supabase.yml` applica solo le migration, le function si deployano a mano):
-     - `npx supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg` (**con** verifica JWT, come `delete-account`);
-     - `npx supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg` (**senza**: chi la chiama un account non ce l'ha ancora).
-  7. [ ] **Stesso SMTP su Supabase Auth**: Dashboard → *Authentication* → *Emails* → *SMTP Settings* → «Custom SMTP» con gli stessi dati. Toglie il limite di 2 email/ora a conferme di registrazione e recupero password.
-  8. [ ] Prova: «Reinvia» sugli inviti di test già in lista (`+collab`, `+collab1`: i tentativi finiti in 404 non hanno consumato il rate limit). Poi il giro completo: in `auth.users` **niente** finché il link non viene aperto; aprire il link e chiudere senza password (righe ancora `pending`); registrarsi da zero con l'indirizzo di un invito mai aperto (deve funzionare); link riaperto dopo l'uso → «già accettato».
+     ⚠️ **Porta 465, mai 587**: le Edge Function di Supabase non possono uscire sulle porte 25 e 587. `DASHBOARD_URL` serve al solo invito collaboratore e **non** va negli allowlist «Redirect URLs» di Supabase Auth: quel link non passa da GoTrue.
+  5. [x] ✅ (16/09, versione 1 di entrambe; smoke test: `accept-invite` risponde `invite_not_found` dalla RPC, `invite-staff` senza login 401, preflight 200) **Due** deploy, **dopo** i secret, con verifica JWT diversa e facile da sbagliare (`.github/workflows/supabase.yml` applica solo le migration). Si fanno via MCP Supabase (`deploy_edge_function`), perché la CLI non ha un token:
+     - `invite-staff` con `verify_jwt: true` (come `delete-account`);
+     - `accept-invite` con `verify_jwt: false` (chi la chiama un account non ce l'ha ancora).
+  6. [ ] **Supabase Auth** (Dashboard → *Authentication*):
+     - *Emails → SMTP Settings* → «Custom SMTP» con gli stessi dati, mittente `no-reply@klokshift.com`, nome `KlokShift`. Toglie il limite di 2 email/ora a conferme di registrazione e recupero password.
+     - *URL Configuration*: Site URL **`https://klokshift.com/app/`**, non la vetrina. L'app mobile non passa né `emailRedirectTo` né `redirectTo`, e non ha una schermata per la nuova password: il suo «Password dimenticata» atterra sul Site URL, e solo la dashboard (`web/src/lib/recovery.ts` → `#/nuova-password`, davanti ai gate) sa consumare `type=recovery`. Con la vetrina come Site URL il recupero da mobile finirebbe in un vicolo cieco. Redirect URLs: `https://klokshift.com/app/**` (registrazione e recupero dal web) + `http://localhost:5173/**` (`yarn web:dev`); togliere le voci su `github.io/topWaitr`.
+     - *Emails → Templates*: «topWaitr» → «KlokShift» in *Confirm signup* e *Reset password* (i template non stanno nel repo).
+  7. [ ] Prova: l'email deve arrivare in Posta in arrivo, e Gmail → *Mostra originale* deve dire `SPF/DKIM/DMARC: PASS`. «Reinvia» sugli inviti di test già in lista (`+collab`, `+collab1`: i tentativi finiti in 404 non hanno consumato il rate limit). Poi il giro completo: in `auth.users` **niente** finché il link non viene aperto; aprire il link e chiudere senza password (righe ancora `pending`); registrarsi da zero con l'indirizzo di un invito mai aperto (deve funzionare); link riaperto dopo l'uso → «già accettato».
 - [x] ~~Applicare `20260917120000_venue_access_invite_token.sql`~~ ✅ (verificato il 16/09 via PostgREST: `claim_venue_access_invite` esiste, `claim_venue_access_send` a 2 argomenti non più).
 - [ ] **L'aggancio automatico invece è testabile da subito, senza email**: mettere un'email su una scheda senza account, registrarsi con quell'indirizzo come professionista, **confermare l'email**, e verificare che `staff_people.waiter_id` si valorizzi e che tutte le `staff_members` ereditino il `waiter_id` dal trigger mirror. Da provare anche: registrazione **non confermata** (deve restare scollegata) e registrazione **come titolare** (idem).
 - [ ] **`respond_to_staff_invite` sul rifiuto fa un `delete`**, non un soft-leave: cancella la `staff_members` e, se era l'ultima, `delete_orphan_staff_person` porta via la scheda con nome, contratto, ore e documenti. È il motivo per cui l'aggancio automatico non usa `'pending'`. Rimedio: allinearla a `remove_staff_member` (`link_status = 'left'` + `staff_people.waiter_id = null`).
@@ -432,6 +435,16 @@ Ora l'email porta un **token nostro** a `#/invito`, e l'account nasce lì con `c
 - [x] ~~Verifica live a due account~~ — in larga parte coperta dai test manuali del 14-15/07 (Giuseppe/Mattia: staff, inviti, turni, ore, notifiche); resta da provare dal vivo la notifica `shift_cancelled`, la nuova `shift_unassigned` (in particolare la guardia sull'auto-rimozione, non testabile via MCP perché `auth.uid()` è `null`) e l'export su dispositivo.
 
 ## 🧭 Backlog / Roadmap
+
+### Uso all'estero — cosa è solo in italiano (inventario 16/09)
+
+L'app sarà usata anche fuori dall'Italia. Oggi non c'è nessuna internazionalizzazione, e i testi non stanno solo nell'app:
+- **App e dashboard**: stringhe italiane inline, nessuna libreria i18n (regola di `AGENTS.md`), ~10 formattazioni con `it-IT` fisso.
+- **La lingua dell'utente non è salvata da nessuna parte**: né in `user_metadata` né in `profiles`. È il primo pezzo da fare, perché tutto il resto (email comprese) deve sapere in che lingua scrivere a chi.
+- **Notifiche e push**: titolo e testo vengono **composti in italiano dentro le funzioni SQL** (~27 migration con `insert into notifications`) e la function `push` li spedisce così come sono. È la parte più costosa: una riga di `notifications` contiene già il testo finito, non il tipo più i parametri.
+- **Email d'invito** (`invite-staff`): testo italiano nel codice. Chi riceve l'invito non ha un account, quindi la lingua va presa da altro (sede, titolare, o scelta nel form d'invito).
+- **Email di Supabase Auth** (conferma, recupero password): template **in inglese**, brevi (scelta del 16/09), nella Dashboard. Si possono dividere per lingua dentro lo stesso template leggendo `user_metadata` (`{{ if eq .Data.locale "en" }}…{{ else }}…{{ end }}`, Go templates), ma solo quando `locale` verrà salvato alla registrazione.
+- **Sito vetrina**: già predisposto (`web-site/src/content/it.ts` + `types.ts`); pagine legali solo in italiano.
 
 ### Multi-sede — cosa resta fuori (13/09)
 
@@ -468,6 +481,7 @@ Le pagine ci sono tutte; quello che manca è ciò che rende la scrivania **più 
   - [ ] **Scheda store**: descrizione, screenshot, categoria, content rating.
   - [ ] **Pulizia dati di test** sul progetto Supabase.
   - [ ] **Data safety form** di Play Console: dichiarare email, nome, foto, messaggi, token push.
+  - [ ] **Accendere i badge store di `invito.html`** appena le schede esistono. È la pagina dove porta «Scarica l'app» nell'email d'invito all'organico: oggi i due pulsanti sono spenti, con la scritta «In arrivo su App Store e Google Play», quindi chi riceve l'invito non può scaricare niente. Servono `EXPO_PUBLIC_IOS_URL` e `EXPO_PUBLIC_ANDROID_URL` nelle *variables* di GitHub **e** nel blocco `env` di `.github/workflows/deploy-web.yml`, che oggi non le passa: senza quella riga le variables restano ignorate e i badge restano spenti.
 - **Staff (evoluzioni)**: ~~**modifica turni interni** dopo la creazione~~ ✅ **già fatta** dal 15/07 (commit `641005e`): `InternalShiftEditForm` in `(manager)/shift/edit/[id].tsx` copre giorno, orari, fabbisogno per ruolo, aggiunta/rimozione assegnati e note — la voce era rimasta aperta per errore. Restano aperti: invito via **QR/codice** (oltre email); valutare **soft-delete** dei membri per non perdere lo storico ore alla rimozione; vista **agenda/calendario** — ⚠️ **fatta sul web** il 10/09 (settimana + mese, `useVenueShiftsRange`), **aperta sul mobile**: se un giorno la si porta nell'app, riusare quell'API invece di scriverne un'altra.
 - ~~**Scalabilità (follow-up)**: paginazione **candidature**~~ ✅ **già fatta** (verificato 09/09): `useMyApplicationsInfinite` + filtro server-side, e i chip usano `getMyApplicationCounts` con head-count `count: "exact"` **indipendenti dalla paginazione** — cioè esattamente la riserva che la voce sollevava.
 - **Rebrand topWaitr → KlokShift (16/09)** — dominio `klokshift.com` comprato su GoDaddy. Nel codice: nome, testi, email di invito, `scheme` `klokshift`, bundle ID e package `com.klokshift.app` (cambiati prima di creare qualsiasi scheda sugli store, quindi senza costo), URL assoluti del sito su `https://klokshift.com/`.

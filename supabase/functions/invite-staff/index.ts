@@ -30,10 +30,14 @@
 // Deploy (richiede JWT, quindi NIENTE --no-verify-jwt):
 //   supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg
 //
-// Secrets:
-//   supabase secrets set SMTP_HOST=... SMTP_PORT=587 SMTP_USER=... \
-//     SMTP_PASS=... SMTP_FROM='KlokShift <no-reply@...>' SITE_URL='https://...' \
-//     DASHBOARD_URL='https://.../app'
+// Secrets (Resend, regione EU):
+//   supabase secrets set SMTP_HOST=smtp.resend.com SMTP_PORT=465 SMTP_USER=resend \
+//     SMTP_PASS=re_... SMTP_FROM='KlokShift <no-reply@klokshift.com>' \
+//     SITE_URL='https://klokshift.com' DASHBOARD_URL='https://klokshift.com/app'
+//
+// ⚠️ Solo la 465: le Edge Function di Supabase non possono aprire connessioni in
+// uscita sulle porte 25 e 587 (docs, Functions → Limits). Con la 587 l'invio
+// fallisce in `smtp_failed` qualunque sia il provider.
 //
 // ⚠️ `DASHBOARD_URL` è dove atterra il link del collaboratore. Non serve metterlo
 // fra i "Redirect URLs" di Supabase Auth: quel link non passa più da GoTrue, è
@@ -47,7 +51,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const SMTP_HOST = Deno.env.get("SMTP_HOST")!;
-const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") ?? "587");
+const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") ?? "465");
 const SMTP_USER = Deno.env.get("SMTP_USER")!;
 const SMTP_PASS = Deno.env.get("SMTP_PASS")!;
 const SMTP_FROM = Deno.env.get("SMTP_FROM")!;
@@ -347,7 +351,8 @@ Deno.serve(async (req) => {
       port: SMTP_PORT,
       // 465 è TLS implicito; su 587 si parte in chiaro e denomailer fa lui lo
       // STARTTLS. Invertirli è il modo più comune di ritrovarsi una function
-      // che non spedisce e non dice perché.
+      // che non spedisce e non dice perché. Su Supabase la 587 è comunque
+      // bloccata in uscita: il ramo STARTTLS serve solo in locale.
       tls: SMTP_PORT === 465,
       auth: { username: SMTP_USER, password: SMTP_PASS },
     },
