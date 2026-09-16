@@ -35,6 +35,7 @@ import { PersonHoursSection } from "@/features/assignments/PersonHoursSection";
 import { PersonPerformanceSection } from "@/features/assignments/PersonPerformanceSection";
 import { ProLockedCard } from "@/features/plan/ProLock";
 import { useIsPro } from "@/features/plan/hooks";
+import { PersonAbsencesSection } from "@/features/absences/PersonAbsencesSection";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { PromoteSection } from "@/features/team/PromoteSection";
@@ -512,7 +513,13 @@ function PersonContractForm({ person }: { person: StaffPersonDetail }) {
   );
 }
 
-type PersonTab = "dati" | "sedi" | "ore" | "documenti" | "gestione";
+type PersonTab =
+  | "dati"
+  | "sedi"
+  | "ore"
+  | "assenze"
+  | "documenti"
+  | "gestione";
 
 /**
  * Una sezione della scheda. Nascosta e non smontata: vedi `StaffPersonView`.
@@ -620,6 +627,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
     { id: "dati", label: "Dati" },
     { id: "sedi", label: multiVenue ? `Sedi · ${liveMemberships.length}` : "Sedi" },
     ...(canAny("can_view_hours") ? [{ id: "ore" as const, label: "Ore" }] : []),
+    // Stesso permesso della RLS di `staff_absences`: la malattia è un dato
+    // sanitario, chi fa solo i turni non la legge.
+    ...(canAny("can_manage_staff")
+      ? [{ id: "assenze" as const, label: "Assenze" }]
+      : []),
     ...(canAny("can_manage_documents")
       ? [{ id: "documenti" as const, label: "Documenti" }]
       : []),
@@ -796,6 +808,20 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                   subtitle="Ore lavorate, affidabilità e statistiche di questa persona, su tutte le tue sedi."
                 />
               )}
+            </TabPanel>
+          ) : null}
+
+          {canAny("can_manage_staff") ? (
+            <TabPanel active={tab === "assenze"}>
+              <PersonAbsencesSection
+                personId={person.id}
+                onRecord={() =>
+                  router.push({
+                    pathname: "/(manager)/staff/assenza/new",
+                    params: { personId: person.id },
+                  })
+                }
+              />
             </TabPanel>
           ) : null}
 

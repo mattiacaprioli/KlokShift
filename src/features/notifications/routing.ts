@@ -24,12 +24,24 @@ export function routeForNotification(
     // Per i messaggi related_id è la conversazione, non un turno. Vale anche per
     // l'esito di un cambio turno: la card con la risposta vive nel thread, ed è
     // lì che ha senso atterrare — il turno, se approvato, non è più suo.
-    if (type === "new_message" || type === "shift_change_response") {
+    //
+    // Anche l'esito di ferie e permessi: la card è nel thread col titolare.
+    if (
+      type === "new_message" ||
+      type === "shift_change_response" ||
+      type === "absence_response"
+    ) {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
     // Il professionista non riceve mai le altre due (sono per la sede), ma la
     // funzione è totale sui tipi: meglio dirlo che lasciarlo al ramo finale.
-    if (type === "shift_change_request" || type === "shift_declined") return null;
+    if (
+      type === "shift_change_request" ||
+      type === "shift_declined" ||
+      type === "absence_request" ||
+      type === "absence_sick"
+    )
+      return null;
     // shift_unassigned: la delete dell'assegnazione gli toglie anche la lettura
     // del turno (is_my_assigned_shift), quindi non c'è nulla da aprire.
     //
@@ -58,8 +70,15 @@ export function routeForNotification(
   // Revoca: non c'è più niente da aprire. Stessa scelta di `staff_removed`.
   if (type === "team_removed") return null;
   // `shift_change_request` porta la conversazione, non il turno: la richiesta si
-  // legge e si decide dalla card nel thread.
-  if (type === "new_message" || type === "shift_change_request") {
+  // legge e si decide dalla card nel thread. Lo stesso per le assenze
+  // (`absence_response` qui è l'annullamento di un'assenza già approvata).
+  if (
+    type === "new_message" ||
+    type === "shift_change_request" ||
+    type === "absence_request" ||
+    type === "absence_response" ||
+    type === "absence_sick"
+  ) {
     return relatedId ? `/(manager)/chat/${relatedId}` : null;
   }
   return relatedId ? `/(manager)/shift/${relatedId}` : null;

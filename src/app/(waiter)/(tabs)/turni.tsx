@@ -370,13 +370,20 @@ export default function WaiterShiftsScreen() {
               </View>
             }
             ListFooterComponent={
-              <NavRow
-                className="mt-4"
-                icon="clock"
-                title="Le mie ore"
-                subtitle={`${totals.count} turni svolti · ${formatHours(totals.totalHours)}`}
-                onPress={() => router.push("/(waiter)/storico")}
-              />
+              <View className="mt-4 gap-2.5">
+                <NavRow
+                  icon="clock"
+                  title="Le mie ore"
+                  subtitle={`${totals.count} turni svolti · ${formatHours(totals.totalHours)}`}
+                  onPress={() => router.push("/(waiter)/storico")}
+                />
+                <NavRow
+                  icon="calendar"
+                  title="Ferie e permessi"
+                  subtitle="Chiedi un'assenza o comunica una malattia"
+                  onPress={() => router.push("/(waiter)/assenze")}
+                />
+              </View>
             }
           />
         )}

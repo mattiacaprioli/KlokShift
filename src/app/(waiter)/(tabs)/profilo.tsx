@@ -367,6 +367,12 @@ export default function WaiterProfiloScreen() {
         subtitle="HACCP, contratti, attestati · privati"
         onPress={() => router.push("/(waiter)/documenti")}
       />
+      <NavRow
+        icon="calendar"
+        title="Ferie, permessi e malattia"
+        subtitle="Chiedi un'assenza o comunicala al titolare"
+        onPress={() => router.push("/(waiter)/assenze")}
+      />
 
       {/* Tabs */}
       <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">

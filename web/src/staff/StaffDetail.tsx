@@ -26,6 +26,7 @@ import {
   type ContractPeriod,
 } from "@/features/staff/contract";
 import { RoleCheckboxes } from "./RoleCheckboxes";
+import { AbsencesPanel } from "../absences/AbsencesPanel";
 import { DocumentsPanel } from "./DocumentsPanel";
 import {
   formatBirthday,
@@ -142,7 +143,13 @@ function PersonModalShell({
   );
 }
 
-type TabId = "anagrafica" | "sedi" | "documenti" | "performance" | "gestione";
+type TabId =
+  | "anagrafica"
+  | "sedi"
+  | "assenze"
+  | "documenti"
+  | "performance"
+  | "gestione";
 
 function PersonPanel({
   person,
@@ -173,6 +180,11 @@ function PersonPanel({
       id: "sedi",
       label: multiVenue ? `Sedi e ruoli · ${liveMemberships.length}` : "Sedi e ruoli",
     },
+    // Stesso permesso della RLS di `staff_absences`: la malattia è un dato
+    // sanitario, chi fa solo i turni non la legge.
+    ...(canAny("can_manage_staff")
+      ? [{ id: "assenze" as const, label: "Assenze" }]
+      : []),
     ...(canAny("can_manage_documents")
       ? [{ id: "documenti" as const, label: "Documenti" }]
       : []),
@@ -265,6 +277,11 @@ function PersonPanel({
               <RemoveSection person={person} onRemoved={onClose} />
             ) : null}
           </TabPanel>
+          {canAny("can_manage_staff") ? (
+            <TabPanel active={tab === "assenze"}>
+              <AbsencesPanel personId={person.id} />
+            </TabPanel>
+          ) : null}
           {canAny("can_manage_documents") ? (
             <TabPanel active={tab === "documenti"}>
               <DocumentsPanel personId={person.id} />

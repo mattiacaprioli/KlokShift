@@ -26,6 +26,9 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   team_linked: "shield",
   team_joined: "shield",
   team_removed: "close",
+  absence_request: "calendar",
+  absence_response: "check",
+  absence_sick: "alert",
 };
 
 type Props = {

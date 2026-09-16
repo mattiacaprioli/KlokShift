@@ -22,6 +22,7 @@ export default function ManagerLayout() {
         name="staff/documento/new"
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="staff/assenza/new" options={{ headerShown: false }} />
       <Stack.Screen name="ore" options={{ headerShown: false }} />
       <Stack.Screen name="storico" options={{ headerShown: false }} />
       <Stack.Screen name="pro" options={{ headerShown: false }} />

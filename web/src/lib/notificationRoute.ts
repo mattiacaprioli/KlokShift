@@ -16,8 +16,15 @@ export function webRouteForNotification(
 ): string | null {
   if (type === "staff_response") return "/staff";
   // Per i messaggi related_id è la conversazione, non un turno. Stessa cosa per
-  // la richiesta di cambio turno: si legge e si decide dalla card nel thread.
-  if (type === "new_message" || type === "shift_change_request") {
+  // la richiesta di cambio turno e le assenze: si leggono e si decidono dalla
+  // card nel thread.
+  if (
+    type === "new_message" ||
+    type === "shift_change_request" ||
+    type === "absence_request" ||
+    type === "absence_response" ||
+    type === "absence_sick"
+  ) {
     return relatedId ? `/chat/${relatedId}` : null;
   }
   // Tutto il resto è legato a un turno. La dashboard non ha una pagina di

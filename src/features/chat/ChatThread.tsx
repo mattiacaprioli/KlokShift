@@ -11,6 +11,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { toTimeString } from "@/lib/format";
 import { useKeyboardVisible } from "@/lib/useKeyboardVisible";
 import { useToast } from "@/providers/Toast";
+import { AbsenceCard } from "@/features/absences/AbsenceCard";
 import { ChangeRequestCard } from "@/features/changeRequests/ChangeRequestCard";
 import type { Message } from "./api";
 import { useChatThread } from "./useChatThread";
@@ -142,12 +143,19 @@ export function ChatThread({ conversationId, userId }: Props) {
             data={messages}
             keyExtractor={(m) => m.id}
             renderItem={({ item }) =>
-              // Le righe di servizio (richieste di cambio turno) non sono
+              // Le righe di servizio (cambio turno, assenze) non sono
               // testo: portano un `request_id` e si rendono come card con i
               // bottoni di chi deve decidere. Il `content` resta la frase di
               // ripiego, ed è quello che la card mostra come motivo.
               item.kind === "text" ? (
                 <MessageBubble message={item} own={item.sender_id === userId} />
+              ) : item.kind === "absence_request" ||
+                item.kind === "absence_response" ? (
+                <AbsenceCard
+                  message={item}
+                  userId={userId}
+                  own={item.sender_id === userId}
+                />
               ) : (
                 <ChangeRequestCard
                   message={item}

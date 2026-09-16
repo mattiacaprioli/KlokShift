@@ -17,6 +17,7 @@ import {
 } from "@/lib/format";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AbsencesToHandle } from "../absences/AbsencesToHandle";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
 import { NoVenues } from "../venues/NoVenues";
@@ -41,7 +42,7 @@ type Worker = {
  * schermi.
  */
 export function HomePage() {
-  const { venues, isMultiVenue } = useOwnerVenues();
+  const { venues, isMultiVenue, canAny } = useOwnerVenues();
   /** Il nome della sede, o niente se il titolare ne ha una sola. */
   const venueName = useCallback(
     (venueId: string | undefined) => {
@@ -133,6 +134,8 @@ export function HomePage() {
         />
         <Stat value={pastCount} label="turni svolti" />
       </div>
+
+      <AbsencesToHandle enabled={canAny("can_manage_staff")} />
 
       <div className="grid grid-cols-2 gap-6">
         <section>

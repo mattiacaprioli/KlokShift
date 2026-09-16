@@ -107,6 +107,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          absence_id: string | null
           content: string
           conversation_id: string
           created_at: string
@@ -117,6 +118,7 @@ export type Database = {
           sender_id: string
         }
         Insert: {
+          absence_id?: string | null
           content: string
           conversation_id: string
           created_at?: string
@@ -127,6 +129,7 @@ export type Database = {
           sender_id: string
         }
         Update: {
+          absence_id?: string | null
           content?: string
           conversation_id?: string
           created_at?: string
@@ -137,6 +140,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_absence_id_fkey"
+            columns: ["absence_id"]
+            isOneToOne: false
+            referencedRelation: "staff_absences"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -589,6 +599,92 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_absences: {
+        Row: {
+          created_at: string
+          end_date: string
+          end_time: string | null
+          id: string
+          inps_protocol: string | null
+          kind: Database["public"]["Enums"]["absence_kind"]
+          note: string | null
+          owner_id: string
+          person_id: string
+          requested_by: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          start_date: string
+          start_time: string | null
+          status: Database["public"]["Enums"]["absence_status"]
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          end_time?: string | null
+          id?: string
+          inps_protocol?: string | null
+          kind: Database["public"]["Enums"]["absence_kind"]
+          note?: string | null
+          owner_id: string
+          person_id: string
+          requested_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          start_date: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["absence_status"]
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          end_time?: string | null
+          id?: string
+          inps_protocol?: string | null
+          kind?: Database["public"]["Enums"]["absence_kind"]
+          note?: string | null
+          owner_id?: string
+          person_id?: string
+          requested_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          start_date?: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["absence_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_absences_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_absences_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "staff_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_absences_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_absences_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1074,6 +1170,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_manage_person: {
+        Args: { p_perm?: string; p_person: string }
+        Returns: boolean
+      }
       can_access_staff_person_documents: {
         Args: { p_person: string }
         Returns: boolean
@@ -1291,11 +1391,37 @@ export type Database = {
         Args: { p_assignment: string; p_staff_member: string }
         Returns: string
       }
+      record_absence: {
+        Args: {
+          p_end: string
+          p_end_time?: string
+          p_inps_protocol?: string
+          p_kind: Database["public"]["Enums"]["absence_kind"]
+          p_note?: string
+          p_person: string
+          p_start: string
+          p_start_time?: string
+        }
+        Returns: string
+      }
       register_push_token: {
         Args: { p_platform: string; p_token: string }
         Returns: undefined
       }
       remove_staff_member: { Args: { p_staff_id: string }; Returns: undefined }
+      request_absence: {
+        Args: {
+          p_end: string
+          p_end_time?: string
+          p_inps_protocol?: string
+          p_kind: Database["public"]["Enums"]["absence_kind"]
+          p_note?: string
+          p_owner: string
+          p_start: string
+          p_start_time?: string
+        }
+        Returns: string
+      }
       request_shift_change: {
         Args: {
           p_assignment: string
@@ -1305,6 +1431,10 @@ export type Database = {
           p_start?: string
         }
         Returns: string
+      }
+      resolve_absence: {
+        Args: { p_absence: string; p_approve: boolean; p_note?: string }
+        Returns: undefined
       }
       resolve_shift_change_request: {
         Args: {
@@ -1319,6 +1449,10 @@ export type Database = {
         Args: { p_accept: boolean; p_staff_id: string }
         Returns: undefined
       }
+      set_absence_inps_protocol: {
+        Args: { p_absence: string; p_protocol: string }
+        Returns: undefined
+      }
       shift_duration_hours: {
         Args: { p_end: string; p_start: string }
         Returns: number
@@ -1327,18 +1461,26 @@ export type Database = {
         Args: { p_date: string; p_end: string; p_start: string }
         Returns: string
       }
+      withdraw_absence: { Args: { p_absence: string }; Returns: undefined }
       withdraw_shift_change_request: {
         Args: { p_request: string }
         Returns: undefined
       }
     }
     Enums: {
+      absence_kind: "ferie" | "permesso" | "malattia"
+      absence_status: "pending" | "approved" | "rejected" | "withdrawn"
       application_status: "pending" | "accepted" | "rejected" | "cancelled"
       assignment_status: "assigned" | "confirmed" | "declined" | "no_show"
       change_request_kind: "substitution" | "hours"
       change_request_status: "pending" | "approved" | "rejected" | "withdrawn"
       employment_type: "fisso" | "a_chiamata"
-      message_kind: "text" | "shift_change_request" | "shift_change_response"
+      message_kind:
+        | "text"
+        | "shift_change_request"
+        | "shift_change_response"
+        | "absence_request"
+        | "absence_response"
       notification_type:
         | "application_received"
         | "application_accepted"
@@ -1358,6 +1500,9 @@ export type Database = {
         | "team_linked"
         | "team_joined"
         | "team_removed"
+        | "absence_request"
+        | "absence_response"
+        | "absence_sick"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       staff_link_status: "pending" | "active" | "left"
@@ -1489,12 +1634,20 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      absence_kind: ["ferie", "permesso", "malattia"],
+      absence_status: ["pending", "approved", "rejected", "withdrawn"],
       application_status: ["pending", "accepted", "rejected", "cancelled"],
       assignment_status: ["assigned", "confirmed", "declined", "no_show"],
       change_request_kind: ["substitution", "hours"],
       change_request_status: ["pending", "approved", "rejected", "withdrawn"],
       employment_type: ["fisso", "a_chiamata"],
-      message_kind: ["text", "shift_change_request", "shift_change_response"],
+      message_kind: [
+        "text",
+        "shift_change_request",
+        "shift_change_response",
+        "absence_request",
+        "absence_response",
+      ],
       notification_type: [
         "application_received",
         "application_accepted",
@@ -1511,6 +1664,12 @@ export const Constants = {
         "shift_change_response",
         "shift_declined",
         "staff_linked",
+        "team_linked",
+        "team_joined",
+        "team_removed",
+        "absence_request",
+        "absence_response",
+        "absence_sick",
       ],
       shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],

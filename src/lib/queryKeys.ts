@@ -198,6 +198,23 @@ export const qk = {
     byShift: (shiftId: string) =>
       ["changeRequests", "byShift", shiftId] as const,
   },
+  /**
+   * Ferie, permessi e malattia.
+   *
+   * Tutto sotto un prefisso solo: ogni scrittura cambia insieme la lista della
+   * persona, quella di chi la gestisce e la card in chat, e sono poche righe.
+   * `employers` è qui e non sotto `staff` perché serve solo al form.
+   */
+  absences: {
+    all: ["absences"] as const,
+    byId: (absenceId: string) => ["absences", "byId", absenceId] as const,
+    mine: (waiterId: string) => ["absences", "mine", waiterId] as const,
+    employers: (waiterId: string) =>
+      ["absences", "employers", waiterId] as const,
+    byPerson: (personId: string) =>
+      ["absences", "byPerson", personId] as const,
+    toHandle: ["absences", "toHandle"] as const,
+  },
   notifications: {
     all: ["notifications"] as const,
     list: (userId: string) => ["notifications", "list", userId] as const,

@@ -9,6 +9,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
+import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
@@ -56,7 +57,7 @@ export default function ManagerHome() {
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Ristoratore";
 
   const venueQuery = useOwnerVenues();
-  const { venues, isMultiVenue } = venueQuery;
+  const { venues, isMultiVenue, canAny } = venueQuery;
   const shiftsQuery = useOwnerShifts();
   const shifts = shiftsQuery.data ?? [];
   const pastCount = useOwnerPastShiftsCount().data ?? 0;
@@ -201,6 +202,12 @@ export default function ManagerHome() {
               />
             </View>
           </View>
+
+          {/* Ferie e permessi da decidere, malattie appena comunicate. */}
+          <AbsencesToHandle
+            enabled={canAny("can_manage_staff")}
+            onOpenPerson={(personId) => router.push(`/(manager)/staff/${personId}`)}
+          />
 
           {/* Chi non ha ancora una sede vede i KPI a zero e questo invito, non
               un muro al posto della home: la prima schermata dell'app deve
