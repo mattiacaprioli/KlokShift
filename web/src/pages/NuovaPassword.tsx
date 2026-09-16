@@ -1,58 +1,25 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { isPasswordValid, passwordRules } from "@/features/auth/schema";
-import { cn } from "@/lib/cn";
+import { isPasswordValid } from "@/features/auth/schema";
 import { Button, Field, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
+import { PasswordChecklist } from "../ui/PasswordChecklist";
 import { useToast } from "../ui/Toast";
 
 /**
- * I due link che portano qui.
- *
- * `recovery` è chi ha perso la password. `invite` è il collaboratore che entra
- * la prima volta: il suo account l'ha creato il titolare, quindi non ha mai
- * scelto una password e non ne sta recuperando nessuna. Cambia solo il testo —
- * quello che si fa è identico, e due pagine gemelle si sarebbero disallineate
- * alla prima modifica.
- */
-const COPY = {
-  recovery: {
-    title: "Nuova password",
-    subtitle: "Scegli la password con cui entrerai da qui e dall'app.",
-    deadTitle: "Link non valido",
-    dead: "Questo indirizzo funziona solo aprendo il link di recupero appena ricevuto per email. Se è passato troppo tempo, richiedine uno nuovo dalla pagina di accesso.",
-    done: "Password aggiornata.",
-  },
-  invite: {
-    title: "Scegli la tua password",
-    subtitle:
-      "Il tuo accesso è già attivo: questa password serve a rientrare, da qui e dall'app.",
-    deadTitle: "Invito non valido",
-    dead: "Questo indirizzo funziona solo aprendo il link d'invito ricevuto per email. I link valgono 24 ore e una volta sola: se è scaduto, chiedi a chi ti ha invitato di rimandartelo.",
-    done: "Password impostata. Benvenuto.",
-  },
-} as const;
-
-/**
- * Dove si sceglie la password: fine del recupero, o primo accesso di un
- * collaboratore invitato. Ci si arriva solo dal link ricevuto per email, con la
- * sessione già attiva (vedi `lib/recovery.ts`).
+ * Fine del recupero password: ci si arriva solo dal link ricevuto per email, con
+ * la sessione di recupero già attiva (vedi `lib/recovery.ts`).
  *
  * È l'unica pagina che sta davanti a tutti i gate di <App />: senza, chi ha perso
  * la password da scrivania non avrebbe modo di rientrare.
  *
- * ⚠️ Nel caso `invite` l'accesso è già attivo prima di questo form: aprire il
- * link conferma l'email, e da lì `ensureProfile` + `link_venue_access_for_user`
- * fanno il resto. Chi abbandona qui è dentro a tutti gli effetti, ma senza
- * password — rientra solo da "password dimenticata". Il sottotitolo lo dice.
+ * ⚠️ Non è la pagina del collaboratore invitato: quella è `Invito.tsx`, dove la
+ * password non si *cambia* ma si sceglie per la prima volta, e insieme fa
+ * nascere l'account. Le due si assomigliano solo in superficie — qui c'è già una
+ * sessione, lì non c'è ancora nemmeno un utente.
  */
-export function NuovaPasswordPage({
-  variant = "recovery",
-}: {
-  variant?: keyof typeof COPY;
-}) {
-  const copy = COPY[variant];
+export function NuovaPasswordPage() {
   const { session, updatePassword } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -80,9 +47,9 @@ export function NuovaPasswordPage({
       setError(res.error);
       return;
     }
-    // Quella del link è a tutti gli effetti una sessione: si entra
+    // La sessione di recupero è a tutti gli effetti una sessione: si entra
     // direttamente, senza far riscrivere la password appena impostata.
-    toast.show(copy.done);
+    toast.show("Password aggiornata.");
     navigate("/", { replace: true });
   }
 
@@ -90,9 +57,13 @@ export function NuovaPasswordPage({
   // arrivati qui a mano digitando la rotta.
   if (!session) {
     return (
-      <AuthShell title={copy.deadTitle}>
+      <AuthShell title="Link non valido">
         <AuthPanel>
-          <p className="text-sm leading-6 text-t2">{copy.dead}</p>
+          <p className="text-sm leading-6 text-t2">
+            Questo indirizzo funziona solo aprendo il link di recupero appena
+            ricevuto per email. Se è passato troppo tempo, richiedine uno nuovo
+            dalla pagina di accesso.
+          </p>
           <Link
             to="/login"
             className="focus-gold mt-5 inline-flex w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
@@ -105,7 +76,10 @@ export function NuovaPasswordPage({
   }
 
   return (
-    <AuthShell title={copy.title} subtitle={copy.subtitle}>
+    <AuthShell
+      title="Nuova password"
+      subtitle="Scegli la password con cui entrerai da qui e dall'app."
+    >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Field label="Nuova password">
@@ -125,33 +99,7 @@ export function NuovaPasswordPage({
             />
           </Field>
 
-          <ul className="flex flex-col gap-1.5">
-            {passwordRules.map((rule) => {
-              const ok = rule.test(password);
-              return (
-                <li
-                  key={rule.label}
-                  className={cn(
-                    "flex items-center gap-2 text-xs",
-                    ok ? "text-success" : "text-t3"
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full text-[9px] font-bold",
-                      ok
-                        ? "bg-success text-bg-0"
-                        : "border border-border-2 text-transparent"
-                    )}
-                  >
-                    ✓
-                  </span>
-                  {rule.label}
-                </li>
-              );
-            })}
-          </ul>
+          <PasswordChecklist value={password} />
 
           {error ? (
             <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">

@@ -3,14 +3,10 @@ import { Link } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth";
-import {
-  passwordRules,
-  signupSchema,
-  type SignupForm,
-} from "@/features/auth/schema";
-import { cn } from "@/lib/cn";
+import { signupSchema, type SignupForm } from "@/features/auth/schema";
 import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
+import { PasswordChecklist } from "../ui/PasswordChecklist";
 import {
   resendLabel,
   useResendConfirmation,
@@ -21,16 +17,15 @@ import {
  * esiste per chi gestisce una sede, quindi l'account nasce `manager` (un
  * professionista finirebbe su NotForWaitersPage al primo accesso).
  *
- * ⚠️ Da qui passano **due persone diverse**, e il copy deve valere per
- * entrambe: il titolare che apre la sua sede, e il collaboratore che qualcuno
- * ha invitato a gestirne uno (F1). Il secondo non crea nessuna sede — anzi, non
- * può: `venues_owner_not_delegate` glielo vieta. Quello che deve sapere è una
- * cosa sola, e va detta qui: **registrarsi con l'indirizzo a cui è arrivato
- * l'invito**, perché è il match su quell'email a collegarlo
- * (`link_venue_access_for_user`). È la stessa frase che porta `invito.html`.
+ * ⚠️ Il collaboratore invitato **non passa più di qui**: dal 16/09 il suo
+ * account nasce su `Invito.tsx`, dal link ricevuto per email, con il ruolo già
+ * giusto. Registrarsi a mano con l'indirizzo dell'invito continua a funzionare
+ * (`claim_staff_invites()` aggancia al primo accesso), ma non è più la strada
+ * che gli indichiamo: sceglierebbe di nuovo il ruolo, ed era lì che l'invito si
+ * rompeva in silenzio.
  *
- * `signupSchema` e `passwordRules` arrivano dall'app: regole di validazione e
- * requisiti password restano una sola fonte, allineata a Supabase Auth.
+ * `signupSchema` arriva dall'app: le regole di validazione restano una sola
+ * fonte, allineata a Supabase Auth.
  */
 export function RegistrazionePage() {
   const { signUp } = useAuth();
@@ -114,33 +109,7 @@ export function RegistrazionePage() {
             />
           </Field>
 
-          <ul className="flex flex-col gap-1.5">
-            {passwordRules.map((rule) => {
-              const ok = rule.test(password);
-              return (
-                <li
-                  key={rule.label}
-                  className={cn(
-                    "flex items-center gap-2 text-xs",
-                    ok ? "text-success" : "text-t3"
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full text-[9px] font-bold",
-                      ok
-                        ? "bg-success text-bg-0"
-                        : "border border-border-2 text-transparent"
-                    )}
-                  >
-                    ✓
-                  </span>
-                  {rule.label}
-                </li>
-              );
-            })}
-          </ul>
+          <PasswordChecklist value={password} />
 
           {apiError ? (
             <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">

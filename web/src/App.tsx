@@ -12,6 +12,7 @@ import { LoginPage } from "./pages/Login";
 import { RegistrazionePage } from "./pages/Registrazione";
 import { NotForWaitersPage } from "./pages/NotForWaiters";
 import { NuovaPasswordPage } from "./pages/NuovaPassword";
+import { InvitoPage } from "./pages/Invito";
 import { HomePage } from "./pages/Home";
 import { StoricoPage } from "./pages/Storico";
 import { NotifichePage } from "./pages/Notifiche";
@@ -33,16 +34,15 @@ export function App() {
 
   if (loading) return <Spinner label="Verifica sessione…" />;
 
-  // Davanti a ogni gate: chi arriva da un link ricevuto per email ha una
-  // sessione ma deve poter fare una cosa sola, e se il link è scaduto la pagina
-  // lo spiega da sé. Un redirect qui lo lascerebbe fuori per sempre.
+  // Davanti a ogni gate: chi arriva da un link ricevuto per email deve poter
+  // fare una cosa sola, e se il link è scaduto la pagina lo spiega da sé. Un
+  // redirect qui lo lascerebbe fuori per sempre.
   //
-  // Due rotte perché sono due storie diverse — chi recupera la password ne aveva
-  // una, il collaboratore invitato non l'ha mai scelta — ma la pagina è la
-  // stessa: cambia solo il testo.
+  // Due rotte, due storie diverse: `/nuova-password` ha già una sessione (di
+  // recupero) e la password la cambia; `/invito` non ha nemmeno un utente — è la
+  // pagina che lo crea, scambiando il token dell'email con un account.
   if (pathname === "/nuova-password") return <NuovaPasswordPage />;
-  if (pathname === "/imposta-password")
-    return <NuovaPasswordPage variant="invite" />;
+  if (pathname === "/invito") return <InvitoPage />;
 
   // Fuori sessione esistono due sole pagine. Il catch-all riporta al login
   // anche il fragment che Supabase lascia nell'URL dopo la conferma email

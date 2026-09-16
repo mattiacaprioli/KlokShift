@@ -125,9 +125,9 @@ export default function TeamNewScreen() {
             />
             <Text className="text-xs leading-4 text-t3">
               Se ha già un account da sede con l&apos;email confermata,
-              l&apos;accesso parte subito. Altrimenti gli prepariamo noi
-              l&apos;account e gli mandiamo un link: lo apre, sceglie una
-              password ed è dentro. Non deve registrarsi.
+              l&apos;accesso parte subito. Altrimenti gli mandiamo un link: lo
+              apre, sceglie una password ed è dentro, senza registrarsi. Finché
+              non lo apre non esiste nessun account.
             </Text>
           </View>
 

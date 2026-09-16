@@ -159,14 +159,14 @@ function MemberCard({ member }: { member: TeamMember }) {
 
       {pending ? (
         <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
-          {/* Due strade, e vanno dette tutt'e due: a chi non aveva un account
-              l'abbiamo preparato noi e gli basta aprire il link, chi ce l'ha già
-              entra al primo accesso dopo l'invito (`claimInvites` in
-              lib/auth.tsx). Nominarne una sola — com'era fino al 16/09 — fa
-              sembrare l'invito rotto all'altra metà. */}
+          {/* Due strade, e vanno dette tutt'e due: chi non aveva un account lo
+              crea aprendo il link, chi ce l'ha già entra al primo accesso dopo
+              l'invito (`claimInvites` in lib/auth.tsx). Nominarne una sola —
+              com'era fino al 16/09 — fa sembrare l'invito rotto all'altra metà. */}
           <p className="text-xs text-t3">
             Entra aprendo il link che gli abbiamo mandato e scegliendo una
-            password. Se aveva già un account, gli basta rientrare.
+            password: l&apos;account nasce lì. Se ne aveva già uno, gli basta
+            rientrare.
           </p>
           <Button
             variant="ghost"
@@ -244,8 +244,9 @@ function InviteForm({ ownerId }: { ownerId: string }) {
 
       <p className="text-xs text-t3">
         Se ha già un account da sede con l&apos;email confermata, l&apos;accesso
-        parte subito. Altrimenti gli prepariamo noi l&apos;account e gli mandiamo
-        un link: lo apre, sceglie una password ed è dentro. Non deve registrarsi.
+        parte subito. Altrimenti gli mandiamo un link: lo apre, sceglie una
+        password ed è dentro, senza registrarsi. Finché non lo apre non esiste
+        nessun account.
       </p>
 
       {isMultiVenue ? (

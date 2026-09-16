@@ -10,11 +10,13 @@
 //   organico (`personId`)  → email con un link alla vetrina. La persona si
 //                            registra da sé, e l'account resta suo: è il suo
 //                            profilo di carriera, fra più aziende.
-//   collaboratore (`team`) → l'account lo creiamo noi con `generateLink`, già
-//                            `role: 'manager'`. Un collaboratore è un posto
-//                            dentro l'azienda del titolare (non può possedere
-//                            sedi), e la scelta del ruolo era il punto in cui
-//                            l'invito si rompeva in silenzio.
+//   collaboratore (`team`) → email con un token monouso verso `#/invito` sulla
+//                            dashboard, dove l'account nasce già `manager` nel
+//                            momento in cui sceglie la password (vedi
+//                            `accept-invite`). Un collaboratore è un posto dentro
+//                            l'azienda del titolare — non può possedere sedi — e
+//                            la scelta del ruolo era il punto in cui l'invito si
+//                            rompeva in silenzio.
 //
 // In entrambi i casi il body porta **solo** un id di riga, mai un indirizzo: per
 // spedire a qualcuno il titolare deve prima averlo scritto su una propria
@@ -33,9 +35,9 @@
 //     SMTP_PASS=... SMTP_FROM='topWaitr <no-reply@...>' SITE_URL='https://...' \
 //     DASHBOARD_URL='https://.../app'
 //
-// ⚠️ `DASHBOARD_URL` è dove atterra il link del collaboratore, e va anche messo
-// fra i "Redirect URLs" di Supabase Auth: senza, GoTrue rimanda al Site URL e
-// l'invito finisce da nessuna parte.
+// ⚠️ `DASHBOARD_URL` è dove atterra il link del collaboratore. Non serve metterlo
+// fra i "Redirect URLs" di Supabase Auth: quel link non passa più da GoTrue, è
+// una rotta nostra con un token nostro.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
@@ -75,10 +77,34 @@ const STATUS: Record<string, number> = {
   already_linked: 403,
   no_email: 403,
   rate_limited: 429,
-  // Stesso indirizzo invitato anche da un'altra azienda: il suo account non è
-  // solo nostro e non si cancella (vedi `claim_venue_access_cancel`).
-  invite_shared: 409,
 };
+
+/** Il segreto che finisce nell'email: 32 byte casuali, in esadecimale. */
+function newInviteToken(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Quello che finisce nel database.
+ *
+ * ⚠️ Nel database va **solo** l'hash: chi legge `venue_access` non deve poter
+ * entrare nell'account di nessuno. Il token in chiaro esiste dentro questa
+ * invocazione e dentro l'email, e non va mai loggato.
+ */
+async function sha256hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value)
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Sette giorni: un invito mandato venerdì sera non deve morire nel weekend. */
+const INVITE_TTL_DAYS = 7;
 
 function claimFailed(message: string) {
   const code = Object.keys(STATUS).find((k) => message.includes(k));
@@ -184,13 +210,12 @@ function buildEmail(p: Payload) {
  *
  * Testo diverso e non un parametro dentro `buildEmail`: chi riceve questa non
  * viene invitato a *lavorare* in una sede, ma a *gestirla*. E soprattutto non
- * deve registrarsi: l'accesso è già pronto, gli resta da dimostrare che quella
- * casella è sua — cioè aprire questo link, che è l'unica cosa che valorizza
- * `email_confirmed_at` e fa scattare l'aggancio.
+ * deve registrarsi: aprire il link e scegliere una password **è** la
+ * registrazione, fatta al posto suo.
  *
- * `link` arriva da fuori perché è un `action_link` monouso generato al momento,
- * non un indirizzo fisso: metterlo qui dentro vorrebbe dire ricostruirlo, e un
- * link d'invito ricostruito a mano non esiste.
+ * `link` arriva da fuori perché porta un token monouso generato in questa
+ * invocazione: metterlo qui dentro vorrebbe dire ricostruirlo, e un token
+ * ricostruito a mano non è più un segreto.
  */
 function buildTeamEmail(p: TeamPayload, link: string) {
   const subject = `${p.owner_name} ti ha dato accesso a ${p.venue_name} su topWaitr`;
@@ -201,12 +226,12 @@ function buildTeamEmail(p: TeamPayload, link: string) {
     `${p.owner_name} ti ha dato accesso alla gestione di ${p.venue_name} su`,
     `topWaitr: da lì organizzi i turni e segui l'organico della sede.`,
     ``,
-    `L'accesso è già pronto a nome di questo indirizzo (${p.email}). Per entrare`,
-    `apri questo link e scegli una password:`,
+    `Apri questo link e scegli una password: l'account lo creiamo in quel`,
+    `momento, a nome di questo indirizzo (${p.email}).`,
     ``,
     `${link}`,
     ``,
-    `Il link vale 24 ore ed è usabile una volta sola. Se è scaduto, chiedi a`,
+    `Il link vale ${INVITE_TTL_DAYS} giorni ed è usabile una volta sola. Se è scaduto, chiedi a`,
     `${p.owner_name} di rimandartelo.`,
     ``,
     `Con quella password entri sia da qui che dall'app topWaitr.`,
@@ -214,7 +239,7 @@ function buildTeamEmail(p: TeamPayload, link: string) {
     `---`,
     `Ricevi questa email perché ${p.owner_name} ti ha aggiunto ai collaboratori di`,
     `${p.venue_name} su topWaitr. Se non ti riguarda, ignorala: finché non apri il`,
-    `link l'accesso non si attiva, e l'account resta inutilizzabile.`,
+    `link e non scegli una password non viene creato nessun account.`,
     `Privacy: ${SITE_URL}/privacy.html`,
   ].join("\n");
 
@@ -239,59 +264,18 @@ function buildTeamEmail(p: TeamPayload, link: string) {
   </table>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F5F2EC;border-radius:12px;">
     <tr><td style="padding:16px 18px;font-size:14px;line-height:1.6;">
-      L'accesso è già pronto a nome di <strong>${e.email}</strong>: non devi registrarti, ti basta aprire il link e scegliere una password. Con quella entri sia da qui che dall'app.<br><br>
-      Il link vale 24 ore ed è usabile una volta sola. Se è scaduto, chiedi a ${e.owner} di rimandartelo.
+      Non devi registrarti: apri il link e scegli una password, l'account lo creiamo in quel momento a nome di <strong>${e.email}</strong>. Con quella password entri sia da qui che dall'app.<br><br>
+      Il link vale ${INVITE_TTL_DAYS} giorni ed è usabile una volta sola. Se è scaduto, chiedi a ${e.owner} di rimandartelo.
     </td></tr>
   </table>
   <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">
-    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori di ${e.venue} su topWaitr. Se non ti riguarda, ignorala: finché non apri il link l'accesso non si attiva, e l'account resta inutilizzabile.<br>
+    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori di ${e.venue} su topWaitr. Se non ti riguarda, ignorala: finché non apri il link e non scegli una password non viene creato nessun account.<br>
     <a href="${SITE_URL}/privacy.html" style="color:#8A8070;">Privacy</a>
   </p>
 </td></tr></table>
 </body></html>`;
 
   return { subject, text, html };
-}
-
-/**
- * Il link con cui il collaboratore entra la prima volta.
- *
- * `generateLink` crea l'utente e torna l'`action_link` **senza spedire niente**:
- * l'email la manda questa function, con il proprio SMTP, il proprio copy e i
- * rate limit che ha già. Passare da `inviteUserByEmail` vorrebbe dire due
- * pipeline di posta e due mittenti.
- *
- * Il `role: 'manager'` nei metadati è il punto di tutta la feature: `profiles`
- * nasce da lì (`ensureProfile` in src/lib/auth.tsx) e `link_venue_access_for_user`
- * aggancia solo i manager. Prima quella scelta la faceva l'invitato, in un menu,
- * e sbagliarla lasciava l'invito muto per sempre.
- */
-async function teamInviteLink(
-  admin: ReturnType<typeof createClient>,
-  email: string
-): Promise<{ link: string } | { error: string; detail?: string }> {
-  // L'invito precedente mai aperto va tolto di mezzo: `type: 'invite'` non si
-  // può rigenerare su un utente che esiste. Sparisce solo se è ancora inerte —
-  // la funzione SQL controlla email non confermata **e** nessun profilo.
-  const { data: inert, error: inertError } = await admin.rpc("inert_invite_user", {
-    p_email: email,
-  });
-  if (inertError) return { error: "invite_failed", detail: inertError.message };
-  if (inert) {
-    const { error } = await admin.auth.admin.deleteUser(inert as string);
-    if (error) return { error: "invite_failed", detail: error.message };
-  }
-
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "invite",
-    email,
-    options: { data: { role: "manager" }, redirectTo: `${DASHBOARD_URL}/` },
-  });
-  const link = data?.properties?.action_link;
-  if (error || !link) {
-    return { error: "invite_failed", detail: error?.message };
-  }
-  return { link };
 }
 
 Deno.serve(async (req) => {
@@ -308,11 +292,10 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "invalid token" }, 401);
 
-  // Tre operazioni, una function: l'invito al collaboratore (`kind: "team"`),
-  // la sua disdetta (`kind: "team_cancel"`) e l'invito alla persona in organico
-  // (tutto il resto, incluse le versioni dell'app che il campo `kind` non lo
-  // mandano). Stessa autenticazione, stessi rate limit, stesso SMTP — cambia il
-  // destinatario e il testo.
+  // Due inviti, una function: il collaboratore (`kind: "team"`) e la persona in
+  // organico (tutto il resto, incluse le versioni dell'app che il campo `kind`
+  // non lo mandano). Stessa autenticazione, stessi rate limit, stesso SMTP —
+  // cambia il destinatario, il testo e dove porta il link.
   let body: { personId?: string; accessId?: string; kind?: string } = {};
   try {
     body = (await req.json()) ?? {};
@@ -322,44 +305,24 @@ Deno.serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // Disdetta: il titolare ha revocato un invito che nessuno ha ancora aperto, e
-  // l'`auth.users` creato per generarlo va tolto di mezzo — finché resta lì
-  // quell'indirizzo è occupato e chi l'ha ricevuto per sbaglio non riesce più a
-  // registrarsi. Non manda nessuna email, quindi non tocca i rate limit.
-  if (body.kind === "team_cancel") {
-    if (!body.accessId) return json({ error: "missing accessId" }, 400);
-
-    const { data, error } = await admin.rpc("claim_venue_access_cancel", {
-      p_access: body.accessId,
-      p_owner: userData.user.id,
-    });
-    if (error) return claimFailed(error.message);
-
-    const email = (data as { email: string }[] | null)?.[0]?.email;
-    if (!email) return json({ error: "not_owner" }, 403);
-
-    // Secondo controllo, su un'altra tabella: la RPC ha detto di chi è l'invito,
-    // questa dice se l'account è ancora inerte. Nessuno dei due da solo basta.
-    const { data: inert, error: inertError } = await admin.rpc("inert_invite_user", {
-      p_email: email,
-    });
-    if (inertError) return json({ error: "delete_failed" }, 500);
-    if (!inert) return json({ deleted: false });
-
-    const { error: deleteError } = await admin.auth.admin.deleteUser(inert as string);
-    if (deleteError) return json({ error: "delete_failed" }, 502);
-    return json({ deleted: true });
-  }
-
   const isTeam = body.kind === "team";
   const rowId = isTeam ? body.accessId : body.personId;
   if (!rowId) return json({ error: isTeam ? "missing accessId" : "missing personId" }, 400);
+
+  // Il token si genera **prima** del claim, così la RPC lo salva nella stessa
+  // transazione dei contatori: o l'invito è registrato per intero, o non è
+  // partito. Un token scritto dopo lascerebbe una finestra in cui il tentativo è
+  // consumato e il link non apre niente.
+  const token = isTeam ? newInviteToken() : "";
+  const expires = new Date(Date.now() + INVITE_TTL_DAYS * 86400_000).toISOString();
 
   // Proprietà, stato della riga, rate limit e incremento: tutto qui dentro.
   const { data, error } = isTeam
     ? await admin.rpc("claim_venue_access_send", {
         p_access: rowId,
         p_owner: userData.user.id,
+        p_token_hash: await sha256hex(token),
+        p_expires: expires,
       })
     : await admin.rpc("claim_staff_invite_send", {
         p_person: rowId,
@@ -370,17 +333,14 @@ Deno.serve(async (req) => {
   const payload = (data as (Payload | TeamPayload)[] | null)?.[0];
   if (!payload) return json({ error: "not_owner" }, 403);
 
-  let mail: { subject: string; text: string; html: string };
-  if (isTeam) {
-    // Prima il link, poi la posta: un'email d'invito senza link funzionante è
-    // peggio di un'email non spedita, perché il tentativo è già consumato e chi
-    // la riceve non ha niente da cliccare.
-    const invite = await teamInviteLink(admin, payload.email);
-    if ("error" in invite) return json(invite, 502);
-    mail = buildTeamEmail(payload as TeamPayload, invite.link);
-  } else {
-    mail = buildEmail(payload as Payload);
-  }
+  // ⚠️ Il token in chiaro vive qui e nell'email, e basta. Non va loggato: chi
+  // legge i log della function entrerebbe nell'account di un collaboratore.
+  const mail = isTeam
+    ? buildTeamEmail(
+        payload as TeamPayload,
+        `${DASHBOARD_URL}/#/invito?t=${token}`
+      )
+    : buildEmail(payload as Payload);
   const client = new SMTPClient({
     connection: {
       hostname: SMTP_HOST,

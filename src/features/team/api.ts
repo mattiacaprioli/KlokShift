@@ -498,57 +498,17 @@ export async function promoteStaffPerson(input: {
  * notifica `team_removed`. Togliere l'accesso in silenzio a chi ieri organizzava
  * i turni non è una cosa che si fa senza dirlo.
  *
- * Se quello che si revoca è un invito che nessuno ha mai aperto, si prova anche
- * a cancellare l'account creato per generarlo: finché resta lì, quell'indirizzo
- * è occupato e chi l'ha ricevuto per sbaglio non riesce più a registrarsi.
+ * Nessuna pulizia da fare sull'invito: il token resta su una riga che non è più
+ * `pending`, e `claim_venue_access_invite` lo rifiuta. Un account creato per
+ * sbaglio non esiste, perché nasce solo quando qualcuno apre il link.
  */
 export async function revokeTeamAccess(accessIds: string[]): Promise<void> {
   if (accessIds.length === 0) return;
-
-  // Le righe si leggono prima: dopo l'update un invito mai aperto e un accesso
-  // tolto a chi ce l'aveva sono la stessa cosa (`status = 'revoked'`), e non si
-  // saprebbe più quale dei due si è appena revocato.
-  const { data: before, error: readError } = await supabase
-    .from("venue_access")
-    .select("id, user_id")
-    .in("id", accessIds);
-  if (readError) throw new Error(readError.message);
-
   const { error } = await supabase
     .from("venue_access")
     .update({ status: "revoked" })
     .in("id", accessIds);
   if (error) throw new Error(error.message);
-
-  // Una riga sola basta: l'indirizzo è lo stesso su tutte, e l'account è uno.
-  const invite = (before ?? []).find((r) => r.user_id == null)?.id;
-  if (!invite) return;
-
-  try {
-    await cancelTeamInvite(invite);
-  } catch {
-    // ⚠️ Silenzioso, e dopo la revoca: la revoca è quello che il titolare ha
-    // chiesto, la pulizia è un di più. Fallisce da sola in due casi normali —
-    // la Edge Function non è deployata, o lo stesso indirizzo ha ancora un
-    // invito aperto altrove — e in nessuno dei due c'è qualcosa da dire.
-  }
-}
-
-/**
- * Cancella l'account creato per un invito che nessuno ha mai aperto.
- *
- * Il body porta solo l'id della riga, come per l'invio: chi sei lo dice il
- * token, cosa puoi lo dice `claim_venue_access_cancel`. La function ricontrolla
- * poi in `auth` che l'account sia ancora inerte, e non cancella niente altrove.
- *
- * Non la chiama nessuna UI: sta dietro `revokeTeamAccess`, che è il gesto vero.
- */
-export async function cancelTeamInvite(accessId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ error?: string }>(
-    "invite-staff",
-    { body: { kind: "team_cancel", accessId } }
-  );
-  if (error) throw new Error(data?.error ?? error.message);
 }
 
 /**
@@ -580,13 +540,6 @@ export async function sendTeamInvite(accessId: string): Promise<void> {
   }
   if (code.includes("no_email")) {
     throw new UserFacingError("Questo accesso non ha un'email.");
-  }
-  if (code.includes("invite_failed")) {
-    // Il link d'invito non è stato generato: senza, l'email non ha niente da
-    // far cliccare, e infatti non è partita.
-    throw new UserFacingError(
-      "Non siamo riusciti a preparare l'accesso per questo indirizzo. Riprova tra qualche minuto."
-    );
   }
   if (code.includes("NOT_FOUND")) {
     // La Edge Function non è deployata: nessun workflow la pubblica, va fatto
