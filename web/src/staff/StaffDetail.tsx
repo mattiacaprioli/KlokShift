@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
+  useAddPersonToVenue,
   useRemoveStaffMember,
   useSendStaffInvite,
   useStaffPerson,
@@ -655,12 +656,24 @@ function Workplaces({
   memberships: StaffPersonDetail["memberships"];
   multiVenue: boolean;
 }) {
+  const { isOwner, venues } = useOwnerVenues();
+  const liveCount = memberships.filter((m) => m.link_status !== "left").length;
+  // Riprendere qualcuno o dargli un'altra sede è del titolare: l'update su
+  // `staff_members` la RLS lo concede solo a lui. Con un account, poi, solo se
+  // lavora ancora per lui da qualche parte: chi ha lasciato tutte le sedi
+  // l'accordo l'ha chiuso, e rimetterlo in organico senza chiederglielo sarebbe
+  // decidere al posto suo.
+  const canReassign = isOwner && (!person.waiter_id || liveCount > 0);
+  // Le sedi dove non c'è mai stata. Quelle lasciate hanno già la loro card, con
+  // il suo «Rimetti in organico».
+  const otherVenues = venues.filter(
+    (v) => !person.memberships.some((m) => m.venue_id === v.id)
+  );
+
   return (
     <section className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        {multiVenue
-          ? `Dove lavora · ${memberships.filter((m) => m.link_status !== "left").length}`
-          : "Dove lavora"}
+        {multiVenue ? `Dove lavora · ${liveCount}` : "Dove lavora"}
       </span>
       {memberships.map((m) => (
         <WorkplaceCard
@@ -668,9 +681,89 @@ function Workplaces({
           person={person}
           membership={m}
           isOnly={!multiVenue}
+          canRestore={canReassign}
         />
       ))}
+      {canReassign && otherVenues.length > 0 ? (
+        <AddToVenue person={person} venues={otherVenues} />
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * Un'altra delle sedi del titolare per una persona che ha già. Nessun invito:
+ * l'accordo c'è, e l'account, se c'è, è già sulla persona. I ruoli si scelgono
+ * dopo, sulla card che compare, perché sono di quella sede.
+ */
+function AddToVenue({
+  person,
+  venues,
+}: {
+  person: StaffPersonDetail;
+  venues: { id: string; name: string }[];
+}) {
+  const add = useAddPersonToVenue();
+  const toast = useToast();
+  const [venueId, setVenueId] = useState("");
+  const [empType, setEmpType] =
+    useState<Enums<"employment_type">>("a_chiamata");
+
+  function onAdd() {
+    const name = venues.find((v) => v.id === venueId)?.name ?? "sede";
+    add.mutate(
+      { venue_id: venueId, person_id: person.id, employment_type: empType },
+      {
+        onSuccess: () => {
+          setVenueId("");
+          toast.show(`Aggiunto a ${name} · scegli i ruoli nella sua card`);
+        },
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <span className="text-sm font-semibold text-t1">
+        Aggiungi a un&apos;altra sede
+      </span>
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="Sede">
+          <Select
+            value={venueId}
+            onChange={(e) => setVenueId(e.target.value)}
+            className="w-56"
+          >
+            <option value="">Scegli…</option>
+            {venues.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Impiego">
+          <Select
+            value={empType}
+            onChange={(e) =>
+              setEmpType(e.target.value as Enums<"employment_type">)
+            }
+            className="w-40"
+          >
+            <option value="fisso">Fisso</option>
+            <option value="a_chiamata">A chiamata</option>
+          </Select>
+        </Field>
+        <Button
+          variant="gold"
+          disabled={!venueId || add.isPending}
+          onClick={onAdd}
+        >
+          {add.isPending ? "Aggiunta…" : "Aggiungi"}
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -679,14 +772,18 @@ function WorkplaceCard({
   membership,
   /** Unica sede: la rimozione sta nel bottone globale in fondo al pannello. */
   isOnly,
+  /** Può rimettere in organico un'appartenenza finita: vedi `Workplaces`. */
+  canRestore,
 }: {
   person: StaffPersonDetail;
   membership: PersonMembership;
   isOnly: boolean;
+  canRestore: boolean;
 }) {
   const update = useUpdateStaffMember();
   const setRoles = useSetStaffMemberRoles();
   const remove = useRemoveStaffMember();
+  const restore = useAddPersonToVenue();
   const toast = useToast();
   const [roleIds, setRoleIds] = useState<string[]>(
     membership.staff_member_roles
@@ -715,23 +812,49 @@ function WorkplaceCard({
   }
 
   // Appartenenza finita: resta in scheda perché le ore di quella sede sono
-  // sue, ma non c'è più niente da modificare. Per riprenderla si riaggiunge la
-  // persona alla sede, e la stessa riga torna attiva (`addPersonToVenue`).
+  // sue, ma non c'è più niente da modificare. Riprenderla non crea una riga
+  // nuova: `addPersonToVenue` rianima questa, con i ruoli che aveva — l'uscita
+  // non li cancella. I turni annullati all'uscita invece non tornano.
   if (membership.link_status === "left") {
     return (
-      <Card className="flex flex-col gap-2 p-4 opacity-70">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-t2">
-            {venueName}
-          </span>
-          <Pill tone="neutral">Non più in organico</Pill>
+      <Card className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-2 opacity-70">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-t2">
+              {venueName}
+            </span>
+            <Pill tone="neutral">Non più in organico</Pill>
+          </div>
+          <p className="text-xs leading-5 text-t3">
+            {membership.left_at
+              ? `Ha lasciato questa sede il ${formatDate(membership.left_at.slice(0, 10))}. `
+              : ""}
+            Le ore dei turni già fatti restano nel rendiconto.
+          </p>
         </div>
-        <p className="text-xs leading-5 text-t3">
-          {membership.left_at
-            ? `Ha lasciato questa sede il ${formatDate(membership.left_at.slice(0, 10))}. `
-            : ""}
-          Le ore dei turni già fatti restano nel rendiconto.
-        </p>
+        {canRestore && !membership.venue?.closed_at ? (
+          <div>
+            <Button
+              disabled={restore.isPending}
+              onClick={() =>
+                restore.mutate(
+                  {
+                    venue_id: membership.venue_id,
+                    person_id: person.id,
+                    employment_type: membership.employment_type,
+                  },
+                  {
+                    onSuccess: () =>
+                      toast.show(`Di nuovo in organico a ${venueName}`),
+                    onError: (e) => toast.show(userErrorMessage(e), "error"),
+                  }
+                )
+              }
+            >
+              {restore.isPending ? "Un momento…" : "Rimetti in organico"}
+            </Button>
+          </div>
+        ) : null}
       </Card>
     );
   }
@@ -1001,8 +1124,7 @@ function RemoveSection({
           <p className="text-xs leading-5 text-warning">
             {person.full_name} non lavorerà più in nessuna delle tue sedi. I
             turni futuri già assegnati vengono annullati; ore, presenze e
-            documenti restano nella sua scheda e nell&apos;export. Per
-            riprenderlo in futuro basta riaggiungerlo dall&apos;organico.
+            documenti restano nella sua scheda e nell&apos;export.
           </p>
           <div className="flex gap-2">
             <Button

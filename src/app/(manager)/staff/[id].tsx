@@ -6,7 +6,7 @@ import {
   ScrollView as RNScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -25,6 +25,7 @@ import { formatBirthday, formatDate } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
+  useAddPersonToVenue,
   useRemoveStaffMember,
   useSendStaffInvite,
   useStaffPerson,
@@ -67,15 +68,19 @@ function WorkplaceCard({
   membership,
   /** Unica sede: la rimozione sta nel bottone globale in fondo alla pagina. */
   isOnly,
+  /** Può rimettere in organico un'appartenenza finita: vedi `StaffPersonView`. */
+  canRestore,
 }: {
   person: StaffPersonDetail;
   membership: PersonMembership;
   isOnly: boolean;
+  canRestore: boolean;
 }) {
   const toast = useToast();
   const update = useUpdateStaffMember();
   const setRoles = useSetStaffMemberRoles();
   const remove = useRemoveStaffMember();
+  const restore = useAddPersonToVenue();
 
   const [roleIds, setRoleIds] = useState<string[]>(
     membership.staff_member_roles
@@ -124,25 +129,48 @@ function WorkplaceCard({
     });
   }
 
+  function doRestore() {
+    restore.mutate(
+      {
+        venue_id: membership.venue_id,
+        person_id: person.id,
+        employment_type: membership.employment_type,
+      },
+      {
+        onSuccess: () => toast.show(`Di nuovo in organico a ${venueName}`),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
+
   // Chi non c'è più: la sede resta in scheda perché le sue ore sono lì, ma
   // ruoli, tipo di impiego e rimozione non hanno più un oggetto su cui agire.
-  // Per riprenderlo lo si riaggiunge dall'organico (Staff → + Aggiungi): con la
-  // stessa persona e la stessa sede si rianima **questa** riga invece di
-  // crearne una seconda, vedi `addStaffToVenues`.
+  // Riprenderlo non crea una riga nuova: `addPersonToVenue` rianima questa, con
+  // i ruoli che aveva — l'uscita non li cancella. I turni annullati all'uscita
+  // invece non tornano.
   if (left) {
     return (
-      <View className="gap-2 rounded-3xl border border-border bg-bg-card p-5 opacity-70">
-        <View className="flex-row items-center gap-2">
-          <Text className="flex-1 text-base font-sans-semibold text-t2">
-            {venueName}
+      <View className="gap-4 rounded-3xl border border-border bg-bg-card p-5">
+        <View className="gap-2 opacity-70">
+          <View className="flex-row items-center gap-2">
+            <Text className="flex-1 text-base font-sans-semibold text-t2">
+              {venueName}
+            </Text>
+            <Pill label="Non più in organico" variant="closed" />
+          </View>
+          <Text className="text-sm text-t3">
+            {membership.left_at
+              ? `Ha lasciato questa sede il ${formatDate(membership.left_at.slice(0, 10))}. Le ore dei turni già fatti restano nel rendiconto.`
+              : "Le ore dei turni già fatti restano nel rendiconto."}
           </Text>
-          <Pill label="Non più in organico" variant="closed" />
         </View>
-        <Text className="text-sm text-t3">
-          {membership.left_at
-            ? `Ha lasciato questa sede il ${formatDate(membership.left_at.slice(0, 10))}. Le ore dei turni già fatti restano nel rendiconto.`
-            : "Le ore dei turni già fatti restano nel rendiconto."}
-        </Text>
+        {canRestore && !membership.venue?.closed_at ? (
+          <GhostButton
+            label={restore.isPending ? "Un momento…" : "Rimetti in organico"}
+            disabled={restore.isPending}
+            onPress={doRestore}
+          />
+        ) : null}
       </View>
     );
   }
@@ -216,6 +244,98 @@ function WorkplaceCard({
         pending={remove.isPending}
         onConfirm={doRemove}
         onCancel={() => setConfirmVisible(false)}
+      />
+    </View>
+  );
+}
+
+/**
+ * Un'altra delle sedi del titolare per una persona che ha già. Nessun invito:
+ * l'accordo c'è, e l'account, se c'è, è già sulla persona. I ruoli si scelgono
+ * dopo, sulla card che compare, perché sono di quella sede.
+ */
+function AddToVenueCard({
+  person,
+  venues,
+}: {
+  person: StaffPersonDetail;
+  venues: { id: string; name: string }[];
+}) {
+  const toast = useToast();
+  const add = useAddPersonToVenue();
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [empType, setEmpType] =
+    useState<Enums<"employment_type">>("a_chiamata");
+  const venue = venues.find((v) => v.id === venueId);
+
+  function onAdd() {
+    if (!venue) return;
+    add.mutate(
+      { venue_id: venue.id, person_id: person.id, employment_type: empType },
+      {
+        onSuccess: () => {
+          setVenueId(null);
+          toast.show(`Aggiunto a ${venue.name} · scegli i ruoli nella sua card`);
+        },
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
+
+  return (
+    <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
+      <Text className="text-base font-sans-semibold text-t1">
+        Aggiungi a un&apos;altra sede
+      </Text>
+
+      <View className="gap-2">
+        <Mono>Sede</Mono>
+        {/* Orizzontale come in `VenuePicker`: i nomi delle sedi sono liberi, e
+            mandarli a capo spezzerebbe la riga in modo diverso a ogni sede. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+        >
+          {venues.map((v) => (
+            <Chip
+              key={v.id}
+              label={v.name}
+              gold
+              active={v.id === venueId}
+              onPress={() => setVenueId(v.id)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
+      <View className="gap-2">
+        <Mono>Tipo in questa sede</Mono>
+        <View className="flex-row gap-2">
+          <Chip
+            label="Fisso"
+            active={empType === "fisso"}
+            gold={empType === "fisso"}
+            onPress={() => setEmpType("fisso")}
+          />
+          <Chip
+            label="A chiamata"
+            active={empType === "a_chiamata"}
+            onPress={() => setEmpType("a_chiamata")}
+          />
+        </View>
+      </View>
+
+      <GoldButton
+        label={
+          add.isPending
+            ? "Aggiunta…"
+            : venue
+              ? `Aggiungi a ${venue.name}`
+              : "Scegli una sede"
+        }
+        disabled={!venue || add.isPending}
+        onPress={onAdd}
       />
     </View>
   );
@@ -568,7 +688,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   const [selectedTab, setSelectedTab] = useState<PersonTab>("dati");
   const scrollRef = useRef<RNScrollView>(null);
 
-  const { isOwner, can, canAny } = useOwnerVenues();
+  const { isOwner, can, canAny, venues } = useOwnerVenues();
 
   const waiterId = person.waiter_id;
   /**
@@ -587,6 +707,17 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   // delle sue ore) ma non contano per "in quante sedi lavora" né per le azioni.
   const liveMemberships = memberships.filter((m) => m.link_status !== "left");
   const multiVenue = liveMemberships.length > 1;
+  // Riprendere qualcuno o dargli un'altra sede è del titolare: l'update su
+  // `staff_members` la RLS lo concede solo a lui. Con un account, poi, solo se
+  // lavora ancora per lui da qualche parte: chi ha lasciato tutte le sedi
+  // l'accordo l'ha chiuso, e rimetterlo in organico senza chiederglielo sarebbe
+  // decidere al posto suo. Stessa regola della scheda web.
+  const canReassign = isOwner && (!waiterId || liveMemberships.length > 0);
+  // Le sedi dove non c'è mai stata. Quelle lasciate hanno già la loro card, con
+  // il suo «Rimetti in organico».
+  const otherVenues = venues.filter(
+    (v) => !person.memberships.some((m) => m.venue_id === v.id)
+  );
 
   function onMessage() {
     if (!waiterId) return;
@@ -765,8 +896,12 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                   person={person}
                   membership={m}
                   isOnly={!multiVenue}
+                  canRestore={canReassign}
                 />
               ))}
+              {canReassign && otherVenues.length > 0 ? (
+                <AddToVenueCard person={person} venues={otherVenues} />
+              ) : null}
             </View>
 
             {/* Toglie la persona da **tutte** le sedi dell'azienda, comprese
@@ -855,7 +990,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
       <ConfirmModal
         visible={confirmVisible}
         title="Rimuovere dall'organico?"
-        message={`${person.full_name} non lavorerà più in nessuna delle tue sedi. I turni futuri già assegnati vengono annullati; ore, presenze e documenti restano nella sua scheda e nell'export. Per riprenderlo in futuro basta riaggiungerlo dall'organico.`}
+        message={`${person.full_name} non lavorerà più in nessuna delle tue sedi. I turni futuri già assegnati vengono annullati; ore, presenze e documenti restano nella sua scheda e nell'export.`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}
