@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
@@ -59,6 +59,9 @@ import { useToast } from "../ui/Toast";
  * Anagrafica (vale in tutte le sedi), ore e performance dell'azienda, documenti, e
  * una card per ogni sede in cui lavora con i ruoli e il tipo di impiego di *quella*
  * sede. Prima Marco ne aveva due, e ognuna mostrava le ore di una sola sede.
+ *
+ * È un dialogo centrale diviso in tab (anagrafica, sedi, documenti, performance,
+ * gestione): da cassetto laterale con tutto impilato era diventata troppo lunga.
  */
 export function StaffDetail({
   personId,
@@ -71,9 +74,8 @@ export function StaffDetail({
 
   if (isPending || isError || !data) {
     return (
-      <div className="fixed inset-0 z-50 flex justify-end">
-        <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-        <div className="relative flex h-full w-full max-w-lg flex-col gap-6 overflow-y-auto border-l border-border-2 bg-bg-0 p-6">
+      <PersonModalShell label="Scheda" onClose={onClose}>
+        <div className="flex flex-col gap-6 overflow-y-auto p-6">
           <div className="flex justify-end">
             <Button onClick={onClose}>Chiudi</Button>
           </div>
@@ -88,12 +90,56 @@ export function StaffDetail({
             />
           )}
         </div>
-      </div>
+      </PersonModalShell>
     );
   }
 
   return <PersonPanel person={data} onClose={onClose} />;
 }
+
+/**
+ * Il guscio della scheda: un dialogo al centro, non più un cassetto laterale.
+ * Con due sedi il cassetto superava i due schermi di scroll; qui l'altezza è
+ * limitata e a scorrere è solo il contenuto del tab.
+ */
+function PersonModalShell({
+  label,
+  onClose,
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  // Esc chiude, come in `ConfirmDialog`.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-modal
+        aria-label={label}
+        className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-0"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type TabId = "anagrafica" | "sedi" | "documenti" | "performance" | "gestione";
 
 function PersonPanel({
   person,
@@ -115,15 +161,35 @@ function PersonPanel({
   // lo storico delle sue ore) ma non sono chip di dove trovarlo.
   const liveMemberships = memberships.filter((m) => m.link_status !== "left");
   const multiVenue = liveMemberships.length > 1;
+
+  // Un tab compare solo se chi guarda ha qualcosa da farci: stessi permessi che
+  // prima nascondevano le sezioni.
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "anagrafica", label: "Anagrafica" },
+    {
+      id: "sedi",
+      label: multiVenue ? `Sedi e ruoli · ${liveMemberships.length}` : "Sedi e ruoli",
+    },
+    ...(canAny("can_manage_documents")
+      ? [{ id: "documenti" as const, label: "Documenti" }]
+      : []),
+    ...(canAny("can_view_hours")
+      ? [{ id: "performance" as const, label: "Performance" }]
+      : []),
+    // La promozione è del titolare e di nessun altro: un collaboratore che
+    // potesse promuoverne altri sarebbe una catena di deleghe.
+    ...(isOwner && person.waiter_id && liveMemberships.length > 0
+      ? [{ id: "gestione" as const, label: "Gestione" }]
+      : []),
+  ];
+  const [selected, setSelected] = useState<TabId>("anagrafica");
+  // Il tab scelto può sparire mentre la scheda è aperta (es. la persona lascia
+  // l'ultima sede e «Gestione» non ha più senso): si torna all'anagrafica.
+  const tab = tabs.some((t) => t.id === selected) ? selected : "anagrafica";
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="relative flex h-full w-full max-w-lg flex-col gap-6 overflow-y-auto border-l border-border-2 bg-bg-0 p-6">
-        <header className="flex items-start justify-between gap-4">
+    <PersonModalShell label={person.full_name} onClose={onClose}>
+        <header className="flex items-start justify-between gap-4 px-6 pt-6">
           <div className="min-w-0">
             <h2 className="truncate font-serif text-xl text-t1">
               {person.full_name}
@@ -155,34 +221,90 @@ function PersonPanel({
           </div>
         </header>
 
-        <Anagrafica person={person} />
-        {/* Le ore da contratto sono un accordo fra la persona e l'azienda. */}
-        {isOwner ? <ContractSection person={person} /> : null}
-        {canAny("can_manage_documents") ? (
-          <DocumentsPanel personId={person.id} />
-        ) : null}
-        {canAny("can_view_hours") ? (
-          <Performance
-            personId={person.id}
-            waiterId={person.waiter_id ?? null}
-            showVenue={multiVenue}
-          />
-        ) : null}
-        {/* La promozione è del titolare e di nessun altro: un collaboratore che
-            potesse promuoverne altri sarebbe una catena di deleghe. */}
-        {isOwner && person.waiter_id ? (
-          <PromoteSection
-            ownerId={person.owner_id}
-            waiterId={person.waiter_id}
-            personName={person.full_name}
-            venueIds={liveMemberships.map((m) => m.venue_id)}
-          />
-        ) : null}
-        <Workplaces memberships={memberships} multiVenue={multiVenue} person={person} />
-        {isOwner ? (
-          <RemoveSection person={person} onRemoved={onClose} />
-        ) : null}
-      </div>
+        <nav
+          role="tablist"
+          aria-label="Sezioni della scheda"
+          className="mt-4 flex shrink-0 gap-1 overflow-x-auto border-b border-border px-6"
+        >
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setSelected(t.id)}
+              className={cn(
+                "focus-gold -mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition",
+                tab === t.id
+                  ? "border-gold font-semibold text-gold"
+                  : "border-transparent text-t3 hover:text-t1"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* I pannelli inattivi restano montati e solo nascosti: i form tengono
+            gli edit in stato locale, e cambiare tab non deve buttarli via. */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <TabPanel active={tab === "anagrafica"}>
+            <Anagrafica person={person} />
+            {/* Le ore da contratto sono un accordo fra la persona e l'azienda. */}
+            {isOwner ? <ContractSection person={person} /> : null}
+          </TabPanel>
+          <TabPanel active={tab === "sedi"}>
+            <Workplaces
+              memberships={memberships}
+              multiVenue={multiVenue}
+              person={person}
+            />
+            {isOwner ? (
+              <RemoveSection person={person} onRemoved={onClose} />
+            ) : null}
+          </TabPanel>
+          {canAny("can_manage_documents") ? (
+            <TabPanel active={tab === "documenti"}>
+              <DocumentsPanel personId={person.id} />
+            </TabPanel>
+          ) : null}
+          {canAny("can_view_hours") ? (
+            <TabPanel active={tab === "performance"}>
+              <Performance
+                personId={person.id}
+                waiterId={person.waiter_id ?? null}
+                showVenue={multiVenue}
+              />
+            </TabPanel>
+          ) : null}
+          {tabs.some((t) => t.id === "gestione") && person.waiter_id ? (
+            <TabPanel active={tab === "gestione"}>
+              <PromoteSection
+                ownerId={person.owner_id}
+                waiterId={person.waiter_id}
+                personName={person.full_name}
+                venueIds={liveMemberships.map((m) => m.venue_id)}
+              />
+            </TabPanel>
+          ) : null}
+        </div>
+    </PersonModalShell>
+  );
+}
+
+function TabPanel({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="tabpanel"
+      hidden={!active}
+      className={cn("flex flex-col gap-6", !active && "hidden")}
+    >
+      {children}
     </div>
   );
 }
@@ -853,7 +975,7 @@ function RemoveSection({
   }
 
   return (
-    <section className="mt-auto border-t border-border pt-4">
+    <section className="border-t border-border pt-4">
       {confirming ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs leading-5 text-warning">

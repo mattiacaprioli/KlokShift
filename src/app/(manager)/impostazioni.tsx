@@ -135,6 +135,33 @@ export default function ManagerSettingsScreen() {
           </Card>
         </View>
 
+        {/* Solo per il titolare, come la riga Collaboratori: la guida spiega un
+            gesto che un collaboratore non può fare. */}
+        {isOwner ? (
+          <View className="gap-2">
+            <SectionHeader title="Aiuto" />
+            <Card className="p-0">
+              <Pressable
+                onPress={() => router.push("/(manager)/tutorial")}
+                className="flex-row items-center gap-3 px-4 py-3.5"
+              >
+                <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
+                  <Icon name="sparkle" size={18} color="#EAB54C" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[15px] font-sans-semibold text-t1">
+                    Tutorial
+                  </Text>
+                  <Text className="mt-0.5 text-[13px] text-t3">
+                    Come aggiungere un collaboratore
+                  </Text>
+                </View>
+                <Icon name="chevR" size={18} color="#6A6358" />
+              </Pressable>
+            </Card>
+          </View>
+        ) : null}
+
         <DevPlanToggle />
         <LegalLinks />
 
