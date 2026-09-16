@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
@@ -10,24 +11,28 @@ import { QueryError } from "@/components/ui/QueryError";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
 import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
-import { shiftCounts } from "@/features/assignments/coverage";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { ProUpsellCard } from "@/features/plan/ProLock";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
-  useOwnerPastShiftsCount,
-  useOwnerShifts,
-} from "@/features/shifts/hooks";
+  computeHomeStats,
+  periodLabel,
+  periodRange,
+  STATS_PERIODS,
+  type StatsPeriod,
+} from "@/features/shifts/homeStats";
+import { useOwnerShifts, useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
-import { formatShiftRange, todayString } from "@/lib/format";
+import { formatHours, formatShiftRange, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -58,9 +63,26 @@ export default function ManagerHome() {
 
   const venueQuery = useOwnerVenues();
   const { venues, isMultiVenue, canAny } = venueQuery;
+  const [period, setPeriod] = useState<StatsPeriod>("week");
+  // Lo stesso intervallo che apre il Planning, quindi la stessa entry di cache.
+  const { from, to } = useMemo(() => periodRange(period), [period]);
+  const periodQuery = useOwnerShiftsRange(from, to);
+  // Memo sull'identità del dato in cache: React Query la tiene stabile finché il
+  // dato non cambia davvero.
+  const stats = useMemo(
+    () => computeHomeStats(periodQuery.data ?? []),
+    [periodQuery.data],
+  );
+  // Cambiare periodo cambia la chiave di cache: senza questo i quattro numeri
+  // cadrebbero a zero per un istante prima di riempirsi, e uno zero è una
+  // risposta — non un'attesa.
+  const statsReady = periodQuery.isSuccess;
+
+  // `getOwnerShifts` è la lista dei prossimi turni **senza** limite superiore, e
+  // resta tale: l'anteprima deve mostrare cosa viene dopo anche di domenica
+  // sera, quando il periodo scelto è ormai finito.
   const shiftsQuery = useOwnerShifts();
   const shifts = shiftsQuery.data ?? [];
-  const pastCount = useOwnerPastShiftsCount().data ?? 0;
   const assignQuery = useOwnerTodayAssignments();
   const todayAssignments = assignQuery.data ?? [];
   const unread = useUnreadCount(userId).data ?? 0;
@@ -73,19 +95,10 @@ export default function ManagerHome() {
     return { name: venues[i].name, accent: venueAccent(i) };
   };
 
-  // `getOwnerShifts` torna già solo i turni non conclusi (turni notturni
-  // inclusi): qui non serve più rifiltrare per data, che tagliava fuori proprio
-  // quelli. I KPI sommano tutte le sedi — sono i numeri dell'azienda, e le
-  // etichette non hanno bisogno di dirlo.
+  // L'anteprima mostra i prossimi turni così come sono, annullati compresi: un
+  // turno annullato che era in programma domani è un'informazione, non rumore.
+  // I numeri sopra invece li escludono, e li calcola `computeHomeStats`.
   const upcoming = shifts;
-  // Gli annullati non hanno posti da coprire: esclusi dai KPI.
-  const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
-  const counts = activeUpcoming.map((s) => shiftCounts(s));
-  const filled = counts.reduce((n, c) => n + c.filled, 0);
-  const totalPos = counts.reduce((n, c) => n + c.total, 0);
-  // L'unico numero su cui c'è da agire: turni che partono senza abbastanza
-  // gente. Esce da `counts`, già calcolato: nessuna query in più.
-  const shortCount = counts.filter((c) => c.short).length;
 
   // "Chi lavora oggi": lo staff assegnato ai turni di oggi. Include chi è in
   // sala adesso su un turno cominciato ieri sera, quindi si ordina per giorno
@@ -119,6 +132,9 @@ export default function ManagerHome() {
     Promise.all([
       venueQuery.refetch(),
       shiftsQuery.refetch(),
+      // Anche i numeri del periodo: sono la prima cosa che si guarda dopo aver
+      // tirato giù, e senza questo resterebbero quelli di prima.
+      periodQuery.refetch(),
       assignQuery.refetch(),
     ]),
   );
@@ -176,29 +192,52 @@ export default function ManagerHome() {
         <ActivityIndicator color="#EAB54C" className="mt-10" />
       ) : (
         <>
-          {/* A colpo d'occhio */}
+          {/* A colpo d'occhio. Il periodo sta **sopra i numeri che qualifica**:
+              senza, "31 turni" non dice su quanto tempo. */}
           <View className="gap-2.5">
-            <Mono>A colpo d&apos;occhio</Mono>
+            <View className="flex-row items-center justify-between gap-3">
+              <Mono className="flex-1">{periodLabel(period)}</Mono>
+              <View className="flex-row gap-1.5">
+                {STATS_PERIODS.map((p) => (
+                  <Chip
+                    key={p.value}
+                    label={p.label}
+                    gold
+                    active={period === p.value}
+                    onPress={() => setPeriod(p.value)}
+                  />
+                ))}
+              </View>
+            </View>
             <View className="flex-row gap-2.5">
               <StatCard
-                value={String(activeUpcoming.length)}
-                label="turni in programma"
+                loading={!statsReady}
+                value={String(stats.total)}
+                label="turni"
+                hint={`${stats.done} svolti · ${stats.upcoming} da fare`}
               />
               <StatCard
-                value={String(shortCount)}
+                loading={!statsReady}
+                value={String(stats.shortCount)}
                 label="turni scoperti"
+                hint="solo quelli da fare"
+                tone={stats.shortCount > 0 ? "warning" : "normal"}
                 onPress={() => router.push("/(manager)/(tabs)/turni")}
               />
             </View>
             <View className="flex-row gap-2.5">
               <StatCard
-                value={totalPos > 0 ? `${filled}/${totalPos}` : "—"}
-                label="turni coperti"
+                loading={!statsReady}
+                value={String(stats.missingSlots)}
+                label="posti da coprire"
+                hint="persone che mancano"
+                tone={stats.missingSlots > 0 ? "warning" : "normal"}
+                onPress={() => router.push("/(manager)/(tabs)/turni")}
               />
               <StatCard
-                value={String(pastCount)}
-                label="turni svolti"
-                onPress={() => router.push("/(manager)/storico")}
+                loading={!statsReady}
+                value={formatHours(stats.hours)}
+                label="ore pianificate"
               />
             </View>
           </View>

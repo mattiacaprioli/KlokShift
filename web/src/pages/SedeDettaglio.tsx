@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueFormCard } from "../venues/VenueFormCard";
+import { VenueInfoCard } from "../venues/VenueInfoCard";
 import { PageHeader, Placeholder, QueryError, Spinner } from "../ui/primitives";
 
 /**
@@ -11,7 +12,7 @@ import { PageHeader, Placeholder, QueryError, Spinner } from "../ui/primitives";
  */
 export function SedeDettaglioPage() {
   const { id } = useParams<{ id: string }>();
-  const { venues, isPending, isError, error } = useOwnerVenues();
+  const { venues, can, isPending, isError, error } = useOwnerVenues();
   const venue = venues.find((v) => v.id === id) ?? null;
 
   if (isPending) return <Spinner />;
@@ -29,13 +30,25 @@ export function SedeDettaglioPage() {
     );
   }
 
+  // Il permesso è **per sede**: con due sedi delegate un collaboratore può
+  // scrivere l'una e non l'altra, quindi la domanda si fa qui e non sul menu.
+  const editable = can(venue.id, "can_manage_venue");
+
   return (
     <>
       <PageHeader
         title={venue.name}
-        subtitle="Questi dati sono ciò che i professionisti vedono di te."
+        subtitle={
+          editable
+            ? "Questi dati sono ciò che i professionisti vedono di te."
+            : "Questi dati sono ciò che i professionisti vedono della sede."
+        }
       />
-      <VenueFormCard venue={venue} />
+      {editable ? (
+        <VenueFormCard venue={venue} />
+      ) : (
+        <VenueInfoCard venue={venue} />
+      )}
     </>
   );
 }

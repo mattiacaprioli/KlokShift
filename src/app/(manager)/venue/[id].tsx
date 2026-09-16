@@ -11,6 +11,7 @@ import { VenuePlanningToggle } from "@/features/planning/VenuePlanningToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useSetVenueClosed } from "@/features/venues/hooks";
 import { VenueFormView } from "@/features/venues/VenueFormView";
+import { VenueInfoView } from "@/features/venues/VenueInfoView";
 
 /**
  * Modifica di una sede, più la sua archiviazione.
@@ -24,7 +25,7 @@ export default function VenueEditScreen() {
   const router = useRouter();
   const toast = useToast();
   const ownerId = session!.user.id;
-  const { venues, isLoading, isError, refetch } = useOwnerVenues();
+  const { venues, can, isLoading, isError, refetch } = useOwnerVenues();
   const close = useSetVenueClosed(ownerId);
   const [confirmVisible, setConfirmVisible] = useState(false);
 
@@ -49,6 +50,14 @@ export default function VenueEditScreen() {
         />
       </View>
     );
+  }
+
+  // Il permesso è per sede, quindi la domanda si fa qui: da `Profilo` ci si
+  // arriva toccando la riga dell'elenco, che non sa cosa ci sia dietro. Senza
+  // questo, un collaboratore invitato sui soli turni apriva il modulo di
+  // modifica — e il pulsante «Chiudi questa sede».
+  if (!can(venue.id, "can_manage_venue")) {
+    return <VenueInfoView venue={venue} />;
   }
 
   function doClose() {

@@ -27,6 +27,9 @@ export function useMyVenues(
    * sessione, e la cache si svuota al cambio di persona (`syncAccount` in
    * `lib/auth.tsx`). Aggiungerle qui vorrebbe dire una voce di cache nuova ogni
    * volta che il titolare tocca un permesso.
+   *
+   * ⚠️ Il rovescio: cambiare questi id **non** rifà la query. Per questo
+   * `OwnerVenuesProvider` la accende solo quando gli accessi sono arrivati.
    */
   accessVenueIds: readonly string[]
 ) {

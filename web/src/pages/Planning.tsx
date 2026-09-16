@@ -107,7 +107,10 @@ function storedVenue(): string | null {
  * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
-  const { venues, venueIds, isMultiVenue } = useOwnerVenues();
+  const { venues, venueIds, isMultiVenue, canAny } = useOwnerVenues();
+  // Duplicare un periodo crea turni: stesso permesso che serve a crearne uno
+  // (`ShiftPanel` filtra già le sedi con `venuesWith("can_manage_shifts")`).
+  const canCreateShift = canAny("can_manage_shifts");
   /** La sede di un turno: nome e colore. `undefined` con una sede sola. */
   const venueOf = useCallback(
     (venueId: string) => {
@@ -367,9 +370,11 @@ export function PlanningPage() {
                 settimanali, il mese sulla vista mese. Il dialogo dice quanti
                 turni e quante notifiche prima di procedere — che su un mese non
                 è una formalità. */}
-            <Button onClick={() => setDuplicating(true)}>
-              {isWeekly ? "Duplica settimana" : "Duplica mese"}
-            </Button>
+            {canCreateShift ? (
+              <Button onClick={() => setDuplicating(true)}>
+                {isWeekly ? "Duplica settimana" : "Duplica mese"}
+              </Button>
+            ) : null}
             {/* Il turnario finisce in bacheca: la stampa la fa il browser sulla
                 vista che hai davanti, con i token ribaltati su bianco. */}
             <Button className="mr-2" onClick={() => window.print()}>

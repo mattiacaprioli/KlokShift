@@ -167,8 +167,22 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
     () => access.map((row) => row.venue_id),
     [access]
   );
+  // ⚠️ **Le sedi partono solo dopo gli accessi**, anche per un gestore.
+  //
+  // Gli id delegati non stanno nella query key (vedi `useMyVenues`): se le due
+  // query partono insieme, le sedi si chiedono con `accessVenueIds = []` —
+  // cioè «solo quelle di cui sono proprietario» — e quando gli accessi
+  // arrivano la chiave è la stessa, quindi nessuno rifà la richiesta. Un
+  // collaboratore con account `manager` (quelli nati da `accept-invite`)
+  // restava con zero sedi, e senza sedi `ownerId` ricadeva su di lui: la
+  // dashboard lo trattava da titolare di un'azienda vuota.
+  //
+  // Sull'app non si vedeva per caso: il provider è montato alla radice, la
+  // sessione arriva prima del profilo e gli accessi partivano prima che
+  // `isManager` diventasse vero. Sul web il provider si monta **dopo** il
+  // profilo, e le due query partivano nello stesso render.
   const query = useMyVenues(
-    !!myId && (isManager || hasVenueAccess),
+    !!myId && !accessQuery.isPending && (isManager || hasVenueAccess),
     myId,
     accessVenueIds
   );

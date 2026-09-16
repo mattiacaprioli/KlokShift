@@ -6,11 +6,20 @@ import { Mono } from "./Mono";
 export function StatCard({
   value,
   label,
+  hint,
+  tone = "normal",
+  loading = false,
   onPress,
   className,
 }: {
   value: string;
   label: string;
+  /** La riga sotto l'etichetta: cosa il numero conta, quando non è ovvio. */
+  hint?: string;
+  /** `warning` per i numeri che chiedono un intervento (posti scoperti). */
+  tone?: "normal" | "warning";
+  /** Dato non ancora disponibile: un trattino, non uno zero. */
+  loading?: boolean;
   /** Rende la cella toccabile: per i numeri su cui c'è qualcosa da fare. */
   onPress?: () => void;
   className?: string;
@@ -25,12 +34,18 @@ export function StatCard({
       )}
     >
       <Text
-        className="text-2xl font-sans-bold text-t1"
+        className={cn(
+          "text-2xl font-sans-bold",
+          loading ? "text-t4" : tone === "warning" ? "text-warning" : "text-t1"
+        )}
         style={{ letterSpacing: -0.5 }}
       >
-        {value}
+        {loading ? "—" : value}
       </Text>
       <Mono className="mt-1.5">{label}</Mono>
+      {hint && !loading ? (
+        <Text className="mt-1 text-[11px] text-t4">{hint}</Text>
+      ) : null}
     </Root>
   );
 }

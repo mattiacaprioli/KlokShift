@@ -18,8 +18,24 @@ import { PageHeader, Placeholder } from "../ui/primitives";
  */
 export function SedeNuovaPage() {
   const { profile } = useAuth();
-  const { venues } = useOwnerVenues();
+  const { venues, isOwner } = useOwnerVenues();
   const navigate = useNavigate();
+
+  // Aprire una sede è del titolare e non si delega: `VenuesCard` già non mostra
+  // il pulsante, ma questa pagina ha un indirizzo e ci si arriva anche da lì. La
+  // difesa vera è il trigger `venues_owner_not_delegate`, che rifiuta l'insert;
+  // qui si evita di far compilare un modulo destinato a un errore.
+  if (!isOwner) {
+    return (
+      <>
+        <PageHeader title="Nuova sede" />
+        <Placeholder
+          title="Solo il titolare può aprire una sede"
+          detail="Come collaboratore puoi lavorare sulle sedi su cui ti hanno dato accesso."
+        />
+      </>
+    );
+  }
 
   const gate = canCreateVenue({
     venueCount: venues.length,

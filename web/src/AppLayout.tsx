@@ -57,8 +57,11 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh">
-      {/* Navigazione: sul foglio non serve, e ruberebbe un quarto di pagina. */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border-2 bg-bg-card p-4 print:hidden">
+      {/* Navigazione: sul foglio non serve, e ruberebbe un quarto di pagina.
+          `sticky` + `h-dvh`: senza l'altezza esplicita la colonna si stira con
+          la pagina (è un flex item), e "Esci" — che sta in fondo con `mt-auto` —
+          finisce in fondo al *documento*, non della finestra. */}
+      <aside className="sticky top-0 flex h-dvh w-56 shrink-0 flex-col overflow-y-auto border-r border-border-2 bg-bg-card p-4 print:hidden">
         <div className="mb-6 px-2">
           <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
           <p className="font-serif text-lg leading-tight text-t1">{company}</p>

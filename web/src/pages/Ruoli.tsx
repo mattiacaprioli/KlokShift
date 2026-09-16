@@ -97,8 +97,17 @@ function RoleRow({ role }: { role: VenueRole }) {
  * sarebbe lo stesso selettore, ma nascosto.
  */
 export function RuoliPage() {
-  const { venues, venueById, isMultiVenue } = useOwnerVenues();
-  const { venueId, choose } = useLastVenue();
+  const { venues, venuesWith, venueById } = useOwnerVenues();
+  // Le mansioni sono un dato della sede: si scrivono dove si ha
+  // `can_manage_venue` (policy `venue_roles: owner all`, che passa da
+  // `my_venue_ids('venue')`). Le altre sedi non entrano nel selettore, come nel
+  // `VenuePicker` dell'app — e `useLastVenue`, che cade su `venues[0]`, può
+  // proporne una che non è di questo elenco.
+  const editable = venuesWith("can_manage_venue");
+  const { venueId: lastVenueId, choose } = useLastVenue();
+  const venueId = editable.some((v) => v.id === lastVenueId)
+    ? lastVenueId
+    : editable[0]?.id;
   const venue = venueId ? venueById(venueId) : undefined;
   const toast = useToast();
   const { data, isPending, isError, error } = useVenueRoles(venueId);
@@ -125,6 +134,18 @@ export function RuoliPage() {
     );
   }
 
+  if (editable.length === 0) {
+    return (
+      <>
+        <PageHeader title="Ruoli" />
+        <Placeholder
+          title="Non puoi modificare le mansioni"
+          detail="Le mansioni fanno parte dei dati della sede: servono i permessi «Dati della sede»."
+        />
+      </>
+    );
+  }
+
   if (isPending) return <Spinner />;
   if (isError) return <QueryError error={error} />;
 
@@ -140,19 +161,19 @@ export function RuoliPage() {
       <PageHeader
         title="Ruoli"
         subtitle={
-          isMultiVenue && venue
+          editable.length > 1 && venue
             ? `Le mansioni di ${venue.name}: ogni sede ha le sue.`
             : "Le mansioni che assegni allo staff e che chiedi sui turni."
         }
         actions={
-          isMultiVenue ? (
+          editable.length > 1 ? (
             <Select
               value={venueId ?? ""}
               onChange={(e) => choose(e.target.value)}
               className="w-56"
               aria-label="Ruoli di quale sede"
             >
-              {venues.map((v) => (
+              {editable.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}
                 </option>

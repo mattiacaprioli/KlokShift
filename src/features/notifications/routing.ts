@@ -70,16 +70,23 @@ export function routeForNotification(
   // Revoca: non c'è più niente da aprire. Stessa scelta di `staff_removed`.
   if (type === "team_removed") return null;
   // `shift_change_request` porta la conversazione, non il turno: la richiesta si
-  // legge e si decide dalla card nel thread. Lo stesso per le assenze
+  // legge e si decide dalla card nel thread.
+  if (type === "new_message" || type === "shift_change_request") {
+    return relatedId ? `/(manager)/chat/${relatedId}` : null;
+  }
+  // Le assenze hanno **due** destinatari con due atterraggi diversi
   // (`absence_response` qui è l'annullamento di un'assenza già approvata).
+  // Con la conversazione è il titolare: la card sta nel suo thread. Senza, è un
+  // collaboratore con «Organico» — quel thread è la coppia (professionista,
+  // titolare) e la RLS non glielo apre, quindi la sua copia arriva senza
+  // `related_id` e lo porta in home, dove il blocco «Richieste» è il posto in
+  // cui quelle assenze si decidono.
   if (
-    type === "new_message" ||
-    type === "shift_change_request" ||
     type === "absence_request" ||
     type === "absence_response" ||
     type === "absence_sick"
   ) {
-    return relatedId ? `/(manager)/chat/${relatedId}` : null;
+    return relatedId ? `/(manager)/chat/${relatedId}` : "/(manager)/(tabs)";
   }
   return relatedId ? `/(manager)/shift/${relatedId}` : null;
 }

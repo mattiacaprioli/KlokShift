@@ -238,7 +238,7 @@ function InternalForm({
 }) {
   // Solo le sedi su cui si possono fare i turni: il selettore non deve offrire
   // una sede su cui l'insert verrebbe poi rifiutato dalla RLS.
-  const { venuesWith } = useOwnerVenues();
+  const { venuesWith, can } = useOwnerVenues();
   const venues = venuesWith("can_manage_shifts");
   const isMultiVenue = venues.length > 1;
   const { venueId: lastVenueId, choose } = useLastVenue();
@@ -621,11 +621,22 @@ function InternalForm({
         </div>
         {roles.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
-            Nessun ruolo definito.{" "}
-            <Link to="/ruoli" className="font-semibold text-gold">
-              Creali ora
-            </Link>{" "}
-            per poterli chiedere sui turni.
+            {/* Il listino si scrive con il permesso 'venue': a chi fa i soli
+                turni «Creali ora» aprirebbe una pagina in sola lettura. */}
+            {can(formVenueId, "can_manage_venue") ? (
+              <>
+                Nessun ruolo definito.{" "}
+                <Link to="/ruoli" className="font-semibold text-gold">
+                  Creali ora
+                </Link>{" "}
+                per poterli chiedere sui turni.
+              </>
+            ) : (
+              <>
+                Nessun ruolo definito per questa sede: può crearli chi ne
+                gestisce i dati.
+              </>
+            )}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2">

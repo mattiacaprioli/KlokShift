@@ -3,14 +3,22 @@ import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import type { Shift } from "@/features/shifts/api";
 import {
-  useOwnerPastShiftsCount,
+  computeHomeStats,
+  periodLabel,
+  periodRange,
+  STATS_PERIODS,
+  type StatsPeriod,
+} from "@/features/shifts/homeStats";
+import {
   useOwnerShifts,
+  useOwnerShiftsRange,
 } from "@/features/shifts/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { cn } from "@/lib/cn";
 import {
   formatDate,
+  formatHours,
   formatShiftRange,
   formatTime,
   toDateString,
@@ -56,21 +64,32 @@ export function HomePage() {
   // spaesante che finire sul Planning, che si riposiziona da solo.
   const [panel, setPanel] = useState<Shift | null>(null);
 
+  const [period, setPeriod] = useState<StatsPeriod>("week");
+  // Lo stesso intervallo che apre il Planning, quindi la stessa entry di cache:
+  // passare da una pagina all'altra non rifà la query.
+  const { from, to } = useMemo(() => periodRange(period), [period]);
+  const periodQuery = useOwnerShiftsRange(from, to);
+  // Memo su `periodQuery.data` e non su un `?? []`: React Query tiene il
+  // riferimento stabile finché il dato non cambia davvero, mentre un array nuovo
+  // a ogni render ricalcolerebbe sempre.
+  const stats = useMemo(
+    () => computeHomeStats(periodQuery.data ?? []),
+    [periodQuery.data],
+  );
+  // Cambiare periodo cambia la chiave di cache: senza questo i quattro numeri
+  // cadrebbero a zero per un istante prima di riempirsi, e uno zero è una
+  // risposta — non un'attesa. Vale anche per l'errore: meglio un trattino che
+  // "0 turni scoperti" quando la query non è mai tornata.
+  const statsReady = periodQuery.isSuccess;
+
+  // `getOwnerShifts` è la lista dei prossimi turni **senza** limite superiore, e
+  // resta tale: "Prossimi turni" deve mostrare cosa viene dopo anche di domenica
+  // sera, quando il periodo scelto è ormai finito.
   const shifts = useOwnerShifts().data ?? [];
-  const pastCount = useOwnerPastShiftsCount().data ?? 0;
   const todayAssignments = useOwnerTodayAssignments().data ?? [];
 
-  // `getOwnerShifts` torna già solo i turni non conclusi (turni notturni inclusi):
-  // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
-  const upcoming = shifts;
-  // Gli annullati non hanno posti da coprire: esclusi dai KPI.
-  const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
-  const counts = activeUpcoming.map((s) => shiftCounts(s));
-  const filled = counts.reduce((n, c) => n + c.filled, 0);
-  const totalPos = counts.reduce((n, c) => n + c.total, 0);
-  // L'unico numero su cui c'è da agire: turni che partono senza abbastanza
-  // gente. Esce da `counts`, già calcolato: nessuna query in più.
-  const shortCount = counts.filter((c) => c.short).length;
+  // Gli annullati non hanno posti da coprire: fuori anche dall'elenco.
+  const activeUpcoming = shifts.filter((s) => s.status !== "cancelled");
 
   // "Chi lavora oggi": lo staff assegnato ai turni di oggi. Comprende chi è in
   // sala adesso su un turno cominciato ieri sera, quindi si ordina per giorno
@@ -119,20 +138,59 @@ export function HomePage() {
         }
       />
 
+      {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non
+          dice su quanto tempo, e la prima domanda di chi guarda è "in base a
+          cosa?". */}
+      <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-t3">
+          {periodLabel(period)}
+        </p>
+        <div className="flex overflow-hidden rounded-xl border border-border-2 print:hidden">
+          {STATS_PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPeriod(p.value)}
+              className={cn(
+                "focus-gold px-3 py-1.5 text-xs font-semibold transition",
+                period === p.value
+                  ? "bg-gold text-gold-ink"
+                  : "bg-bg-2 text-t2 hover:bg-bg-3",
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="mb-6 grid grid-cols-4 gap-3">
-        <Stat value={activeUpcoming.length} label="turni in programma" />
         <Stat
-          value={`${filled}/${totalPos}`}
-          label="turni coperti"
-          tone={totalPos > 0 && filled < totalPos ? "warning" : "normal"}
+          loading={!statsReady}
+          value={stats.total}
+          label="turni"
+          hint={`${stats.done} svolti · ${stats.upcoming} da fare`}
         />
         <Stat
-          value={shortCount}
+          loading={!statsReady}
+          value={stats.shortCount}
           label="turni scoperti"
-          tone={shortCount > 0 ? "warning" : "normal"}
+          hint="solo quelli ancora da fare"
+          tone={stats.shortCount > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
         />
-        <Stat value={pastCount} label="turni svolti" />
+        <Stat
+          loading={!statsReady}
+          value={stats.missingSlots}
+          label="posti da coprire"
+          hint="persone che mancano"
+          tone={stats.missingSlots > 0 ? "warning" : "normal"}
+          onClick={() => navigate("/planning")}
+        />
+        <Stat
+          loading={!statsReady}
+          value={formatHours(stats.hours)}
+          label="ore pianificate"
+        />
       </div>
 
       <AbsencesToHandle enabled={canAny("can_manage_staff")} />
@@ -262,12 +320,18 @@ export function HomePage() {
 function Stat({
   value,
   label,
+  hint,
   tone = "normal",
+  loading = false,
   onClick,
 }: {
   value: string | number;
   label: string;
+  /** La riga sotto l'etichetta: cosa il numero conta, quando non è ovvio. */
+  hint?: string;
   tone?: "normal" | "gold" | "warning";
+  /** Dato non ancora disponibile: un trattino, non uno zero. */
+  loading?: boolean;
   onClick?: () => void;
 }) {
   const Tag = onClick ? "button" : "div";
@@ -282,14 +346,18 @@ function Stat({
       <p
         className={cn(
           "font-mono text-3xl",
-          tone === "gold" && "text-gold",
-          tone === "warning" && "text-warning",
-          tone === "normal" && "text-t1",
+          loading && "text-t4",
+          !loading && tone === "gold" && "text-gold",
+          !loading && tone === "warning" && "text-warning",
+          !loading && tone === "normal" && "text-t1",
         )}
       >
-        {value}
+        {loading ? "—" : value}
       </p>
       <p className="mt-1 text-xs text-t3">{label}</p>
+      {hint && !loading ? (
+        <p className="mt-0.5 text-[11px] text-t4">{hint}</p>
+      ) : null}
     </Tag>
   );
 }

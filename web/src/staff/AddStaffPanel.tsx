@@ -159,7 +159,11 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <Card className="mb-5">
-      <div className="grid grid-cols-2 items-end gap-3 lg:grid-cols-4">
+      {/* `items-start` e non `items-end`: l'hint sotto l'email è una riga in più
+          in fondo alla Field, e allineando i campi in basso alzava quel solo
+          input rispetto agli altri tre. In alto le etichette sono tutte di una
+          riga, quindi gli input restano sulla stessa linea. */}
+      <div className="grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
         <Field label="Nome">
           <Input
             value={name}

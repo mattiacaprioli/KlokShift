@@ -24,11 +24,19 @@ export async function updateVenueLogo(
   venueId: string,
   logoUrl: string | null
 ): Promise<void> {
-  const { error } = await supabase
+  // ⚠️ `.select()` non è un capriccio: senza, un update che la RLS non fa
+  // passare non tocca nessuna riga e **non dà errore** — PostgREST risponde 204
+  // lo stesso. A un collaboratore senza `can_manage_venue` la dashboard diceva
+  // «Logo aggiornato» su una sede rimasta com'era. Ora torna la riga scritta, e
+  // zero righe sono un errore.
+  const { data, error } = await supabase
     .from("venues")
     .update({ logo_url: logoUrl })
-    .eq("id", venueId);
+    .eq("id", venueId)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error("Non puoi modificare i dati di questa sede.");
 }
 
 /** Un uuid e nient'altro: vedi `getMyVenues`. */

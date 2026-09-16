@@ -269,11 +269,16 @@ export default function ManagerProfiloScreen() {
             />
           ) : null}
 
-          <VenuesCard
-            venues={venues}
-            onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
-            onAdd={isOwner ? () => router.push("/(manager)/venue/new") : undefined}
-          />
+          {/* Con una sede sola l'elenco ripete la scheda che sta qui sopra: al
+              titolare serve lo stesso — è da lì che se ne apre una seconda — a
+              un collaboratore no. */}
+          {isOwner ? (
+            <VenuesCard
+              venues={venues}
+              onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
+              onAdd={() => router.push("/(manager)/venue/new")}
+            />
+          ) : null}
 
           {isOwner ? <PlanCard /> : null}
 
