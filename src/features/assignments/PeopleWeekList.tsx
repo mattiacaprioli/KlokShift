@@ -25,6 +25,10 @@ import {
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
+import type { AbsenceAvailability } from "@/features/absences/api";
+import { absenceForShift, absenceOnDay } from "@/features/absences/conflicts";
+import { useAbsenceAvailability } from "@/features/absences/hooks";
+import { absenceCellLabel, formatAbsenceRange } from "@/features/absences/labels";
 import { computeWeekLoad, type PersonLoad } from "./weekLoad";
 import { ASSIGNMENT_STATUS_LABEL, isActiveAssignment } from "./status";
 
@@ -77,9 +81,25 @@ export function PeopleWeekList({
   const { ownerId, venues, isMultiVenue } = useOwnerVenues();
   const shiftsQuery = useOwnerShiftsRange(from, to, scope);
   const peopleQuery = useOwnerPeople(ownerId);
+  // Chi non c'è in settimana, senza il perché (`get_absence_availability`).
+  const absencesQuery = useAbsenceAvailability(from, to);
   const pull = usePullToRefresh(() =>
-    Promise.all([shiftsQuery.refetch(), peopleQuery.refetch()])
+    Promise.all([
+      shiftsQuery.refetch(),
+      peopleQuery.refetch(),
+      absencesQuery.refetch(),
+    ])
   );
+
+  const absencesByPerson = useMemo(() => {
+    const map = new Map<string, AbsenceAvailability[]>();
+    for (const a of absencesQuery.data ?? []) {
+      const list = map.get(a.person_id);
+      if (list) list.push(a);
+      else map.set(a.person_id, [a]);
+    }
+    return map;
+  }, [absencesQuery.data]);
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDaysToDate(from, i)),
@@ -165,6 +185,7 @@ export function PeopleWeekList({
         <PersonWeekCard
           person={item}
           days={days}
+          absences={absencesByPerson.get(item.personId) ?? []}
           venueOf={venueOf}
           onOpenShift={onOpenShift}
         />
@@ -200,11 +221,14 @@ export function PeopleWeekList({
 function PersonWeekCard({
   person,
   days,
+  absences,
   venueOf,
   onOpenShift,
 }: {
   person: PersonLoad;
   days: string[];
+  /** Le assenze della persona in settimana: date e stato, mai il tipo. */
+  absences: AbsenceAvailability[];
   venueOf: (venueId: string) => { name: string; accent: string } | null;
   onOpenShift: (shiftId: string) => void;
 }) {
@@ -241,6 +265,15 @@ function PersonWeekCard({
                 {formatContract(person.contract)}
               </Text>
             ) : null}
+            {absences.map((a) => (
+              <Text
+                key={a.id}
+                className="mt-0.5 text-[11px] font-sans-semibold text-warning"
+                numberOfLines={1}
+              >
+                {absenceCellLabel(a)} · {formatAbsenceRange(a)}
+              </Text>
+            ))}
           </View>
 
           <View className="items-end">
@@ -264,6 +297,7 @@ function PersonWeekCard({
                 key={day}
                 label={WEEKDAYS[i]}
                 shifts={person.byDay.get(day) ?? []}
+                absent={absenceOnDay(day, absences)?.status ?? null}
               />
             ))}
           </View>
@@ -290,6 +324,12 @@ function PersonWeekCard({
           {shifts.map((ps) => {
             const venue = venueOf(ps.venueId);
             const active = isActiveAssignment(ps.status);
+            const conflict =
+              active &&
+              !!absenceForShift(
+                ps,
+                absences.filter((a) => a.status === "approved")
+              );
             return (
               <Pressable
                 key={ps.assignmentId}
@@ -313,6 +353,7 @@ function PersonWeekCard({
                       venue?.name,
                       ps.role,
                       active ? null : ASSIGNMENT_STATUS_LABEL[ps.status],
+                      conflict ? "in conflitto con un'assenza" : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -338,9 +379,12 @@ function PersonWeekCard({
 function DayDot({
   label,
   shifts,
+  absent,
 }: {
   label: string;
   shifts: { status: string }[];
+  /** Assenza quel giorno: il pallino diventa arancione tratteggiato. */
+  absent: AbsenceAvailability["status"] | null;
 }) {
   const active = shifts.some((s) =>
     isActiveAssignment(s.status as Parameters<typeof isActiveAssignment>[0])
@@ -360,12 +404,15 @@ function DayDot({
       <View
         className={cn(
           "h-2 w-2 rounded-full border",
-          active
-            ? "border-gold bg-gold"
-            : inactive
-              ? "border-warning bg-transparent"
-              : "border-border-2 bg-transparent"
+          active && absent === "approved"
+            ? "border-warning bg-warning"
+            : active
+              ? "border-gold bg-gold"
+              : inactive || absent
+                ? "border-warning bg-transparent"
+                : "border-border-2 bg-transparent"
         )}
+        style={absent ? { borderStyle: "dashed" } : undefined}
       />
     </View>
   );

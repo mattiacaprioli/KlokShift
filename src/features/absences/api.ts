@@ -200,3 +200,109 @@ export async function getAbsencesToHandle(): Promise<AbsenceWithPerson[]> {
   if (error) throw new Error(error.message);
   return (data as AbsenceWithPerson[] | null) ?? [];
 }
+
+/**
+ * Un'assenza vista dal planning: date, orari e stato, **mai il tipo**. La
+ * restituisce `get_absence_availability` (migration 20260918110000) anche a chi
+ * fa solo i turni e non può leggere `staff_absences`.
+ */
+export type AbsenceAvailability = {
+  id: string;
+  person_id: string;
+  start_date: string;
+  end_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  status: AbsenceStatus;
+};
+
+export async function getAbsenceAvailability(
+  from: string,
+  to: string
+): Promise<AbsenceAvailability[]> {
+  const { data, error } = await supabase.rpc("get_absence_availability", {
+    p_from: from,
+    p_to: to,
+  });
+  if (error) throw new Error(error.message);
+  // I generatori di tipi danno per `not null` ogni colonna di una `returns
+  // table`: gli orari invece sono null su tutte le assenze a giornata intera.
+  return (data ?? []) as AbsenceAvailability[];
+}
+
+/** Un turno attivo di una persona, per i conflitti con un'assenza. */
+export type PersonShiftAssignment = {
+  /** L'assegnazione: è la riga che si toglie. */
+  id: string;
+  shift: {
+    id: string;
+    title: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    venue_id: string;
+  };
+};
+
+/**
+ * I turni attivi (assegnati o confermati, non annullati) di una persona fra due
+ * date, su tutte le sedi.
+ *
+ * `from` parte dal giorno prima: un turno notturno cominciato la sera prima
+ * delle ferie finisce dentro le ferie. Il filtro esatto lo fa `absenceConflicts`.
+ *
+ * La RLS restituisce solo i turni delle sedi in cui l'utente gestisce i turni:
+ * un delegato con il solo Organico vede l'assenza ma non i conflitti, e non
+ * potrebbe comunque toglierli.
+ */
+export async function getPersonShiftsInRange(
+  personId: string,
+  from: string,
+  to: string
+): Promise<PersonShiftAssignment[]> {
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(
+      "id, staff_member:staff_members!inner(person_id), shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)"
+    )
+    .eq("staff_member.person_id", personId)
+    .in("status", ["assigned", "confirmed"])
+    .gte("shift.date", addDaysToDate(from, -1))
+    .lte("shift.date", to)
+    .neq("shift.status", "cancelled");
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .map((a) => ({
+      id: a.id,
+      shift: {
+        id: a.shift.id,
+        title: a.shift.title,
+        date: a.shift.date,
+        start_time: a.shift.start_time,
+        end_time: a.shift.end_time,
+        venue_id: a.shift.venue_id,
+      },
+    }))
+    .sort((a, b) =>
+      `${a.shift.date}T${a.shift.start_time}`.localeCompare(
+        `${b.shift.date}T${b.shift.start_time}`
+      )
+    );
+}
+
+/**
+ * Toglie la persona dai turni in conflitto con l'assenza.
+ *
+ * Una `delete` sulle assegnazioni, come fa già la modifica di un turno: il
+ * trigger `notify_on_assignment_removed` avvisa chi esce («Turno revocato») e
+ * quello sui coperti riapre il posto. Il turno resta, scoperto: il sostituto lo
+ * sceglie il titolare.
+ */
+export async function removeFromShifts(assignmentIds: string[]): Promise<void> {
+  if (assignmentIds.length === 0) return;
+  const { error } = await supabase
+    .from("shift_assignments")
+    .delete()
+    .in("id", assignmentIds);
+  if (error) throw new Error(error.message);
+}

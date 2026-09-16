@@ -5,7 +5,12 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import { useResolveAbsence } from "./hooks";
+import { ConflictShiftList } from "./AbsenceConflicts";
+import {
+  useAbsenceConflicts,
+  useRemoveFromShifts,
+  useResolveAbsence,
+} from "./hooks";
 import type { Absence } from "./api";
 import { ABSENCE_KIND_LABEL, formatAbsenceRange } from "./labels";
 
@@ -14,7 +19,8 @@ import { ABSENCE_KIND_LABEL, formatAbsenceRange } from "./labels";
  *
  * Approvare **non** toglie la persona dai turni che cadono nell'assenza: come
  * per le richieste di orario, un tap su «Approva» non cancella assegnazioni come
- * effetto collaterale. I turni si sistemano poi dal planning.
+ * effetto collaterale. I turni in conflitto si **mostrano**, e toglierli è un
+ * bottone a parte: «Approva e togli dai turni».
  */
 export function ResolveAbsenceModal({
   absence,
@@ -28,15 +34,38 @@ export function ResolveAbsenceModal({
 }) {
   const toast = useToast();
   const resolve = useResolveAbsence();
+  const remove = useRemoveFromShifts();
+  const { conflicts, isLoading: loadingConflicts } = useAbsenceConflicts(absence);
   const [note, setNote] = useState("");
+  const busy = resolve.isPending || remove.isPending;
 
-  function decide(approve: boolean) {
+  function decide(approve: boolean, clearShifts = false) {
     resolve.mutate(
       { absenceId: absence.id, approve, note },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // Prima si approva, poi si tolgono i turni: se la seconda fallisce,
+          // la decisione è comunque presa e i turni si tolgono dalla card.
+          if (clearShifts && conflicts.length > 0) {
+            try {
+              await remove.mutateAsync(conflicts.map((c) => c.assignmentId));
+            } catch (e) {
+              onClose();
+              toast.show(
+                userErrorMessage(e, "Approvata, ma i turni non sono stati tolti."),
+                "error"
+              );
+              return;
+            }
+          }
           onClose();
-          toast.show(approve ? "Richiesta approvata" : "Richiesta rifiutata");
+          toast.show(
+            !approve
+              ? "Richiesta rifiutata"
+              : clearShifts
+                ? "Approvata: turni liberati"
+                : "Richiesta approvata"
+          );
         },
         onError: (e) =>
           toast.show(
@@ -56,7 +85,7 @@ export function ResolveAbsenceModal({
       onRequestClose={onClose}
     >
       <Pressable
-        onPress={resolve.isPending ? undefined : onClose}
+        onPress={busy ? undefined : onClose}
         style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
         className="items-center justify-center px-6"
       >
@@ -76,10 +105,20 @@ export function ResolveAbsenceModal({
               {absence.note}
             </Text>
           ) : null}
-          <Text className="mt-3 text-xs leading-4 text-t3">
-            Approvare non toglie nessuno dai turni: se serve, sistemali tu dal
-            planning.
-          </Text>
+          {loadingConflicts ? null : conflicts.length > 0 ? (
+            <View className="mt-3 gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3">
+              <Text className="text-[13px] font-sans-semibold text-warning">
+                {conflicts.length === 1
+                  ? "In quei giorni è in turno"
+                  : `In quei giorni è in ${conflicts.length} turni`}
+              </Text>
+              <ConflictShiftList shifts={conflicts} />
+            </View>
+          ) : (
+            <Text className="mt-3 text-xs leading-4 text-t3">
+              Nessun turno in quei giorni.
+            </Text>
+          )}
 
           <View className="mt-4">
             <Input
@@ -92,14 +131,33 @@ export function ResolveAbsenceModal({
           </View>
 
           <View className="mt-6 gap-2.5">
-            <GoldButton
-              label={resolve.isPending ? "Attendere…" : "Approva"}
-              disabled={resolve.isPending}
-              onPress={() => decide(true)}
-            />
+            {conflicts.length > 0 ? (
+              <GoldButton
+                label={busy ? "Attendere…" : "Approva e togli dai turni"}
+                disabled={busy}
+                onPress={() => decide(true, true)}
+              />
+            ) : null}
+            {conflicts.length > 0 ? (
+              <Pressable
+                onPress={() => decide(true)}
+                disabled={busy}
+                className="items-center rounded-xl border border-border py-3.5"
+              >
+                <Text className="text-sm font-sans-semibold text-t1">
+                  Approva, i turni li sistemo io
+                </Text>
+              </Pressable>
+            ) : (
+              <GoldButton
+                label={busy ? "Attendere…" : "Approva"}
+                disabled={busy}
+                onPress={() => decide(true)}
+              />
+            )}
             <Pressable
               onPress={() => decide(false)}
-              disabled={resolve.isPending}
+              disabled={busy}
               className="items-center rounded-xl border border-border py-3.5"
             >
               <Text className="text-sm font-sans-semibold text-t2">
@@ -108,7 +166,7 @@ export function ResolveAbsenceModal({
             </Pressable>
             <Pressable
               onPress={onClose}
-              disabled={resolve.isPending}
+              disabled={busy}
               className="items-center py-2"
             >
               <Text className="text-sm text-t4">Decidi dopo</Text>

@@ -14,6 +14,7 @@ import {
   canWithdrawAbsence,
   formatAbsenceRange,
 } from "./labels";
+import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
 
 /**
@@ -114,6 +115,12 @@ export function AbsenceCard({
               ? `Protocollo INPS ${absence.inps_protocol}`
               : "Protocollo INPS non ancora indicato"}
           </Text>
+        ) : null}
+
+        {/* La malattia non passa dal modal di decisione: i turni da liberare
+            vanno mostrati qui, a chi gestisce la persona. */}
+        {absence && !isResponse && !isRequester && absence.status === "approved" ? (
+          <AbsenceConflictsBlock absence={absence} />
         ) : null}
 
         {!isResponse && pending && !isRequester ? (

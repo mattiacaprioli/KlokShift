@@ -1354,6 +1354,18 @@ export type Database = {
           staff_member_id: string
         }[]
       }
+      get_absence_availability: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          end_date: string
+          end_time: string
+          id: string
+          person_id: string
+          start_date: string
+          start_time: string
+          status: Database["public"]["Enums"]["absence_status"]
+        }[]
+      }
       get_waiter_public_card: {
         Args: { p_waiter: string }
         Returns: {

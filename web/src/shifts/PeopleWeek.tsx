@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import {
   computeWeekLoad,
   type PersonShift,
@@ -15,6 +15,9 @@ import {
   ASSIGNMENT_STATUS_LABEL,
   isActiveAssignment,
 } from "@/features/assignments/status";
+import type { AbsenceAvailability } from "@/features/absences/api";
+import { absenceForShift, absenceOnDay } from "@/features/absences/conflicts";
+import { absenceCellLabel } from "@/features/absences/labels";
 import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
@@ -42,12 +45,18 @@ export function PeopleWeek({
   days,
   shifts,
   venueIds,
+  absences,
   onOpen,
   onCreate,
   onReassign,
 }: {
   days: string[];
   shifts: ShiftWithAssignees[];
+  /**
+   * Chi non c'è nel periodo (`get_absence_availability`): date e stato, mai il
+   * tipo. Le celle assenti restano cliccabili: è un avviso, non un blocco.
+   */
+  absences: AbsenceAvailability[];
   /**
    * Le sedi che `shifts` contiene: tutte quelle dell'azienda, o la sola sede
    * scelta col filtro per sede del Planning. Qui serve a due cose — tenere
@@ -93,6 +102,16 @@ export function PeopleWeek({
   };
 
   const byId = useMemo(() => new Map(shifts.map((s) => [s.id, s])), [shifts]);
+
+  const absencesByPerson = useMemo(() => {
+    const map = new Map<string, AbsenceAvailability[]>();
+    for (const a of absences) {
+      const list = map.get(a.person_id);
+      if (list) list.push(a);
+      else map.set(a.person_id, [a]);
+    }
+    return map;
+  }, [absences]);
 
   /**
    * L'appartenenza di una persona **in una sede**, o `undefined` se lì non
@@ -220,6 +239,9 @@ export function PeopleWeek({
 
                 {days.map((day) => {
                   const dayShifts = person.byDay.get(day) ?? [];
+                  const personAbsences =
+                    absencesByPerson.get(person.personId) ?? [];
+                  const absence = absenceOnDay(day, personAbsences);
                   // Si accetta solo dalla stessa colonna: trascinare su un
                   // altro giorno *di un'altra persona* sarebbe spostamento e
                   // riassegnazione insieme, e nessuno saprebbe cosa aspettarsi.
@@ -255,14 +277,23 @@ export function PeopleWeek({
                           if (dnd.swallowClick()) return;
                           onCreate(day, person.personId);
                         }}
-                        aria-label={`Nuovo turno per ${person.name} il ${day}`}
+                        aria-label={
+                          absence
+                            ? `${absenceCellLabel(absence)}. Nuovo turno per ${person.name} il ${day}`
+                            : `Nuovo turno per ${person.name} il ${day}`
+                        }
+                        title={absence ? absenceCellLabel(absence) : undefined}
                         {...dropHandlers}
+                        style={absence ? absenceCellStyle(absence) : undefined}
                         className={cn(
-                          "focus-gold flex min-h-14 items-center justify-center rounded-xl border border-dashed border-border text-sm text-transparent transition hover:border-border-gold hover:text-gold",
+                          "focus-gold flex min-h-14 items-center justify-center rounded-xl border border-dashed text-sm transition hover:border-border-gold",
+                          absence
+                            ? "border-warning/50 px-1 text-center text-[10px] leading-tight text-warning hover:text-gold"
+                            : "border-border text-transparent hover:text-gold",
                           dropClass(state)
                         )}
                       >
-                        +
+                        {absence ? absenceCellLabel(absence) : "+"}
                       </button>
                     );
                   }
@@ -270,15 +301,32 @@ export function PeopleWeek({
                     <div
                       key={day}
                       {...dropHandlers}
+                      style={absence ? absenceCellStyle(absence) : undefined}
                       className={cn(
-                        "flex min-h-14 flex-col gap-1 rounded-xl border border-border-2 bg-bg-card p-1",
+                        "flex min-h-14 flex-col gap-1 rounded-xl border p-1",
+                        absence
+                          ? "border-dashed border-warning/50"
+                          : "border-border-2 bg-bg-card",
                         dropClass(state)
                       )}
                     >
+                      {absence ? (
+                        <span className="px-1 text-[10px] leading-tight text-warning">
+                          {absenceCellLabel(absence)}
+                        </span>
+                      ) : null}
                       {dayShifts.map((ps) => (
                         <PersonShiftChip
                           key={ps.shiftId}
                           personShift={ps}
+                          conflict={
+                            !!absenceForShift(
+                              ps,
+                              personAbsences.filter(
+                                (a) => a.status === "approved"
+                              )
+                            )
+                          }
                           fromStaffName={person.name}
                           venue={venueOf(ps.venueId)}
                           showVenue={showVenue}
@@ -325,6 +373,13 @@ export function PeopleWeek({
           <span className="h-2 w-2 rounded-full bg-error" /> oltre le ore del
           contratto
         </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="h-3 w-4 rounded border border-dashed border-warning/50"
+            style={absenceCellStyle({ status: "approved" })}
+          />{" "}
+          non disponibile (tratteggio leggero: assenza da decidere)
+        </span>
       </div>
 
       <p className="mt-2 text-xs leading-5 text-t4">
@@ -360,8 +415,21 @@ export function PeopleWeek({
   );
 }
 
+/**
+ * Il tratteggio di una giornata di assenza. Inline perché è un gradiente: in
+ * classi Tailwind sarebbe illeggibile. Una richiesta ancora da decidere è più
+ * leggera di un'assenza approvata.
+ */
+function absenceCellStyle(a: Pick<AbsenceAvailability, "status">): CSSProperties {
+  const alpha = a.status === "approved" ? 0.16 : 0.07;
+  return {
+    backgroundImage: `repeating-linear-gradient(135deg, rgba(226,146,47,${alpha}) 0 6px, transparent 6px 12px)`,
+  };
+}
+
 function PersonShiftChip({
   personShift,
+  conflict,
   fromStaffName,
   venue,
   showVenue,
@@ -369,6 +437,8 @@ function PersonShiftChip({
   onOpen,
 }: {
   personShift: PersonShift;
+  /** Il turno cade in un'assenza approvata della persona: va coperto. */
+  conflict: boolean;
   fromStaffName: string;
   /** La sede del turno: nome e colore. `null` con una sede sola. */
   venue: { name: string; accent: string } | null;
@@ -409,12 +479,15 @@ function PersonShiftChip({
         personShift.title,
         formatShiftRange(personShift.start_time, personShift.end_time),
         active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
+        conflict ? "In conflitto con un'assenza" : null,
       ]
         .filter(Boolean)
         .join(" · ")}
       className={cn(
         "focus-gold cursor-grab rounded-lg border px-1.5 py-1 text-left transition active:cursor-grabbing",
-        active
+        active && conflict
+          ? "border-warning bg-warning/15 hover:bg-warning/25"
+          : active
           ? "border-border-gold bg-gold/10 hover:bg-gold/20"
           : // Non viene: resta visibile, perché è un buco da coprire, ma non
             // deve somigliare a una copertura.

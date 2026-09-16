@@ -65,6 +65,7 @@ export function MyShiftCard({
   onConfirm,
   onDecline,
   pending,
+  absenceNote,
 }: {
   shift: ShiftWithVenue;
   status: AssignmentStatus;
@@ -78,6 +79,11 @@ export function MyShiftCard({
   onDecline?: () => void;
   /** Solo per **questa** riga: la mutation è condivisa da tutta la lista. */
   pending?: boolean;
+  /**
+   * Il turno cade in una sua assenza approvata («Sei in ferie»). Il turno non
+   * sparisce: lo toglie il titolare, e finché non lo fa è giusto vederlo.
+   */
+  absenceNote?: string | null;
 }) {
   const s = STATUS[status];
   const venueName = shift.venue?.name ?? "Sede";
@@ -173,6 +179,11 @@ export function MyShiftCard({
             <View className="mt-2 flex-row">
               <Pill label={s.pill.label} variant={s.pill.variant} />
             </View>
+          ) : null}
+          {absenceNote && !spent ? (
+            <Text className="mt-2 text-[13px] font-sans-semibold text-warning">
+              {absenceNote} · la sede deve ancora sistemare il turno
+            </Text>
           ) : null}
         </View>
       </View>

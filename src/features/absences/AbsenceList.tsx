@@ -16,6 +16,7 @@ import {
   canWithdrawAbsence,
   formatAbsenceRange,
 } from "./labels";
+import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
 
 type Props = {
@@ -119,6 +120,10 @@ export function AbsenceList({ absences, mode, subtitleFor }: Props) {
                 <Text className="mt-2 text-xs leading-4 text-t3">
                   Nota: {a.resolution_note}
                 </Text>
+              ) : null}
+
+              {mode === "manager" && a.status === "approved" ? (
+                <AbsenceConflictsBlock absence={a} />
               ) : null}
 
               {actions.length > 0 ? (

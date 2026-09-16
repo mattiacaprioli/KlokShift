@@ -75,3 +75,46 @@ export function absenceStatusTone(
   if (status === "approved") return "accepted";
   return "cancelled";
 }
+
+/**
+ * L'avviso quando si mette in turno una persona assente. Avviso e non blocco,
+ * come per le ore da contratto: il titolare può sapere cose che l'app non sa
+ * (le ferie spostate a voce).
+ *
+ * Non dice mai il **tipo** di assenza: chi fa solo i turni non lo deve sapere.
+ */
+export function absenceWarning(
+  name: string,
+  a: {
+    status: AbsenceStatus;
+    start_time: string | null;
+    end_time: string | null;
+  }
+): string {
+  const hours =
+    a.start_time && a.end_time
+      ? ` dalle ${formatTime(a.start_time)} alle ${formatTime(a.end_time)}`
+      : "";
+  return a.status === "approved"
+    ? `${name} non è disponibile${hours || " quel giorno"}: ha un'assenza approvata.`
+    : `${name} ha chiesto un'assenza${hours || " per quel giorno"}, ancora da decidere.`;
+}
+
+/** L'etichetta breve della cella del planning. */
+export function absenceCellLabel(a: {
+  status: AbsenceStatus;
+  start_time: string | null;
+  end_time: string | null;
+}): string {
+  const base = a.status === "approved" ? "Non disponibile" : "Assenza richiesta";
+  return a.start_time && a.end_time
+    ? `${base} · ${formatTime(a.start_time)}–${formatTime(a.end_time)}`
+    : base;
+}
+
+/** La dicitura sul turno del professionista che cade in una sua assenza. */
+export const MY_ABSENCE_NOTE: Record<AbsenceKind, string> = {
+  ferie: "Sei in ferie",
+  permesso: "Sei in permesso",
+  malattia: "Sei in malattia",
+};

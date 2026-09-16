@@ -206,6 +206,11 @@ export function StaffShiftForm({ initialDate }: Props) {
           value={selected}
           onToggle={toggle}
           onRoleChange={setRole}
+          shiftTimes={{
+            date: toDateString(date),
+            start_time: toTimeString(start),
+            end_time: toTimeString(end),
+          }}
         />
 
         <RequireConfirmationField

@@ -149,6 +149,12 @@ export const qk = {
     personWorked: (personId: string, limit: number) =>
       ["assignments", "personWorked", personId, limit] as const,
     roleReqs: (shiftId: string) => ["assignments", "roleReqs", shiftId] as const,
+    /**
+     * I turni attivi di una persona in un intervallo, su tutte le sedi: i
+     * conflitti con un'assenza. Sotto `assignments` perché è lì che cambiano.
+     */
+    personRange: (personId: string, from: string, to: string) =>
+      ["assignments", "personRange", personId, from, to] as const,
     /** Chi lavora oggi, in tutte le sedi: `scope` è `venuesKey`, come i turni. */
     today: (scope: string) => ["assignments", "today", scope] as const,
     todayAll: ["assignments", "today"] as const,
@@ -214,6 +220,9 @@ export const qk = {
     byPerson: (personId: string) =>
       ["absences", "byPerson", personId] as const,
     toHandle: ["absences", "toHandle"] as const,
+    /** Chi non c'è, senza il perché: la fonte del planning. */
+    availability: (from: string, to: string) =>
+      ["absences", "availability", from, to] as const,
   },
   notifications: {
     all: ["notifications"] as const,

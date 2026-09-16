@@ -7,6 +7,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { cn } from "@/lib/cn";
+import type { ShiftTimes } from "@/lib/format";
+import { absenceForShift } from "@/features/absences/conflicts";
+import { useAbsenceAvailability } from "@/features/absences/hooks";
+import { absenceCellLabel } from "@/features/absences/labels";
 import { staffRoleNames, type StaffMemberWithWaiter } from "@/features/staff/api";
 import {
   ASSIGNMENT_STATUS_LABEL,
@@ -23,6 +27,11 @@ type Props = {
   onRoleChange: (staffId: string, roleId: string | null) => void;
   /** Stato già a sistema (solo in modifica): chi ha rifiutato non copre. */
   statusFor?: (staffId: string) => AssignmentStatus;
+  /**
+   * Giorno e orario del turno: servono a segnalare chi è assente. È un avviso e
+   * non un blocco — il titolare può sapere cose che l'app non sa.
+   */
+  shiftTimes?: ShiftTimes;
 };
 
 /**
@@ -40,7 +49,15 @@ export function StaffAssignPicker({
   onToggle,
   onRoleChange,
   statusFor,
+  shiftTimes,
 }: Props) {
+  const absences =
+    useAbsenceAvailability(
+      shiftTimes?.date ?? "",
+      shiftTimes?.date ?? "",
+      !!shiftTimes
+    ).data ?? [];
+
   return (
     <View className="gap-3">
       <Mono>Chi chiami</Mono>
@@ -62,6 +79,12 @@ export function StaffAssignPicker({
               .filter((r): r is NonNullable<typeof r> => !!r)
               .sort((a, b) => a.sort_order - b.sort_order);
             const chosen = value[m.id] ?? null;
+            const absence = shiftTimes
+              ? absenceForShift(
+                  shiftTimes,
+                  absences.filter((a) => a.person_id === m.person_id)
+                )
+              : null;
 
             return (
               <Card
@@ -85,6 +108,11 @@ export function StaffAssignPicker({
                     <Text className="text-xs text-t3">
                       {staffRoleNames(m) ?? "Ruoli non indicati"}
                     </Text>
+                    {absence ? (
+                      <Text className="text-xs font-sans-semibold text-warning">
+                        {absenceCellLabel(absence)}
+                      </Text>
+                    ) : null}
                     {active && !works ? (
                       <Text className="text-xs font-sans-semibold text-error">
                         {ASSIGNMENT_STATUS_LABEL[status]} · non copre il turno

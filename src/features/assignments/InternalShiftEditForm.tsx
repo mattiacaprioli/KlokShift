@@ -210,6 +210,11 @@ function EditForm({
           onToggle={toggle}
           onRoleChange={setRole}
           statusFor={memberStatus}
+          shiftTimes={{
+            date: toDateString(date),
+            start_time: toTimeString(start),
+            end_time: toTimeString(end),
+          }}
         />
 
         <RequireConfirmationField

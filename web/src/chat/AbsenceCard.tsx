@@ -10,6 +10,7 @@ import { userErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/cn";
 import { useToast } from "../ui/Toast";
 import { Button, Pill } from "../ui/primitives";
+import { AbsenceConflictsBlock } from "../absences/AbsenceConflicts";
 import { ResolveAbsenceForm, absencePillTone } from "../absences/ResolveAbsenceForm";
 
 /**
@@ -92,6 +93,10 @@ export function AbsenceCard({
             ? `Protocollo INPS ${absence.inps_protocol}`
             : "Protocollo INPS non ancora indicato"}
         </p>
+      ) : null}
+
+      {absence && !isResponse && !isRequester && absence.status === "approved" ? (
+        <AbsenceConflictsBlock absence={absence} />
       ) : null}
 
       {absence && !isResponse && pending && !isRequester ? (

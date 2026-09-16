@@ -17,6 +17,7 @@ import { todayString } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useToast } from "../ui/Toast";
 import { Button, Card, Field, Input, Pill, Spinner } from "../ui/primitives";
+import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
 
 /**
@@ -76,6 +77,7 @@ function AbsenceRow({ absence: a }: { absence: Absence }) {
         <ResolveAbsenceForm absence={a} className="mt-3" />
       ) : null}
       {sick && a.status === "approved" ? <ProtocolField absence={a} /> : null}
+      <AbsenceConflictsBlock absence={a} />
     </Card>
   );
 }

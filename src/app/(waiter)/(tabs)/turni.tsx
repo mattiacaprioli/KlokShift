@@ -17,6 +17,9 @@ import { NavRow } from "@/components/ui/NavRow";
 import { QueryError } from "@/components/ui/QueryError";
 import { Segmented } from "@/components/ui/Segmented";
 import { WeekCalendar } from "@/components/ui/WeekCalendar";
+import { absenceForShift } from "@/features/absences/conflicts";
+import { useMyAbsences } from "@/features/absences/hooks";
+import { MY_ABSENCE_NOTE } from "@/features/absences/labels";
 import {
   type AgendaItem,
   type AgendaSection,
@@ -33,6 +36,7 @@ import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { useStaffPlanning } from "@/features/planning/hooks";
 import { VenuePlanningList } from "@/features/planning/VenuePlanningList";
+import type { ShiftWithVenue } from "@/features/shifts/types";
 import { useMyEmployers } from "@/features/staff/hooks";
 import { useAuth } from "@/lib/auth";
 import {
@@ -152,6 +156,22 @@ export default function WaiterShiftsScreen() {
   // Chi è in organico da qualche parte: decide se il selettore ha senso, e se
   // sulle card serve il nome della sede.
   const employers = useMyEmployers(waiterId);
+
+  // Le proprie assenze approvate: un turno che ci cade dentro dice «Sei in
+  // ferie». Solo quelle dello **stesso** titolare del turno — le ferie chieste a
+  // un'altra azienda non riguardano questa sede.
+  const myAbsences = useMyAbsences(waiterId);
+  const approvedAbsences = useMemo(
+    () => (myAbsences.data ?? []).filter((a) => a.status === "approved"),
+    [myAbsences.data]
+  );
+  function absenceNoteFor(shift: ShiftWithVenue): string | null {
+    const hit = absenceForShift(
+      shift,
+      approvedAbsences.filter((a) => a.owner_id === shift.venue?.owner_id)
+    );
+    return hit ? MY_ABSENCE_NOTE[hit.kind] : null;
+  }
   const venueCount = employers.data?.length ?? 0;
 
   // I pallini del calendario seguono la vista: sono la mappa di **questa**
@@ -350,6 +370,7 @@ export default function WaiterShiftsScreen() {
                   pending={
                     respond.isPending && respond.variables?.id === item.id
                   }
+                  absenceNote={absenceNoteFor(item.shift)}
                 />
               </View>
             )}

@@ -6,6 +6,7 @@ import { Pill } from "@/components/ui/Pill";
 import type { AbsenceWithPerson } from "./api";
 import { useAbsencesToHandle } from "./hooks";
 import { ABSENCE_KIND_LABEL, formatAbsenceRange } from "./labels";
+import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
 
 /**
@@ -46,24 +47,30 @@ export function AbsencesToHandle({
           const pending = a.status === "pending";
           const name = a.person?.full_name ?? "Persona";
           return (
-            <Pressable
+            <View
               key={a.id}
-              onPress={() =>
-                pending ? setResolving(a) : onOpenPerson(a.person_id)
-              }
-              className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5"
+              className="rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5"
             >
-              <View className="flex-1">
-                <Text className="text-base font-sans-bold text-t1">{name}</Text>
-                <Text className="mt-0.5 text-xs text-t3">
-                  {ABSENCE_KIND_LABEL[a.kind]} · {formatAbsenceRange(a)}
-                </Text>
-              </View>
-              <Pill
-                label={pending ? "Da decidere" : "Comunicata"}
-                variant={pending ? "pending" : "neutral"}
-              />
-            </Pressable>
+              <Pressable
+                onPress={() =>
+                  pending ? setResolving(a) : onOpenPerson(a.person_id)
+                }
+                className="flex-row items-center gap-3"
+              >
+                <View className="flex-1">
+                  <Text className="text-base font-sans-bold text-t1">{name}</Text>
+                  <Text className="mt-0.5 text-xs text-t3">
+                    {ABSENCE_KIND_LABEL[a.kind]} · {formatAbsenceRange(a)}
+                  </Text>
+                </View>
+                <Pill
+                  label={pending ? "Da decidere" : "Comunicata"}
+                  variant={pending ? "pending" : "neutral"}
+                />
+              </Pressable>
+              {/* Malattia: i turni dei prossimi giorni da liberare. */}
+              {pending ? null : <AbsenceConflictsBlock absence={a} />}
+            </View>
           );
         })}
       </View>

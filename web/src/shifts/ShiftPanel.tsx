@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
+import { absenceForShift } from "@/features/absences/conflicts";
+import { useAbsenceAvailability } from "@/features/absences/hooks";
+import { absenceCellLabel } from "@/features/absences/labels";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -285,6 +288,12 @@ function InternalForm({
    * selezionabili. In modifica è quella del turno, sempre.
    */
   const formVenueId = shift?.venue_id ?? watch("venue_id");
+  // Chi non c'è nel giorno del turno. Solo il giorno principale: sui giorni in
+  // più di una ripetizione l'avviso non si vede, ed è un limite accettato.
+  const formDate = watch("date");
+  const formStart = watch("start_time");
+  const formEnd = watch("end_time");
+  const absencesQuery = useAbsenceAvailability(formDate, formDate, !!formDate);
   const staffQuery = useVenueStaff(formVenueId || undefined);
   const rolesQuery = useVenueRoles(formVenueId || undefined);
 
@@ -446,9 +455,6 @@ function InternalForm({
 
   // I sette giorni della settimana della data scelta: è lì che si ripete un
   // turno di servizio ("anche giovedì e sabato"), non a distanza di mesi.
-  const formDate = watch("date");
-  const formStart = watch("start_time");
-  const formEnd = watch("end_time");
   const weekOfForm = useMemo(
     () => (formDate ? weekDays(startOfWeek(new Date(`${formDate}T00:00:00`))) : []),
     [formDate]
@@ -676,6 +682,20 @@ function InternalForm({
                 .filter((r): r is NonNullable<typeof r> => !!r)
                 .sort((a, b) => a.sort_order - b.sort_order);
               const chosen = staffRoles[member.id] ?? null;
+              // Avviso, non blocco: il titolare può sapere cose che l'app no.
+              const absence =
+                formDate && formStart && formEnd
+                  ? absenceForShift(
+                      {
+                        date: formDate,
+                        start_time: formStart,
+                        end_time: formEnd,
+                      },
+                      (absencesQuery.data ?? []).filter(
+                        (a) => a.person_id === member.person_id
+                      )
+                    )
+                  : null;
               return (
                 <div key={member.id}>
                   <button
@@ -695,6 +715,11 @@ function InternalForm({
                       <span className="block truncate text-xs text-t4">
                         {staffRoleNames(member) ?? "Ruoli non indicati"}
                       </span>
+                      {absence ? (
+                        <span className="block truncate text-xs font-semibold text-warning">
+                          {absenceCellLabel(absence)}
+                        </span>
+                      ) : null}
                       {requestedByStaff.has(member.id) ? (
                         <span className="block truncate text-xs font-semibold text-gold">
                           {requestedByStaff.get(member.id) === "hours"

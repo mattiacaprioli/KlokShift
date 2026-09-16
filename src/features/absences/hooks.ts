@@ -1,7 +1,12 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { absenceConflicts, type AbsenceWindow } from "./conflicts";
 import {
   getAbsence,
+  getAbsenceAvailability,
+  getPersonShiftsInRange,
+  removeFromShifts,
   getAbsencesToHandle,
   getMyAbsenceEmployers,
   getMyAbsences,
@@ -106,5 +111,62 @@ export function useSetAbsenceInpsProtocol() {
   return useMutation({
     mutationFn: setAbsenceInpsProtocol,
     onSuccess: () => invalidateAfterAbsenceWrite(qc),
+  });
+}
+
+/** Chi non c'è fra due date, per il planning (senza il tipo di assenza). */
+export function useAbsenceAvailability(from: string, to: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.absences.availability(from, to),
+    queryFn: () => getAbsenceAvailability(from, to),
+    enabled: enabled && !!from && !!to,
+  });
+}
+
+/**
+ * I turni della persona che cadono nell'assenza e non sono ancora finiti.
+ * `enabled` va spento sulle assenze chiuse: non hanno niente da togliere.
+ */
+export function useAbsenceConflicts(
+  absence: (AbsenceWindow & { person_id: string }) | null,
+  enabled = true
+) {
+  const on = enabled && !!absence;
+  const query = useQuery({
+    queryKey: qk.assignments.personRange(
+      absence?.person_id ?? "",
+      absence?.start_date ?? "",
+      absence?.end_date ?? ""
+    ),
+    queryFn: () =>
+      getPersonShiftsInRange(
+        absence!.person_id,
+        absence!.start_date,
+        absence!.end_date
+      ),
+    enabled: on,
+  });
+  const conflicts = useMemo(
+    () =>
+      absence && query.data
+        ? absenceConflicts(
+            query.data.map((a) => ({ ...a.shift, assignmentId: a.id })),
+            absence
+          )
+        : [],
+    [absence, query.data]
+  );
+  return { ...query, conflicts };
+}
+
+export function useRemoveFromShifts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: removeFromShifts,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
+      qc.invalidateQueries({ queryKey: qk.shifts.all });
+      qc.invalidateQueries({ queryKey: qk.planning.all });
+    },
   });
 }

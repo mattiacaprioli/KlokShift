@@ -5,6 +5,7 @@ import {
   formatAbsenceRange,
 } from "@/features/absences/labels";
 import { Button, Card, Pill } from "../ui/primitives";
+import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceForm } from "./ResolveAbsenceForm";
 
 /**
@@ -59,6 +60,7 @@ export function AbsencesToHandle({ enabled }: { enabled: boolean }) {
               {pending && open === a.id ? (
                 <ResolveAbsenceForm absence={a} className="mt-3" />
               ) : null}
+              {pending ? null : <AbsenceConflictsBlock absence={a} />}
             </Card>
           );
         })}

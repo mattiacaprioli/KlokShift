@@ -7,6 +7,10 @@ import {
   useOwnerShiftsRange,
 } from "@/features/shifts/hooks";
 import { useReassignShiftAssignment } from "@/features/assignments/hooks";
+import type { AbsenceAvailability } from "@/features/absences/api";
+import { absenceForShift } from "@/features/absences/conflicts";
+import { useAbsenceAvailability } from "@/features/absences/hooks";
+import { absenceWarning } from "@/features/absences/labels";
 import {
   reassignNotifyPlan,
   shiftNotifyRecipients,
@@ -214,6 +218,11 @@ export function PlanningPage() {
     [data, isWeekly, month]
   );
 
+  // Chi non c'è nel periodo visibile, senza il perché. Serve alla vista per
+  // persona e all'avviso quando si passa un turno a qualcuno assente.
+  const absences =
+    useAbsenceAvailability(days[0], days[days.length - 1]).data ?? [];
+
   const toast = useToast();
   const move = useMoveShiftToDate();
   const reassign = useReassignShiftAssignment();
@@ -288,11 +297,19 @@ export function PlanningPage() {
       },
       toWaiterId: to.waiter_id,
     });
-    if (!plan.notifiesFrom && !plan.notifiesTo) {
+    // Chi riceve il turno è assente: si chiede conferma anche se nessuno
+    // verrebbe avvisato. Avviso, non blocco.
+    const absence = shift
+      ? absenceForShift(
+          shift,
+          absences.filter((a) => a.person_id === to.person_id)
+        )
+      : null;
+    if (!plan.notifiesFrom && !plan.notifiesTo && !absence) {
       runReassign(payload, to);
       return;
     }
-    setPendingDrop({ kind: "reassign", payload, to, plan });
+    setPendingDrop({ kind: "reassign", payload, to, plan, absence });
   }
 
   function goToday() {
@@ -421,6 +438,7 @@ export function PlanningPage() {
             days={days}
             shifts={data ?? []}
             venueIds={scopedIds}
+            absences={absences}
             onOpen={(shift) => setPanel({ date: shift.date, shift })}
             onCreate={(day, personId) =>
               setPanel({ date: day, personIds: [personId] })
@@ -495,12 +513,23 @@ export function PlanningPage() {
       {pendingDrop?.kind === "reassign" ? (
         <ConfirmDialog
           title="Cambia persona"
-          message={reassignMessage(
-            pendingDrop.payload,
-            pendingDrop.to,
-            pendingDrop.plan
-          )}
-          confirmLabel="Riassegna e avvisa"
+          message={[
+            pendingDrop.absence
+              ? absenceWarning(pendingDrop.to.display_name, pendingDrop.absence)
+              : null,
+            reassignMessage(
+              pendingDrop.payload,
+              pendingDrop.to,
+              pendingDrop.plan
+            ),
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          confirmLabel={
+            pendingDrop.plan.notifiesFrom || pendingDrop.plan.notifiesTo
+              ? "Riassegna e avvisa"
+              : "Riassegna comunque"
+          }
           pending={busy}
           onConfirm={() => runReassign(pendingDrop.payload, pendingDrop.to)}
           onCancel={() => setPendingDrop(null)}
@@ -524,6 +553,8 @@ type PendingDrop =
       payload: ReassignDragPayload;
       to: ReassignTarget;
       plan: ReassignNotifyPlan;
+      /** Chi riceve il turno è assente quel giorno (o l'ha chiesto). */
+      absence: AbsenceAvailability | null;
     };
 
 /** "Anna", "Anna e Bruno", "Anna, Bruno e Carla". */
@@ -563,6 +594,8 @@ function reassignMessage(
   plan: ReassignNotifyPlan
 ): string {
   const head = `«${payload.title}» del ${formatDate(payload.date)} passa da ${payload.fromStaffName} a ${to.display_name}.`;
+  // Si arriva qui senza nessuno da avvisare solo per l'avviso di assenza.
+  if (!plan.notifiesFrom && !plan.notifiesTo) return head;
   if (plan.notifiesFrom && plan.notifiesTo) {
     return `${head} ${payload.fromStaffName} riceverà «Turno revocato», ${to.display_name} «Nuovo turno assegnato».`;
   }
