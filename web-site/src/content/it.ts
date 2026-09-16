@@ -21,7 +21,7 @@ export const it: Content = {
   lang: "it",
 
   brand: {
-    name: "topWaitr",
+    name: "KlokShift",
     tagline: "Gestione turni per l'ospitalità",
   },
 
@@ -152,7 +152,7 @@ export const it: Content = {
 
   sectors: {
     eyebrow: "Per chi",
-    title: "Se si lavora su turni, topWaitr serve.",
+    title: "Se si lavora su turni, KlokShift serve.",
     lead: "Nato in sala, non solo per la sala.",
     items: [
       "Ristoranti",
@@ -225,7 +225,7 @@ export const it: Content = {
       },
       {
         q: "Gestisce anche le paghe?",
-        a: "No. topWaitr conta le ore e le esporta. Le buste paga restano al tuo consulente.",
+        a: "No. KlokShift conta le ore e le esporta. Le buste paga restano al tuo consulente.",
       },
     ],
   },
@@ -242,7 +242,7 @@ export const it: Content = {
     tagline: "Gestione dei turni per il settore dell'ospitalità.",
     // ⚠️ Da confermare: stesso indirizzo va messo in `public/privacy.html`,
     // dove oggi c'è il placeholder `[EMAIL DI CONTATTO]`.
-    email: "info@topwaitr.com",
+    email: "info@klokshift.com",
     emailLabel: "Scrivici",
     links: [
       { href: "./privacy.html", label: "Informativa sulla privacy" },
@@ -254,7 +254,7 @@ export const it: Content = {
   invite: {
     eyebrow: "Invito",
     title: "Ti hanno aggiunto a un organico.",
-    lead: "La sede che ti ha invitato usa topWaitr per organizzare i turni. Scarica l'app e trovi i tuoi.",
+    lead: "La sede che ti ha invitato usa KlokShift per organizzare i turni. Scarica l'app e trovi i tuoi.",
     steps: [
       {
         title: "Scarica l'app",
@@ -281,13 +281,13 @@ export const it: Content = {
       "Le ore che hai fatto, contate senza doverle scrivere a mano.",
       "I messaggi con la sede, per cambi e imprevisti.",
     ],
-    homeLabel: "Scopri topWaitr",
+    homeLabel: "Scopri KlokShift",
   },
 
   inviteManager: {
     eyebrow: "Invito",
     title: "Ti hanno dato accesso a una sede.",
-    lead: "Chi gestisce la sede ti ha aggiunto ai suoi collaboratori: da topWaitr organizzi i turni e segui l'organico.",
+    lead: "Chi gestisce la sede ti ha aggiunto ai suoi collaboratori: da KlokShift organizzi i turni e segui l'organico.",
     steps: [
       {
         title: "Registrati come sede",
@@ -304,7 +304,7 @@ export const it: Content = {
     ],
     calloutTitle: "Registrati come sede, non come professionista",
     calloutBody:
-      "Con un account da professionista, o con un indirizzo diverso, entri in topWaitr ma non nella gestione della sede che ti ha invitato.",
+      "Con un account da professionista, o con un indirizzo diverso, entri in KlokShift ma non nella gestione della sede che ti ha invitato.",
     webTitle: "Anche dal computer",
     webBody:
       "La gestione dei turni si fa dall'app o dalla dashboard, con la stessa registrazione.",

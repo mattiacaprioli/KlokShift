@@ -5,7 +5,7 @@ type Props = {
   color?: string;
 };
 
-/** topWaitr mark — a filled dot with concentric arcs (ported from the prototype). */
+/** KlokShift mark — a filled dot with concentric arcs (ported from the prototype). */
 export function Logo({ size = 48, color = "#EAB54C" }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">

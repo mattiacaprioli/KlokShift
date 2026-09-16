@@ -79,7 +79,7 @@ export function InvitePage() {
           </ol>
 
           {/* La frase da cui dipende tutto il meccanismo: chi si registra con un
-              altro indirizzo entra in topWaitr ma non nell'organico. */}
+              altro indirizzo entra in KlokShift ma non nell'organico. */}
           <div className="mt-8 rounded-2xl border border-border-gold bg-bg-card p-6">
             <h2 className="font-semibold text-gold">
               {c.calloutTitle}

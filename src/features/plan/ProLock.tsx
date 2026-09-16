@@ -33,7 +33,7 @@ export function PlanCard() {
         <Icon name="sparkle" size={18} color="#EAB54C" />
       </View>
       <View className="flex-1">
-        <Text className="text-base font-sans-bold text-t1">topWaitr Pro</Text>
+        <Text className="text-base font-sans-bold text-t1">KlokShift Pro</Text>
         <Text className="mt-0.5 text-xs text-t3">
           {isPro
             ? "Gestione del personale attiva."

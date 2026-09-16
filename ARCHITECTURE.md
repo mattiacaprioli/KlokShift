@@ -1,4 +1,4 @@
-# Architettura topWaitr
+# Architettura KlokShift
 
 Gestione dei turni per l'ospitalità (Expo SDK 56 · React Native 0.85 · Expo
 Router · Supabase · NativeWind v4/Tailwind v4). Questo documento è la guida di

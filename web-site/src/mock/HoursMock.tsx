@@ -1,6 +1,6 @@
 /*
  * Il riepilogo mensile delle ore: una riga per persona, il totale in fondo e i
- * due export. Nessuna cifra in euro — topWaitr conta ore, non paghe (vedi il
+ * due export. Nessuna cifra in euro — KlokShift conta ore, non paghe (vedi il
  * commento in cima a `content/it.ts`).
  */
 

@@ -1,6 +1,6 @@
 # web-site — sito vetrina
 
-La pagina pubblica di topWaitr: cosa fa il prodotto, per chi, e il pulsante che
+La pagina pubblica di KlokShift: cosa fa il prodotto, per chi, e il pulsante che
 porta alla registrazione della sede. È la **radice** del sito su GitHub Pages;
 la dashboard sta sotto `/app/` (vedi `web/README.md`).
 
@@ -37,7 +37,7 @@ Il sito deve raccontare il prodotto che esiste oggi:
 
 - **niente recensioni, reputazione o QR** — sospesi (`src/features/reviews/config.ts`);
 - **niente annunci o candidature** — il marketplace è stato rimosso il 2026-09-12;
-- **niente paghe, compensi o pagamenti** — topWaitr conta ore, non soldi;
+- **niente paghe, compensi o pagamenti** — KlokShift conta ore, non soldi;
 - **nessun prezzo** — il modello non è definito (`TASKS.md`), quindi la sezione
   "Piani" dice cosa resta gratis e cosa andrà nel Pro, senza cifre.
 

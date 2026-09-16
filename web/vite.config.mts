@@ -9,8 +9,8 @@ const repoRoot = resolve(here, "..");
 
 export default defineConfig(({ mode }) => ({
   root: here,
-  // Percorsi relativi: la SPA gira sotto /topWaitr/app/ su GitHub Pages oggi e
-  // sulla radice di un dominio proprio domani, senza ricompilare con base diverse.
+  // Percorsi relativi: la SPA gira sotto /topWaitr/app/ su github.io e sotto
+  // /app/ su klokshift.com, senza ricompilare con base diverse.
   base: "./",
   // Riusa il .env della root con gli stessi nomi dell'app: una sola fonte per
   // URL e anon key di Supabase, nessuna coppia VITE_* da tenere allineata.

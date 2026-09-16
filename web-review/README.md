@@ -32,7 +32,7 @@ Deve combaciare con `EXPO_PUBLIC_REVIEW_SITE_URL` in `.env` (default `http://loc
 Qualsiasi static host gratuito, es. Cloudflare Pages / Vercel / Netlify:
 carica la cartella `web-review/` come sito statico (nessun build command, output
 dir = cartella stessa). Poi imposta nell'app `EXPO_PUBLIC_REVIEW_SITE_URL` all'URL
-risultante (senza slash finale), es. `https://recensioni.topwaitr.com`.
+risultante (senza slash finale), es. `https://recensioni.klokshift.com`.
 
 ## Prerequisito DB
 Richiede le migration `20260703120000_reviews.sql` e

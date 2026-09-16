@@ -85,7 +85,7 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title="topWaitr"
+      title="KlokShift"
       subtitle="Gestione della sede — turni, copertura e ore."
     >
       <AuthPanel>

@@ -3,9 +3,8 @@ import { Reveal } from "../ui/Reveal";
 import { t } from "../content";
 
 /*
- * I settori come chip. È la sezione che smentisce il nome del prodotto:
- * "Waitr" suona ristorazione, ma il modo di organizzare i turni è lo stesso in
- * un hotel, in una discoteca o in un'agenzia di eventi.
+ * I settori come chip: il modo di organizzare i turni è lo stesso in un
+ * ristorante, in un hotel, in una discoteca o in un'agenzia di eventi.
  */
 export function Sectors() {
   return (

@@ -5,4 +5,4 @@ Allow: /
 # `noindex` nel suo HTML. Qui si evita anche la scansione.
 Disallow: /app/
 
-Sitemap: https://mattiacaprioli.github.io/topWaitr/sitemap.xml
+Sitemap: https://klokshift.com/sitemap.xml

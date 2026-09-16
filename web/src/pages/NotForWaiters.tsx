@@ -17,7 +17,7 @@ export function NotForWaitersPage() {
         </h1>
         <p className="mt-3 text-sm leading-6 text-t2">
           Ciao {profile?.full_name ?? ""}, il tuo account è da professionista.
-          Turni, messaggi e recensioni li trovi nell&apos;app topWaitr
+          Turni, messaggi e recensioni li trovi nell&apos;app KlokShift
           sul telefono: è lì che funzionano meglio.
         </p>
         <p className="mt-2 text-xs text-t4">

@@ -54,7 +54,7 @@ export default function SignupRole() {
         <Icon name="chevL" size={18} color="#C2BBB0" />
       </Pressable>
 
-      <Display className="mt-6 text-[28px]">Come userai topWaitr?</Display>
+      <Display className="mt-6 text-[28px]">Come userai KlokShift?</Display>
       <Text className="mt-2 font-sans text-[13.5px] text-t3">
         Scegli come vuoi iniziare. Potrai cambiare in seguito dalle impostazioni.
       </Text>

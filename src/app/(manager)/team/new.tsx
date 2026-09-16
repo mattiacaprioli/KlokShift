@@ -24,7 +24,7 @@ import { userErrorMessage } from "@/lib/errors";
  *
  * Email, sedi, permessi — in quest'ordine, che è quello in cui il titolare
  * pensa: *chi* faccio entrare, *dove*, e *cosa* può fare. Non gli si chiede se
- * quella persona abbia già topWaitr: è `addTeamMember` a deciderlo, come per
+ * quella persona abbia già KlokShift: è `addTeamMember` a deciderlo, come per
  * l'organico.
  */
 export default function TeamNewScreen() {

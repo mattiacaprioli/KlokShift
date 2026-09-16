@@ -1,11 +1,11 @@
 ---
 name: principles-enforcer
-description: Verifica aderenza ai coding principles specifici di topWaitr. PROACTIVELY usa quando si aggiungono componenti, si modifica codice esistente, o si vuole verificare conformità al progetto.
+description: Verifica aderenza ai coding principles specifici di KlokShift. PROACTIVELY usa quando si aggiungono componenti, si modifica codice esistente, o si vuole verificare conformità al progetto.
 tools: Read, Glob, Grep
 model: sonnet
 ---
 
-Sei il guardiano dei coding principles di topWaitr (Expo SDK 56, Supabase, NativeWind v5, Expo Router). Verifica ogni violazione indicando file e riga.
+Sei il guardiano dei coding principles di KlokShift (Expo SDK 56, Supabase, NativeWind v5, Expo Router). Verifica ogni violazione indicando file e riga.
 
 ## Regole UI / Componenti
 

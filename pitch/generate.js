@@ -72,7 +72,7 @@ async function icon(name, color) {
     });
 
     kicker(s, "Presentazione progetto  ·  Mercato italiano", 0.92, 6.5);
-    s.addNotes("Deck di presentazione di topWaitr per ristoratori/aziende. Tema premium scuro con accento oro coerente col design system dell'app.");
+    s.addNotes("Deck di presentazione di KlokShift per ristoratori/aziende. Tema premium scuro con accento oro coerente col design system dell'app.");
   }
 
   // ============================================================ SLIDE 2 — PROBLEMA
@@ -113,7 +113,7 @@ async function icon(name, color) {
       { text: "farti scegliere", options: { color: C.gold } },
       { text: ".", options: { color: C.cream } },
     ], { x: 0.7, y: 1.35, w: 4.4, h: 3, fontFace: SERIF, fontSize: 30, bold: true, align: "left", margin: 0, lineSpacingMultiple: 1.1 });
-    s.addText("topWaitr unisce la gestione del tuo staff interno al marketplace degli extra, con la reputazione dei camerieri al centro.", {
+    s.addText("KlokShift unisce la gestione del tuo staff interno al marketplace degli extra, con la reputazione dei camerieri al centro.", {
       x: 0.7, y: 5.0, w: 4.4, h: 1.4, fontFace: SANS, fontSize: 14, color: C.muted, align: "left", margin: 0, lineSpacingMultiple: 1.25,
     });
 
@@ -353,6 +353,6 @@ async function icon(name, color) {
     s.addNotes("Chiusura: call to action per ristoratori pilota. Sostituire con contatti reali prima della presentazione.");
   }
 
-  await p.writeFile({ fileName: "/Users/alisher/topWaitr/pitch/topWaitr.pptx" });
+  await p.writeFile({ fileName: "/Users/alisher/topWaitr/pitch/KlokShift.pptx" });
   console.log("done");
 })();

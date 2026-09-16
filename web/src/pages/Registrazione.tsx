@@ -136,7 +136,7 @@ export function RegistrazionePage() {
             è quello che ti collega alla sua sede.
             <br />
             Se lavori come professionista, la registrazione si fa
-            dall&apos;app topWaitr sul telefono.
+            dall&apos;app KlokShift sul telefono.
           </p>
         </form>
       </AuthPanel>

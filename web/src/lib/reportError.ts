@@ -6,5 +6,5 @@
 // browser — dove un gestore che chiama può leggerlo — invece di sparire con la
 // pagina bianca.
 export function reportError(error: unknown, context?: string) {
-  console.error(`[topWaitr${context ? ` · ${context}` : ""}]`, error);
+  console.error(`[KlokShift${context ? ` · ${context}` : ""}]`, error);
 }

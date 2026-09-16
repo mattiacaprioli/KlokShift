@@ -3,7 +3,7 @@
 //
 // Il ramo "persona già registrata" non passa di qui: quello resta
 // `find_waiter_by_email` + invito in-app. Qui c'è il caso normale — il titolare
-// ha l'email di Marco, Marco non sa nemmeno che topWaitr esiste.
+// ha l'email di Marco, Marco non sa nemmeno che KlokShift esiste.
 //
 // I due inviti non funzionano allo stesso modo, ed è voluto:
 //
@@ -32,7 +32,7 @@
 //
 // Secrets:
 //   supabase secrets set SMTP_HOST=... SMTP_PORT=587 SMTP_USER=... \
-//     SMTP_PASS=... SMTP_FROM='topWaitr <no-reply@...>' SITE_URL='https://...' \
+//     SMTP_PASS=... SMTP_FROM='KlokShift <no-reply@...>' SITE_URL='https://...' \
 //     DASHBOARD_URL='https://.../app'
 //
 // ⚠️ `DASHBOARD_URL` è dove atterra il link del collaboratore. Non serve metterlo
@@ -148,14 +148,14 @@ function buildEmail(p: Payload) {
   const link = `${SITE_URL}/invito.html`;
   const firstName = p.full_name.trim().split(/\s+/)[0] || "ciao";
 
-  const subject = `${venue} ti ha aggiunto al suo organico su topWaitr`;
+  const subject = `${venue} ti ha aggiunto al suo organico su KlokShift`;
 
   // Il testo semplice non è un di più: un'email solo-HTML, mandata a freddo a
   // qualcuno che non conosce il mittente, parte con un punteggio spam peggiore.
   const text = [
     `Ciao ${firstName},`,
     ``,
-    `${p.owner_name} ti ha aggiunto all'organico di ${venue} su topWaitr,`,
+    `${p.owner_name} ti ha aggiunto all'organico di ${venue} su KlokShift,`,
     `l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.`,
     ``,
     `Scarica l'app: ${link}`,
@@ -165,7 +165,7 @@ function buildEmail(p: Payload) {
     ``,
     `---`,
     `Ricevi questa email perché ${venue} ha inserito il tuo indirizzo nel proprio`,
-    `organico su topWaitr. Se non ti riguarda, ignorala: senza registrazione non`,
+    `organico su KlokShift. Se non ti riguarda, ignorala: senza registrazione non`,
     `viene creato nessun account.`,
     `Privacy: ${SITE_URL}/privacy.html`,
   ].join("\n");
@@ -182,9 +182,9 @@ function buildEmail(p: Payload) {
 <body style="margin:0;padding:24px 12px;background:#F5F2EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#23201B;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;">
 <tr><td style="padding:32px 28px;">
-  <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">topWaitr</p>
+  <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
   <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno aggiunto a un organico</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su topWaitr — l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su KlokShift — l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Scarica l'app</a>
@@ -196,7 +196,7 @@ function buildEmail(p: Payload) {
     </td></tr>
   </table>
   <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">
-    Ricevi questa email perché ${e.venue} ha inserito il tuo indirizzo nel proprio organico su topWaitr. Se non ti riguarda, ignorala: senza registrazione non viene creato nessun account.<br>
+    Ricevi questa email perché ${e.venue} ha inserito il tuo indirizzo nel proprio organico su KlokShift. Se non ti riguarda, ignorala: senza registrazione non viene creato nessun account.<br>
     <a href="${SITE_URL}/privacy.html" style="color:#8A8070;">Privacy</a>
   </p>
 </td></tr></table>
@@ -218,13 +218,13 @@ function buildEmail(p: Payload) {
  * ricostruito a mano non è più un segreto.
  */
 function buildTeamEmail(p: TeamPayload, link: string) {
-  const subject = `${p.owner_name} ti ha dato accesso a ${p.venue_name} su topWaitr`;
+  const subject = `${p.owner_name} ti ha dato accesso a ${p.venue_name} su KlokShift`;
 
   const text = [
     `Ciao,`,
     ``,
     `${p.owner_name} ti ha dato accesso alla gestione di ${p.venue_name} su`,
-    `topWaitr: da lì organizzi i turni e segui l'organico della sede.`,
+    `KlokShift: da lì organizzi i turni e segui l'organico della sede.`,
     ``,
     `Apri questo link e scegli una password: l'account lo creiamo in quel`,
     `momento, a nome di questo indirizzo (${p.email}).`,
@@ -234,11 +234,11 @@ function buildTeamEmail(p: TeamPayload, link: string) {
     `Il link vale ${INVITE_TTL_DAYS} giorni ed è usabile una volta sola. Se è scaduto, chiedi a`,
     `${p.owner_name} di rimandartelo.`,
     ``,
-    `Con quella password entri sia da qui che dall'app topWaitr.`,
+    `Con quella password entri sia da qui che dall'app KlokShift.`,
     ``,
     `---`,
     `Ricevi questa email perché ${p.owner_name} ti ha aggiunto ai collaboratori di`,
-    `${p.venue_name} su topWaitr. Se non ti riguarda, ignorala: finché non apri il`,
+    `${p.venue_name} su KlokShift. Se non ti riguarda, ignorala: finché non apri il`,
     `link e non scegli una password non viene creato nessun account.`,
     `Privacy: ${SITE_URL}/privacy.html`,
   ].join("\n");
@@ -254,9 +254,9 @@ function buildTeamEmail(p: TeamPayload, link: string) {
 <body style="margin:0;padding:24px 12px;background:#F5F2EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#23201B;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;">
 <tr><td style="padding:32px 28px;">
-  <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">topWaitr</p>
+  <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
   <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso a una sede</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione di <strong>${e.venue}</strong> su topWaitr — da lì organizzi i turni e segui l'organico della sede.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione di <strong>${e.venue}</strong> su KlokShift — da lì organizzi i turni e segui l'organico della sede.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Attiva il tuo accesso</a>
@@ -269,7 +269,7 @@ function buildTeamEmail(p: TeamPayload, link: string) {
     </td></tr>
   </table>
   <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">
-    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori di ${e.venue} su topWaitr. Se non ti riguarda, ignorala: finché non apri il link e non scegli una password non viene creato nessun account.<br>
+    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori di ${e.venue} su KlokShift. Se non ti riguarda, ignorala: finché non apri il link e non scegli una password non viene creato nessun account.<br>
     <a href="${SITE_URL}/privacy.html" style="color:#8A8070;">Privacy</a>
   </p>
 </td></tr></table>

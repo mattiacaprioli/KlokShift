@@ -81,7 +81,7 @@ function useVenueSelection() {
  * gli si aggiunge una sede dalla sua scheda.
  *
  * Dal 16/09/2026 sono spariti anche i due tab «Scheda manuale / Invita via
- * email»: chiedevano al titolare se quella persona avesse già topWaitr, cosa
+ * email»: chiedevano al titolare se quella persona avesse già KlokShift, cosa
  * che non può sapere. Scrive nome ed email, e `addStaff` decide — scheda,
  * invito in-app o email d'invito. Stessa funzione dell'app.
  */

@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "topWaitr",
+    "name": "KlokShift",
     "slug": "topWaitr",
     "owner": "tiaxd94",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "topwaitr",
+    "scheme": "klokshift",
     "userInterfaceStyle": "dark",
     "ios": {
-      "bundleIdentifier": "com.topwaitr.app",
+      "bundleIdentifier": "com.klokshift.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.topwaitr.app",
+      "package": "com.klokshift.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0C0907",
@@ -49,14 +49,14 @@
       [
         "expo-media-library",
         {
-          "savePhotosPermission": "Consenti a topWaitr di salvare il tuo QR nella galleria.",
+          "savePhotosPermission": "Consenti a KlokShift di salvare il tuo QR nella galleria.",
           "granularPermissions": ["photo"]
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Consenti a topWaitr di accedere alle foto per scegliere l'immagine del tuo profilo."
+          "photosPermission": "Consenti a KlokShift di accedere alle foto per scegliere l'immagine del tuo profilo."
         }
       ],
       "@sentry/react-native",

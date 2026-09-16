@@ -235,7 +235,7 @@ export type AddTeamMemberResult =
  *
  * Un solo punto d'ingresso con dentro la decisione, invece di due modalità da
  * scegliere a mano: chi invita non sa — e non deve sapere — se la persona ha già
- * un account topWaitr. È la stessa forma di `addStaff()` per l'organico.
+ * un account KlokShift. È la stessa forma di `addStaff()` per l'organico.
  *
  * Le sedi si trattano una per una perché i tre casi convivono nella stessa
  * chiamata: su una c'è già, su una c'era e gli è stato tolto, su una è nuovo.
@@ -357,11 +357,11 @@ export async function addTeamMember(
 function teamError(message: string): Error {
   if (message.includes("already_in_other_company")) {
     return new UserFacingError(
-      "Questa persona collabora già con un'altra sede su topWaitr."
+      "Questa persona collabora già con un'altra sede su KlokShift."
     );
   }
   if (message.includes("already_owns_venues")) {
-    return new UserFacingError("Questa persona ha già una sede sua su topWaitr.");
+    return new UserFacingError("Questa persona ha già una sede sua su KlokShift.");
   }
   // I due controlli di `venue_access_user_matches_email`: l'app non dovrebbe mai
   // vederli — li produce chi scrive un `user_id` che non corrisponde all'email.

@@ -35,7 +35,7 @@ export default function ManagerProScreen() {
           gap: 20,
         }}
       >
-        <ScreenHeader eyebrow="topWaitr" title="Pro" goldEyebrow icon="close" />
+        <ScreenHeader eyebrow="KlokShift" title="Pro" goldEyebrow icon="close" />
 
         <View className="items-center gap-3 py-2">
           <View className="h-16 w-16 items-center justify-center rounded-full border border-border-gold bg-bg-2">
@@ -77,7 +77,7 @@ export default function ManagerProScreen() {
             Stiamo definendo i piani
           </Text>
           <Text className="text-center text-xs leading-4 text-t3">
-            Presto potrai attivare topWaitr Pro. Facci sapere se ti interessa:
+            Presto potrai attivare KlokShift Pro. Facci sapere se ti interessa:
             terremo conto del tuo riscontro.
           </Text>
         </View>
@@ -85,7 +85,7 @@ export default function ManagerProScreen() {
         <GoldButton
           label="Sono interessato"
           onPress={() =>
-            toast.show("Grazie! Ti terremo aggiornato su topWaitr Pro.")
+            toast.show("Grazie! Ti terremo aggiornato su KlokShift Pro.")
           }
         />
       </ScrollView>

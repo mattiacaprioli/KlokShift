@@ -1,9 +1,9 @@
 ---
 name: new-component
-description: Crea un nuovo componente UI o una nuova schermata Expo Router in topWaitr seguendo le convenzioni del progetto. Attiva quando si aggiunge un file in src/components/, src/app/, si crea un hook, o si struttura una nuova feature.
+description: Crea un nuovo componente UI o una nuova schermata Expo Router in KlokShift seguendo le convenzioni del progetto. Attiva quando si aggiunge un file in src/components/, src/app/, si crea un hook, o si struttura una nuova feature.
 ---
 
-# Nuovo componente / schermata — topWaitr
+# Nuovo componente / schermata — KlokShift
 
 Stack: Expo SDK 56 + React Native 0.85 + Expo Router + Supabase + NativeWind v5 (wrapper `@/tw`).
 Linea guida: React Native puro + NativeWind. Niente Tamagui, niente GraphQL/Relay.

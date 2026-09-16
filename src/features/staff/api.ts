@@ -542,7 +542,7 @@ export type AddStaffResult =
 /**
  * Aggiunge una persona all'organico, email o no.
  *
- * ⚠️ La domanda «questa persona ha già topWaitr?» **non è del titolare**: lui ha
+ * ⚠️ La domanda «questa persona ha già KlokShift?» **non è del titolare**: lui ha
  * un'email e basta. Prima erano due modalità nel form — Manuale e Invita — e
  * sceglierle male voleva dire o un invito che non partiva o una scheda muta.
  * Ora si scrive l'email e la decisione è qui, in un posto solo, condiviso da app

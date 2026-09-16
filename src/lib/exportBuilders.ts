@@ -81,7 +81,7 @@ export function buildHoursHtml(
       )}</td></tr></tfoot>
     </table>
     ${absences.length > 0 ? absencesHtmlSection(absences) : ""}
-    <div class="foot">Documento generato da topWaitr · riepilogo ore/presenze del personale interno.</div>
+    <div class="foot">Documento generato da KlokShift · riepilogo ore/presenze del personale interno.</div>
   </body></html>`;
 }
 

@@ -25,7 +25,7 @@ export default function ComponentsScreen() {
   return (
     <ScrollView className="flex-1 bg-bg-1" contentContainerClassName="p-5">
       <Block title="ShimmerText">
-        <ShimmerText fontSize={36}>topWaitr</ShimmerText>
+        <ShimmerText fontSize={36}>KlokShift</ShimmerText>
       </Block>
 
       <Block title="GoldButton">

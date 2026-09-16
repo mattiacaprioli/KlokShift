@@ -14,7 +14,7 @@ export default function Welcome() {
       <LogoBadge size={92} />
 
       <View className="mt-12 items-center">
-        <Mono gold>BENVENUTO IN TOPWAITR</Mono>
+        <Mono gold>BENVENUTO IN KLOKSHIFT</Mono>
       </View>
 
       <Display

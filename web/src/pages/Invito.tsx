@@ -168,7 +168,7 @@ export function InvitoPage() {
       setError("Account creato. Entra dalla pagina di accesso con questa password.");
       return;
     }
-    toast.show("Benvenuto in topWaitr.");
+    toast.show("Benvenuto in KlokShift.");
     navigate("/", { replace: true });
   }
 
@@ -201,7 +201,7 @@ export function InvitoPage() {
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <p className="rounded-xl border border-border-2 bg-bg-2 px-3 py-2.5 text-xs leading-5 text-t3">
             Il tuo account sarà <strong className="text-t2">{invite.email}</strong>
-            . Con questa password entri sia da qui che dall&apos;app topWaitr.
+            . Con questa password entri sia da qui che dall&apos;app KlokShift.
           </p>
 
           <Field label="Come ti chiami">

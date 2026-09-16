@@ -1,8 +1,8 @@
-Review completa del codice corrente di topWaitr.
+Review completa del codice corrente di KlokShift.
 
 Lancia in parallelo i seguenti subagent (Agent tool):
 1. **code-reviewer** — qualità del codice, SRP, DRY, naming, error handling
-2. **principles-enforcer** — conformità ai principi topWaitr (NativeWind via `@/tw`, no Tamagui, data layer Supabase, Stack.Protected, gotcha `<Link>`, path alias `@/`)
+2. **principles-enforcer** — conformità ai principi KlokShift (NativeWind via `@/tw`, no Tamagui, data layer Supabase, Stack.Protected, gotcha `<Link>`, path alias `@/`)
 3. **techdebt-analyzer** — tech debt, componenti grandi, duplicazione, dead code, TODO, pattern obsoleti
 
 Se $ARGUMENTS contiene un path, limita l'analisi a quei file o cartelle.

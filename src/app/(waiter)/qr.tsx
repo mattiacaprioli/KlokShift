@@ -34,7 +34,7 @@ export default function WaiterQRScreen() {
   async function onShare() {
     try {
       await Share.share({
-        message: `Lascia una recensione a ${name} su topWaitr: ${url}`,
+        message: `Lascia una recensione a ${name} su KlokShift: ${url}`,
       });
     } catch {
       // condivisione annullata
@@ -62,7 +62,7 @@ export default function WaiterQRScreen() {
         toast.show("Concedi l'accesso alle foto per salvare", "error");
         return;
       }
-      const uri = `${FileSystem.cacheDirectory}topwaitr-qr.png`;
+      const uri = `${FileSystem.cacheDirectory}klokshift-qr.png`;
       await FileSystem.writeAsStringAsync(uri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });

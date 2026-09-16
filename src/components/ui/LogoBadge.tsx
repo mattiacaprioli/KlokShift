@@ -6,7 +6,7 @@ type Props = {
   size?: number;
 };
 
-/** Rounded gradient badge framing the topWaitr mark, with a soft gold glow. */
+/** Rounded gradient badge framing the KlokShift mark, with a soft gold glow. */
 export function LogoBadge({ size = 92 }: Props) {
   return (
     <View

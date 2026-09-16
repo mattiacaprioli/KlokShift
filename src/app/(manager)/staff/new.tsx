@@ -86,7 +86,7 @@ function VenueMultiSelect({
  * in elenco, e gli si aggiunge una sede dalla sua scheda.
  *
  * Dal 16/09/2026 è sparito anche il bivio «Manuale / Invita»: chiedeva al
- * titolare se quella persona avesse già topWaitr, cosa che non può sapere.
+ * titolare se quella persona avesse già KlokShift, cosa che non può sapere.
  * Scrive nome ed email, e `addStaff` decide — scheda, invito in-app o email
  * d'invito. Vedi `src/features/staff/api.ts`.
  */
