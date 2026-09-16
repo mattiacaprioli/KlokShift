@@ -221,7 +221,12 @@ export type AddTeamMemberResult =
   /** La persona aveva già un account: l'accesso è attivo da subito. */
   | { kind: "linked"; name: string | null }
   /** Nessun account: riga in attesa e invito spedito (o no, se l'SMTP ha detto no). */
-  | { kind: "invited"; emailSent: boolean }
+  | {
+      kind: "invited";
+      emailSent: boolean;
+      /** Perché l'email non è partita, già in italiano. Assente se è partita. */
+      emailError?: string;
+    }
   /** Aveva già accesso a **tutte** le sedi scelte: niente da fare. */
   | { kind: "already" };
 
@@ -326,11 +331,19 @@ export async function addTeamMember(
   try {
     await sendTeamInvite(accessId);
     return { kind: "invited", emailSent: true };
-  } catch {
+  } catch (e) {
     // L'accesso è stato creato: se l'email non parte, il titolare ha comunque
     // una riga in lista e un pulsante "Reinvia". Fallire tutto qui vorrebbe dire
     // buttare via un invito già valido perché l'SMTP era occupato.
-    return { kind: "invited", emailSent: false };
+    //
+    // Il motivo però va portato fino al toast: «email non spedita» senza un
+    // perché fa riprovare all'infinito anche quando il problema è che gli inviti
+    // non sono attivi sul progetto, e riprovare non cambierà niente.
+    return {
+      kind: "invited",
+      emailSent: false,
+      emailError: e instanceof UserFacingError ? e.message : undefined,
+    };
   }
 }
 

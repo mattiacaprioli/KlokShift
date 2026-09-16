@@ -152,8 +152,9 @@ export default function StaffNewScreen() {
   function messageFor(res: AddStaffResult): string {
     if (res.kind === "app_invite") return "Richiesta inviata";
     if (res.kind === "email_invite") {
-      return res.emailSent
-        ? "Aggiunto allo staff · invito spedito"
+      if (res.emailSent) return "Aggiunto allo staff · invito spedito";
+      return res.emailError
+        ? `Aggiunto allo staff · invito non spedito: ${res.emailError}`
         : "Aggiunto allo staff · invito non spedito, riprova dalla sua scheda";
     }
     return "Aggiunto allo staff";

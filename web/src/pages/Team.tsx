@@ -218,7 +218,9 @@ function InviteForm({ ownerId }: { ownerId: string }) {
               ? `${res.name ?? "Il collaboratore"} ora ha accesso`
               : res.emailSent
                 ? "Invito spedito"
-                : "Invito creato · email non spedita, riprova dalla lista"
+                : res.emailError
+                  ? `Invito creato · email non spedita: ${res.emailError}`
+                  : "Invito creato · email non spedita, riprova dalla lista"
           );
           setEmail("");
           setPicked([]);

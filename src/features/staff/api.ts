@@ -530,7 +530,13 @@ export async function sendStaffInvite(personId: string): Promise<void> {
 export type AddStaffResult =
   | { kind: "manual"; members: StaffMember[] }
   | { kind: "app_invite"; members: StaffMember[] }
-  | { kind: "email_invite"; members: StaffMember[]; emailSent: boolean }
+  | {
+      kind: "email_invite";
+      members: StaffMember[];
+      emailSent: boolean;
+      /** Perché l'email non è partita, già in italiano. Assente se è partita. */
+      emailError?: string;
+    }
   | { kind: "already"; personId: string };
 
 /**
@@ -597,8 +603,14 @@ export async function addStaff(args: {
   try {
     await sendStaffInvite(personId);
     return { kind: "email_invite", members, emailSent: true };
-  } catch {
-    return { kind: "email_invite", members, emailSent: false };
+  } catch (e) {
+    // Il motivo arriva fino al toast: vedi lo stesso ramo in `addTeamMember`.
+    return {
+      kind: "email_invite",
+      members,
+      emailSent: false,
+      emailError: e instanceof UserFacingError ? e.message : undefined,
+    };
   }
 }
 

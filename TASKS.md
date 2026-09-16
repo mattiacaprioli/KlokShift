@@ -393,13 +393,26 @@ Ora l'email porta un **token nostro** a `#/invito`, e l'account nasce lì con `c
 
 ## 🔜 In sospeso — prossimi passi immediati
 
-- [ ] ⚠️ **L'invio dell'email d'invito NON è ancora attivo** (15/09). Il codice c'è, le migration sono applicate, ma `POST /functions/v1/invite-staff` risponde **404 `NOT_FOUND`**: `.github/workflows/supabase.yml` applica solo le migration, le Edge Function si deployano a mano. Il bottone «Invita a scaricare l'app» dice «Gli inviti via email non sono ancora attivi su questo progetto» finché non si fanno **due** cose:
-  1. **Mittente SMTP con SPF + DKIM + DMARC.** È il rischio vero, non il codice: il sito è su `github.io`, **non c'è un dominio proprio da autenticare**, e senza DKIM un'email a freddo con un link va in spam — la feature fallisce **in silenzio**, nessun errore, nessuno che si registra. O si registra un dominio, o si spedisce da un sottodominio del provider (deliverability inferiore).
-  2. `supabase secrets set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM/SITE_URL/DASHBOARD_URL` + **due** deploy, con due comandi diversi e facili da sbagliare:
-     - `supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg` (**con** verifica JWT, come `delete-account`);
-     - `supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg` (**senza**: chi la chiama un account non ce l'ha ancora).
-     `DASHBOARD_URL` serve al solo invito collaboratore. Non va negli allowlist «Redirect URLs» di Supabase Auth: quel link non passa da GoTrue.
-- [ ] **Applicare `20260917120000_venue_access_invite_token.sql`.** Verifiche veloci dopo il push: `claim_venue_access_cancel` e `inert_invite_user` non devono più esistere, e `claim_venue_access_send` deve esistere in **una** sola versione (4 argomenti). Poi il giro completo: invitare un indirizzo mai visto e controllare che in `auth.users` **non** ci sia niente finché il link non viene aperto; aprire il link e chiudere senza scegliere la password (le righe devono restare `pending`); registrarsi da zero con l'indirizzo di un invito mai aperto (deve funzionare).
+- [ ] ⚠️ **ATTIVARE L'INVIO DELLE EMAIL** (verificato il 16/09: `invite-staff` e `accept-invite` rispondono **404 `NOT_FOUND`**, nessuna email è mai partita). Il codice c'è e la migration `20260917120000` è applicata; mancano solo servizio, secret e deploy. Supabase da solo spedisce **solo** le email di autenticazione, con un limite di **2 all'ora** e un mittente dichiarato «solo per test»: le email personalizzate (inviti) richiedono un SMTP esterno, e lo stesso SMTP va messo anche su Supabase Auth prima di avere utenti veri. Scelta: **Resend** (gratis 3.000/mese, max 100/giorno, regione EU; alternativa Brevo, 300/giorno). Passi, in ordine:
+  1. [ ] **Comprare un dominio** (~10 €/anno). Senza, Gmail/Outlook scartano o mettono in spam: nessun servizio spedisce bene da `@gmail.com`. Farlo per primo: tra acquisto e DNS ci può volere un giorno.
+  2. [ ] **Account Resend** con regione **EU** → *Domains* → *Add domain* → copiare i record DNS (SPF/DKIM/DMARC) nel pannello del registrar → aspettare «Verified».
+  3. [ ] Resend → *API Keys* → creare una chiave (`re_...`). Dati SMTP: host `smtp.resend.com`, porta `465`, utente `resend`, password = la chiave.
+  4. [ ] `npx supabase login` (il CLI non è installato globalmente: sempre via `npx`).
+  5. [ ] Secret (in alternativa: Dashboard → *Edge Functions* → *Secrets*):
+     ```
+     npx supabase secrets set SMTP_HOST=smtp.resend.com SMTP_PORT=465 SMTP_USER=resend \
+       SMTP_PASS=re_... SMTP_FROM='topWaitr <no-reply@DOMINIO>' \
+       SITE_URL=https://mattiacaprioli.github.io/topWaitr \
+       DASHBOARD_URL=https://mattiacaprioli.github.io/topWaitr/app \
+       --project-ref rmlobxjlqlpixkvrzmfg
+     ```
+     `DASHBOARD_URL` serve al solo invito collaboratore e **non** va negli allowlist «Redirect URLs» di Supabase Auth: quel link non passa da GoTrue.
+  6. [ ] **Due** deploy, con due comandi diversi e facili da sbagliare (`.github/workflows/supabase.yml` applica solo le migration, le function si deployano a mano):
+     - `npx supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg` (**con** verifica JWT, come `delete-account`);
+     - `npx supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg` (**senza**: chi la chiama un account non ce l'ha ancora).
+  7. [ ] **Stesso SMTP su Supabase Auth**: Dashboard → *Authentication* → *Emails* → *SMTP Settings* → «Custom SMTP» con gli stessi dati. Toglie il limite di 2 email/ora a conferme di registrazione e recupero password.
+  8. [ ] Prova: «Reinvia» sugli inviti di test già in lista (`+collab`, `+collab1`: i tentativi finiti in 404 non hanno consumato il rate limit). Poi il giro completo: in `auth.users` **niente** finché il link non viene aperto; aprire il link e chiudere senza password (righe ancora `pending`); registrarsi da zero con l'indirizzo di un invito mai aperto (deve funzionare); link riaperto dopo l'uso → «già accettato».
+- [x] ~~Applicare `20260917120000_venue_access_invite_token.sql`~~ ✅ (verificato il 16/09 via PostgREST: `claim_venue_access_invite` esiste, `claim_venue_access_send` a 2 argomenti non più).
 - [ ] **L'aggancio automatico invece è testabile da subito, senza email**: mettere un'email su una scheda senza account, registrarsi con quell'indirizzo come professionista, **confermare l'email**, e verificare che `staff_people.waiter_id` si valorizzi e che tutte le `staff_members` ereditino il `waiter_id` dal trigger mirror. Da provare anche: registrazione **non confermata** (deve restare scollegata) e registrazione **come titolare** (idem).
 - [ ] **`respond_to_staff_invite` sul rifiuto fa un `delete`**, non un soft-leave: cancella la `staff_members` e, se era l'ultima, `delete_orphan_staff_person` porta via la scheda con nome, contratto, ore e documenti. È il motivo per cui l'aggancio automatico non usa `'pending'`. Rimedio: allinearla a `remove_staff_member` (`link_status = 'left'` + `staff_people.waiter_id = null`).
 
