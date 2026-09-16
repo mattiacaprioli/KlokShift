@@ -66,7 +66,8 @@ export function PromoteSection({
       <Text className="-mt-1 px-1 text-[12px] leading-4 text-t4">
         {personName.split(/\s+/)[0]} continua a essere un professionista con i
         suoi turni: gli si aggiunge un secondo accesso, non gli si cambia
-        l&apos;account. Non potrà mai assegnarsi turni né scriversi le ore.
+        l&apos;account. Può mettersi in turno da solo, ma le sue presenze e le
+        sue ore le segna chi gestisce la sede.
       </Text>
       {venueIds.map((venueId) => (
         <PromoteVenueRow

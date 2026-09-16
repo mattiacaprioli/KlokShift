@@ -58,8 +58,9 @@ export function PromoteSection({
       </span>
       <p className="-mt-1 text-xs leading-5 text-t3">
         {firstName} continua a essere un professionista con i suoi turni: gli si
-        aggiunge un secondo accesso, non gli si cambia l&apos;account. Non potrà
-        mai assegnarsi turni né scriversi le ore.
+        aggiunge un secondo accesso, non gli si cambia l&apos;account. Può
+        mettersi in turno da solo, ma le sue presenze e le sue ore le segna chi
+        gestisce la sede.
       </p>
       {venueIds.map((venueId) => (
         <PromoteVenueCard
