@@ -57,8 +57,8 @@ export function PersonPerformanceSection({
           ) : null}
 
           <View className="flex-row gap-3">
-            <StatCard value={String(workedCount)} label="turni svolti" />
-            <StatCard value={formatHours(totalHours)} label="ore totali" />
+            <StatCard value={String(workedCount)} label="Turni svolti" />
+            <StatCard value={formatHours(totalHours)} label="Ore totali" />
           </View>
 
           {reliability != null ? (

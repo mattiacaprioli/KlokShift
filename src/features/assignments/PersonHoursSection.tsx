@@ -44,8 +44,8 @@ export function PersonHoursSection({
       ) : (
         <>
           <View className="flex-row gap-3">
-            <StatCard value={formatHours(monthHours)} label="ore questo mese" />
-            <StatCard value={String(monthShifts)} label="turni questo mese" />
+            <StatCard value={formatHours(monthHours)} label="Ore questo mese" />
+            <StatCard value={String(monthShifts)} label="Turni questo mese" />
           </View>
 
           {recent.length > 0 ? (

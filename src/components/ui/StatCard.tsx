@@ -1,8 +1,11 @@
 import { Pressable, Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
-import { Mono } from "./Mono";
 
-/** Compact metric cell (value + mono label). Used in the home stat strip and profile stats. */
+/**
+ * Compact metric cell (value + label). Used in the home stat strip and profile stats.
+ * Same shell as the list cards around it (Richieste, Chi lavora oggi): a stat
+ * strip in a different material read as a separate widget stuck on the page.
+ */
 export function StatCard({
   value,
   label,
@@ -13,6 +16,7 @@ export function StatCard({
   className,
 }: {
   value: string;
+  /** In minuscolo dopo l'iniziale, come un titolo di card: «Turni scoperti». */
   label: string;
   /** La riga sotto l'etichetta: cosa il numero conta, quando non è ovvio. */
   hint?: string;
@@ -29,7 +33,7 @@ export function StatCard({
     <Root
       onPress={onPress}
       className={cn(
-        "flex-1 rounded-2xl border border-border bg-bg-2 px-3.5 pb-3 pt-3.5",
+        "flex-1 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5",
         className
       )}
     >
@@ -42,9 +46,9 @@ export function StatCard({
       >
         {loading ? "—" : value}
       </Text>
-      <Mono className="mt-1.5">{label}</Mono>
+      <Text className="mt-1 text-sm font-sans-semibold text-t2">{label}</Text>
       {hint && !loading ? (
-        <Text className="mt-1 text-[11px] text-t4">{hint}</Text>
+        <Text className="mt-0.5 text-xs text-t3">{hint}</Text>
       ) : null}
     </Root>
   );

@@ -192,12 +192,12 @@ export default function WaiterHomeScreen() {
         <View className="flex-row gap-2.5">
           <StatCard
             value={String(totals.count)}
-            label="turni svolti"
+            label="Turni svolti"
             onPress={() => router.push("/(waiter)/storico")}
           />
           <StatCard
             value={formatHours(totals.totalHours)}
-            label="ore totali"
+            label="Ore totali"
             onPress={() => router.push("/(waiter)/storico")}
           />
         </View>

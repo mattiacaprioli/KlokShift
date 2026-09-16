@@ -213,13 +213,13 @@ export default function ManagerHome() {
               <StatCard
                 loading={!statsReady}
                 value={String(stats.total)}
-                label="turni"
+                label="Turni"
                 hint={`${stats.done} svolti · ${stats.upcoming} da fare`}
               />
               <StatCard
                 loading={!statsReady}
                 value={String(stats.shortCount)}
-                label="turni scoperti"
+                label="Turni scoperti"
                 hint="solo quelli da fare"
                 tone={stats.shortCount > 0 ? "warning" : "normal"}
                 onPress={() => router.push("/(manager)/(tabs)/turni")}
@@ -229,7 +229,7 @@ export default function ManagerHome() {
               <StatCard
                 loading={!statsReady}
                 value={String(stats.missingSlots)}
-                label="posti da coprire"
+                label="Posti da coprire"
                 hint="persone che mancano"
                 tone={stats.missingSlots > 0 ? "warning" : "normal"}
                 onPress={() => router.push("/(manager)/(tabs)/turni")}
@@ -237,7 +237,7 @@ export default function ManagerHome() {
               <StatCard
                 loading={!statsReady}
                 value={formatHours(stats.hours)}
-                label="ore pianificate"
+                label="Ore pianificate"
               />
             </View>
           </View>

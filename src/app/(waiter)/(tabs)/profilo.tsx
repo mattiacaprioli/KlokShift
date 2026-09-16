@@ -449,8 +449,8 @@ export default function WaiterProfiloScreen() {
       {tab === "statistiche" ? (
         <View className="gap-3">
           <View className="flex-row gap-2.5">
-            <StatCard value={String(history.count)} label="turni svolti" />
-            <StatCard value={formatHours(history.totalHours)} label="ore totali" />
+            <StatCard value={String(history.count)} label="Turni svolti" />
+            <StatCard value={formatHours(history.totalHours)} label="Ore totali" />
           </View>
           <GhostButton
             label="Vedi storico turni"
