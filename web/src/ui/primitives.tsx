@@ -193,6 +193,23 @@ export function PageHeader({
   );
 }
 
+/**
+ * Tiene fermo in cima quello che contiene (titolo, comandi, filtri) mentre la
+ * pagina scorre sotto.
+ *
+ * Il margine negativo copre il padding di `<main>`, così le righe non si vedono
+ * passare sopra il titolo; `flow-root` tiene dentro lo sfondo il margine in
+ * fondo all'ultimo figlio (il `mb-6` di `PageHeader`) invece di farlo
+ * collassare fuori, dove le righe spunterebbero nella fessura.
+ */
+export function StickyHeader({ children }: PropsWithChildren) {
+  return (
+    <div className="sticky top-0 z-10 -mx-8 -mt-8 flow-root bg-bg-0 px-8 pt-8 print:static print:m-0 print:p-0">
+      {children}
+    </div>
+  );
+}
+
 export function Pill({
   tone = "neutral",
   children,

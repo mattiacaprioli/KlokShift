@@ -48,9 +48,14 @@ import { internalShiftSchema, type InternalShiftForm } from "./schema";
 type RoleTarget = { role_id: string; count: number };
 
 /**
- * Pannello laterale di creazione/modifica turno: il gestore sceglie giorno e
- * orario e assegna le persone del proprio organico. È il caso d'uso da
- * scrivania, ed è il motivo per cui il pannello vive dentro il planning.
+ * Creazione/modifica turno: il gestore sceglie giorno e orario e assegna le
+ * persone del proprio organico. È il caso d'uso da scrivania, ed è il motivo per
+ * cui vive dentro il planning.
+ *
+ * Un dialogo al centro, non più un cassetto laterale (come la scheda persona):
+ * in una colonna sola il form superava lo schermo, con il bottone per salvare in
+ * fondo allo scroll. Qui il «quando» sta a sinistra e il «chi» a destra, e
+ * intestazione e bottoni restano fermi mentre scorre solo il contenuto.
  */
 export function ShiftPanel({
   date,
@@ -73,14 +78,19 @@ export function ShiftPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div
         className="absolute inset-0 bg-black/60"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative flex h-full w-full max-w-lg flex-col overflow-y-auto border-l border-border-2 bg-bg-0 p-6">
-        <header className="mb-5 flex items-start justify-between gap-4">
+      <div
+        role="dialog"
+        aria-modal
+        aria-label={shift ? "Modifica turno" : "Nuovo turno"}
+        className="relative flex max-h-[min(90vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-0"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-border-2 px-6 py-4">
           <div>
             <h2 className="font-serif text-xl text-t1">
               {shift ? "Modifica turno" : "Nuovo turno"}
@@ -513,327 +523,344 @@ function InternalForm({
   }
 
   return (
+    // `min-h-0`: senza, il form si allunga quanto il contenuto e a scorrere è
+    // tutto il dialogo, bottoni compresi.
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-1 flex-col gap-4"
+      className="flex min-h-0 flex-1 flex-col"
     >
-      {shift && cancelled ? (
-        <CancelledBanner shift={shift} onDone={onClose} />
-      ) : null}
-
-      {/* Il primo campo: da questa risposta discendono organico e mansioni
-          selezionabili. Con una sede sola non compare — la risposta è già nota.
-
-          ⚠️ In modifica è disabilitato, e deve restarci: `updateInternalShift`
-          non tocca `venue_id`, perché assegnazioni e fabbisogni già scritti
-          puntano a `staff_members` e `venue_roles` di **questa** sede, e
-          spostare il turno li lascerebbe appesi a righe di un'altra sede —
-          cosa che il database accetterebbe senza dire niente. */}
-      {isMultiVenue ? (
-        <Field label="Sede" error={errors.venue_id?.message}>
-          <Select {...register("venue_id")} disabled={!!shift}>
-            {venues.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      ) : null}
-
-      <Field label="Titolo" error={errors.title?.message}>
-        <Input {...register("title")} placeholder="Servizio serale" />
-      </Field>
-
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Data" error={errors.date?.message}>
-          <Input type="date" {...register("date")} />
-        </Field>
-        <Field label="Inizio" error={errors.start_time?.message}>
-          <Input type="time" {...register("start_time")} />
-        </Field>
-        <Field label="Fine" error={errors.end_time?.message}>
-          <Input type="time" {...register("end_time")} />
-        </Field>
-      </div>
-
-      {formDate && formStart && formEnd ? (
-        <p className="-mt-2 text-xs text-t4">
-          {formatShiftSummary(formDate, formStart, formEnd)}
-        </p>
-      ) : null}
-
-      {/* Solo in creazione: su un turno esistente "ripeti" vorrebbe dire
-          crearne altri, cosa diversa dal modificare questo. */}
-      {!shift ? (
-        <section>
-          <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
-            Ripeti anche il…
-          </span>
-          <div className="grid grid-cols-7 gap-1">
-            {weekOfForm.map((day) => {
-              const isMain = day === formDate;
-              const on = isMain || extraDates.includes(day);
-              const { name, num } = dayLabel(day);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  disabled={isMain}
-                  onClick={() => toggleExtraDate(day)}
-                  title={isMain ? "È la data del turno" : undefined}
-                  className={cn(
-                    "focus-gold rounded-xl border py-1.5 text-center transition",
-                    on
-                      ? "border-border-gold bg-gold/10 text-gold"
-                      : "border-border-2 bg-bg-1 text-t3 hover:bg-bg-2",
-                    isMain && "cursor-default"
-                  )}
-                >
-                  <span className="block text-[10px] uppercase">{name}</span>
-                  <span className="block font-mono text-xs">{num}</span>
-                </button>
-              );
-            })}
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        {shift && cancelled ? (
+          <div className="mb-4">
+            <CancelledBanner shift={shift} onDone={onClose} />
           </div>
-          <p className="mt-1.5 text-xs text-t4">
-            {extraDates.length === 0
-              ? "Stessi orari, staff e fabbisogno su più giorni della settimana."
-              : `Verranno creati ${extraDates.length + 1} turni identici, uno per giorno.`}
-          </p>
-        </section>
-      ) : null}
+        ) : null}
 
-      <Field label="Note" hint="Visibili a chi è assegnato al turno.">
-        <Textarea {...register("description")} />
-      </Field>
+        <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
+          {/* Colonna sinistra: dove e quando. */}
+          <div className="flex min-w-0 flex-col gap-4">
+            {/* Il primo campo: da questa risposta discendono organico e mansioni
+                selezionabili. Con una sede sola non compare — la risposta è già nota.
 
-      <section>
-        <div className="mb-2 flex items-baseline justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-            Fabbisogno per ruolo
-          </span>
-          {coverage.required > 0 ? (
-            <Pill tone={coverage.missing > 0 ? "warning" : "success"}>
-              {coverage.covered}/{coverage.required} coperti
-            </Pill>
-          ) : null}
-        </div>
-        {roles.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
-            {/* Il listino si scrive con il permesso 'venue': a chi fa i soli
-                turni «Creali ora» aprirebbe una pagina in sola lettura. */}
-            {can(formVenueId, "can_manage_venue") ? (
-              <>
-                Nessun ruolo definito.{" "}
-                <Link to="/ruoli" className="font-semibold text-gold">
-                  Creali ora
-                </Link>{" "}
-                per poterli chiedere sui turni.
-              </>
-            ) : (
-              <>
-                Nessun ruolo definito per questa sede: può crearli chi ne
-                gestisce i dati.
-              </>
-            )}
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {roles.map((role) => {
-              const count =
-                roleTargets.find((t) => t.role_id === role.id)?.count ?? 0;
-              return (
-                <div
-                  key={role.id}
-                  className={cn(
-                    "flex items-center justify-between gap-2 rounded-xl border px-3 py-1.5",
-                    count > 0
-                      ? "border-border-gold bg-gold/5"
-                      : "border-border-2 bg-bg-1"
-                  )}
-                >
-                  <span className="truncate text-xs text-t2">{role.name}</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={99}
-                    value={count}
-                    onChange={(e) =>
-                      setRoleCount(
-                        role.id,
-                        Math.max(0, Number(e.target.value) || 0)
-                      )
-                    }
-                    className="w-14 px-2 py-1 text-center font-mono text-xs"
-                  />
+                ⚠️ In modifica è disabilitato, e deve restarci: `updateInternalShift`
+                non tocca `venue_id`, perché assegnazioni e fabbisogni già scritti
+                puntano a `staff_members` e `venue_roles` di **questa** sede, e
+                spostare il turno li lascerebbe appesi a righe di un'altra sede —
+                cosa che il database accetterebbe senza dire niente. */}
+            {isMultiVenue ? (
+              <Field label="Sede" error={errors.venue_id?.message}>
+                <Select {...register("venue_id")} disabled={!!shift}>
+                  {venues.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : null}
+
+            <Field label="Titolo" error={errors.title?.message}>
+              <Input {...register("title")} placeholder="Servizio serale" />
+            </Field>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Data" error={errors.date?.message}>
+                <Input type="date" {...register("date")} />
+              </Field>
+              <Field label="Inizio" error={errors.start_time?.message}>
+                <Input type="time" {...register("start_time")} />
+              </Field>
+              <Field label="Fine" error={errors.end_time?.message}>
+                <Input type="time" {...register("end_time")} />
+              </Field>
+            </div>
+
+            {formDate && formStart && formEnd ? (
+              <p className="-mt-2 text-xs text-t4">
+                {formatShiftSummary(formDate, formStart, formEnd)}
+              </p>
+            ) : null}
+
+            {/* Solo in creazione: su un turno esistente "ripeti" vorrebbe dire
+                crearne altri, cosa diversa dal modificare questo. */}
+            {!shift ? (
+              <section>
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
+                  Ripeti anche il…
+                </span>
+                <div className="grid grid-cols-7 gap-1">
+                  {weekOfForm.map((day) => {
+                    const isMain = day === formDate;
+                    const on = isMain || extraDates.includes(day);
+                    const { name, num } = dayLabel(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        disabled={isMain}
+                        onClick={() => toggleExtraDate(day)}
+                        title={isMain ? "È la data del turno" : undefined}
+                        className={cn(
+                          "focus-gold rounded-xl border py-1.5 text-center transition",
+                          on
+                            ? "border-border-gold bg-gold/10 text-gold"
+                            : "border-border-2 bg-bg-1 text-t3 hover:bg-bg-2",
+                          isMain && "cursor-default"
+                        )}
+                      >
+                        <span className="block text-[10px] uppercase">{name}</span>
+                        <span className="block font-mono text-xs">{num}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            })}
+                <p className="mt-1.5 text-xs text-t4">
+                  {extraDates.length === 0
+                    ? "Stessi orari, staff e fabbisogno su più giorni della settimana."
+                    : `Verranno creati ${extraDates.length + 1} turni identici, uno per giorno.`}
+                </p>
+              </section>
+            ) : null}
+
+            <Field label="Note" hint="Visibili a chi è assegnato al turno.">
+              <Textarea {...register("description")} />
+            </Field>
           </div>
-        )}
-      </section>
 
-      <section>
-        <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
-          Chi lavora ({workingCount})
-        </span>
-        {staff.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
-            Nessuno nel tuo organico. Aggiungi il personale dalla sezione Staff.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-1">
-            {staff.map((member) => {
-              const on = member.id in staffRoles;
-              const status = staffStatus(member.id);
-              const works = isActiveAssignment(status);
-              const own = member.staff_member_roles
-                .map((r) => r.role)
-                .filter((r): r is NonNullable<typeof r> => !!r)
-                .sort((a, b) => a.sort_order - b.sort_order);
-              const chosen = staffRoles[member.id] ?? null;
-              // Avviso, non blocco: il titolare può sapere cose che l'app no.
-              const absence =
-                formDate && formStart && formEnd
-                  ? absenceForShift(
-                      {
-                        date: formDate,
-                        start_time: formStart,
-                        end_time: formEnd,
-                      },
-                      (absencesQuery.data ?? []).filter(
-                        (a) => a.person_id === member.person_id
-                      )
-                    )
-                  : null;
-              return (
-                <div key={member.id}>
-                  <button
-                    type="button"
-                    onClick={() => toggleStaff(member)}
-                    className={cn(
-                      "focus-gold flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition",
-                      on && works && "border-border-gold bg-gold/10",
-                      on && !works && "border-error/40 bg-error/5",
-                      !on && "border-border-2 bg-bg-1 hover:bg-bg-2"
-                    )}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm text-t1">
-                        {member.display_name}
-                      </span>
-                      <span className="block truncate text-xs text-t4">
-                        {staffRoleNames(member) ?? "Ruoli non indicati"}
-                      </span>
-                      {absence ? (
-                        <span className="block truncate text-xs font-semibold text-warning">
-                          {absenceCellLabel(absence)}
-                        </span>
-                      ) : null}
-                      {requestedByStaff.has(member.id) ? (
-                        <span className="block truncate text-xs font-semibold text-gold">
-                          {requestedByStaff.get(member.id) === "hours"
-                            ? "Ha chiesto un altro orario"
-                            : "Ha chiesto il cambio"}{" "}
-                          · rispondi in chat
-                        </span>
-                      ) : null}
-                    </span>
-                    {on ? (
-                      <Pill tone={works ? "gold" : "error"}>
-                        {ASSIGNMENT_STATUS_LABEL[status]}
-                      </Pill>
-                    ) : null}
-                  </button>
-
-                  {/* Il ruolo si sceglie solo per chi ne ha più di uno: con una
-                      mansione sola non c'è niente da decidere. */}
-                  {on && own.length > 1 ? (
-                    <div className="mt-1 flex flex-wrap items-center gap-2 pl-3">
-                      <span className="text-xs text-t4">In questo turno:</span>
-                      {own.map((r) => (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() =>
-                            setStaffRole(
-                              member.id,
-                              chosen === r.id ? null : r.id
+          {/* Colonna destra: chi serve e chi viene. */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <section>
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+                  Fabbisogno per ruolo
+                </span>
+                {coverage.required > 0 ? (
+                  <Pill tone={coverage.missing > 0 ? "warning" : "success"}>
+                    {coverage.covered}/{coverage.required} coperti
+                  </Pill>
+                ) : null}
+              </div>
+              {roles.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
+                  {/* Il listino si scrive con il permesso 'venue': a chi fa i soli
+                      turni «Creali ora» aprirebbe una pagina in sola lettura. */}
+                  {can(formVenueId, "can_manage_venue") ? (
+                    <>
+                      Nessun ruolo definito.{" "}
+                      <Link to="/ruoli" className="font-semibold text-gold">
+                        Creali ora
+                      </Link>{" "}
+                      per poterli chiedere sui turni.
+                    </>
+                  ) : (
+                    <>
+                      Nessun ruolo definito per questa sede: può crearli chi ne
+                      gestisce i dati.
+                    </>
+                  )}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {roles.map((role) => {
+                    const count =
+                      roleTargets.find((t) => t.role_id === role.id)?.count ?? 0;
+                    return (
+                      <div
+                        key={role.id}
+                        className={cn(
+                          "flex items-center justify-between gap-2 rounded-xl border px-3 py-1.5",
+                          count > 0
+                            ? "border-border-gold bg-gold/5"
+                            : "border-border-2 bg-bg-1"
+                        )}
+                      >
+                        <span className="truncate text-xs text-t2">{role.name}</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={count}
+                          onChange={(e) =>
+                            setRoleCount(
+                              role.id,
+                              Math.max(0, Number(e.target.value) || 0)
                             )
                           }
+                          className="w-14 px-2 py-1 text-center font-mono text-xs"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
+                Chi lavora ({workingCount})
+              </span>
+              {staff.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
+                  Nessuno nel tuo organico. Aggiungi il personale dalla sezione Staff.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {staff.map((member) => {
+                    const on = member.id in staffRoles;
+                    const status = staffStatus(member.id);
+                    const works = isActiveAssignment(status);
+                    const own = member.staff_member_roles
+                      .map((r) => r.role)
+                      .filter((r): r is NonNullable<typeof r> => !!r)
+                      .sort((a, b) => a.sort_order - b.sort_order);
+                    const chosen = staffRoles[member.id] ?? null;
+                    // Avviso, non blocco: il titolare può sapere cose che l'app no.
+                    const absence =
+                      formDate && formStart && formEnd
+                        ? absenceForShift(
+                            {
+                              date: formDate,
+                              start_time: formStart,
+                              end_time: formEnd,
+                            },
+                            (absencesQuery.data ?? []).filter(
+                              (a) => a.person_id === member.person_id
+                            )
+                          )
+                        : null;
+                    return (
+                      <div key={member.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleStaff(member)}
                           className={cn(
-                            "focus-gold rounded-full border px-2.5 py-0.5 text-xs transition",
-                            chosen === r.id
-                              ? "border-border-gold bg-gold/10 text-t1"
-                              : "border-border-2 text-t3 hover:bg-bg-2"
+                            "focus-gold flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition",
+                            on && works && "border-border-gold bg-gold/10",
+                            on && !works && "border-error/40 bg-error/5",
+                            !on && "border-border-2 bg-bg-1 hover:bg-bg-2"
                           )}
                         >
-                          {r.name}
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm text-t1">
+                              {member.display_name}
+                            </span>
+                            <span className="block truncate text-xs text-t4">
+                              {staffRoleNames(member) ?? "Ruoli non indicati"}
+                            </span>
+                            {absence ? (
+                              <span className="block truncate text-xs font-semibold text-warning">
+                                {absenceCellLabel(absence)}
+                              </span>
+                            ) : null}
+                            {requestedByStaff.has(member.id) ? (
+                              <span className="block truncate text-xs font-semibold text-gold">
+                                {requestedByStaff.get(member.id) === "hours"
+                                  ? "Ha chiesto un altro orario"
+                                  : "Ha chiesto il cambio"}{" "}
+                                · rispondi in chat
+                              </span>
+                            ) : null}
+                          </span>
+                          {on ? (
+                            <Pill tone={works ? "gold" : "error"}>
+                              {ASSIGNMENT_STATUS_LABEL[status]}
+                            </Pill>
+                          ) : null}
                         </button>
-                      ))}
-                    </div>
-                  ) : null}
+
+                        {/* Il ruolo si sceglie solo per chi ne ha più di uno: con una
+                            mansione sola non c'è niente da decidere. */}
+                        {on && own.length > 1 ? (
+                          <div className="mt-1 flex flex-wrap items-center gap-2 pl-3">
+                            <span className="text-xs text-t4">In questo turno:</span>
+                            {own.map((r) => (
+                              <button
+                                key={r.id}
+                                type="button"
+                                onClick={() =>
+                                  setStaffRole(
+                                    member.id,
+                                    chosen === r.id ? null : r.id
+                                  )
+                                }
+                                className={cn(
+                                  "focus-gold rounded-full border px-2.5 py-0.5 text-xs transition",
+                                  chosen === r.id
+                                    ? "border-border-gold bg-gold/10 text-t1"
+                                    : "border-border-2 text-t3 hover:bg-bg-2"
+                                )}
+                              >
+                                {r.name}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              )}
+            </section>
+
+            {/* Di norma la conferma la chiede solo chi è a chiamata: l'assegnazione di
+                un dipendente fisso nasce già confermata (default_assignment_confirmation,
+                20260915100000). Lo switch è per i turni fuori dall'ordinario. */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-2 bg-bg-1 p-3">
+              <input
+                type="checkbox"
+                {...register("require_confirmation")}
+                className="mt-0.5 h-4 w-4 accent-gold"
+              />
+              <span>
+                <span className="block text-sm text-t1">Chiedi conferma a tutti</span>
+                <span className="mt-0.5 block text-xs leading-4 text-t4">
+                  Di norma confermano solo i collaboratori a chiamata: chi è assunto
+                  fisso risulta già in turno.
+                </span>
+              </span>
+            </label>
+
+            {/* Solo a turno concluso: prima non c'è nulla da consuntivare. */}
+            {shift && isShiftOver(shift) && !cancelled ? (
+              <PresenceSection
+                shiftId={shift.id}
+                startTime={shift.start_time}
+                endTime={shift.end_time}
+              />
+            ) : null}
           </div>
-        )}
-      </section>
-
-      {/* Di norma la conferma la chiede solo chi è a chiamata: l'assegnazione di
-          un dipendente fisso nasce già confermata (default_assignment_confirmation,
-          20260915100000). Lo switch è per i turni fuori dall'ordinario. */}
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-2 bg-bg-1 p-3">
-        <input
-          type="checkbox"
-          {...register("require_confirmation")}
-          className="mt-0.5 h-4 w-4 accent-gold"
-        />
-        <span>
-          <span className="block text-sm text-t1">Chiedi conferma a tutti</span>
-          <span className="mt-0.5 block text-xs leading-4 text-t4">
-            Di norma confermano solo i collaboratori a chiamata: chi è assunto
-            fisso risulta già in turno.
-          </span>
-        </span>
-      </label>
-
-      {/* Solo a turno concluso: prima non c'è nulla da consuntivare. */}
-      {shift && isShiftOver(shift) && !cancelled ? (
-        <PresenceSection
-          shiftId={shift.id}
-          startTime={shift.start_time}
-          endTime={shift.end_time}
-        />
-      ) : null}
-
-      {mutationError ? (
-        <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
-          {userErrorMessage(mutationError)}
-        </p>
-      ) : null}
-
-      <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <Button type="submit" variant="gold" disabled={pending}>
-          {pending
-            ? "Salvataggio…"
-            : shift
-              ? "Salva modifiche"
-              : extraDates.length > 0
-                ? `Crea ${extraDates.length + 1} turni`
-                : "Crea turno"}
-        </Button>
-        {shift && !cancelled ? (
-          <CancelShiftButton shift={shift} onDone={onClose} />
-        ) : null}
+        </div>
       </div>
-      {shift ? (
-        <p className="text-[11px] leading-4 text-t4">
-          Chi viene aggiunto riceve una notifica; a chi viene tolto il turno
-          sparisce. Se cambi giorno o orario, gli assegnati vengono avvisati.
-        </p>
-      ) : null}
+
+      {/* Fuori dallo scroll: il salvataggio si vede sempre, e l'errore gli sta
+          accanto invece che in fondo a un contenuto che magari non si vede. */}
+      <footer className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border-2 px-6 py-4">
+        {mutationError ? (
+          <p className="w-full rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
+            {userErrorMessage(mutationError)}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="gold" disabled={pending}>
+            {pending
+              ? "Salvataggio…"
+              : shift
+                ? "Salva modifiche"
+                : extraDates.length > 0
+                  ? `Crea ${extraDates.length + 1} turni`
+                  : "Crea turno"}
+          </Button>
+          {shift && !cancelled ? (
+            <CancelShiftButton shift={shift} onDone={onClose} />
+          ) : null}
+        </div>
+        {shift ? (
+          <p className="min-w-60 flex-1 text-[11px] leading-4 text-t4">
+            Chi viene aggiunto riceve una notifica; a chi viene tolto il turno
+            sparisce. Se cambi giorno o orario, gli assegnati vengono avvisati.
+          </p>
+        ) : null}
+      </footer>
     </form>
   );
 }

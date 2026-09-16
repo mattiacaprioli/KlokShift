@@ -16,18 +16,24 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
+  useAddTeamVenue,
   useRevokeTeamAccess,
   useSendTeamInvite,
   useTeam,
   useUpdateTeamPermissions,
 } from "@/features/team/hooks";
-import { PermissionSwitches } from "@/features/team/PermissionSwitches";
 import {
+  DEFAULT_TEAM_PERMISSIONS,
+  PermissionSwitches,
+} from "@/features/team/PermissionSwitches";
+import {
+  permissionsForNewVenue,
   permissionsOf,
   TEAM_PERMISSIONS,
   TEAM_PERMISSION_LABEL,
   type TeamMember,
   type TeamPermission,
+  type TeamPermissions,
   type VenueAccess,
 } from "@/features/team/api";
 import { userErrorMessage } from "@/lib/errors";
@@ -105,21 +111,115 @@ function VenueAccessRow({
   );
 }
 
+/**
+ * Una sede che il collaboratore non ha ancora: si apre con i permessi da
+ * confermare, e solo "Aggiungi" dà l'accesso.
+ *
+ * Prima l'unica strada era rifare l'invito con la stessa email, che funzionava
+ * ma non lo pensa nessuno per chi è già attivo. Con un invito in sospeso la riga
+ * nuova resta in attesa come le altre, senza una seconda email.
+ */
+function AddVenueRow({
+  ownerId,
+  member,
+  venueId,
+  venueName,
+}: {
+  ownerId: string;
+  member: TeamMember;
+  venueId: string;
+  venueName: string;
+}) {
+  const toast = useToast();
+  const add = useAddTeamVenue(ownerId);
+  const [open, setOpen] = useState(false);
+  const [permissions, setPermissions] = useState<TeamPermissions>(
+    DEFAULT_TEAM_PERMISSIONS
+  );
+
+  function submit() {
+    add.mutate(
+      { member, venueId, permissions },
+      {
+        onSuccess: () =>
+          toast.show(
+            member.status === "pending"
+              ? "Sede aggiunta: la vedrà quando accetta l'invito"
+              : `Accesso a ${venueName} aggiunto`
+          ),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
+
+  return (
+    <View className="border-t border-border-1 px-4 py-3">
+      <Pressable
+        onPress={() => {
+          if (!open) {
+            setPermissions(
+              permissionsForNewVenue(member, DEFAULT_TEAM_PERMISSIONS)
+            );
+          }
+          setOpen((v) => !v);
+        }}
+        className="flex-row items-center gap-3"
+      >
+        <View className="flex-1">
+          <Text className="text-[14px] font-sans-semibold text-t2">
+            + {venueName}
+          </Text>
+          <Text className="mt-0.5 text-[12px] leading-4 text-t4">
+            Non ha accesso a questa sede
+          </Text>
+        </View>
+        <Icon
+          name="chevR"
+          size={16}
+          color="#6A6358"
+          style={open ? { transform: [{ rotate: "90deg" }] } : undefined}
+        />
+      </Pressable>
+
+      {open ? (
+        <View className="mt-3 gap-3">
+          <PermissionSwitches
+            value={permissions}
+            onChange={(perm, next) =>
+              setPermissions((prev) => ({ ...prev, [perm]: next }))
+            }
+            disabled={add.isPending}
+          />
+          <GoldButton
+            label={add.isPending ? "Aggiungo…" : `Aggiungi ${venueName}`}
+            onPress={submit}
+            disabled={add.isPending}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function MemberCard({
+  ownerId,
   member,
   venueName,
   onRevokeRow,
   onRevokeAll,
 }: {
+  ownerId: string;
   member: TeamMember;
   venueName: (id: string) => string;
   onRevokeRow: (row: VenueAccess) => void;
   onRevokeAll: (member: TeamMember) => void;
 }) {
   const toast = useToast();
+  const { venues } = useOwnerVenues();
   const invite = useSendTeamInvite();
   const pending = member.status === "pending";
   const title = member.fullName?.trim() || member.email || "Collaboratore";
+  const missing = venues.filter((v) => !member.venueIds.includes(v.id));
 
   return (
     <Card className="gap-0 p-0">
@@ -165,6 +265,16 @@ function MemberCard({
           row={row}
           venueName={venueName(row.venue_id)}
           onRevoke={() => onRevokeRow(row)}
+        />
+      ))}
+
+      {missing.map((v) => (
+        <AddVenueRow
+          key={v.id}
+          ownerId={ownerId}
+          member={member}
+          venueId={v.id}
+          venueName={v.name}
         />
       ))}
 
@@ -251,6 +361,7 @@ export default function TeamScreen() {
           members.map((m) => (
             <MemberCard
               key={m.userId ?? m.email ?? m.rows[0].id}
+              ownerId={ownerId ?? ""}
               member={m}
               venueName={venueName}
               onRevokeRow={(row) =>

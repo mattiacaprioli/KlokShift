@@ -94,6 +94,27 @@ export function memberPermissions(
   return out;
 }
 
+/**
+ * Da dove partono i permessi quando si aggiunge una sede a chi c'è già: quelli
+ * che ha, se sono uguali su tutte le sue sedi. Se divergono non c'è un "suo"
+ * mestiere da copiare, e si riparte da `fallback`.
+ *
+ * Solo il punto di partenza: il titolare li vede e li cambia prima di confermare.
+ */
+export function permissionsForNewVenue(
+  member: TeamMember,
+  fallback: TeamPermissions
+): TeamPermissions {
+  const current = memberPermissions(member);
+  const out = { ...fallback };
+  for (const perm of TEAM_PERMISSIONS) {
+    const value = current[perm];
+    if (value == null) return fallback;
+    out[perm] = value;
+  }
+  return out;
+}
+
 /** Chiave di raggruppamento: l'account se c'è, altrimenti l'indirizzo. */
 function memberKey(row: VenueAccess): string {
   return row.user_id ?? `email:${(row.email ?? "").toLowerCase()}`;

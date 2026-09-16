@@ -21,7 +21,9 @@ import {
   PageHeader,
   Placeholder,
   QueryError,
+  Select,
   Spinner,
+  StickyHeader,
 } from "../ui/primitives";
 
 /** Ultimi 12 mesi, dal più recente: copre ogni esigenza del commercialista. */
@@ -46,6 +48,8 @@ export function OrePage() {
   const { ownerId, venues } = useOwnerVenues();
   const months = useMemo(() => recentMonths(), []);
   const [month, setMonth] = useState(months[0]);
+  // `months` va dal più recente: +1 è il mese prima.
+  const monthIndex = months.indexOf(month);
   const { data, isPending, isError, error } = useOwnerHoursSummary(
     ownerId,
     month
@@ -99,11 +103,48 @@ export function OrePage() {
 
   return (
     <>
-      <PageHeader
-        title="Ore"
-        subtitle={`${label} · ${formatHours(totalHours)} totali`}
-        actions={
-          <>
+      <StickyHeader>
+        <PageHeader
+          title="Ore"
+          subtitle={`${label} · ${formatHours(totalHours)} totali`}
+        />
+
+        {/* Una riga sotto il titolo, come i filtri dello Storico. Niente
+            `items-center`: lo stretch dà a frecce, tendina e bottoni la stessa
+            altezza anche se il glifo della freccia è più alto del testo. */}
+        <div className="mb-5 flex flex-wrap justify-between gap-3 print:hidden">
+          {/* Frecce per il mese accanto (il caso di tutti i mesi: chiudere il
+              precedente), tendina per saltare. Le pillole andavano a capo. */}
+          <div className="flex gap-2">
+            <Button
+              aria-label="Mese precedente"
+              onClick={() => setMonth(months[monthIndex + 1])}
+              disabled={monthIndex === months.length - 1}
+            >
+              ←
+            </Button>
+            <Select
+              aria-label="Mese"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="w-auto"
+            >
+              {months.map((m) => (
+                <option key={m} value={m}>
+                  {monthLabel(m)}
+                </option>
+              ))}
+            </Select>
+            <Button
+              aria-label="Mese successivo"
+              onClick={() => setMonth(months[monthIndex - 1])}
+              disabled={monthIndex === 0}
+            >
+              →
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
             <Button onClick={downloadCsv} disabled={people.length === 0}>
               CSV ore
             </Button>
@@ -120,25 +161,9 @@ export function OrePage() {
             >
               Stampa / PDF
             </Button>
-          </>
-        }
-      />
-
-      <div className="mb-5 flex flex-wrap gap-1.5">
-        {months.map((m) => (
-          <button
-            key={m}
-            onClick={() => setMonth(m)}
-            className={`focus-gold rounded-full px-3 py-1 text-xs font-medium transition ${
-              m === month
-                ? "bg-gold text-gold-ink"
-                : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
-            }`}
-          >
-            {monthLabel(m)}
-          </button>
-        ))}
-      </div>
+          </div>
+        </div>
+      </StickyHeader>
 
       {isError ? <QueryError error={error} /> : null}
       {isPending ? <Spinner /> : null}

@@ -303,7 +303,7 @@ export function PeopleWeek({
                       {...dropHandlers}
                       style={absence ? absenceCellStyle(absence) : undefined}
                       className={cn(
-                        "flex min-h-14 flex-col gap-1 rounded-xl border p-1",
+                        "group flex min-h-14 flex-col gap-1 rounded-xl border p-1",
                         absence
                           ? "border-dashed border-warning/50"
                           : "border-border-2 bg-bg-card",
@@ -343,6 +343,21 @@ export function PeopleWeek({
                           }}
                         />
                       ))}
+                      {/* Anche una giornata già occupata può volere un altro
+                          turno: lo spezzato (pranzo + cena) è normale in sala.
+                          `flex-1` prende lo spazio libero della cella quando la
+                          riga è alzata da un altro giorno; il "+" compare al
+                          passaggio, come nelle caselle vuote. */}
+                      <button
+                        onClick={() => {
+                          if (dnd.swallowClick()) return;
+                          onCreate(day, person.personId);
+                        }}
+                        aria-label={`Altro turno per ${person.name} il ${day}`}
+                        className="focus-gold flex min-h-6 flex-1 items-center justify-center rounded-lg border border-dashed border-transparent text-sm text-t4 opacity-0 transition group-hover:opacity-100 hover:border-border-gold hover:text-gold focus-visible:opacity-100 print:hidden"
+                      >
+                        +
+                      </button>
                     </div>
                   );
                 })}

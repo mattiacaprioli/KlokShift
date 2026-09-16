@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
+  permissionsForNewVenue,
   permissionsOf,
   TEAM_PERMISSIONS,
   TEAM_PERMISSION_HINT,
@@ -15,6 +16,7 @@ import {
 } from "@/features/team/api";
 import {
   useAddTeamMember,
+  useAddTeamVenue,
   useRevokeTeamAccess,
   useSendTeamInvite,
   useTeam,
@@ -227,7 +229,127 @@ function VenueAccessRow({ row }: { row: VenueAccess }) {
   );
 }
 
-function MemberCard({ member }: { member: TeamMember }) {
+/**
+ * Le sedi che il collaboratore non ha ancora, da dargli senza ripassare dal
+ * modulo d'invito — che lo faceva già, ma nessuno pensa di "invitare" chi è
+ * attivo da una settimana.
+ *
+ * Un clic sulla sede non basta a dare l'accesso: apre la sezione come sarà, con
+ * i permessi da confermare. Si sta aprendo la gestione di una sede a qualcuno, e
+ * i permessi vanno visti prima, non corretti dopo.
+ *
+ * Con un invito ancora in sospeso la riga nuova resta `pending` come le altre e
+ * non parte una seconda email: si aggancia tutto allo stesso primo accesso.
+ */
+function AddVenueRow({
+  ownerId,
+  member,
+}: {
+  ownerId: string;
+  member: TeamMember;
+}) {
+  const toast = useToast();
+  const { venues } = useOwnerVenues();
+  const add = useAddTeamVenue(ownerId);
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [permissions, setPermissions] =
+    useState<TeamPermissions>(DEFAULT_PERMISSIONS);
+
+  const missing = venues.filter((v) => !member.venueIds.includes(v.id));
+  if (missing.length === 0) return null;
+
+  const picked = missing.find((v) => v.id === pickedId);
+
+  if (!picked) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3">
+        <span className="mr-1 text-xs text-t4">Aggiungi una sede</span>
+        {missing.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => {
+              setPermissions(permissionsForNewVenue(member, DEFAULT_PERMISSIONS));
+              setPickedId(v.id);
+            }}
+            className="focus-gold inline-flex items-center gap-1.5 rounded-full border border-dashed border-border-2 px-3 py-1.5 text-xs font-medium text-t3 transition hover:border-gold/40 hover:text-gold"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <path d="M6 2.5v7M2.5 6h7" />
+            </svg>
+            {v.name}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 bg-bg-2/30 px-5 py-4">
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <span className="truncate text-xs font-semibold uppercase tracking-wider text-t3">
+          {picked.name}
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <Button
+            className="px-3 py-1 text-xs"
+            disabled={add.isPending}
+            onClick={() => setPickedId(null)}
+          >
+            Annulla
+          </Button>
+          <Button
+            variant="gold"
+            className="px-3 py-1 text-xs"
+            disabled={add.isPending}
+            onClick={() =>
+              add.mutate(
+                { member, venueId: picked.id, permissions },
+                {
+                  onSuccess: () => {
+                    setPickedId(null);
+                    toast.show(
+                      member.status === "pending"
+                        ? "Sede aggiunta: la vedrà quando accetta l'invito"
+                        : `Accesso a ${picked.name} aggiunto`
+                    );
+                  },
+                  onError: (e) => toast.show(userErrorMessage(e), "error"),
+                }
+              )
+            }
+          >
+            {add.isPending ? "Aggiungo…" : "Aggiungi"}
+          </Button>
+        </span>
+      </div>
+      <PermissionToggles
+        value={permissions}
+        disabled={add.isPending}
+        onChange={(perm, next) =>
+          setPermissions((prev) => ({ ...prev, [perm]: next }))
+        }
+      />
+    </div>
+  );
+}
+
+function MemberCard({
+  ownerId,
+  member,
+}: {
+  ownerId: string;
+  member: TeamMember;
+}) {
   const toast = useToast();
   const invite = useSendTeamInvite();
   const pending = member.status === "pending";
@@ -286,6 +408,7 @@ function MemberCard({ member }: { member: TeamMember }) {
         {member.rows.map((row) => (
           <VenueAccessRow key={row.id} row={row} />
         ))}
+        <AddVenueRow ownerId={ownerId} member={member} />
       </div>
     </Card>
   );
@@ -469,7 +592,11 @@ export function TeamPage() {
             />
           ) : (
             members.map((m) => (
-              <MemberCard key={m.userId ?? m.email ?? m.rows[0].id} member={m} />
+              <MemberCard
+                key={m.userId ?? m.email ?? m.rows[0].id}
+                ownerId={ownerId}
+                member={m}
+              />
             ))
           )}
         </section>

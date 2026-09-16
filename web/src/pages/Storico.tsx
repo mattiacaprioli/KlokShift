@@ -23,6 +23,7 @@ import {
   Placeholder,
   QueryError,
   Spinner,
+  StickyHeader,
 } from "../ui/primitives";
 
 /** Quanto si aspetta prima di interrogare il server mentre si digita. */
@@ -74,21 +75,25 @@ export function StoricoPage() {
 
   return (
     <>
-      <PageHeader
-        title="Storico"
-        subtitle={
-          filtered ? `${count} turni trovati` : `${count} turni svolti`
-        }
-      />
+      {/* Titolo e filtri restano fermi mentre la tabella scorre: con lo scroll
+          infinito i comandi finirebbero a centinaia di righe di distanza. */}
+      <StickyHeader>
+        <PageHeader
+          title="Storico"
+          subtitle={
+            filtered ? `${count} turni trovati` : `${count} turni svolti`
+          }
+        />
 
-      {/* Sopra lo stato di caricamento: chi ha appena cambiato un filtro deve
-          continuare a vedere i comandi mentre la query riparte. */}
-      <PastShiftsFilters
-        value={filters}
-        onChange={setFilters}
-        text={text}
-        onTextChange={setText}
-      />
+        {/* Sopra lo stato di caricamento: chi ha appena cambiato un filtro deve
+            continuare a vedere i comandi mentre la query riparte. */}
+        <PastShiftsFilters
+          value={filters}
+          onChange={setFilters}
+          text={text}
+          onTextChange={setText}
+        />
+      </StickyHeader>
 
       {isPending ? (
         <Spinner />
