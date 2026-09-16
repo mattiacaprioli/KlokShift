@@ -203,6 +203,29 @@ export async function getAbsencesToHandle(): Promise<AbsenceWithPerson[]> {
   return (data as AbsenceWithPerson[] | null) ?? [];
 }
 
+/** Quanto indietro guarda la pagina Assenze. */
+export const COMPANY_ABSENCES_DAYS_BACK = 60;
+
+/**
+ * Chi gestisce l'organico: le assenze di tutta l'azienda per la pagina
+ * Assenze. Le richieste ancora da decidere tutte, qualunque data abbiano; le
+ * altre solo se non sono finite da più di `COMPANY_ABSENCES_DAYS_BACK` giorni.
+ *
+ * Una finestra e non lo storico intero: la pagina risponde a «chi manca in
+ * questi giorni», e lo storico di ogni persona sta nella sua scheda. La RLS
+ * (`manager read`) limita alle persone gestite con il permesso Organico.
+ */
+export async function getCompanyAbsences(): Promise<AbsenceWithPerson[]> {
+  const since = addDaysToDate(todayString(), -COMPANY_ABSENCES_DAYS_BACK);
+  const { data, error } = await supabase
+    .from("staff_absences")
+    .select("*, person:staff_people(id, full_name, waiter_id)")
+    .or(`status.eq.pending,end_date.gte.${since}`)
+    .order("start_date", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as AbsenceWithPerson[] | null) ?? [];
+}
+
 /**
  * Un'assenza vista dal planning: date, orari e stato, **mai il tipo**. La
  * restituisce `get_absence_availability` (migration 20260918110000) anche a chi

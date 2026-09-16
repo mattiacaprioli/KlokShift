@@ -67,6 +67,31 @@ export function canWithdrawAbsence(
   return a.status === "approved" && a.start_date > today;
 }
 
+/**
+ * Le sezioni della pagina Assenze, condivise da app e web:
+ * - `pending`: da decidere;
+ * - `upcoming`: approvate e non ancora finite, in corso comprese, dalla più
+ *   vicina;
+ * - `closed`: finite, rifiutate o ritirate, dalla più recente.
+ */
+export function groupCompanyAbsences<
+  T extends Pick<Absence, "status" | "start_date" | "end_date">,
+>(
+  absences: readonly T[],
+  today: string = todayString()
+): { pending: T[]; upcoming: T[]; closed: T[] } {
+  const pending: T[] = [];
+  const upcoming: T[] = [];
+  const closed: T[] = [];
+  for (const a of absences) {
+    if (a.status === "pending") pending.push(a);
+    else if (a.status === "approved" && a.end_date >= today) upcoming.push(a);
+    else closed.push(a);
+  }
+  closed.sort((x, y) => y.start_date.localeCompare(x.start_date));
+  return { pending, upcoming, closed };
+}
+
 /** Il tono della pillola di stato, condiviso da app e web. */
 export function absenceStatusTone(
   status: AbsenceStatus

@@ -5,13 +5,14 @@ import type { TeamPermission } from "@/features/team/api";
 import { companyName } from "@/features/venues/companyName";
 import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
+import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { cn } from "@/lib/cn";
 import { Button, QueryError, Spinner } from "./ui/primitives";
 
 type NavItem = {
   to: string;
   label: string;
-  badge?: "chat" | "notifiche";
+  badge?: "chat" | "notifiche" | "assenze";
   /**
    * Il permesso che serve per arrivarci. Assente = per tutti (il titolare li ha
    * tutti, quindi vede sempre l'elenco intero).
@@ -30,6 +31,13 @@ const NAV: NavItem[] = [
   { to: "/planning", label: "Planning" },
   { to: "/ore", label: "Ore", perm: "can_view_hours" },
   { to: "/staff", label: "Staff", perm: "can_manage_staff" },
+  // Stesso permesso di Staff: è quello che fa leggere e decidere le assenze.
+  {
+    to: "/assenze",
+    label: "Assenze",
+    perm: "can_manage_staff",
+    badge: "assenze",
+  },
   { to: "/storico", label: "Storico" },
   // La chat è la coppia (professionista, titolare): non è scopata per sede, e a
   // un collaboratore mostrerebbe le conversazioni di qualcun altro. Fuori
@@ -49,6 +57,8 @@ export function AppLayout() {
   // canale notifications.
   const chatUnread = useChatUnreadCount(session!.user.id).data ?? 0;
   const notifUnread = useUnreadCount(session!.user.id).data ?? 0;
+  // Le richieste da decidere: stessa query del blocco «Richieste» della Home.
+  const absencesPending = usePendingAbsenceCount(canAny("can_manage_staff"));
 
   // L'**azienda**, non la sede: la dashboard le guarda tutte insieme, e fino al
   // 14/09/2026 questa riga era uno switcher perché ne guardava una alla volta.
@@ -80,7 +90,9 @@ export function AppLayout() {
                 ? chatUnread
                 : item.badge === "notifiche"
                   ? notifUnread
-                  : 0;
+                  : item.badge === "assenze"
+                    ? absencesPending
+                    : 0;
             return (
               <NavLink
                 key={item.to}

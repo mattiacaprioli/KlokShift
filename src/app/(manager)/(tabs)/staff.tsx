@@ -13,6 +13,7 @@ import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ProBadge } from "@/features/plan/ProLock";
+import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { useProGate } from "@/features/plan/hooks";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
@@ -115,6 +116,7 @@ export default function ManagerStaffScreen() {
   const canStaff = canAny("can_manage_staff");
   const canHours = canAny("can_view_hours");
   const canVenue = canAny("can_manage_venue");
+  const pendingAbsences = usePendingAbsenceCount(canStaff);
   // L'organico è dell'**azienda**: una riga per persona, tutte le sedi insieme.
   const peopleQuery = useOwnerPeople(venueQuery.ownerId);
   const people = peopleQuery.data ?? [];
@@ -189,6 +191,30 @@ export default function ManagerStaffScreen() {
               ) : (
                 <ProBadge />
               )}
+            </View>
+          </Card>
+          ) : null}
+
+          {/* Una pagina e non una tab: vedi `(manager)/assenze.tsx`. */}
+          {canStaff ? (
+          <Card
+            className="rounded-3xl border-border-2 p-4"
+            onPress={() => router.push("/(manager)/assenze")}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                <Icon name="calendar" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-sans-bold text-t1">Assenze</Text>
+                <Text className="text-xs text-t3">
+                  Ferie, permessi e malattia di tutto lo staff
+                </Text>
+              </View>
+              {pendingAbsences > 0 ? (
+                <Pill label={`${pendingAbsences} da decidere`} variant="pending" />
+              ) : null}
+              <Icon name="chevR" size={18} color="#8c857a" />
             </View>
           </Card>
           ) : null}

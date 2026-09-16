@@ -79,14 +79,14 @@ export function routeForNotification(
   // Con la conversazione è il titolare: la card sta nel suo thread. Senza, è un
   // collaboratore con «Organico» — quel thread è la coppia (professionista,
   // titolare) e la RLS non glielo apre, quindi la sua copia arriva senza
-  // `related_id` e lo porta in home, dove il blocco «Richieste» è il posto in
-  // cui quelle assenze si decidono.
+  // `related_id` e lo porta alla pagina Assenze, dove quelle assenze si
+  // decidono.
   if (
     type === "absence_request" ||
     type === "absence_response" ||
     type === "absence_sick"
   ) {
-    return relatedId ? `/(manager)/chat/${relatedId}` : "/(manager)/(tabs)";
+    return relatedId ? `/(manager)/chat/${relatedId}` : "/(manager)/assenze";
   }
   return relatedId ? `/(manager)/shift/${relatedId}` : null;
 }

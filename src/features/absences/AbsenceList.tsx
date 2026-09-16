@@ -5,6 +5,7 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Pill } from "@/components/ui/Pill";
 import { userErrorMessage } from "@/lib/errors";
+import { todayString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import type { Absence } from "./api";
 import { useSetAbsenceInpsProtocol, useWithdrawAbsence } from "./hooks";
@@ -28,6 +29,8 @@ type Props = {
   mode: "mine" | "manager";
   /** Riga secondaria per assenza, es. l'azienda per chi lavora in più posti. */
   subtitleFor?: (absence: Absence) => string | null;
+  /** Il nome in testa alla riga, nelle liste con più persone (pagina Assenze). */
+  titleFor?: (absence: Absence) => string | null;
 };
 
 /**
@@ -36,11 +39,12 @@ type Props = {
  * Le rifiutate e le ritirate restano in lista (in grigio): un «no» sulle ferie è
  * una cosa che si vuole poter ritrovare, non un errore da far sparire.
  */
-export function AbsenceList({ absences, mode, subtitleFor }: Props) {
+export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
   const toast = useToast();
   const withdraw = useWithdrawAbsence();
   const [resolving, setResolving] = useState<Absence | null>(null);
   const [protocolFor, setProtocolFor] = useState<Absence | null>(null);
+  const today = todayString();
 
   function onWithdraw(a: Absence) {
     withdraw.mutate(a.id, {
@@ -59,6 +63,7 @@ export function AbsenceList({ absences, mode, subtitleFor }: Props) {
           const sick = a.kind === "malattia";
           const days = absenceDays(a);
           const subtitle = subtitleFor?.(a);
+          const title = titleFor?.(a);
           const actions = [
             mode === "manager" && a.status === "pending" ? (
               <RowAction
@@ -90,6 +95,11 @@ export function AbsenceList({ absences, mode, subtitleFor }: Props) {
               className="rounded-2xl border border-border-2 bg-bg-card px-4 py-3.5"
               style={closed ? { opacity: 0.6 } : undefined}
             >
+              {title ? (
+                <Text className="mb-1 text-base font-sans-bold text-t1">
+                  {title}
+                </Text>
+              ) : null}
               <View className="flex-row items-center gap-2">
                 <Text className="flex-1 font-sans-semibold text-[15px] text-t1">
                   {ABSENCE_KIND_LABEL[a.kind]}
@@ -122,7 +132,11 @@ export function AbsenceList({ absences, mode, subtitleFor }: Props) {
                 </Text>
               ) : null}
 
-              {mode === "manager" && a.status === "approved" ? (
+              {/* Solo su quelle non finite: su una passata non c'è più niente da
+                  togliere, e ogni blocco è una query sui turni della persona. */}
+              {mode === "manager" &&
+              a.status === "approved" &&
+              a.end_date >= today ? (
                 <AbsenceConflictsBlock absence={a} />
               ) : null}
 
@@ -137,6 +151,7 @@ export function AbsenceList({ absences, mode, subtitleFor }: Props) {
       {resolving ? (
         <ResolveAbsenceModal
           absence={resolving}
+          personName={titleFor?.(resolving)}
           onClose={() => setResolving(null)}
         />
       ) : null}

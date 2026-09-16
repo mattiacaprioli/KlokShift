@@ -51,7 +51,18 @@ export function AbsencesPanel({ personId }: { personId: string }) {
   );
 }
 
-function AbsenceRow({ absence: a }: { absence: Absence }) {
+/**
+ * Una riga d'assenza con i comandi di chi gestisce: rispondere, il protocollo,
+ * i turni da liberare. La usano la scheda persona e la pagina Assenze.
+ */
+export function AbsenceRow({
+  absence: a,
+  personName,
+}: {
+  absence: Absence;
+  /** In testa alla riga, nelle liste con più persone. */
+  personName?: string | null;
+}) {
   const closed = a.status === "rejected" || a.status === "withdrawn";
   const sick = a.kind === "malattia";
   const days = absenceDays(a);
@@ -59,7 +70,17 @@ function AbsenceRow({ absence: a }: { absence: Absence }) {
     <Card className={cn("p-3", closed && "opacity-60")}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-t1">
+          {personName ? (
+            <p className="mb-0.5 truncate text-sm font-semibold text-t1">
+              {personName}
+            </p>
+          ) : null}
+          <p
+            className={cn(
+              "text-sm",
+              personName ? "text-t2" : "font-semibold text-t1"
+            )}
+          >
             {ABSENCE_KIND_LABEL[a.kind]}
             {a.start_time ? "" : ` · ${days} ${days === 1 ? "giorno" : "giorni"}`}
           </p>
@@ -77,7 +98,9 @@ function AbsenceRow({ absence: a }: { absence: Absence }) {
         <ResolveAbsenceForm absence={a} className="mt-3" />
       ) : null}
       {sick && a.status === "approved" ? <ProtocolField absence={a} /> : null}
-      <AbsenceConflictsBlock absence={a} />
+      {/* Su una assenza finita non c'è più niente da togliere, e ogni blocco è
+          una query sui turni della persona. */}
+      {a.end_date >= todayString() ? <AbsenceConflictsBlock absence={a} /> : null}
     </Card>
   );
 }

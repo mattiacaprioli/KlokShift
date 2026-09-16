@@ -8,6 +8,7 @@ import {
   getPersonShiftsInRange,
   removeFromShifts,
   getAbsencesToHandle,
+  getCompanyAbsences,
   getMyAbsenceEmployers,
   getMyAbsences,
   getOwnerAbsenceSummary,
@@ -61,6 +62,29 @@ export function useAbsencesToHandle(enabled = true) {
   return useQuery({
     queryKey: qk.absences.toHandle,
     queryFn: getAbsencesToHandle,
+    enabled,
+  });
+}
+
+/**
+ * Quante richieste aspettano una risposta: il badge della tab Staff e della
+ * voce Assenze. Stessa query del blocco «Richieste» della home, quindi nessuna
+ * richiesta in più; `select` conta senza toccare la cache.
+ */
+export function usePendingAbsenceCount(enabled = true): number {
+  const query = useQuery({
+    queryKey: qk.absences.toHandle,
+    queryFn: getAbsencesToHandle,
+    enabled,
+    select: (rows) => rows.filter((a) => a.status === "pending").length,
+  });
+  return enabled ? (query.data ?? 0) : 0;
+}
+
+export function useCompanyAbsences(enabled = true) {
+  return useQuery({
+    queryKey: qk.absences.company,
+    queryFn: getCompanyAbsences,
     enabled,
   });
 }

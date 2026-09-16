@@ -1,5 +1,6 @@
 import { FloatingTabBar } from "@/components/nav/FloatingTabBar";
 import type { IconName } from "@/components/ui/Icon";
+import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useAuth } from "@/lib/auth";
@@ -23,11 +24,18 @@ export default function ManagerTabsLayout() {
   // titolare finché la conversazione non diventa un oggetto della sede.
   const showChat = isOwner;
   const showStaff = canAny("can_manage_staff");
+  // Le assenze non hanno una tab: stanno in Staff, e il badge dice da qualunque
+  // schermata che c'è una richiesta che aspetta.
+  const pendingAbsences = usePendingAbsenceCount(showStaff);
 
   return (
     <Tabs
       tabBar={(props) => (
-        <FloatingTabBar {...props} icons={ICONS} badges={{ messaggi: unread }} />
+        <FloatingTabBar
+          {...props}
+          icons={ICONS}
+          badges={{ messaggi: unread, staff: pendingAbsences }}
+        />
       )}
       screenOptions={{ headerShown: false }}
     >

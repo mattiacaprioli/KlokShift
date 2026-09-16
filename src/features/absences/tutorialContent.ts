@@ -18,7 +18,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
     {
       title: "Quando arriva una richiesta",
       steps: [
-        "Ricevi una notifica e trovi la richiesta in chat con quella persona. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste».",
+        "Ricevi una notifica e trovi la richiesta in chat con quella persona. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste», e in Staff › Assenze (nella dashboard, la voce «Assenze» del menu), con il numero sul badge.",
         "Apri la richiesta: vedi date, motivo e i turni in cui la persona è già assegnata in quei giorni.",
         "Scegli «Approva e togli dai turni» per liberare quei posti, oppure «Approva, i turni li sistemo io». Se non ci sono turni in conflitto c'è solo «Approva».",
         "Se non va bene, «Rifiuta». La nota è facoltativa e la legge chi ha chiesto.",

@@ -220,6 +220,8 @@ export const qk = {
     byPerson: (personId: string) =>
       ["absences", "byPerson", personId] as const,
     toHandle: ["absences", "toHandle"] as const,
+    /** Tutta l'azienda, per la pagina Assenze. */
+    company: ["absences", "company"] as const,
     /** Il riepilogo del mese per il commercialista (pagina Ore). */
     summary: (ownerId: string, month: string) =>
       ["absences", "summary", ownerId, month] as const,

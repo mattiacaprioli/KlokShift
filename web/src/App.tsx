@@ -20,6 +20,7 @@ import { ChatPage } from "./pages/Chat";
 import { PlanningPage } from "./pages/Planning";
 import { OrePage } from "./pages/Ore";
 import { StaffPage } from "./pages/Staff";
+import { AssenzePage } from "./pages/Assenze";
 import { RuoliPage } from "./pages/Ruoli";
 import { ProfessionistaPage } from "./pages/Professionista";
 import { SedePage } from "./pages/Sede";
@@ -113,6 +114,7 @@ function Dashboard({
           <Route path="/storico" element={<StoricoPage />} />
           <Route path="/ore" element={<OrePage />} />
           <Route path="/staff" element={<StaffPage />} />
+          <Route path="/assenze" element={<AssenzePage />} />
           <Route path="/ruoli" element={<RuoliPage />} />
           {/* Profilo pubblico: si arriva dall'organico o dal dettaglio di un
               turno, non c'è una voce di menu (non è una lista da sfogliare). */}
