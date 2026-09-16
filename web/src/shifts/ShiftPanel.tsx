@@ -810,7 +810,7 @@ function InternalForm({
 
       {mutationError ? (
         <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
-          {mutationError.message}
+          {userErrorMessage(mutationError)}
         </p>
       ) : null}
 

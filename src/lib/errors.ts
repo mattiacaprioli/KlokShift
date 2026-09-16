@@ -31,6 +31,13 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Connessione assente. Controlla la rete e riprova.",
   },
   {
+    // `guard_finished_shift_times` (20260918170000): prima del generico sui
+    // permessi, perché qui c'è una ragione precisa da dire.
+    match: ["finished_shift_locked"],
+    message:
+      "Questo turno è già finito: data e orari li cambia solo chi ha il permesso Ore, e mai chi ci ha lavorato.",
+  },
+  {
     match: ["row-level security", "permission denied", "insufficient privilege"],
     message: "Non hai i permessi per farlo.",
   },
