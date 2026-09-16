@@ -353,6 +353,6 @@ async function icon(name, color) {
     s.addNotes("Chiusura: call to action per ristoratori pilota. Sostituire con contatti reali prima della presentazione.");
   }
 
-  await p.writeFile({ fileName: "/Users/alisher/topWaitr/pitch/KlokShift.pptx" });
+  await p.writeFile({ fileName: require("path").join(__dirname, "KlokShift.pptx") });
   console.log("done");
 })();
