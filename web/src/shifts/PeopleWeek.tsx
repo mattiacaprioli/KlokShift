@@ -19,6 +19,7 @@ import type { AbsenceAvailability } from "@/features/absences/api";
 import { absenceForShift, absenceOnDay } from "@/features/absences/conflicts";
 import { absenceCellLabel } from "@/features/absences/labels";
 import { useOwnerPeople } from "@/features/staff/hooks";
+import { useSelfStaff } from "@/features/staff/self";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { formatHours, formatShiftRange } from "@/lib/format";
@@ -80,6 +81,8 @@ export function PeopleWeek({
 }) {
   const { ownerId, venues, isMultiVenue } = useOwnerVenues();
   const peopleQuery = useOwnerPeople(ownerId);
+  // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
+  const self = useSelfStaff();
   const dnd = useShiftDrag();
 
   /** Il filtro per sede del Planning è acceso: si vede una sede sola. */
@@ -223,6 +226,12 @@ export function PeopleWeek({
                 <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border-2 bg-bg-card px-3 py-2">
                   <span className="truncate text-sm text-t1">
                     {person.name}
+                    {/* Il confronto è sull'id della **persona**: `PersonLoad`
+                        non porta il `waiter_id`, e chi gestisce può stare in
+                        organico. */}
+                    {person.personId === self.person?.id ? (
+                      <span className="ml-1.5 text-xs text-gold">(tu)</span>
+                    ) : null}
                   </span>
                   <span className="truncate text-xs text-t4">
                     {person.roles ?? "Ruoli non indicati"}

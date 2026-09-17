@@ -70,11 +70,22 @@ function WorkplaceCard({
   isOnly,
   /** Può rimettere in organico un'appartenenza finita: vedi `StaffPersonView`. */
   canRestore,
+  /**
+   * Può togliere **questa** appartenenza.
+   *
+   * Falso solo in un caso: è la propria scheda e chi guarda è un collaboratore.
+   * `remove_staff_member` lo rifiuta (uscire dall'organico non si fa coi poteri
+   * che si hanno per gestire gli altri) e senza questo il bottone chiederebbe
+   * conferma per poi mostrare un errore. Il titolare invece può: la sua scheda
+   * altrimenti sarebbe inamovibile, perché `leave_venue` è del professionista.
+   */
+  canRemove = true,
 }: {
   person: StaffPersonDetail;
   membership: PersonMembership;
   isOnly: boolean;
   canRestore: boolean;
+  canRemove?: boolean;
 }) {
   const toast = useToast();
   const update = useUpdateStaffMember();
@@ -219,7 +230,7 @@ function WorkplaceCard({
         onPress={() => void onSave()}
       />
 
-      {!isOnly ? (
+      {!isOnly && canRemove ? (
         <Pressable
           disabled={busy}
           onPress={() => setConfirmVisible(true)}
@@ -692,6 +703,15 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
 
   const waiterId = person.waiter_id;
   /**
+   * Questa scheda sono io.
+   *
+   * Da quando chi gestisce la sede può mettersi in organico, la propria scheda
+   * si apre da questa stessa schermata — e metà di ciò che c'è dentro è scritto
+   * per guardare qualcun altro: la chat, la scheda pubblica da professionista
+   * (che un account gestore non ha), la promozione a collaboratore.
+   */
+  const isMe = !!waiterId && waiterId === managerId;
+  /**
    * Le sedi della persona che **chi guarda** gestisce.
    *
    * Per il titolare sono tutte. Per un collaboratore no, ed è il punto: la
@@ -767,8 +787,9 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
       ? [{ id: "documenti" as const, label: "Documenti" }]
       : []),
     // La promozione è del titolare e di nessun altro: un collaboratore che
-    // potesse promuoverne altri sarebbe una catena di deleghe.
-    ...(isOwner && waiterId && liveMemberships.length > 0
+    // potesse promuoverne altri sarebbe una catena di deleghe. E non su sé
+    // stesso: chi apre la propria scheda la sede la gestisce già.
+    ...(isOwner && waiterId && !isMe && liveMemberships.length > 0
       ? [{ id: "gestione" as const, label: "Gestione" }]
       : []),
   ];
@@ -794,15 +815,15 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           <View className="px-5">
             {/* "Dipendente" e non "Staff": la scheda non è più di una sede. */}
             <ScreenHeader
-              eyebrow="Dipendente"
+              eyebrow={isMe ? "Tu" : "Dipendente"}
               title={person.full_name}
               titleClassName="text-2xl"
               right={
                 // La conversazione è la coppia (professionista, titolare) e
                 // non è scopata per sede: aprirla come collaboratore creerebbe
                 // un thread che il titolare non vede e che al professionista
-                // arriva da uno sconosciuto.
-                waiterId && isOwner ? (
+                // arriva da uno sconosciuto. E con sé stessi non esiste.
+                waiterId && isOwner && !isMe ? (
                   <Pressable
                     disabled={startConversation.isPending}
                     onPress={onMessage}
@@ -866,7 +887,21 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           {/* I pannelli inattivi restano montati e solo nascosti: i form tengono
               gli edit in stato locale, e cambiare tab non deve buttarli via. */}
           <TabPanel active={tab === "dati"}>
-            {waiterId ? (
+            {/* La propria scheda non porta a una scheda pubblica da
+                professionista: `waiter_public_cards` contiene solo i
+                professionisti, quindi quella pagina per un gestore sarebbe
+                vuota. Nome e foto si cambiano dal profilo. */}
+            {isMe ? (
+              <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
+                <Icon name="user" size={18} color="#EAB54C" />
+                <View className="flex-1">
+                  <Mono gold>Questo sei tu</Mono>
+                  <Text className="mt-0.5 text-sm text-t2">
+                    Nome e foto si cambiano dal tuo profilo
+                  </Text>
+                </View>
+              </View>
+            ) : waiterId ? (
               <Pressable
                 onPress={() => router.push(`/(manager)/cameriere/${waiterId}`)}
               >
@@ -897,6 +932,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                   membership={m}
                   isOnly={!multiVenue}
                   canRestore={canReassign}
+                  canRemove={!isMe || isOwner}
                 />
               ))}
               {canReassign && otherVenues.length > 0 ? (

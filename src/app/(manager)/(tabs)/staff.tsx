@@ -19,6 +19,7 @@ import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useOwnerPeople } from "@/features/staff/hooks";
+import { useSelfStaff } from "@/features/staff/self";
 import {
   personEmploymentType,
   personRoleNames,
@@ -38,10 +39,13 @@ function PersonRow({
   person,
   /** Le sedi in cui lavora. Vuoto con una sede sola: sarebbe rumore. */
   venueNames,
+  /** È la mia scheda: da quando chi gestisce può mettersi in organico. */
+  isMe,
   onPress,
 }: {
   person: OwnerPerson;
   venueNames: string[];
+  isMe?: boolean;
   onPress: () => void;
 }) {
   const linked = !!person.waiter_id;
@@ -61,6 +65,7 @@ function PersonRow({
             {linked ? (
               <Icon name="verified" size={15} color="#EAB54C" />
             ) : null}
+            {isMe ? <Pill label="Tu" variant="tag" /> : null}
           </View>
           <Text className="text-xs text-t3">
             {personRoleNames(person) ?? "Ruoli non indicati"}
@@ -120,6 +125,9 @@ export default function ManagerStaffScreen() {
   // L'organico è dell'**azienda**: una riga per persona, tutte le sedi insieme.
   const peopleQuery = useOwnerPeople(venueQuery.ownerId);
   const people = peopleQuery.data ?? [];
+  // Chi gestisce può lavorare: la propria scheda si riconosce nell'elenco, e
+  // finché non c'è si offre di crearla. Legge la stessa query, non una in più.
+  const self = useSelfStaff();
   const pull = usePullToRefresh(peopleQuery.refetch);
 
   return (
@@ -165,6 +173,31 @@ export default function ManagerStaffScreen() {
               label="Aggiungi allo staff"
               onPress={() => router.push("/(manager)/staff/new")}
             />
+          ) : null}
+
+          {/* Anche chi organizza i turni li lavora. Finché la scheda non c'è le
+              sue ore non esistono da nessuna parte: né nel planning, né in
+              «Ore del mese», né nell'export. Sparisce appena si è dentro. */}
+          {canStaff && !self.isPending && !self.hasCard ? (
+            <Card
+              className="rounded-3xl border-border-2 p-4"
+              onPress={() => router.push("/(manager)/staff/new?self=1")}
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                  <Icon name="user" size={18} color="#EAB54C" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-sans-bold text-t1">
+                    Metti te stesso in organico
+                  </Text>
+                  <Text className="text-xs text-t3">
+                    Per assegnarti i turni e contare le tue ore
+                  </Text>
+                </View>
+                <Icon name="chevR" size={18} color="#8c857a" />
+              </View>
+            </Card>
           ) : null}
 
           {canHours ? (
@@ -262,6 +295,7 @@ export default function ManagerStaffScreen() {
                   key={person.id}
                   person={person}
                   venueNames={isMultiVenue ? personVenueNames(person) : []}
+                  isMe={self.isSelf(person.waiter_id)}
                   onPress={() => router.push(`/(manager)/staff/${person.id}`)}
                 />
               ))}

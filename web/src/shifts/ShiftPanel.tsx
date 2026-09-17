@@ -824,6 +824,7 @@ function InternalForm({
             {shift && isShiftOver(shift) && !cancelled ? (
               <PresenceSection
                 shiftId={shift.id}
+                venueId={shift.venue_id}
                 startTime={shift.start_time}
                 endTime={shift.end_time}
               />

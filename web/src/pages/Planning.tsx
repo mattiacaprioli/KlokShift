@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
+import { useAuth } from "@/lib/auth";
 import { useSearchParams } from "react-router-dom";
 import {
   useMoveShiftToDate,
@@ -108,6 +109,9 @@ function storedVenue(): string | null {
  */
 export function PlanningPage() {
   const { venues, venueIds, isMultiVenue, canAny } = useOwnerVenues();
+  // Chi gestisce può essere in turno: il trigger non avvisa chi sta spostando,
+  // e la finestra di conferma non deve promettere un avviso in più.
+  const { session } = useAuth();
   // Duplicare un periodo crea turni: stesso permesso che serve a crearne uno
   // (`ShiftPanel` filtra già le sedi con `venuesWith("can_manage_shifts")`).
   const canCreateShift = canAny("can_manage_shifts");
@@ -248,7 +252,10 @@ export function PlanningPage() {
 
   function requestMove(payload: MoveDragPayload, toDate: string) {
     if (busy) return;
-    const notify = shiftNotifyRecipients(byId.get(payload.shiftId));
+    const notify = shiftNotifyRecipients(
+      byId.get(payload.shiftId),
+      session?.user.id
+    );
     // Nessuno da avvisare: non c'è niente da confermare.
     if (notify.total === 0) {
       runMove(payload, toDate);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
@@ -13,10 +13,11 @@ import { useToast } from "@/providers/Toast";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
-import { useAddStaff } from "@/features/staff/hooks";
+import { useAddSelfToStaff, useAddStaff } from "@/features/staff/hooks";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
-import type { AddStaffResult } from "@/features/staff/api";
+import { useAuth } from "@/lib/auth";
+import type { AddStaffResult, StaffMember } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
 function TypeChips({
@@ -89,11 +90,23 @@ function VenueMultiSelect({
  * titolare se quella persona avesse già KlokShift, cosa che non può sapere.
  * Scrive nome ed email, e `addStaff` decide — scheda, invito in-app o email
  * d'invito. Vedi `src/features/staff/api.ts`.
+ *
+ * Dal 17/09/2026 la stessa schermata serve anche a **mettere sé stessi** in
+ * organico (`?self=1`): chi gestisce la sede spesso ci lavora, e finché non ha
+ * una scheda le sue ore non esistono in nessun conto. Una modalità e non una
+ * rotta nuova, perché tutto quello che viene dopo il nome — sedi, tipo di
+ * impiego, ruoli — è identico; cambiano il nome (è il suo, e non si scrive) e
+ * l'email (non serve: l'account si conosce già).
  */
 export default function StaffNewScreen() {
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
+  // `?self=1` dalla tab Staff. Una stringa e non un booleano: è quello che
+  // passa per l'URL.
+  const { self } = useLocalSearchParams<{ self?: string }>();
+  const isSelf = self === "1";
+  const { session, profile } = useAuth();
   // ⚠️ L'azienda, non chi sta scrivendo: per un collaboratore `session.user.id`
   // non è il titolare, e `staff_people.owner_id` deve restare quello della sede.
   // Vedi `OwnerVenuesProvider`.
@@ -108,7 +121,9 @@ export default function StaffNewScreen() {
   const { venueId: lastVenueId } = useLastVenue();
 
   const add = useAddStaff();
+  const addSelf = useAddSelfToStaff();
   const setRoles = useSetStaffMemberRoles();
+  const pending = add.isPending || addSelf.isPending;
 
   /**
    * Le sedi scelte. `null` finché la preferenza non è risolta: derivarle invece
@@ -136,7 +151,12 @@ export default function StaffNewScreen() {
   // scheda della persona, che li mostra già sede per sede.
   const singleVenue = venueIds.size === 1 ? [...venueIds][0] : undefined;
 
-  const [name, setName] = useState("");
+  // Mettendosi da sé il nome è il proprio: si prende dal profilo e resta in
+  // sola lettura. Cambiarlo qui scriverebbe un secondo nome sulla stessa
+  // persona — quello dell'anagrafica si modifica dal profilo.
+  const [name, setName] = useState(() =>
+    isSelf ? (profile?.full_name ?? "") : ""
+  );
   const [email, setEmail] = useState("");
   const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
@@ -160,9 +180,55 @@ export default function StaffNewScreen() {
     return "Aggiunto allo staff";
   }
 
+  /**
+   * Quel che viene dopo l'insert, uguale per le due modalità: i ruoli (che
+   * hanno bisogno dell'id della scheda, quindi non possono partire prima), il
+   * toast e l'uscita.
+   */
+  function finish(members: StaffMember[], msg: string) {
+    if (!singleVenue || roleIds.length === 0 || members.length !== 1) {
+      toast.show(singleVenue ? msg : `${msg} · assegna i ruoli in ogni sede`);
+      router.back();
+      return;
+    }
+    setRoles.mutate(
+      { staffMemberId: members[0].id, roleIds },
+      {
+        onSuccess: () => {
+          toast.show(msg);
+          router.back();
+        },
+        onError: () =>
+          toast.show("Scheda creata, ma i ruoli non sono stati salvati.", "error"),
+      }
+    );
+  }
+
   function submit() {
     if (!ownerId || venueIds.size === 0 || !name.trim()) return;
     setAlready(null);
+
+    if (isSelf) {
+      const myId = session?.user.id;
+      if (!myId) return;
+      addSelf.mutate(
+        {
+          ownerId,
+          myId,
+          venueIds: [...venueIds],
+          fullName: name.trim(),
+          employmentType: empType,
+          phone: phone.trim() || null,
+        },
+        {
+          onSuccess: (members) => finish(members, "Sei in organico"),
+          onError: () =>
+            toast.show("Operazione non riuscita. Riprova.", "error"),
+        }
+      );
+      return;
+    }
+
     add.mutate(
       {
         ownerId,
@@ -178,30 +244,7 @@ export default function StaffNewScreen() {
             setAlready(res.personId);
             return;
           }
-          const msg = messageFor(res);
-          // I ruoli si scrivono dopo l'insert: hanno bisogno dell'id della
-          // scheda. Solo con una sede sola — altrimenti non sono stati chiesti.
-          if (!singleVenue || roleIds.length === 0 || res.members.length !== 1) {
-            toast.show(
-              singleVenue ? msg : `${msg} · assegna i ruoli in ogni sede`
-            );
-            router.back();
-            return;
-          }
-          setRoles.mutate(
-            { staffMemberId: res.members[0].id, roleIds },
-            {
-              onSuccess: () => {
-                toast.show(msg);
-                router.back();
-              },
-              onError: () =>
-                toast.show(
-                  "Scheda creata, ma i ruoli non sono stati salvati.",
-                  "error"
-                ),
-            }
-          );
+          finish(res.members, messageFor(res));
         },
         onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
       }
@@ -214,7 +257,7 @@ export default function StaffNewScreen() {
         className="flex-1 bg-bg-0 px-5"
         style={{ paddingTop: insets.top + 8 }}
       >
-        <ScreenHeader eyebrow="Staff" title="Aggiungi" />
+        <ScreenHeader eyebrow="Staff" title={isSelf ? "Sei tu" : "Aggiungi"} />
         <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
       </View>
     );
@@ -232,35 +275,63 @@ export default function StaffNewScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenHeader eyebrow="Staff" title="Aggiungi" />
+        <ScreenHeader eyebrow="Staff" title={isSelf ? "Sei tu" : "Aggiungi"} />
 
         <View className="gap-5">
-          <Input
-            label="Nome"
-            value={name}
-            onChangeText={setName}
-            placeholder="Es. Marco Rossi"
-          />
-
-          <View className="gap-2">
-            <Input
-              label="Email (facoltativa)"
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t);
-                setAlready(null);
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="nome@email.com"
-            />
-            <Text className="text-xs leading-4 text-t3">
-              Se ha già un account, gli arriva la richiesta nell&apos;app.
-              Altrimenti gli mandiamo un invito e, quando si registra con questa
-              email, lo colleghiamo a questa scheda.
+          {isSelf ? (
+            <Text className="text-sm leading-5 text-t2">
+              Ti aggiungi al tuo organico: da qui in poi puoi assegnarti i turni
+              come a chiunque altro, e le tue ore entrano nel riepilogo e
+              nell&apos;export.
             </Text>
-          </View>
+          ) : null}
+
+          {/* Il proprio nome non si scrive qui: è quello del profilo, e
+              scriverne un altro creerebbe due nomi per la stessa persona. */}
+          {isSelf ? (
+            <View className="gap-2">
+              <Mono>Nome</Mono>
+              <Card className="rounded-3xl border-border-2 px-4 py-3.5">
+                <Text className="text-base text-t1">
+                  {name || "Il tuo nome"}
+                </Text>
+              </Card>
+              <Text className="text-xs leading-4 text-t3">
+                Come compari nel tuo profilo. Si cambia da lì.
+              </Text>
+            </View>
+          ) : (
+            <Input
+              label="Nome"
+              value={name}
+              onChangeText={setName}
+              placeholder="Es. Marco Rossi"
+            />
+          )}
+
+          {/* Nessuna email in modalità «sono io»: non c'è nessun invito da
+              mandare e nessun account da agganciare — è già il mio. */}
+          {isSelf ? null : (
+            <View className="gap-2">
+              <Input
+                label="Email (facoltativa)"
+                value={email}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  setAlready(null);
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="nome@email.com"
+              />
+              <Text className="text-xs leading-4 text-t3">
+                Se ha già un account, gli arriva la richiesta nell&apos;app.
+                Altrimenti gli mandiamo un invito e, quando si registra con
+                questa email, lo colleghiamo a questa scheda.
+              </Text>
+            </View>
+          )}
 
           {already ? (
             <Card className="gap-4 rounded-3xl border-border-2 p-5">
@@ -315,8 +386,14 @@ export default function StaffNewScreen() {
 
           <GoldButton
             className="mt-1"
-            label={add.isPending ? "Aggiunta…" : "Aggiungi allo staff"}
-            disabled={add.isPending || !name.trim() || venueIds.size === 0}
+            label={
+              pending
+                ? "Aggiunta…"
+                : isSelf
+                  ? "Mettimi in organico"
+                  : "Aggiungi allo staff"
+            }
+            disabled={pending || !name.trim() || venueIds.size === 0}
             onPress={submit}
           />
         </View>

@@ -56,7 +56,10 @@ export async function getOwnerShifts(
       // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
       // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
       // ragiona per ruolo e ignora chi ha rifiutato.
-      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
+      // `staff_member_id` non serve alla copertura: serve al filtro «I miei
+      // turni» dell'agenda, da quando chi gestisce la sede può esserci sopra.
+      // È una colonna della riga già embeddata, non un join in più.
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, staff_member_id)"
     )
     .in("venue_id", venueIds)
     .gte("date", addDaysToDate(todayString(), -1))

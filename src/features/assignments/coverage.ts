@@ -65,6 +65,13 @@ export type CoverageEmbeds = {
   shift_assignments: {
     status: AssignmentStatus;
     role_id: string | null;
+    /**
+     * Facoltativo: la copertura non lo guarda. Lo porta `getOwnerShifts` perché
+     * l'agenda della sede deve poter riconoscere i turni di **chi guarda** —
+     * chi gestisce può stare in organico — e un'altra query per saperlo
+     * costerebbe più del campo.
+     */
+    staff_member_id?: string | null;
   }[];
 };
 

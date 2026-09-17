@@ -6,12 +6,14 @@ import { Chip } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
 import type { ShiftTimes } from "@/lib/format";
 import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceCellLabel } from "@/features/absences/labels";
 import { staffRoleNames, type StaffMemberWithWaiter } from "@/features/staff/api";
+import { useSelfStaff } from "@/features/staff/self";
 import {
   ASSIGNMENT_STATUS_LABEL,
   isActiveAssignment,
@@ -57,6 +59,9 @@ export function StaffAssignPicker({
       shiftTimes?.date ?? "",
       !!shiftTimes
     ).data ?? [];
+  // Chi gestisce la sede può essere in organico: la propria riga si riconosce,
+  // altrimenti in un elenco di nomi si cerca il proprio senza trovarlo.
+  const self = useSelfStaff();
 
   return (
     <View className="gap-3">
@@ -102,9 +107,14 @@ export function StaffAssignPicker({
                     size={40}
                   />
                   <View className="flex-1">
-                    <Text className="text-base font-sans-bold text-t1">
-                      {m.display_name}
-                    </Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-base font-sans-bold text-t1">
+                        {m.display_name}
+                      </Text>
+                      {self.isSelf(m.waiter_id) ? (
+                        <Pill label="Tu" variant="tag" />
+                      ) : null}
+                    </View>
                     <Text className="text-xs text-t3">
                       {staffRoleNames(m) ?? "Ruoli non indicati"}
                     </Text>

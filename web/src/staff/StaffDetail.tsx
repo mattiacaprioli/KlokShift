@@ -160,6 +160,16 @@ function PersonPanel({
   onClose: () => void;
 }) {
   const { isOwner, can, canAny } = useOwnerVenues();
+  const { session } = useAuth();
+  /**
+   * Questa scheda sono io.
+   *
+   * Da quando chi gestisce la sede può mettersi in organico, la propria scheda
+   * si apre da qui — e metà di ciò che c'è dentro è scritto per guardare
+   * qualcun altro: la chat, il profilo pubblico da professionista (che un
+   * account gestore non ha), la promozione a collaboratore.
+   */
+  const isMe = !!person.waiter_id && person.waiter_id === session?.user.id;
   /**
    * Le sedi della persona che **chi guarda** gestisce: per il titolare tutte,
    * per un collaboratore solo le sue. La scheda è dell'azienda, ma lui la deve
@@ -193,8 +203,9 @@ function PersonPanel({
       ? [{ id: "performance" as const, label: "Performance" }]
       : []),
     // La promozione è del titolare e di nessun altro: un collaboratore che
-    // potesse promuoverne altri sarebbe una catena di deleghe.
-    ...(isOwner && person.waiter_id && liveMemberships.length > 0
+    // potesse promuoverne altri sarebbe una catena di deleghe. E non su sé
+    // stesso: chi apre la propria scheda la sede la gestisce già.
+    ...(isOwner && person.waiter_id && !isMe && liveMemberships.length > 0
       ? [{ id: "gestione" as const, label: "Gestione" }]
       : []),
   ];
@@ -230,7 +241,8 @@ function PersonPanel({
                 scopata per sede: aprirla come collaboratore creerebbe un thread
                 che il titolare non vede e che al professionista arriva da uno
                 sconosciuto. */}
-            {person.waiter_id && isOwner ? (
+            {/* E con sé stessi non esiste. */}
+            {person.waiter_id && isOwner && !isMe ? (
               <MessageButton waiterId={person.waiter_id} />
             ) : null}
             <Button onClick={onClose}>Chiudi</Button>
@@ -292,7 +304,10 @@ function PersonPanel({
             <TabPanel active={tab === "performance"}>
               <Performance
                 personId={person.id}
-                waiterId={person.waiter_id ?? null}
+                // ⚠️ `null` sulla propria scheda: `waiter_public_cards`
+                // contiene solo i professionisti, quindi il profilo pubblico di
+                // un gestore è una pagina vuota e la sua card non esiste.
+                waiterId={isMe ? null : (person.waiter_id ?? null)}
                 showVenue={multiVenue}
               />
             </TabPanel>
@@ -657,6 +672,8 @@ function Workplaces({
   multiVenue: boolean;
 }) {
   const { isOwner, venues } = useOwnerVenues();
+  const { session } = useAuth();
+  const isMe = !!person.waiter_id && person.waiter_id === session?.user.id;
   const liveCount = memberships.filter((m) => m.link_status !== "left").length;
   // Riprendere qualcuno o dargli un'altra sede è del titolare: l'update su
   // `staff_members` la RLS lo concede solo a lui. Con un account, poi, solo se
@@ -682,6 +699,12 @@ function Workplaces({
           membership={m}
           isOnly={!multiVenue}
           canRestore={canReassign}
+          // `remove_staff_member` rifiuta la propria scheda a un collaboratore
+          // (uscire dall'organico non si fa coi poteri con cui si gestiscono
+          // gli altri): senza questo il bottone chiederebbe conferma per poi
+          // mostrare un errore. Il titolare invece può — la sua scheda
+          // altrimenti sarebbe inamovibile.
+          canRemove={!isMe || isOwner}
         />
       ))}
       {canReassign && otherVenues.length > 0 ? (
@@ -774,11 +797,14 @@ function WorkplaceCard({
   isOnly,
   /** Può rimettere in organico un'appartenenza finita: vedi `Workplaces`. */
   canRestore,
+  /** Può togliere questa appartenenza: vedi `Workplaces`. */
+  canRemove = true,
 }: {
   person: StaffPersonDetail;
   membership: PersonMembership;
   isOnly: boolean;
   canRestore: boolean;
+  canRemove?: boolean;
 }) {
   const update = useUpdateStaffMember();
   const setRoles = useSetStaffMemberRoles();
@@ -899,7 +925,7 @@ function WorkplaceCard({
         <Button variant="gold" disabled={busy} onClick={() => void onSave()}>
           {busy ? "Salvataggio…" : "Salva"}
         </Button>
-        {!isOnly ? (
+        {!isOnly && canRemove ? (
           confirming ? (
             <>
               <Button

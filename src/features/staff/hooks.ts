@@ -3,6 +3,7 @@ import { qk } from "@/lib/queryKeys";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 import {
   addPersonToVenue,
+  addSelfToStaff,
   addStaff,
   addStaffToVenues,
   getMyDocumentScopes,
@@ -93,6 +94,23 @@ export function useAddStaff() {
   return useMutation({
     mutationFn: addStaff,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
+  });
+}
+
+/**
+ * Chi gestisce la sede si mette da sé in organico. Vedi `addSelfToStaff`.
+ *
+ * Invalida anche i turni: da adesso quella persona compare nel picker «Chi
+ * chiami» e nelle griglie del planning, che leggono l'organico della sede.
+ */
+export function useAddSelfToStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: addSelfToStaff,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.staff.all });
+      qc.invalidateQueries({ queryKey: qk.shifts.all });
+    },
   });
 }
 

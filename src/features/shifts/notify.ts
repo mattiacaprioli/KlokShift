@@ -33,14 +33,26 @@ export const NO_RECIPIENTS: ShiftNotifyRecipients = {
 };
 
 export function shiftNotifyRecipients(
-  shift: ShiftWithAssignees | undefined
+  shift: ShiftWithAssignees | undefined,
+  /**
+   * Chi sta spostando il turno, se è anche in organico: da `20260919100200` il
+   * trigger salta chi coincide con `auth.uid()` — la notifica direbbe a uno
+   * l'orario che ha scritto lui, e la sua conferma non va riaperta. Senza
+   * questo la finestra promette un avviso in più di quelli che partono.
+   */
+  myWaiterId?: string
 ): ShiftNotifyRecipients {
   if (!shift) return NO_RECIPIENTS;
   // Un turno annullato non genera notifiche: il trigger si ferma prima.
   if (shift.status === "cancelled") return NO_RECIPIENTS;
 
   const assignees = shift.shift_assignments
-    .filter((a) => isActiveAssignment(a.status) && a.staff_member?.waiter_id)
+    .filter(
+      (a) =>
+        isActiveAssignment(a.status) &&
+        a.staff_member?.waiter_id &&
+        a.staff_member.waiter_id !== myWaiterId
+    )
     .map((a) => a.staff_member?.display_name ?? "");
 
   return { assignees, total: assignees.length };

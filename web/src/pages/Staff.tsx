@@ -6,6 +6,7 @@ import {
   personRoleNames,
   personVenueNames,
 } from "@/features/staff/api";
+import { useSelfStaff } from "@/features/staff/self";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
 import { AddStaffPanel } from "../staff/AddStaffPanel";
@@ -36,7 +37,12 @@ export function StaffPage() {
   const canStaff = canAny("can_manage_staff");
   const canVenue = canAny("can_manage_venue");
   const { data, isPending, isError, error } = useOwnerPeople(ownerId);
+  // Chi gestisce può lavorare: la propria riga si riconosce, e finché non c'è
+  // si offre di crearla. Stessa query dell'elenco, nessuna in più.
+  const self = useSelfStaff();
   const [adding, setAdding] = useState(false);
+  /** Il pannello «+ Aggiungi» aperto in modalità «sono io». */
+  const [addingSelf, setAddingSelf] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   if (venues.length === 0) {
@@ -76,16 +82,42 @@ export function StaffPage() {
                 <Button>Ruoli</Button>
               </Link>
             ) : null}
+            {/* Anche chi organizza i turni li lavora: finché non ha una scheda
+                le sue ore non entrano in nessun conto. Sparisce appena c'è. */}
+            {canStaff && !self.hasCard ? (
+              <Button
+                onClick={() => {
+                  setAddingSelf(true);
+                  setAdding(true);
+                }}
+              >
+                + Metti te stesso
+              </Button>
+            ) : null}
             {canStaff ? (
-              <Button variant="gold" onClick={() => setAdding((v) => !v)}>
-                {adding ? "Annulla" : "+ Aggiungi"}
+              <Button
+                variant="gold"
+                onClick={() => {
+                  setAddingSelf(false);
+                  setAdding((v) => !v);
+                }}
+              >
+                {adding && !addingSelf ? "Annulla" : "+ Aggiungi"}
               </Button>
             ) : null}
           </div>
         }
       />
 
-      {adding ? <AddStaffPanel onClose={() => setAdding(false)} /> : null}
+      {adding ? (
+        <AddStaffPanel
+          self={addingSelf}
+          onClose={() => {
+            setAdding(false);
+            setAddingSelf(false);
+          }}
+        />
+      ) : null}
 
       {people.length === 0 && !adding ? (
         <Placeholder
@@ -113,6 +145,11 @@ export function StaffPage() {
                   <span className="min-w-40 flex-1">
                     <span className="block truncate text-sm font-semibold text-t1">
                       {person.full_name}
+                      {self.isSelf(person.waiter_id) ? (
+                        <span className="ml-1.5 text-xs font-normal text-gold">
+                          (tu)
+                        </span>
+                      ) : null}
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-t4">
                       {personRoleNames(person) ?? "Ruoli non indicati"}

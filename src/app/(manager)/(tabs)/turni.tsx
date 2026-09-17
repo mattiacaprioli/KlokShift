@@ -26,6 +26,7 @@ import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useOwnerShifts } from "@/features/shifts/hooks";
+import { useSelfStaff } from "@/features/staff/self";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -76,6 +77,8 @@ export default function ManagerShiftsScreen() {
   const canCreateShift = venueQuery.canAny("can_manage_shifts");
   const upcomingQuery = useOwnerShifts();
   const pull = usePullToRefresh(() => upcomingQuery.refetch());
+  // La propria scheda nell'organico, se chi gestisce lavora anche lui.
+  const self = useSelfStaff();
 
   const today = todayString();
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
@@ -85,6 +88,8 @@ export default function ManagerShiftsScreen() {
   const [expanded, setExpanded] = useState(false);
   /** L'agenda ridotta a ciò che manca da coprire. */
   const [onlyShort, setOnlyShort] = useState(false);
+  /** «I miei turni»: esiste solo per chi gestisce ed è anche in organico. */
+  const [onlyMine, setOnlyMine] = useState(false);
   /**
    * Cosa si sta guardando: i turni per giorno, o l'organico per persona.
    *
@@ -151,6 +156,33 @@ export default function ManagerShiftsScreen() {
   // con il comando per uscirne appena sparito sarebbe un vicolo cieco.
   const filtering = onlyShort && shortCount > 0;
 
+  /**
+   * I turni su cui c'è **chi guarda**, per chi gestisce e lavora.
+   *
+   * Le proprie schede sono una per sede (`staff_people` → N `staff_members`) e
+   * un turno è di una sede sola: si confrontano gli id delle appartenenze, che
+   * `OwnerPerson` porta già nell'embed dell'organico. Le appartenenze finite
+   * restano fuori — `getOwnerPeople` le filtra.
+   */
+  const myMemberIds = useMemo(
+    () => new Set((self.person?.memberships ?? []).map((m) => m.id)),
+    [self.person]
+  );
+  const isMine = useCallback(
+    (s: ShiftWithCount) =>
+      s.shift_assignments.some(
+        (a) => a.staff_member_id && myMemberIds.has(a.staff_member_id)
+      ),
+    [myMemberIds]
+  );
+  const mineCount = useMemo(
+    () => (myMemberIds.size === 0 ? 0 : upcoming.filter(isMine).length),
+    [upcoming, isMine, myMemberIds]
+  );
+  // Stessa regola del filtro dei buchi: un filtro che non filtra niente non
+  // compare, e se l'ultimo turno proprio sparisce si spegne da sé.
+  const filteringMine = onlyMine && mineCount > 0;
+
   const dayGroups = useMemo(
     () => groupByDay(upcoming, (s) => s.date),
     [upcoming]
@@ -158,11 +190,18 @@ export default function ManagerShiftsScreen() {
 
   const sections = useMemo<ShiftSection[]>(() => {
     const future = dayGroups.filter((g) => (g.date ?? "") >= anchorDay);
-    if (filtering) {
+    if (filtering || filteringMine) {
       // Un giorno rimasto senza turni scoperti non è un giorno vuoto da
       // mostrare: è un giorno a posto, e sparisce insieme ai suoi turni.
+      // I due filtri si sommano (scoperti **e** miei), che è l'unica lettura
+      // sensata di due comandi accesi insieme.
       return future
-        .map((g) => ({ ...g, data: g.data.filter(isShort) }))
+        .map((g) => ({
+          ...g,
+          data: g.data.filter(
+            (s) => (!filtering || isShort(s)) && (!filteringMine || isMine(s))
+          ),
+        }))
         .filter((g) => g.data.length > 0);
     }
     // Fino al 14/09/2026 lo storico chiudeva l'agenda come sezione in coda.
@@ -171,7 +210,7 @@ export default function ManagerShiftsScreen() {
     // scaricate — va bene per i prossimi turni, che sono tutti in cache, ma su
     // una lista paginata accorcia le pagine e tronca la lista.
     return future;
-  }, [dayGroups, anchorDay, filtering]);
+  }, [dayGroups, anchorDay, filtering, filteringMine, isMine]);
 
   // Il quadro della settimana di cui si sta guardando un giorno.
   const week = useMemo(() => {
@@ -433,9 +472,10 @@ export default function ManagerShiftsScreen() {
           viewabilityConfig={VIEWABILITY}
           onViewableItemsChanged={onViewableItemsChanged}
           ListHeaderComponent={
-            // Compare solo quando c'è davvero qualcosa da coprire: su un'agenda
-            // in ordine sarebbe un comando che non filtra niente.
-            shortCount > 0 ? (
+            <View className="mb-4 flex-row flex-wrap items-center gap-2">
+            {/* Compare solo quando c'è davvero qualcosa da coprire: su un'agenda
+                in ordine sarebbe un comando che non filtra niente. */}
+            {shortCount > 0 ? (
               <Pressable
                 onPress={() => setOnlyShort((v) => !v)}
                 // Sfondo inline come nelle `Pill`: `bg-warning/15` passerebbe da
@@ -446,7 +486,7 @@ export default function ManagerShiftsScreen() {
                     : undefined
                 }
                 className={cn(
-                  "mb-4 flex-row items-center gap-2 self-start rounded-full border px-3.5 py-2",
+                  "flex-row items-center gap-2 self-start rounded-full border px-3.5 py-2",
                   filtering ? "border-warning" : "border-border-2 bg-bg-2"
                 )}
                 accessibilityRole="button"
@@ -464,7 +504,39 @@ export default function ManagerShiftsScreen() {
                     : `Solo i turni scoperti (${shortCount})`}
                 </Text>
               </Pressable>
-            ) : null
+            ) : null}
+
+            {/* Chi organizza i turni spesso ci lavora: qui trova i suoi senza
+                cercarsi in mezzo all'agenda della sede. Compare solo se ne ha. */}
+            {mineCount > 0 ? (
+              <Pressable
+                onPress={() => setOnlyMine((v) => !v)}
+                style={
+                  filteringMine
+                    ? { backgroundColor: "rgba(234,181,76,0.15)" }
+                    : undefined
+                }
+                className={cn(
+                  "flex-row items-center gap-2 self-start rounded-full border px-3.5 py-2",
+                  filteringMine ? "border-gold" : "border-border-2 bg-bg-2"
+                )}
+                accessibilityRole="button"
+                accessibilityState={{ selected: filteringMine }}
+                accessibilityLabel={
+                  filteringMine
+                    ? "Mostra i turni di tutti"
+                    : `Mostra solo i tuoi turni, ${mineCount}`
+                }
+              >
+                <Icon name="user" size={13} color="#EAB54C" strokeWidth={2.4} />
+                <Text className="text-[13px] font-sans-semibold text-gold">
+                  {filteringMine
+                    ? "Turni di tutti"
+                    : `I miei turni (${mineCount})`}
+                </Text>
+              </Pressable>
+            ) : null}
+            </View>
           }
           renderSectionHeader={({ section }) => (
             <View className="bg-bg-0 pb-2 pt-3">
@@ -489,6 +561,15 @@ export default function ManagerShiftsScreen() {
                     away
                       ? "I turni da coprire sono prima di questo giorno: tocca «Oggi» per vederli."
                       : "Tocca «Mostra tutti i turni» per tornare all'agenda completa."
+                  }
+                />
+              ) : filteringMine ? (
+                <EmptyState
+                  title="Nessun tuo turno da qui in poi"
+                  subtitle={
+                    away
+                      ? "I tuoi turni sono prima di questo giorno: tocca «Oggi» per vederli."
+                      : "Tocca «Turni di tutti» per tornare all'agenda completa."
                   }
                 />
               ) : (

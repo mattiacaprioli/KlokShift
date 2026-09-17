@@ -35,6 +35,7 @@ import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
 import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
+import { useSelfStaff } from "@/features/staff/self";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
 
@@ -121,15 +122,26 @@ function AssignedRow({
   );
 }
 
-/** Riga presenza per un turno interno concluso: presente/assente + ore effettive. */
+/**
+ * Riga presenza per un turno interno concluso: presente/assente + ore effettive.
+ *
+ * ⚠️ `locked` è la riga **propria** di un collaboratore. Il database congela in
+ * silenzio status e `worked_hours` sulle righe di chi le sta scrivendo se quella
+ * non è la sua azienda (`freeze_assignment_payroll`), e
+ * `setAssignmentPresence` fa un update senza `.select()`: senza questo ramo i
+ * bottoni ci sono, si toccano, tornano 200 e non salvano niente. Il titolare non
+ * è mai `locked` — le proprie ore le scrive lui, nessun altro lo farà.
+ */
 function PresenceRow({
   assignment,
   plannedHours,
   shiftId,
+  locked,
 }: {
   assignment: AssignmentWithStaff;
   plannedHours: number;
   shiftId: string;
+  locked?: boolean;
 }) {
   const presence = useSetAssignmentPresence(shiftId);
   const sm = assignment.staff_member;
@@ -165,11 +177,20 @@ function PresenceRow({
       <View className="flex-row items-center gap-3">
         <Avatar uri={sm?.waiter?.avatar_url ?? undefined} name={name} size={44} />
         <View className="flex-1">
-          <Text className="text-base font-sans-bold text-t1">{name}</Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-base font-sans-bold text-t1">{name}</Text>
+            {locked ? <Pill label="Tu" variant="tag" /> : null}
+          </View>
           <Text className="text-xs text-t3">
             {assignment.role?.name ?? "Ruolo da assegnare"}
           </Text>
         </View>
+        {locked ? (
+          <Pill
+            label={ASSIGNMENT_STATUS_LABEL[assignment.status]}
+            variant={present ? "accepted" : "cancelled"}
+          />
+        ) : (
         <View className="flex-row overflow-hidden rounded-full border border-border">
           <Pressable
             disabled={presence.isPending}
@@ -198,9 +219,23 @@ function PresenceRow({
             </Text>
           </Pressable>
         </View>
+        )}
       </View>
 
-      {present ? (
+      {locked ? (
+        <View className="mt-3 border-t border-border pt-3">
+          <View className="flex-row items-center gap-2">
+            <Icon name="clock" size={15} color="#8c857a" />
+            <Text className="text-sm text-t2">Ore: {formatHours(effective)}</Text>
+          </View>
+          <Text className="mt-1.5 text-xs leading-4 text-t3">
+            Le tue presenze e le tue ore le segna chi ha il permesso Ore su
+            questa sede.
+          </Text>
+        </View>
+      ) : null}
+
+      {present && !locked ? (
         <View className="mt-3 border-t border-border pt-3">
           {!editing ? (
             <Pressable
@@ -279,6 +314,9 @@ export default function ShiftDetailScreen() {
   const { session } = useAuth();
   const managerId = session!.user.id;
   const startConversation = useStartConversation();
+  // Chi gestisce può essere in turno: la propria riga si riconosce, e su di essa
+  // presenze e ore sono del titolare e non del collaboratore.
+  const self = useSelfStaff();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -557,11 +595,23 @@ export default function ShiftDetailScreen() {
                 assignment={a}
                 plannedHours={plannedHours}
                 shiftId={id}
+                // La propria riga, quando le proprie ore non sono mie da
+                // scrivere: il collaboratore. Senza `shift` si ricade su «è la
+                // mia azienda?», che è la stessa domanda del DB.
+                locked={
+                  self.isSelf(a.staff_member?.waiter_id) &&
+                  !self.canEditOwnPayroll(shift?.venue_id ?? "")
+                }
               />
             ))
           ) : (
             assignments.map((a) => {
-              const waiterId = a.staff_member?.waiter_id ?? null;
+              // ⚠️ Non la propria riga: la scheda pubblica di un gestore non
+              // esiste (`waiter_public_cards` filtra i professionisti) e la chat
+              // con sé stessi nemmeno.
+              const waiterId = self.isSelf(a.staff_member?.waiter_id)
+                ? null
+                : (a.staff_member?.waiter_id ?? null);
               return (
                 <AssignedRow
                   key={a.id}

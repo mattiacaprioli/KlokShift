@@ -160,7 +160,13 @@ function StaffPicker({
   const startConversation = useStartConversation();
   const { data, isPending, isError, error } = useOwnerPeople(managerId);
 
-  const linked = (data ?? []).filter((p) => p.waiter_id);
+  // ⚠️ Con un account collegato **e non il proprio**: da quando chi gestisce
+  // può stare nel proprio organico, la sua scheda compare in questo elenco — e
+  // `conversations` è una coppia (professionista, titolare), quindi con sé
+  // stessi il thread non esiste.
+  const linked = (data ?? []).filter(
+    (p) => p.waiter_id && p.waiter_id !== managerId
+  );
   const needle = filter.trim().toLowerCase();
   const shown = needle
     ? linked.filter((p) => p.full_name.toLowerCase().includes(needle))

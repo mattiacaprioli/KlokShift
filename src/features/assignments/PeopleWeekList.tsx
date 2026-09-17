@@ -15,6 +15,7 @@ import {
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { personRoleNames } from "@/features/staff/api";
 import { useOwnerPeople } from "@/features/staff/hooks";
+import { useSelfStaff } from "@/features/staff/self";
 import {
   formatContract,
   loadTone,
@@ -81,6 +82,8 @@ export function PeopleWeekList({
   const { ownerId, venues, isMultiVenue } = useOwnerVenues();
   const shiftsQuery = useOwnerShiftsRange(from, to, scope);
   const peopleQuery = useOwnerPeople(ownerId);
+  // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
+  const self = useSelfStaff();
   // Chi non c'è in settimana, senza il perché (`get_absence_availability`).
   const absencesQuery = useAbsenceAvailability(from, to);
   const pull = usePullToRefresh(() =>
@@ -188,6 +191,10 @@ export function PeopleWeekList({
           absences={absencesByPerson.get(item.personId) ?? []}
           venueOf={venueOf}
           onOpenShift={onOpenShift}
+          // Il confronto è sull'id della **persona** e non sul `waiter_id`:
+          // `PersonLoad` non lo porta, e questo non costa un campo in più
+          // attraverso `computeWeekLoad`.
+          isMe={item.personId === self.person?.id}
         />
       )}
       ListEmptyComponent={
@@ -224,6 +231,8 @@ function PersonWeekCard({
   absences,
   venueOf,
   onOpenShift,
+  /** È la riga di chi guarda: da quando chi gestisce può stare in organico. */
+  isMe,
 }: {
   person: PersonLoad;
   days: string[];
@@ -231,6 +240,7 @@ function PersonWeekCard({
   absences: AbsenceAvailability[];
   venueOf: (venueId: string) => { name: string; accent: string } | null;
   onOpenShift: (shiftId: string) => void;
+  isMe?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -255,7 +265,7 @@ function PersonWeekCard({
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1">
             <Text className="text-[15px] font-sans-semibold text-t1">
-              {person.name}
+              {isMe ? `${person.name} (tu)` : person.name}
             </Text>
             <Text className="mt-0.5 text-xs text-t3" numberOfLines={1}>
               {person.roles ?? "Ruoli non indicati"}

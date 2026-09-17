@@ -38,6 +38,14 @@ const PATTERNS: { match: string[]; message: string }[] = [
       "Questo turno è già finito: data e orari li cambia solo chi ha il permesso Ore, e mai chi ci ha lavorato.",
   },
   {
+    // `guard_staff_link_consent` (20260919100100): anche qui prima del generico
+    // sui permessi, perché non è una questione di permessi — è che quella
+    // persona non ha detto sì.
+    match: ["staff_link_needs_consent"],
+    message:
+      "Questa persona deve accettare l'invito prima di entrare in organico: mandaglielo dalla sua scheda.",
+  },
+  {
     match: ["row-level security", "permission denied", "insufficient privilege"],
     message: "Non hai i permessi per farlo.",
   },

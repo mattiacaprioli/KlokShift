@@ -3,6 +3,7 @@ import {
   useShiftAssignments,
 } from "@/features/assignments/hooks";
 import { assignmentHours } from "@/features/assignments/hours";
+import { useSelfStaff } from "@/features/staff/self";
 import { userErrorMessage } from "@/lib/errors";
 import { shiftDurationHours } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -18,16 +19,30 @@ import { Input, Spinner } from "../ui/primitives";
  */
 export function PresenceSection({
   shiftId,
+  venueId,
   startTime,
   endTime,
 }: {
   shiftId: string;
+  /** La sede del turno: decide se le proprie ore sono proprie da scrivere. */
+  venueId: string;
   startTime: string;
   endTime: string;
 }) {
   const { data, isPending } = useShiftAssignments(shiftId);
   const presence = useSetAssignmentPresence(shiftId);
   const planned = shiftDurationHours(startTime, endTime);
+  /**
+   * La propria riga, per chi gestisce e lavora.
+   *
+   * ⚠️ Sulla riga di un **collaboratore** i controlli non vanno mostrati:
+   * `freeze_assignment_payroll` congela status e `worked_hours` in silenzio, e
+   * `setAssignmentPresence` fa un update senza `.select()` — il toggle
+   * cambierebbe colore, la richiesta tornerebbe 200 e non salverebbe niente.
+   * Il titolare invece scrive: le proprie ore non le segna nessun altro.
+   */
+  const self = useSelfStaff();
+  const locked = !self.canEditOwnPayroll(venueId);
 
   // Chi ha rifiutato il turno non è una presenza da consuntivare: resta in
   // "Chi lavora" con la sua etichetta, ma qui darebbe un "Presente" verde (e un
@@ -49,6 +64,8 @@ export function PresenceSection({
             start_time: startTime,
             end_time: endTime,
           });
+          // La mia riga, e non sono io a poterla consuntivare.
+          const mineLocked = locked && self.isSelf(a.staff_member?.waiter_id);
           return (
             <div
               key={a.id}
@@ -56,8 +73,29 @@ export function PresenceSection({
             >
               <span className="min-w-0 flex-1 truncate text-sm text-t1">
                 {a.staff_member?.display_name ?? "—"}
+                {self.isSelf(a.staff_member?.waiter_id) ? (
+                  <span className="ml-1.5 text-xs text-gold">(tu)</span>
+                ) : null}
               </span>
 
+              {mineLocked ? (
+                <>
+                  <span
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1 text-xs font-semibold",
+                      absent
+                        ? "border-error/40 bg-error/10 text-error"
+                        : "border-success/40 bg-success/10 text-success"
+                    )}
+                  >
+                    {absent ? "Assente" : "Presente"}
+                  </span>
+                  <span className="w-20 text-center font-mono text-xs text-t3">
+                    {absent ? "—" : hours}
+                  </span>
+                </>
+              ) : (
+              <>
               <button
                 type="button"
                 onClick={() =>
@@ -96,6 +134,8 @@ export function PresenceSection({
                 className="w-20 px-2 py-1 text-center font-mono text-xs disabled:opacity-40"
                 aria-label="Ore effettive"
               />
+              </>
+              )}
             </div>
           );
         })}
@@ -104,6 +144,12 @@ export function PresenceSection({
         Durata pianificata {planned.toString().replace(".", ",")} h. Lascia il
         campo vuoto per usarla; scrivi un numero solo se le ore sono diverse.
       </p>
+      {locked && rows.some((a) => self.isSelf(a.staff_member?.waiter_id)) ? (
+        <p className="mt-1 text-[11px] text-t4">
+          Le tue presenze e le tue ore le segna chi ha il permesso Ore su questa
+          sede.
+        </p>
+      ) : null}
       {presence.isError ? (
         <p className="mt-2 text-xs text-error">{userErrorMessage(presence.error)}</p>
       ) : null}

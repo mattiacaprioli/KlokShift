@@ -614,6 +614,51 @@ export async function addStaff(args: {
   }
 }
 
+/**
+ * Chi gestisce la sede si mette **da sé** nel proprio organico.
+ *
+ * Il caso vero è il titolare che lavora — fa il servizio, copre un buco, sta al
+ * bar — e le cui ore prima non esistevano da nessuna parte: non nel planning,
+ * non in `/ore`, non nell'export per il commercialista. Vale anche per un
+ * collaboratore con il permesso Staff (il capo sala invitato per email), che
+ * dopo si pianifica ma non si scrive le ore — la differenza la fa il database
+ * (`private.my_delegate_staff_member_ids`, 20260919100000), non questa funzione.
+ *
+ * ⚠️ **Non passa da `addStaff`**, ed è il punto. Lì la domanda «questa persona
+ * ha già KlokShift?» si risolve con `find_waiter_by_email`, che filtra
+ * `role = 'waiter'`: un gestore non si trova mai. Scrivere la propria email in
+ * quel form produceva una scheda non collegata, un'email d'invito a sé stessi e
+ * un aggancio che non sarebbe mai avvenuto — `link_staff_invites_for_user`
+ * scatta alla registrazione e rifiuta i manager. Tutto in silenzio.
+ *
+ * Qui l'account si conosce già: `myId`. Nessuna email sulla scheda e nessun
+ * invito da spedire, perché **il consenso è il gesto stesso**.
+ */
+export async function addSelfToStaff(args: {
+  /** L'azienda: per un collaboratore è il titolare, non chi sta scrivendo. */
+  ownerId: string;
+  /** `session.user.id` di chi si sta aggiungendo. */
+  myId: string;
+  venueIds: string[];
+  fullName: string;
+  employmentType: Enums<"employment_type">;
+  phone?: string | null;
+}): Promise<StaffMember[]> {
+  return addStaffToVenues({
+    ownerId: args.ownerId,
+    venueIds: args.venueIds,
+    fullName: args.fullName,
+    employmentType: args.employmentType,
+    phone: args.phone ?? null,
+    email: null,
+    waiterId: args.myId,
+    // Nessun `pending` da accettare: l'invito e la risposta sono la stessa
+    // persona. È anche il solo caso in cui un `waiter_id` nasce già 'active'
+    // senza passare da `respond_to_staff_invite`.
+    linkStatus: "active",
+  });
+}
+
 /** Waiter: a pending staff invite joined with the venue. */
 export type PendingInvite = StaffMember & {
   venue: Pick<Tables<"venues">, "id" | "name" | "city" | "logo_url"> | null;

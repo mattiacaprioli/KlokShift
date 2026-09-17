@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
-import { useAddStaff } from "@/features/staff/hooks";
+import { useAuth } from "@/lib/auth";
+import { useAddSelfToStaff, useAddStaff } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import { RoleCheckboxes } from "./RoleCheckboxes";
-import type { AddStaffResult } from "@/features/staff/api";
+import type { AddStaffResult, StaffMember } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, Select } from "../ui/primitives";
@@ -84,18 +85,35 @@ function useVenueSelection() {
  * email»: chiedevano al titolare se quella persona avesse già KlokShift, cosa
  * che non può sapere. Scrive nome ed email, e `addStaff` decide — scheda,
  * invito in-app o email d'invito. Stessa funzione dell'app.
+ *
+ * Dal 17/09/2026 lo stesso pannello mette in organico **chi guarda** (`self`):
+ * chi gestisce la sede spesso ci lavora, e senza una scheda le sue ore non
+ * entrano in nessun conto. Cambiano due campi — il nome è il suo e non si
+ * scrive, l'email non serve perché l'account si conosce già — e tutto il resto,
+ * sedi, impiego e ruoli, è identico.
  */
-export function AddStaffPanel({ onClose }: { onClose: () => void }) {
+export function AddStaffPanel({
+  self = false,
+  onClose,
+}: {
+  self?: boolean;
+  onClose: () => void;
+}) {
   const { ownerId } = useOwnerVenues();
+  const { session, profile } = useAuth();
   const add = useAddStaff();
+  const addSelf = useAddSelfToStaff();
   const setRoles = useSetStaffMemberRoles();
   const toast = useToast();
   const { venueIds, single, node: venuePicker } = useVenueSelection();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() =>
+    self ? (profile?.full_name ?? "") : ""
+  );
   const [email, setEmail] = useState("");
   const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
   const [phone, setPhone] = useState("");
+  const pending = add.isPending || addSelf.isPending;
 
   /**
    * La persona era già in organico: non è un errore, l'accordo con lei esiste.
@@ -115,8 +133,52 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
     return "Aggiunto allo staff";
   }
 
+  /**
+   * Quel che viene dopo l'insert, uguale per le due modalità: i ruoli (che
+   * hanno bisogno dell'id della scheda, quindi non partono prima), il toast e
+   * la chiusura del pannello.
+   */
+  function finish(members: StaffMember[], msg: string) {
+    if (!single || roleIds.length === 0 || members.length !== 1) {
+      toast.show(single ? msg : `${msg} · assegna i ruoli in ogni sede`);
+      onClose();
+      return;
+    }
+    setRoles.mutate(
+      { staffMemberId: members[0].id, roleIds },
+      {
+        onSuccess: () => {
+          toast.show(msg);
+          onClose();
+        },
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
+
   function submit() {
     setAlready(false);
+
+    if (self) {
+      const myId = session?.user.id;
+      if (!myId) return;
+      addSelf.mutate(
+        {
+          ownerId: ownerId!,
+          myId,
+          venueIds,
+          fullName: name.trim(),
+          employmentType: empType,
+          phone: phone.trim() || null,
+        },
+        {
+          onSuccess: (members) => finish(members, "Sei in organico"),
+          onError: (e) => toast.show(userErrorMessage(e), "error"),
+        }
+      );
+      return;
+    }
+
     add.mutate(
       {
         ownerId: ownerId!,
@@ -132,25 +194,7 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
             setAlready(true);
             return;
           }
-          const msg = messageFor(res);
-          // I ruoli vivono in una tabella a parte: servono l'id della scheda,
-          // quindi si scrivono subito dopo l'insert. Solo con una sede sola —
-          // altrimenti non sono stati chiesti.
-          if (!single || roleIds.length === 0 || res.members.length !== 1) {
-            toast.show(single ? msg : `${msg} · assegna i ruoli in ogni sede`);
-            onClose();
-            return;
-          }
-          setRoles.mutate(
-            { staffMemberId: res.members[0].id, roleIds },
-            {
-              onSuccess: () => {
-                toast.show(msg);
-                onClose();
-              },
-              onError: (e) => toast.show(userErrorMessage(e), "error"),
-            }
-          );
+          finish(res.members, messageFor(res));
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
@@ -164,27 +208,38 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
           input rispetto agli altri tre. In alto le etichette sono tutte di una
           riga, quindi gli input restano sulla stessa linea. */}
       <div className="grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
-        <Field label="Nome">
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nome e cognome"
-          />
-        </Field>
+        {/* Il proprio nome è quello del profilo: scriverne un altro darebbe
+            due nomi alla stessa persona. */}
         <Field
-          label="Email"
-          hint="Facoltativa. Serve a collegarle il suo account."
+          label="Nome"
+          hint={self ? "Il tuo: si cambia dal profilo." : undefined}
         >
           <Input
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setAlready(false);
-            }}
-            placeholder="nome@esempio.it"
+            value={name}
+            readOnly={self}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nome e cognome"
+            className={self ? "opacity-60" : undefined}
           />
         </Field>
+        {/* Nessuna email quando ci si mette da sé: non c'è nessun invito da
+            mandare e nessun account da agganciare — è già il mio. */}
+        {self ? null : (
+          <Field
+            label="Email"
+            hint="Facoltativa. Serve a collegarle il suo account."
+          >
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setAlready(false);
+              }}
+              placeholder="nome@esempio.it"
+            />
+          </Field>
+        )}
         <Field label="Impiego">
           <Select
             value={empType}
@@ -231,15 +286,15 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
       <div className="mt-4 flex items-center gap-3">
         <Button
           variant="gold"
-          disabled={!name.trim() || venueIds.length === 0 || add.isPending}
+          disabled={!name.trim() || venueIds.length === 0 || pending}
           onClick={submit}
         >
-          {add.isPending ? "Salvataggio…" : "Aggiungi"}
+          {pending ? "Salvataggio…" : self ? "Mettimi in organico" : "Aggiungi"}
         </Button>
         <span className="text-xs text-t4">
-          Se ha già un account, gli arriva la richiesta nell&apos;app. Altrimenti
-          gli mandiamo un invito e, quando si registra con questa email, lo
-          colleghiamo a questa scheda.
+          {self
+            ? "Da qui in poi puoi assegnarti i turni come a chiunque altro, e le tue ore entrano nel riepilogo e nell'export."
+            : "Se ha già un account, gli arriva la richiesta nell'app. Altrimenti gli mandiamo un invito e, quando si registra con questa email, lo colleghiamo a questa scheda."}
         </span>
       </div>
     </Card>

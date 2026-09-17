@@ -25,10 +25,16 @@ import {
 import { useOwnerShifts, useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { useSelfStaff } from "@/features/staff/self";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
-import { formatHours, formatShiftRange, todayString } from "@/lib/format";
+import {
+  formatHours,
+  formatRelativeStart,
+  formatShiftRange,
+  todayString,
+} from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
@@ -51,6 +57,8 @@ type TodayWorker = {
   end: string;
   /** Dove lavora oggi. Assente con una sede sola. */
   venue?: { name: string; accent: string };
+  /** È chi guarda: da quando chi gestisce può stare in organico. */
+  isMe?: boolean;
   onPress?: () => void;
 };
 
@@ -87,6 +95,32 @@ export default function ManagerHome() {
   const todayAssignments = assignQuery.data ?? [];
   const unread = useUnreadCount(userId).data ?? 0;
 
+  /**
+   * Il proprio prossimo turno, per chi gestisce e lavora.
+   *
+   * `shifts` è già ordinato per data e ora e comincia da oggi, quindi il primo
+   * che mi riguarda è il prossimo. Le proprie schede sono una per sede e un
+   * turno è di una sede sola: si confrontano gli id delle appartenenze, che
+   * l'organico porta già nel suo embed.
+   */
+  const self = useSelfStaff();
+  const myNextShift = useMemo(() => {
+    const mine = new Set((self.person?.memberships ?? []).map((m) => m.id));
+    if (mine.size === 0) return undefined;
+    // `shiftsQuery.data` e non `shifts`: quel `?? []` crea un array nuovo a ogni
+    // render, e come dipendenza rifarebbe il memo sempre.
+    return (shiftsQuery.data ?? []).find(
+      (s) =>
+        s.status !== "cancelled" &&
+        s.shift_assignments.some(
+          (a) =>
+            a.staff_member_id &&
+            mine.has(a.staff_member_id) &&
+            a.status !== "declined",
+        ),
+    );
+  }, [shiftsQuery.data, self.person]);
+
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
   const venueBadge = (venueId: string | undefined) => {
     if (!isMultiVenue || !venueId) return undefined;
@@ -107,7 +141,10 @@ export default function ManagerHome() {
   const workers: TodayWorker[] = todayAssignments
     .map((a) => {
       const sm = a.staff_member;
-      const waiterId = sm?.waiter_id ?? null;
+      const isMe = self.isSelf(sm?.waiter_id);
+      // ⚠️ Non la propria: `waiter_public_cards` contiene solo i
+      // professionisti, quindi la scheda pubblica di un gestore è vuota.
+      const waiterId = isMe ? null : (sm?.waiter_id ?? null);
       return {
         key: `asg-${a.id}`,
         name: sm?.display_name ?? "Staff",
@@ -119,6 +156,7 @@ export default function ManagerHome() {
         start: a.shift?.start_time ?? "",
         end: a.shift?.end_time ?? "",
         venue: venueBadge(a.shift?.venue_id),
+        isMe,
         onPress: waiterId
           ? () => router.push(`/(manager)/cameriere/${waiterId}`)
           : undefined,
@@ -258,6 +296,37 @@ export default function ManagerHome() {
           {/* Upsell Pro — visibile solo agli utenti Free */}
           <ProUpsellCard />
 
+          {/* Il proprio turno prima di quelli degli altri: chi organizza i
+              turni e ci lavora apre l'app anche per sapere quando attacca. */}
+          {myNextShift ? (
+            <Card
+              className="rounded-3xl border-border-gold p-5"
+              onPress={() => router.push(`/(manager)/shift/${myNextShift.id}`)}
+            >
+              <Mono gold>
+                {formatRelativeStart(myNextShift.date, myNextShift.start_time)}
+              </Mono>
+              <Text
+                className="mt-2 text-2xl font-sans-bold text-t1"
+                style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
+              >
+                {formatShiftRange(
+                  myNextShift.start_time,
+                  myNextShift.end_time,
+                )}
+              </Text>
+              <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
+                {[
+                  "Il tuo turno",
+                  myNextShift.title,
+                  venueBadge(myNextShift.venue_id)?.name,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Text>
+            </Card>
+          ) : null}
+
           {/* Chi lavora oggi */}
           {workers.length > 0 ? (
             <View className="gap-3">
@@ -275,9 +344,12 @@ export default function ManagerHome() {
                     <View className="flex-row items-center gap-3">
                       <Avatar uri={w.avatarUri} name={w.name} size={44} />
                       <View className="flex-1">
-                        <Text className="text-base font-sans-bold text-t1">
-                          {w.name}
-                        </Text>
+                        <View className="flex-row items-center gap-1.5">
+                          <Text className="text-base font-sans-bold text-t1">
+                            {w.name}
+                          </Text>
+                          {w.isMe ? <Pill label="Tu" variant="tag" /> : null}
+                        </View>
                         {/* Con più sedi il ruolo da solo non basta: «Barman»
                             non dice in quale sala si presenta stasera. */}
                         {w.role || w.venue ? (
