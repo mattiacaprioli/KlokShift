@@ -15,7 +15,7 @@ import type { OwnerPerson } from "./api";
  * saperlo, o mostra a qualcuno un bottone «Messaggio» verso sé stesso.
  *
  * Le tre nozioni di sé che c'erano prima sono tutte parziali e restano dove
- * sono: `useAuth()` dice chi sono, `useOwnerVenues().ownerId` dice qual è
+ * sono: `useAuth()` dice chi sono, `useOwnerVenues().workspaceId` dice qual è
  * l'azienda (⚠️ per un collaboratore **non** è il mio id), `isOwner` dice se
  * l'azienda è mia. Quello che mancava è la scheda.
  *
@@ -39,31 +39,29 @@ export type SelfStaffState = {
    */
   isSelf: (waiterId: string | null | undefined) => boolean;
   /**
-   * Posso segnare presenze e ore **sulla mia riga** dei turni di questa sede?
+   * Posso segnare presenze e ore **sulla mia riga**?
    *
-   * È la traduzione in UI della regola di `20260919100000`: il titolare sì
+   * È la traduzione in UI di `private.is_restricted_self`: il titolare sì
    * (nessuno gliele segnerà, e non averle è il problema da cui parte tutto), un
    * collaboratore no — le sue le scrive chi ha il permesso Ore. Il database
-   * decide comunque da sé (`private.my_delegate_staff_member_ids`); questo
-   * serve solo a non offrire un controllo che congelerebbe in silenzio.
-   *
-   * Per sede e non globale, come la regola in SQL, che guarda
-   * `venues.owner_id` della sede del turno.
+   * decide comunque da sé; questo serve solo a non offrire un controllo che
+   * congelerebbe in silenzio. Non più per sede: authority e organico sono
+   * dell'azienda, non della singola sede.
    */
-  canEditOwnPayroll: (venueId: string) => boolean;
+  canEditOwnPayroll: (venueId?: string) => boolean;
   /** L'organico non è ancora arrivato: non si sa se una scheda c'è. */
   isPending: boolean;
 };
 
 export function useSelfStaff(): SelfStaffState {
   const { session } = useAuth();
-  const { ownerId, isOwner, venueById } = useOwnerVenues();
+  const { workspaceId, isOwner } = useOwnerVenues();
 
   const myId = session?.user.id ?? "";
 
   // La stessa query dell'elenco organico, con la stessa chiave: la tab Staff
   // l'ha già in cache e qui non costa una richiesta in più.
-  const peopleQuery = useOwnerPeople(ownerId);
+  const peopleQuery = useOwnerPeople(workspaceId);
 
   const person = useMemo(
     () => (peopleQuery.data ?? []).find((p) => p.waiter_id === myId),
@@ -79,16 +77,9 @@ export function useSelfStaff(): SelfStaffState {
     [myId]
   );
 
-  const canEditOwnPayroll = useCallback(
-    (venueId: string) => {
-      const venue = venueById(venueId);
-      // Sede non in elenco (appena chiusa, cache vecchia): si ricade su
-      // «l'azienda è mia», che è la stessa risposta in ogni caso reale — il DB
-      // vieta a un collaboratore di possedere sedi e di servire due aziende.
-      return venue ? venue.owner_id === myId : isOwner;
-    },
-    [venueById, myId, isOwner]
-  );
+  // Non più per sede: `venues` non ha un `owner_id`, e la regola
+  // (`private.is_restricted_self`) guarda l'azienda, non la singola sede.
+  const canEditOwnPayroll = useCallback(() => isOwner, [isOwner]);
 
   return {
     myId,
@@ -99,6 +90,6 @@ export function useSelfStaff(): SelfStaffState {
     // Senza azienda la query è spenta, e React Query tiene `isPending` vero
     // finché resta `enabled: false`: senza questa guardia chi non gestisce
     // niente resterebbe per sempre «in attesa».
-    isPending: !!ownerId && peopleQuery.isPending,
+    isPending: !!workspaceId && peopleQuery.isPending,
   };
 }

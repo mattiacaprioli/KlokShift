@@ -2,6 +2,7 @@ import { Switch } from "react-native";
 import { Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import type { Venue } from "@/features/venues/api";
 import { useSetVenueSeesPlanning } from "./hooks";
@@ -9,7 +10,7 @@ import { useSetVenueSeesPlanning } from "./hooks";
 /**
  * «Planning visibile all'organico», sulla scheda della sede.
  *
- * Acceso di default (vedi la migration 20260914150000): chi lavora in una sede
+ * Acceso di default: chi lavora in una sede
  * ha ragione di sapere chi c'è in turno con lui, e pretendere un'azione dal
  * titolare avrebbe reso la cosa invisibile quasi ovunque. Lo switch esiste per
  * chi non la vuole.
@@ -19,13 +20,13 @@ import { useSetVenueSeesPlanning } from "./hooks";
  */
 export function VenuePlanningToggle({
   venue,
-  ownerId,
 }: {
   venue: Venue;
-  ownerId: string;
+  /** @deprecated Non serve più: si scrive per id di sede. Ignorato. */
+  ownerId?: string;
 }) {
   const toast = useToast();
-  const save = useSetVenueSeesPlanning(ownerId);
+  const save = useSetVenueSeesPlanning();
 
   function toggle(value: boolean) {
     save.mutate(
@@ -37,7 +38,8 @@ export function VenuePlanningToggle({
               ? "L'organico vede il planning"
               : "Planning non più visibile all'organico"
           ),
-        onError: () => toast.show("Impossibile salvare. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(userErrorMessage(e, "Impossibile salvare. Riprova."), "error"),
       }
     );
   }

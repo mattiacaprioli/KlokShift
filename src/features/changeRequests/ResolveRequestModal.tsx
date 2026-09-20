@@ -17,7 +17,7 @@ import type { ChangeRequest } from "./api";
 /**
  * La decisione del titolare su una richiesta di sostituzione.
  *
- * Approvare **con** un sostituto passa da `reassign_shift_assignment`: chi esce
+ * Approvare **con** un sostituto passa da `reassign`: chi esce
  * riceve «Turno revocato», chi entra «Nuovo turno assegnato», e la sua riga
  * nasce pulita. Approvare **senza** sostituto lascia il posto scoperto, ed è una
  * risposta legittima — «va bene, non venire» — non un caso degenere: per questo
@@ -52,7 +52,7 @@ export function ResolveRequestModal({
     const busy = new Set(
       (assignmentsQuery.data ?? [])
         .filter((a) => isActiveAssignment(a.status))
-        .map((a) => a.staff_member_id)
+        .map((a) => a.venue_member_id)
     );
     return (staffQuery.data ?? []).filter(
       (m) => m.link_status === "active" && !busy.has(m.id)

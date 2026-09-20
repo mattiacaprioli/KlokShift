@@ -48,7 +48,15 @@ export default function ManagerAccountEditScreen() {
     reset({ full_name: profile?.full_name ?? "" });
   }, [profile?.full_name, reset]);
 
-  const watchedName = useWatch({ control, name: "full_name" });
+  // ⚠️ `defaultValue`: `useWatch` si iscrive in un effect, quindi quando il
+  // profilo è già in memoria il `reset()` qui sopra parte **prima** e la sua
+  // notifica va persa — il nome resterebbe vuoto (avatar con l'iniziale del
+  // fallback) finché non si tocca il campo.
+  const watchedName = useWatch({
+    control,
+    name: "full_name",
+    defaultValue: profile?.full_name ?? "",
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     try {

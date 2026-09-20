@@ -1,16 +1,15 @@
-import { useState } from "react";
-import { userErrorMessage } from "@/lib/errors";
+import type { VenueRole } from "@/features/roles/api";
 import {
   useArchiveVenueRole,
   useCreateVenueRole,
   useRenameVenueRole,
   useVenueRoles,
 } from "@/features/roles/hooks";
-import type { VenueRole } from "@/features/roles/api";
 import { SUGGESTED_ROLES } from "@/features/staff/roles";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
-import { NoVenues } from "../venues/NoVenues";
+import { userErrorMessage } from "@/lib/errors";
+import { useState } from "react";
 import { useToast } from "../ui/Toast";
 import {
   Button,
@@ -22,6 +21,7 @@ import {
   Select,
   Spinner,
 } from "../ui/primitives";
+import { NoVenues } from "../venues/NoVenues";
 
 /** Una riga: nome modificabile in linea + elimina (archivia). */
 function RoleRow({ role }: { role: VenueRole }) {
@@ -44,7 +44,7 @@ function RoleRow({ role }: { role: VenueRole }) {
           setName(role.name);
           toast.show("Nome già usato o non valido.", "error");
         },
-      }
+      },
     );
   }
 
@@ -121,7 +121,7 @@ export function RuoliPage() {
       {
         onSuccess: () => setDraft(""),
         onError: () => toast.show("Ruolo già presente o non valido.", "error"),
-      }
+      },
     );
   }
 
@@ -154,7 +154,9 @@ export function RuoliPage() {
   // I suggerimenti spariscono man mano che la lista si riempie: servono a chi
   // parte da zero, non a chi ha già deciso come chiamare le proprie mansioni.
   const taken = new Set(roles.map((r) => r.name.trim().toLowerCase()));
-  const suggestions = SUGGESTED_ROLES.filter((s) => !taken.has(s.toLowerCase()));
+  const suggestions = SUGGESTED_ROLES.filter(
+    (s) => !taken.has(s.toLowerCase()),
+  );
 
   return (
     <>
@@ -183,7 +185,7 @@ export function RuoliPage() {
         }
       />
 
-      <Card className="flex flex-wrap items-center gap-2 p-3">
+      <Card className="flex flex-wrap items-center gap-2 p-3 mb-2">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

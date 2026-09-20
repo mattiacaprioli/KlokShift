@@ -17,9 +17,9 @@ import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import { useViewMode } from "@/features/team/ViewMode";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
+import { useLeaveVenue } from "@/features/account/hooks";
 import { useMyWorkHistoryTotals } from "@/features/assignments/history";
-import type { MyEmployer } from "@/features/staff/api";
+import type { Membership } from "@/features/workspace/types";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -28,6 +28,34 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Una sede in cui lavoro: la riga di organico, con l'azienda a cui appartiene. */
+type MyEmployer = {
+  /** `venue_members.id`. */
+  id: string;
+  /** La mia appartenenza in quell'azienda (`workspace_members.id`). */
+  memberId: string;
+  workspaceId: string;
+  venueId: string;
+  venueName: string;
+  employment_type: Membership["works"][number]["employment_type"];
+};
+
+/** Le sedi in cui lavoro, dalle mie appartenenze attive (`get_my_context`). */
+function employersOf(memberships: Membership[]): MyEmployer[] {
+  return memberships
+    .filter((m) => m.status === "active")
+    .flatMap((m) =>
+      m.works.map((w) => ({
+        id: w.venue_member_id,
+        memberId: m.member_id,
+        workspaceId: m.workspace_id,
+        venueId: w.venue_id,
+        venueName: w.venue_name,
+        employment_type: w.employment_type,
+      }))
+    );
+}
 
 type Tab = "esperienze" | "statistiche";
 const TABS: { id: Tab; label: string }[] = [
@@ -48,8 +76,8 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 /**
  * «Passa alla gestione», per chi è stato promosso dalla propria sede.
  *
- * Compare solo con un accesso delegato attivo (`venue_access`), quindi per la
- * quasi totalità dei professionisti questa riga non esiste. Cambiare vista non
+ * Compare solo con un'appartenenza che gestisce (`useViewMode().canSwitch`),
+ * quindi per la quasi totalità dei professionisti questa riga non esiste. Cambiare vista non
  * concede niente: i permessi li decide la RLS sede per sede, e questo tocco
  * sceglie soltanto quale gruppo di rotte montare.
  */
@@ -80,19 +108,22 @@ function EmployerVenueRow({
   const toast = useToast();
   const leave = useLeaveVenue();
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const venueName = employer.venue?.name ?? "Sede";
+  const venueName = employer.venueName || "Sede";
 
   function onConfirm() {
-    leave.mutate(employer.id, {
-      onSuccess: () => {
-        setConfirmVisible(false);
-        toast.show("Hai lasciato la sede");
-      },
-      onError: () => {
-        setConfirmVisible(false);
-        toast.show("Operazione non riuscita. Riprova.", "error");
-      },
-    });
+    leave.mutate(
+      { memberId: employer.memberId, venueId: employer.venueId },
+      {
+        onSuccess: () => {
+          setConfirmVisible(false);
+          toast.show("Hai lasciato la sede");
+        },
+        onError: () => {
+          setConfirmVisible(false);
+          toast.show("Operazione non riuscita. Riprova.", "error");
+        },
+      }
+    );
   }
 
   return (
@@ -103,16 +134,9 @@ function EmployerVenueRow({
           !standalone && "border-t border-border pt-3"
         )}
       >
-        <Avatar
-          uri={employer.venue?.logo_url ?? undefined}
-          name={venueName}
-          size={40}
-        />
+        <Avatar name={venueName} size={40} />
         <View className="flex-1">
           <Text className="text-base font-sans-bold text-t1">{venueName}</Text>
-          {employer.venue?.city ? (
-            <Text className="text-xs text-t3">{employer.venue.city}</Text>
-          ) : null}
         </View>
         <Chip
           label={employer.employment_type === "fisso" ? "Fisso" : "A chiamata"}
@@ -167,24 +191,19 @@ function EmployerVenueRow({
  * Lo stesso raggruppamento che fanno già i documenti (`documentScopeLabel`): la
  * cartella è del datore di lavoro, le sedi le danno solo il nome.
  */
-function EmployerGroupCard({
-  venues,
-  waiterId,
-}: {
+function EmployerGroupCard({ venues }: {
   /** Le sedi di **un** datore di lavoro, dalla più vecchia. */
   venues: MyEmployer[];
-  waiterId: string;
 }) {
   const toast = useToast();
   const router = useRouter();
   const startConversation = useStartConversation();
-  const ownerId = venues[0].venue?.owner_id ?? null;
+  const workspaceId = venues[0].workspaceId;
   const multi = venues.length > 1;
 
   function onContact() {
-    if (!ownerId) return;
     startConversation.mutate(
-      { waiterId, managerId: ownerId },
+      { workspaceId },
       {
         onSuccess: (conv) => router.push(`/(waiter)/chat/${conv.id}`),
         onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
@@ -202,7 +221,7 @@ function EmployerGroupCard({
         />
       ))}
 
-      {ownerId ? (
+      {workspaceId ? (
         <View className={multi ? "border-t border-border pt-3" : undefined}>
           <Pressable
             onPress={onContact}
@@ -232,12 +251,9 @@ function EmployerGroupCard({
 function groupByEmployer(employers: MyEmployer[]): MyEmployer[][] {
   const groups = new Map<string, MyEmployer[]>();
   for (const e of employers) {
-    // Senza `owner_id` (sede non leggibile) la riga resta un gruppo a sé: meglio
-    // una card sola in più che fondere due datori di lavoro diversi.
-    const key = e.venue?.owner_id ?? `solo:${e.id}`;
-    const list = groups.get(key);
+    const list = groups.get(e.workspaceId);
     if (list) list.push(e);
-    else groups.set(key, [e]);
+    else groups.set(e.workspaceId, [e]);
   }
   return [...groups.values()];
 }
@@ -262,7 +278,8 @@ export default function WaiterProfiloScreen() {
 
   const experiences = useExperiences(userId).data ?? [];
 
-  const employers = useMyEmployers(userId).data ?? [];
+  const { memberships } = useOwnerVenues();
+  const employers = employersOf(memberships);
   // Solo i due totali: il Profilo non mostra la lista dei turni.
   const history = useMyWorkHistoryTotals(userId);
   const subtitle = [role, city].filter(Boolean).join(" · ");
@@ -345,11 +362,7 @@ export default function WaiterProfiloScreen() {
         <View className="gap-3">
           <Mono>Le tue sedi</Mono>
           {groupByEmployer(employers).map((group) => (
-            <EmployerGroupCard
-              key={group[0].id}
-              venues={group}
-              waiterId={userId}
-            />
+            <EmployerGroupCard key={group[0].id} venues={group} />
           ))}
         </View>
       ) : null}

@@ -22,8 +22,8 @@ import { userErrorMessage } from "@/lib/errors";
 /**
  * Invita un collaboratore.
  *
- * Email, sedi, permessi — in quest'ordine, che è quello in cui il titolare
- * pensa: *chi* faccio entrare, *dove*, e *cosa* può fare. Non gli si chiede se
+ * Nome, email, permessi, sedi — in quest'ordine, che è quello in cui il titolare
+ * pensa: *chi* faccio entrare, *cosa* può fare e *dove*. Non gli si chiede se
  * quella persona abbia già KlokShift: è `addTeamMember` a deciderlo, come per
  * l'organico.
  */
@@ -31,18 +31,21 @@ export default function TeamNewScreen() {
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const { ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const { workspaceId, venues, isMultiVenue } = useOwnerVenues();
 
   const add = useAddTeamMember();
 
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  /** Vuoto = tutte le sedi, anche quelle future. */
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [permissions, setPermissions] = useState<TeamPermissions>(
     DEFAULT_TEAM_PERMISSIONS
   );
 
-  // Con una sede sola la domanda non si pone: è quella.
-  const venueIds = isMultiVenue ? picked : new Set(venues.map((v) => v.id));
+  // Con una sede sola la domanda non si pone: è quella, e l'ambito resta
+  // «tutte» — così una sede aperta domani non lo lascia fuori.
+  const allVenues = !isMultiVenue || picked.size === 0;
 
   function toggleVenue(id: string) {
     setPicked((prev) => {
@@ -58,23 +61,25 @@ export default function TeamNewScreen() {
   }
 
   function submit() {
-    if (!ownerId || !email.trim() || venueIds.size === 0) return;
+    if (!workspaceId || !fullName.trim() || !email.trim()) return;
     add.mutate(
       {
-        ownerId,
+        workspaceId,
+        fullName: fullName.trim(),
         email: email.trim(),
-        venueIds: [...venueIds],
         permissions,
+        scope: allVenues ? "all" : "selected",
+        venueIds: [...picked],
       },
       {
         onSuccess: (res) => {
           if (res.kind === "already") {
-            toast.show("Ha già accesso a tutte le sedi scelte.", "error");
+            toast.show("Collabora già alla gestione.", "error");
             return;
           }
           toast.show(
-            res.kind === "linked"
-              ? `${res.name ?? "Il collaboratore"} ora ha accesso`
+            res.kind === "invited_in_app"
+              ? "Invito mandato: lo accetta dall'app"
               : res.emailSent
                 ? "Invito spedito"
                 : res.emailError
@@ -115,6 +120,13 @@ export default function TeamNewScreen() {
         <ScreenHeader eyebrow="Collaboratori" title="Invita" />
 
         <View className="gap-5">
+          <Input
+            label="Nome e cognome"
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Come lo chiami tu"
+          />
+
           <View className="gap-2">
             <Input
               label="Email"
@@ -126,44 +138,48 @@ export default function TeamNewScreen() {
               placeholder="nome@email.com"
             />
             <Text className="text-xs leading-4 text-t3">
-              Se ha già un account da sede con l&apos;email confermata,
-              l&apos;accesso parte subito. Altrimenti gli mandiamo un link: lo
-              apre, sceglie una password ed è dentro, senza registrarsi. Finché
-              non lo apre non esiste nessun account.
+              Se ha già un account, trova l&apos;invito da accettare quando
+              entra. Altrimenti gli mandiamo un link: lo apre, sceglie una
+              password ed è dentro, senza registrarsi. Finché non lo apre non
+              esiste nessun account.
             </Text>
           </View>
-
-          {isMultiVenue ? (
-            <View className="gap-2">
-              <Mono>Su quali sedi</Mono>
-              <View className="flex-row flex-wrap gap-2">
-                {venues.map((v) => (
-                  <Chip
-                    key={v.id}
-                    label={v.name}
-                    gold
-                    active={venueIds.has(v.id)}
-                    onPress={() => toggleVenue(v.id)}
-                  />
-                ))}
-              </View>
-            </View>
-          ) : null}
 
           <View className="gap-2">
             <Mono>Cosa può fare</Mono>
             <PermissionSwitches value={permissions} onChange={setPerm} />
             <Text className="px-1 text-[12px] leading-4 text-t4">
               Restano tuoi: aprire e chiudere sedi, invitare altri collaboratori
-              e l&apos;account. I permessi valgono su tutte le sedi scelte qui e
-              si cambiano dopo, sede per sede.
+              e l&apos;account. I permessi si cambiano dopo, dalla sua scheda.
             </Text>
           </View>
+
+          {isMultiVenue ? (
+            <View className="gap-2">
+              <Mono>Dove</Mono>
+              <View className="flex-row flex-wrap gap-2">
+                {venues.map((v) => (
+                  <Chip
+                    key={v.id}
+                    label={v.name}
+                    gold
+                    active={picked.has(v.id)}
+                    onPress={() => toggleVenue(v.id)}
+                  />
+                ))}
+              </View>
+              <Text className="px-1 text-[12px] leading-4 text-t4">
+                {allVenues
+                  ? "Nessuna scelta: vale su tutte le sedi, anche quelle che aprirai."
+                  : "Vale solo sulle sedi scelte."}
+              </Text>
+            </View>
+          ) : null}
 
           <GoldButton
             className="mt-1"
             label={add.isPending ? "Invio…" : "Invita"}
-            disabled={add.isPending || !email.trim() || venueIds.size === 0}
+            disabled={add.isPending || !fullName.trim() || !email.trim()}
             onPress={submit}
           />
         </View>

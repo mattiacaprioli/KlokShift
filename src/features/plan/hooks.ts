@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useAuth } from "@/lib/auth";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useDevPlanOverride, type PlanTier } from "./devOverride";
 
 export type { PlanTier };
@@ -8,15 +8,17 @@ export type { PlanTier };
 export const PAYWALL_ROUTE = "/(manager)/pro" as const;
 
 /**
- * Piano effettivo dell'utente. Fonte autorevole = `profiles.plan` (default 'pro'
- * finché la monetizzazione non è attiva → oggi tutti sbloccati). In sviluppo un
- * override locale può simulare 'free' per vedere i lucchetti.
+ * Piano effettivo: quello **dell'azienda** che si gestisce (`workspaces.plan`,
+ * default 'pro' finché la monetizzazione non è attiva → oggi tutti sbloccati),
+ * non quello di chi guarda: un collaboratore su un account Pro non sblocca
+ * niente in un'azienda Free, e non c'è modo di scrivere il piano dal client.
+ * In sviluppo un override locale può simulare 'free' per vedere i lucchetti.
  */
 export function usePlan(): PlanTier {
-  const { profile } = useAuth();
+  const { plan } = useOwnerVenues();
   const override = useDevPlanOverride();
   if (override) return override;
-  return profile?.plan === "free" ? "free" : "pro";
+  return plan === "free" ? "free" : "pro";
 }
 
 export function useIsPro(): boolean {

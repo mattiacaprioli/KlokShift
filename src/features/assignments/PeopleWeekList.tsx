@@ -79,9 +79,9 @@ export function PeopleWeekList({
   onOpenShift: (shiftId: string) => void;
   paddingBottom: number;
 }) {
-  const { ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const { workspaceId, venues, isMultiVenue } = useOwnerVenues();
   const shiftsQuery = useOwnerShiftsRange(from, to, scope);
-  const peopleQuery = useOwnerPeople(ownerId);
+  const peopleQuery = useOwnerPeople(workspaceId);
   // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
   const self = useSelfStaff();
   // Chi non c'è in settimana, senza il perché (`get_absence_availability`).
@@ -97,9 +97,9 @@ export function PeopleWeekList({
   const absencesByPerson = useMemo(() => {
     const map = new Map<string, AbsenceAvailability[]>();
     for (const a of absencesQuery.data ?? []) {
-      const list = map.get(a.person_id);
+      const list = map.get(a.member_id);
       if (list) list.push(a);
-      else map.set(a.person_id, [a]);
+      else map.set(a.member_id, [a]);
     }
     return map;
   }, [absencesQuery.data]);

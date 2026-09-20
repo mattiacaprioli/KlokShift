@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { addDaysToDate, todayString } from "@/lib/format";
 import { monthBounds } from "@/features/assignments/api";
+import type { Membership } from "@/features/workspace/types";
 import type { Enums, Tables } from "@/types/database";
 import type { AbsenceSummaryRow } from "./summary";
 
@@ -9,21 +10,58 @@ export type Absence = Tables<"staff_absences">;
 export type AbsenceKind = Enums<"absence_kind">;
 export type AbsenceStatus = Enums<"absence_status">;
 
-/** Un'assenza con il nome della persona: le liste di chi gestisce l'organico. */
+/**
+ * Un'assenza con il nome della persona: le liste di chi gestisce l'organico.
+ * `person.id` è il member id (`workspace_members.id`), come `Absence.member_id`.
+ */
 export type AbsenceWithPerson = Absence & {
-  person: Pick<Tables<"staff_people">, "id" | "full_name" | "waiter_id"> | null;
+  person: { id: string; full_name: string; waiter_id: string | null } | null;
 };
 
 /**
  * Un datore di lavoro a cui il professionista può mandare una richiesta: una
- * riga di `staff_people` con almeno una sede in cui è in organico attivo.
+ * sua appartenenza attiva con almeno una sede in cui è in organico.
  */
 export type AbsenceEmployer = {
-  personId: string;
-  ownerId: string;
+  /** La mia appartenenza (`workspace_members.id`): è a cui si riferisce l'assenza. */
+  memberId: string;
+  /** L'azienda a cui si chiede (`p_workspace`). */
+  workspaceId: string;
   /** I nomi delle sedi, come `documentScopeLabel`. */
   label: string;
 };
+
+/** Le aziende a cui chiedere un'assenza, ricavate dalle mie appartenenze. */
+export function absenceEmployersOf(memberships: Membership[]): AbsenceEmployer[] {
+  return memberships
+    .filter((m) => m.status === "active" && m.works.length > 0)
+    .map((m) => {
+      const names = [...new Set(m.works.map((w) => w.venue_name))].sort((a, b) =>
+        a.localeCompare(b, "it")
+      );
+      return {
+        memberId: m.member_id,
+        workspaceId: m.workspace_id,
+        label: names.length > 0 ? names.join(" · ") : "Sede",
+      };
+    });
+}
+
+/** Le colonne della persona che accompagnano un'assenza, con la forma di `AbsenceWithPerson`. */
+const PERSON_EMBED = "person:workspace_members(id, display_name, user_id)";
+
+type PersonEmbed = { id: string; display_name: string; user_id: string | null } | null;
+
+function withPerson<T extends { person: PersonEmbed }>(
+  rows: T[] | null
+): AbsenceWithPerson[] {
+  return (rows ?? []).map(({ person, ...absence }) => ({
+    ...(absence as unknown as Absence),
+    person: person
+      ? { id: person.id, full_name: person.display_name, waiter_id: person.user_id }
+      : null,
+  }));
+}
 
 /**
  * Ferie, permessi e malattia (migration 20260918100200).
@@ -64,10 +102,10 @@ function absenceArgs(input: AbsenceInput) {
 
 /** Professionista: chiede ferie o un permesso, o comunica una malattia. */
 export async function requestAbsence(
-  input: AbsenceInput & { ownerId: string }
+  input: AbsenceInput & { workspaceId: string }
 ): Promise<string> {
   const { data, error } = await supabase.rpc("request_absence", {
-    p_owner: input.ownerId,
+    p_workspace: input.workspaceId,
     ...absenceArgs(input),
   });
   if (error) throw new UserFacingError(error.message);
@@ -76,10 +114,10 @@ export async function requestAbsence(
 
 /** Titolare o delegato con l'organico: registra un'assenza già approvata. */
 export async function recordAbsence(
-  input: AbsenceInput & { personId: string }
+  input: AbsenceInput & { memberId: string }
 ): Promise<string> {
   const { data, error } = await supabase.rpc("record_absence", {
-    p_person: input.personId,
+    p_member: input.memberId,
     ...absenceArgs(input),
   });
   if (error) throw new UserFacingError(error.message);
@@ -129,51 +167,25 @@ export async function getAbsence(absenceId: string): Promise<Absence | null> {
 }
 
 /**
- * Professionista: le sue assenze presso tutti i datori di lavoro. La RLS
- * (`requester read`) restituisce già solo quelle delle sue `staff_people`.
+ * Professionista: le sue assenze presso tutte le aziende. La RLS restituisce
+ * già solo quelle delle sue appartenenze; il filtro rende esplicita la richiesta.
  */
 export async function getMyAbsences(waiterId: string): Promise<Absence[]> {
   const { data, error } = await supabase
     .from("staff_absences")
-    .select("*, person:staff_people!inner(waiter_id)")
-    .eq("person.waiter_id", waiterId)
+    .select("*, member:workspace_members!inner(user_id)")
+    .eq("member.user_id", waiterId)
     .order("start_date", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(({ person: _person, ...absence }) => absence);
-}
-
-/** Professionista: a chi può chiedere un'assenza (organico attivo). */
-export async function getMyAbsenceEmployers(
-  waiterId: string
-): Promise<AbsenceEmployer[]> {
-  const { data, error } = await supabase
-    .from("staff_people")
-    .select(
-      "id, owner_id, memberships:staff_members!inner(link_status, venue:venues(name))"
-    )
-    .eq("waiter_id", waiterId)
-    .eq("memberships.link_status", "active")
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((p) => {
-    const names = p.memberships
-      .map((m) => m.venue?.name)
-      .filter((n): n is string => !!n)
-      .sort((a, b) => a.localeCompare(b, "it"));
-    return {
-      personId: p.id,
-      ownerId: p.owner_id,
-      label: names.length > 0 ? names.join(" · ") : "Sede",
-    };
-  });
+  return (data ?? []).map(({ member: _member, ...absence }) => absence);
 }
 
 /** Chi gestisce l'organico: le assenze di una persona, dalla più recente. */
-export async function getPersonAbsences(personId: string): Promise<Absence[]> {
+export async function getPersonAbsences(memberId: string): Promise<Absence[]> {
   const { data, error } = await supabase
     .from("staff_absences")
     .select("*")
-    .eq("person_id", personId)
+    .eq("member_id", memberId)
     .order("start_date", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -194,13 +206,13 @@ export async function getAbsencesToHandle(): Promise<AbsenceWithPerson[]> {
   const since = addDaysToDate(todayString(), -RECENT_SICK_DAYS);
   const { data, error } = await supabase
     .from("staff_absences")
-    .select("*, person:staff_people(id, full_name, waiter_id)")
+    .select(`*, ${PERSON_EMBED}`)
     .or(
       `status.eq.pending,and(kind.eq.malattia,status.eq.approved,requested_by.not.is.null,created_at.gte.${since})`
     )
     .order("start_date", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as AbsenceWithPerson[] | null) ?? [];
+  return withPerson(data);
 }
 
 /** Quanto indietro guarda la pagina Assenze. */
@@ -219,11 +231,11 @@ export async function getCompanyAbsences(): Promise<AbsenceWithPerson[]> {
   const since = addDaysToDate(todayString(), -COMPANY_ABSENCES_DAYS_BACK);
   const { data, error } = await supabase
     .from("staff_absences")
-    .select("*, person:staff_people(id, full_name, waiter_id)")
+    .select(`*, ${PERSON_EMBED}`)
     .or(`status.eq.pending,end_date.gte.${since}`)
     .order("start_date", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as AbsenceWithPerson[] | null) ?? [];
+  return withPerson(data);
 }
 
 /**
@@ -233,7 +245,8 @@ export async function getCompanyAbsences(): Promise<AbsenceWithPerson[]> {
  */
 export type AbsenceAvailability = {
   id: string;
-  person_id: string;
+  /** La persona (`workspace_members.id`). */
+  member_id: string;
   start_date: string;
   end_date: string;
   start_time: string | null;
@@ -281,16 +294,16 @@ export type PersonShiftAssignment = {
  * potrebbe comunque toglierli.
  */
 export async function getPersonShiftsInRange(
-  personId: string,
+  memberId: string,
   from: string,
   to: string
 ): Promise<PersonShiftAssignment[]> {
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      "id, staff_member:staff_members!inner(person_id), shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)"
+      "id, venue_member:venue_members!inner(member_id), shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)"
     )
-    .eq("staff_member.person_id", personId)
+    .eq("venue_member.member_id", memberId)
     .in("status", ["assigned", "confirmed"])
     .gte("shift.date", addDaysToDate(from, -1))
     .lte("shift.date", to)
@@ -318,37 +331,41 @@ export async function getPersonShiftsInRange(
 /**
  * Toglie la persona dai turni in conflitto con l'assenza.
  *
- * Una `delete` sulle assegnazioni, come fa già la modifica di un turno: il
- * trigger `notify_on_assignment_removed` avvisa chi esce («Turno revocato») e
- * quello sui coperti riapre il posto. Il turno resta, scoperto: il sostituto lo
- * sceglie il titolare.
+ * Una `unassign` per assegnazione, come fa già la modifica di un turno: chi
+ * esce riceve l'avviso («Turno revocato») e il posto si riapre. Il turno
+ * resta, scoperto: il sostituto lo sceglie il titolare. Si ferma al primo
+ * errore, senza ingoiarlo.
  */
 export async function removeFromShifts(assignmentIds: string[]): Promise<void> {
-  if (assignmentIds.length === 0) return;
-  const { error } = await supabase
-    .from("shift_assignments")
-    .delete()
-    .in("id", assignmentIds);
-  if (error) throw new Error(error.message);
+  for (const id of assignmentIds) {
+    const { error } = await supabase.rpc("unassign", { p_assignment: id });
+    if (error) throw new UserFacingError(error.message);
+  }
 }
 
 /**
  * Le assenze approvate del mese per persona, per la pagina Ore e l'export.
- * Stesso intervallo di `getOwnerHoursSummary` (fine esclusa). Il perimetro è il
+ * Stesso intervallo di `get_hours_summary` (fine esclusa). Il perimetro è il
  * permesso Ore, e lo decide la RPC (`auth.uid()`).
  */
 export async function getOwnerAbsenceSummary(
   month: string
 ): Promise<AbsenceSummaryRow[]> {
   const { start, end } = monthBounds(month);
-  const { data, error } = await supabase.rpc("get_owner_absence_summary", {
+  const { data, error } = await supabase.rpc("get_absence_summary", {
     p_from: start,
     p_to: end,
   });
   if (error) throw new Error(error.message);
-  return ((data ?? []) as AbsenceSummaryRow[]).map((r) => ({
-    ...r,
+  return (data ?? []).map((r) => ({
+    person_id: r.member_id,
+    person_name: r.member_name,
+    ferie_days: r.ferie_days,
+    permesso_days: r.permesso_days,
     // `numeric` arriva come stringa o numero a seconda del valore.
     permesso_hours: Number(r.permesso_hours),
+    malattia_days: r.malattia_days,
+    // Il generatore lo dà `not null`, ma è null se non ci sono malattie.
+    inps_protocols: (r.inps_protocols as string | null) ?? null,
   }));
 }

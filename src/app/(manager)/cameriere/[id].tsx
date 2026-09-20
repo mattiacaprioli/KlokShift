@@ -13,21 +13,28 @@ import { useStartConversation } from "@/features/chat/hooks";
 import { useExperiences } from "@/features/experiences/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useWaiterProfile } from "@/features/waiterProfile/hooks";
-import { useAuth } from "@/lib/auth";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useOwnerPeople } from "@/features/staff/hooks";
 import { useToast } from "@/providers/Toast";
 
 export default function WaiterProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
+  // `id` è l'account (`profiles.id`): serve alle rotte pubbliche del
+  // professionista (scheda, recensioni, esperienze). La chat invece si apre
+  // sulla sua **appartenenza** in questa azienda (`open_conversation` vuole
+  // `p_member`): si ricava dall'organico, già in cache dalla tab Staff.
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
-  const managerId = session!.user.id;
+  const { workspaceId } = useOwnerVenues();
+  const people = useOwnerPeople(workspaceId).data ?? [];
+  const memberId = people.find((p) => p.waiter_id === id)?.id;
   const startConversation = useStartConversation();
 
   function onMessage() {
+    if (!memberId) return;
     startConversation.mutate(
-      { waiterId: id, managerId },
+      { memberId },
       {
         onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
         onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
@@ -79,7 +86,7 @@ export default function WaiterProfileScreen() {
       <GhostButton
         className="mt-1"
         label={startConversation.isPending ? "Apertura chat…" : "Invia messaggio"}
-        disabled={startConversation.isPending}
+        disabled={startConversation.isPending || !memberId}
         onPress={onMessage}
       />
     </View>

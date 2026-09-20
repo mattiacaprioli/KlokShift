@@ -12,35 +12,35 @@ import {
   type StaffDocument,
 } from "./api";
 
-export function useStaffDocuments(personId: string | undefined) {
+export function useStaffDocuments(memberId: string | undefined) {
   return useQuery({
-    queryKey: qk.documents.byPerson(personId ?? ""),
-    queryFn: () => getStaffDocuments(personId as string),
-    enabled: !!personId,
+    queryKey: qk.documents.byMember(memberId ?? ""),
+    queryFn: () => getStaffDocuments(memberId as string),
+    enabled: !!memberId,
   });
 }
 
-function useDocumentsInvalidation(personId: string) {
+function useDocumentsInvalidation(memberId: string) {
   const qc = useQueryClient();
   return () =>
-    qc.invalidateQueries({ queryKey: qk.documents.byPerson(personId) });
+    qc.invalidateQueries({ queryKey: qk.documents.byMember(memberId) });
 }
 
-export function useCreateStaffDocument(personId: string) {
-  const invalidate = useDocumentsInvalidation(personId);
+export function useCreateStaffDocument(memberId: string) {
+  const invalidate = useDocumentsInvalidation(memberId);
   return useMutation({
     mutationFn: (vars: {
       uploadedBy: string;
       meta: DocumentMeta;
       file: DocumentFile;
     }) =>
-      createStaffDocument(personId, vars.uploadedBy, vars.meta, vars.file),
+      createStaffDocument(memberId, vars.uploadedBy, vars.meta, vars.file),
     onSuccess: invalidate,
   });
 }
 
-export function useUpdateStaffDocument(personId: string) {
-  const invalidate = useDocumentsInvalidation(personId);
+export function useUpdateStaffDocument(memberId: string) {
+  const invalidate = useDocumentsInvalidation(memberId);
   return useMutation({
     mutationFn: (vars: { id: string; meta: DocumentMeta }) =>
       updateStaffDocument(vars.id, vars.meta),
@@ -48,8 +48,8 @@ export function useUpdateStaffDocument(personId: string) {
   });
 }
 
-export function useReplaceStaffDocumentFile(personId: string) {
-  const invalidate = useDocumentsInvalidation(personId);
+export function useReplaceStaffDocumentFile(memberId: string) {
+  const invalidate = useDocumentsInvalidation(memberId);
   return useMutation({
     mutationFn: (vars: { doc: StaffDocument; file: DocumentFile }) =>
       replaceStaffDocumentFile(vars.doc, vars.file),
@@ -57,8 +57,8 @@ export function useReplaceStaffDocumentFile(personId: string) {
   });
 }
 
-export function useDeleteStaffDocument(personId: string) {
-  const invalidate = useDocumentsInvalidation(personId);
+export function useDeleteStaffDocument(memberId: string) {
+  const invalidate = useDocumentsInvalidation(memberId);
   return useMutation({
     mutationFn: (doc: StaffDocument) => deleteStaffDocument(doc),
     onSuccess: invalidate,

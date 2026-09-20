@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { AbsenceFormView } from "@/features/absences/AbsenceFormView";
@@ -18,8 +17,7 @@ export default function NewWaiterAbsenceScreen() {
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
-  const employersQuery = useMyAbsenceEmployers(session!.user.id);
+  const employersQuery = useMyAbsenceEmployers();
   const request = useRequestAbsence();
 
   return (
@@ -38,10 +36,10 @@ export default function NewWaiterAbsenceScreen() {
           employers={employersQuery.data ?? []}
           submitLabel="Invia al titolare"
           pending={request.isPending}
-          onSubmit={({ ownerId, ...input }) => {
-            if (!ownerId) return;
+          onSubmit={({ workspaceId, ...input }) => {
+            if (!workspaceId) return;
             request.mutate(
-              { ownerId, ...input },
+              { workspaceId, ...input },
               {
                 onSuccess: () => {
                   toast.show(

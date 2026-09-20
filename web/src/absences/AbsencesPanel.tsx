@@ -26,13 +26,13 @@ import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
  *
  * ⚠️ Gemello app in `src/features/absences/PersonAbsencesSection.tsx`.
  */
-export function AbsencesPanel({ personId }: { personId: string }) {
-  const { data, isPending } = usePersonAbsences(personId);
+export function AbsencesPanel({ memberId }: { memberId: string }) {
+  const { data, isPending } = usePersonAbsences(memberId);
   const absences = data ?? [];
 
   return (
     <div className="flex flex-col gap-6">
-      <RecordAbsenceForm personId={personId} />
+      <RecordAbsenceForm memberId={memberId} />
       <section className="flex flex-col gap-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-t3">
           Assenze
@@ -141,7 +141,7 @@ function ProtocolField({ absence }: { absence: Absence }) {
   );
 }
 
-function RecordAbsenceForm({ personId }: { personId: string }) {
+function RecordAbsenceForm({ memberId }: { memberId: string }) {
   const toast = useToast();
   const record = useRecordAbsence();
   const today = todayString();
@@ -166,7 +166,7 @@ function RecordAbsenceForm({ personId }: { personId: string }) {
     if (invalid) return;
     record.mutate(
       {
-        personId,
+        memberId,
         kind,
         startDate: start,
         endDate: isHourly ? start : end,

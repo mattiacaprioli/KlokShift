@@ -57,9 +57,8 @@ function ProfileError() {
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
-  // La doppia vista: un professionista che il titolare ha promosso a gestire una
-  // sede resta `role = 'waiter'`, quindi il ruolo da solo non basta più a
-  // decidere dove mandarlo. Vedi `features/team/ViewMode.tsx`.
+  // Il cappello con cui si usa l'app (gestione / lavoro): si ricava dalle
+  // appartenenze, non da un ruolo sul profilo. Vedi `features/team/ViewMode.tsx`.
   const view = useViewMode();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -91,25 +90,17 @@ function RootNavigator() {
   // render a recoverable screen instead of a blank Stack with no matching guard.
   if (session && !profile) return <ProfileError />;
 
-  const isManager = !!session && profile?.role === "manager";
-  const isWaiter = !!session && profile?.role === "waiter";
-  // Un cameriere senza onboarding completato passa prima dal wizard.
-  const waiterOnboarding = isWaiter && !profile?.onboarding_complete;
-  const waiterReady = isWaiter && !!profile?.onboarding_complete;
-  // Il professionista promosso che ha scelto la gestione. L'onboarding resta
-  // prima di tutto: è la sua scheda da professionista, e senza di quella non
-  // esiste come persona nell'app.
-  const waiterAsManager = waiterReady && view.effective === "manager";
+  const isManagerView = !!session && view.effective === "manager";
+  const isWaiterView = !!session && view.effective === "waiter";
+  // Chi lavora senza aver completato il profilo professionale passa prima dal wizard.
+  const waiterOnboarding = isWaiterView && !profile?.onboarding_complete;
+  const waiterReady = isWaiterView && !!profile?.onboarding_complete;
 
   /**
-   * Il cappello con cui girano realtime e push.
-   *
-   * ⚠️ Deriva dalla **vista**, non dal ruolo: un promosso in gestione deve
-   * ricevere gli aggiornamenti dei turni della sede, non quelli dei propri. Con
-   * `profile.role` resterebbe iscritto ai canali sbagliati e la dashboard non si
-   * aggiornerebbe da sola.
+   * Il cappello con cui girano realtime e push: la **vista**, non un ruolo. Chi ha
+   * entrambe le viste deve ricevere gli aggiornamenti di quella che sta usando.
    */
-  const activeRole = isManager || waiterAsManager ? "manager" : "waiter";
+  const activeRole = view.effective;
 
   return (
     <View style={{ flex: 1 }}>
@@ -125,7 +116,7 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={isManager || waiterAsManager}>
+      <Stack.Protected guard={isManagerView}>
         <Stack.Screen name="(manager)" options={{ headerShown: false }} />
       </Stack.Protected>
 
@@ -133,7 +124,7 @@ function RootNavigator() {
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={waiterReady && !waiterAsManager}>
+      <Stack.Protected guard={waiterReady}>
         <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
       </Stack.Protected>
 

@@ -4,8 +4,8 @@ import type { Tables } from "@/types/database";
 /**
  * Il planning di una sede visto da chi ci lavora.
  *
- * Passa **tutto** dalla RPC `get_staff_planning` (20260914150000) e mai da una
- * select diretta: le policy di `shifts`, `shift_assignments` e `staff_members`
+ * Passa **tutto** dalla RPC `get_staff_planning` e mai da una
+ * select diretta: le policy di `shifts`, `shift_assignments` e `venue_members`
  * mostrano al professionista solo sé stesso, e allargarle esporrebbe anche
  * telefono e note dei colleghi. La funzione DEFINER decide le colonne, e ne
  * escono solo nome, foto e mansione del giorno.
@@ -26,8 +26,8 @@ type PlanningRow = {
   start_time: string;
   end_time: string;
   /** `null` su un turno che non ha ancora nessuno. */
-  staff_member_id: string | null;
-  person_name: string | null;
+  venue_member_id: string | null;
+  member_name: string | null;
   avatar_url: string | null;
   role_name: string | null;
   is_me: boolean;
@@ -35,7 +35,8 @@ type PlanningRow = {
 
 /** Un collega in turno. Nient'altro: il resto della sua scheda non esce dal DB. */
 export type PlanningPerson = {
-  staffMemberId: string;
+  /** `venue_members.id`: la riga di organico, chiave della riga in lista. */
+  venueMemberId: string;
   name: string;
   avatarUrl: string | null;
   /** La mansione di quel giorno, se la sede l'ha scelta. */
@@ -86,12 +87,12 @@ export function groupPlanningRows(rows: PlanningRow[]): PlanningShift[] {
       };
       shifts.push(shift);
     }
-    // `staff_member_id` null è il turno scoperto: la riga esiste per il turno,
+    // `venue_member_id` null è il turno scoperto: la riga esiste per il turno,
     // non per la persona.
-    if (row.staff_member_id && row.person_name) {
+    if (row.venue_member_id && row.member_name) {
       shift.people.push({
-        staffMemberId: row.staff_member_id,
-        name: row.person_name,
+        venueMemberId: row.venue_member_id,
+        name: row.member_name,
         avatarUrl: row.avatar_url,
         roleName: row.role_name,
         isMe: row.is_me,
@@ -117,7 +118,7 @@ export async function getStaffPlanning(
     p_to: to,
   });
   if (error) throw new Error(error.message);
-  return groupPlanningRows((data as PlanningRow[] | null) ?? []);
+  return groupPlanningRows(data ?? []);
 }
 
 /** La squadra di **un** turno: le stesse righe, filtrate su quel turno. */
@@ -139,9 +140,13 @@ export async function setVenueSeesPlanning(
   venueId: string,
   visible: boolean
 ): Promise<void> {
-  const { error } = await supabase
+  // Un update che la RLS scarta torna senza errore: `.select()` e zero righe
+  // sono un rifiuto, non un successo.
+  const { data, error } = await supabase
     .from("venues")
     .update({ staff_sees_planning: visible })
-    .eq("id", venueId);
+    .eq("id", venueId)
+    .select("id");
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("not_allowed");
 }

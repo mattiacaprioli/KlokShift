@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueFormView } from "@/features/venues/VenueFormView";
 import { canCreateVenue } from "@/features/venues/gate";
@@ -19,9 +18,8 @@ import { usePlan, PAYWALL_ROUTE } from "@/features/plan/hooks";
  * senza doverci entrare.
  */
 export default function VenueNewScreen() {
-  const { session } = useAuth();
   const router = useRouter();
-  const { venues } = useOwnerVenues();
+  const { venues, workspaceId } = useOwnerVenues();
   const plan = usePlan();
 
   const gate = canCreateVenue({ venueCount: venues.length, plan });
@@ -42,7 +40,7 @@ export default function VenueNewScreen() {
   return (
     <VenueFormView
       venue={null}
-      ownerId={session!.user.id}
+      workspaceId={workspaceId}
       title="Nuova sede"
       intro={
         venues.length > 0

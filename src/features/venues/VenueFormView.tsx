@@ -10,7 +10,9 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { deleteAvatarByUrl, uploadAvatar } from "@/features/account/api";
 import { pickAvatar } from "@/features/account/avatarPicker";
+import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
+import { useCreateFirstVenue } from "@/features/workspace/hooks";
 import { useToast } from "@/providers/Toast";
 import { useSaveVenue, useUpdateVenueLogo } from "./hooks";
 import { venueSchema, type VenueForm } from "./schema";
@@ -25,7 +27,7 @@ import type { Venue } from "./api";
  */
 export function VenueFormView({
   venue,
-  ownerId,
+  workspaceId,
   eyebrow = "Sede",
   title,
   intro,
@@ -34,18 +36,25 @@ export function VenueFormView({
 }: {
   /** `null` = creazione. */
   venue: Venue | null;
-  ownerId: string;
+  /**
+   * L'azienda a cui appartiene la sede. `undefined` = chi la crea non ha ancora
+   * un'azienda: la prima sede la apre insieme all'azienda (`useCreateFirstVenue`).
+   */
+  workspaceId: string | undefined;
   eyebrow?: string;
   title?: string;
   intro?: string;
-  onSaved: (venue: Venue) => void;
+  onSaved: (venueId: string) => void;
   /** Sotto il pulsante: "Chiudi sede" sulla modifica, niente in creazione. */
   footer?: ReactNode;
 }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const save = useSaveVenue(ownerId);
+  const { session } = useAuth();
+  const save = useSaveVenue(workspaceId ?? "");
+  const createFirst = useCreateFirstVenue();
   const saveLogo = useUpdateVenueLogo();
+  const saving = save.isPending || createFirst.isPending;
   const [logoBusy, setLogoBusy] = useState(false);
 
   const { control, handleSubmit, reset } = useForm<VenueForm>({
@@ -72,21 +81,24 @@ export function VenueFormView({
   }, [venue, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
+    const input = {
+      name: values.name,
+      city: values.city || null,
+      address: values.address || null,
+      cuisine_type: values.cuisine_type || null,
+      description: values.description || null,
+    };
     try {
-      const saved = await save.mutateAsync({
-        input: {
-          name: values.name,
-          city: values.city || null,
-          address: values.address || null,
-          cuisine_type: values.cuisine_type || null,
-          description: values.description || null,
-        },
-        venueId: venue?.id,
-      });
+      let venueId: string;
+      if (!venue && !workspaceId) {
+        venueId = (await createFirst.mutateAsync(input)).venueId;
+      } else {
+        venueId = (await save.mutateAsync({ input, venueId: venue?.id })).id;
+      }
       toast.show(venue ? "Sede salvata" : "Sede creata");
-      onSaved(saved);
-    } catch {
-      toast.show("Impossibile salvare. Riprova.", "error");
+      onSaved(venueId);
+    } catch (e) {
+      toast.show(userErrorMessage(e, "Impossibile salvare. Riprova."), "error");
     }
   });
 
@@ -101,7 +113,7 @@ export function VenueFormView({
    */
   async function onLogo() {
     if (logoBusy) return;
-    if (!venue) {
+    if (!venue || !session) {
       toast.show("Salva prima il nome della sede.", "error");
       return;
     }
@@ -110,7 +122,7 @@ export function VenueFormView({
       const picked = await pickAvatar();
       if (!picked) return; // annullato
       setLogoBusy(true);
-      const url = await uploadAvatar(ownerId, picked.bytes, {
+      const url = await uploadAvatar(session.user.id, picked.bytes, {
         contentType: picked.contentType,
       });
       await saveLogo.mutateAsync({ venueId: venue.id, logoUrl: url });
@@ -215,13 +227,13 @@ export function VenueFormView({
         <GoldButton
           className="mt-2"
           label={
-            save.isPending
+            saving
               ? "Salvataggio…"
               : venue
                 ? "Salva sede"
                 : "Crea sede"
           }
-          disabled={save.isPending}
+          disabled={saving}
           onPress={onSubmit}
         />
 

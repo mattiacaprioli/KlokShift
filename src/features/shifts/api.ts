@@ -5,7 +5,8 @@ import {
   normalizeQuery,
   type PastShiftsFilters,
 } from "./pastFilters";
-import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
+import type { Enums } from "@/types/database";
+import { VENUE_MEMBER_BRIEF } from "@/features/assignments/embeds";
 import type {
   Shift,
   ShiftWithAssignees,
@@ -25,13 +26,13 @@ export type {
 export const SHIFTS_PAGE_SIZE = 20;
 
 /**
- * ⚠️ **Il filtro `venue_id` non si toglie mai.** La policy SELECT su `shifts` è
- * `"shifts: read marketplace or assigned"` — non `"shifts: manager crud own"`,
- * che copre solo insert/update/delete. Una select senza filtro restituirebbe i
- * turni `kind='marketplace'` di **tutta la piattaforma**. Da qui i due invarianti
- * di ogni funzione di questo file: `.in("venue_id", venueIds)`, e l'early-return
- * quando l'array è vuoto (`in.()` non è una query valida, e comunque un titolare
- * senza sedi non ha turni da vedere).
+ * ⚠️ **Il filtro `venue_id` non si toglie mai.** Le policy dicono già cosa si
+ * può leggere, ma la RLS non è il perimetro della schermata: chi è anche in
+ * organico di un'altra sede vede i propri turni là, e questi elenchi sono quelli
+ * **delle sedi che gestisce**. Da qui i due invarianti di ogni funzione di
+ * questo file: `.in("venue_id", venueIds)`, e l'early-return quando l'array è
+ * vuoto (`in.()` non è una query valida, e comunque chi non gestisce sedi non ha
+ * turni da vedere).
  *
  * L'indice `shifts_venue_date_idx (venue_id, date)` serve un `IN` esattamente
  * come un `=`: nessuna migrazione, nessun costo in più.
@@ -56,10 +57,10 @@ export async function getOwnerShifts(
       // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
       // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
       // ragiona per ruolo e ignora chi ha rifiutato.
-      // `staff_member_id` non serve alla copertura: serve al filtro «I miei
+      // `venue_member_id` non serve alla copertura: serve al filtro «I miei
       // turni» dell'agenda, da quando chi gestisce la sede può esserci sopra.
       // È una colonna della riga già embeddata, non un join in più.
-      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, staff_member_id)"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, venue_member_id)"
     )
     .in("venue_id", venueIds)
     .gte("date", addDaysToDate(todayString(), -1))
@@ -103,9 +104,11 @@ export async function getOwnerShiftsRange(
       // Gli altri tre campi servono al drag & drop del planning, e servono qui
       // per non fare una query in più a ogni trascinamento:
       //   · `id` dell'assegnazione → è ciò che si riassegna;
-      //   · `waiter_id` → chi non ha un account collegato non riceve notifiche,
-      //     quindi non va contato quando si chiede conferma.
-      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), staff_member:staff_members(id, display_name, person_id, waiter_id))"
+      //   · l'account (`user_id`) → chi non ha un account collegato non riceve
+      //     notifiche, quindi non va contato quando si chiede conferma.
+      // La riga di organico arriva con la persona sotto (`member`): sotto il nome
+      // `staff_member` la rimette in forma `toStaffMember`.
+      `*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), ${VENUE_MEMBER_BRIEF})`
     )
     .in("venue_id", venueIds)
     .gte("date", from)
@@ -114,7 +117,18 @@ export async function getOwnerShiftsRange(
     .order("start_time", { ascending: true })
     .order("venue_id", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as ShiftWithAssignees[] | null) ?? [];
+  return (data ?? []).map(({ shift_assignments, ...shift }) => ({
+    ...shift,
+    shift_assignments: shift_assignments.map(({ venue_member: vm, ...a }) => ({
+      ...a,
+      staff_member: vm && {
+        id: vm.id,
+        display_name: vm.member?.display_name ?? "",
+        person_id: vm.member_id,
+        waiter_id: vm.member?.user_id ?? null,
+      },
+    })),
+  }));
 }
 
 /** Una pagina di storico, con l'indicazione che ce ne sono altre. */
@@ -254,8 +268,8 @@ export async function getOwnerPastShiftsCount(
 
 /**
  * Il turno con la sua sede: è la query del dettaglio turno lato
- * professionista, dove servono nome e logo della sede, e `venue.owner_id` per
- * aprire la chat.
+ * professionista, dove servono nome e logo della sede, e `venue.workspace_id`
+ * per aprire la chat con l'azienda.
  */
 export async function getShiftWithVenue(
   id: string
@@ -279,29 +293,67 @@ export async function getShift(id: string): Promise<Shift | null> {
   return data ?? null;
 }
 
-export async function createShift(input: TablesInsert<"shifts">): Promise<Shift> {
-  const { data, error } = await supabase
-    .from("shifts")
-    .insert(input)
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
+/**
+ * Stato del turno (RPC `set_shift_status`): annullare, chiudere, riaprire.
+ * L'update diretto su `shifts` è revocato; la RPC solleva `not_allowed` se non
+ * si ha il permesso Turni sulla sede, invece di non fare niente.
+ */
 export async function updateShiftStatus(
   id: string,
   status: Enums<"shift_status">
 ): Promise<void> {
-  const { error } = await supabase.from("shifts").update({ status }).eq("id", id);
+  const { error } = await supabase.rpc("set_shift_status", {
+    p_shift: id,
+    p_status: status,
+  });
   if (error) throw new Error(error.message);
 }
 
-/** Aggiorna i campi editabili di un turno (RLS: shifts manager crud via venue). */
+/** I campi di un turno che si possono cambiare da soli (senza persone né ruoli). */
+export type ShiftFieldsPatch = Partial<
+  Pick<
+    Shift,
+    | "title"
+    | "date"
+    | "start_time"
+    | "end_time"
+    | "description"
+    | "require_confirmation"
+  >
+>;
+
+/**
+ * Cambia i campi base di un turno (es. spostarlo di giorno) lasciando com'è il
+ * resto: `update_shift` senza le chiavi `staff` e `role_targets` non tocca né
+ * assegnati né fabbisogno. La RPC vuole il turno intero, quindi si legge quello
+ * attuale e si sovrappone la patch.
+ */
 export async function updateShift(
   id: string,
-  fields: TablesUpdate<"shifts">
+  fields: ShiftFieldsPatch
 ): Promise<void> {
-  const { error } = await supabase.from("shifts").update(fields).eq("id", id);
+  const current = await getShift(id);
+  if (!current) throw new Error("not_allowed");
+  const next = { ...current, ...fields };
+  const { error } = await supabase.rpc("update_shift", {
+    p_shift: id,
+    p_payload: {
+      title: next.title,
+      date: next.date,
+      start_time: next.start_time,
+      end_time: next.end_time,
+      description: next.description,
+      require_confirmation: next.require_confirmation,
+    },
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Elimina un turno (RPC `delete_shift`). Un turno già finito **con persone**
+ * resta: è storico, ore, presenze (`finished_shift_locked`).
+ */
+export async function deleteShift(id: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_shift", { p_shift: id });
   if (error) throw new Error(error.message);
 }

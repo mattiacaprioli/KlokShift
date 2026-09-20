@@ -25,7 +25,7 @@ export default function WaiterAbsencesScreen() {
   const { session } = useAuth();
   const waiterId = session!.user.id;
   const query = useMyAbsences(waiterId);
-  const employersQuery = useMyAbsenceEmployers(waiterId);
+  const employersQuery = useMyAbsenceEmployers();
   const absences = query.data ?? [];
   const employers = employersQuery.data ?? [];
   const pull = usePullToRefresh(async () => {
@@ -33,10 +33,10 @@ export default function WaiterAbsencesScreen() {
   });
 
   // Il nome dell'azienda serve solo a chi lavora per più titolari.
-  const labelByPerson = new Map(employers.map((e) => [e.personId, e.label]));
+  const labelByPerson = new Map(employers.map((e) => [e.memberId, e.label]));
   const subtitleFor =
     employers.length > 1
-      ? (a: { person_id: string }) => labelByPerson.get(a.person_id) ?? null
+      ? (a: { member_id: string }) => labelByPerson.get(a.member_id) ?? null
       : undefined;
 
   const loading = query.isLoading || employersQuery.isLoading;

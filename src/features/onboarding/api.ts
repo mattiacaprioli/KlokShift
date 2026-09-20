@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
-import { PRIMARY_ROLE_EXAMPLES } from "@/features/waiterProfile/api";
+import {
+  PRIMARY_ROLE_EXAMPLES,
+  writeWaiterProfile,
+} from "@/features/waiterProfile/api";
 
 /** Ruolo principale — testo libero, stessi esempi del profilo cameriere. */
 export { PRIMARY_ROLE_EXAMPLES };
@@ -11,29 +14,35 @@ export type OnboardingInput = {
 };
 
 /**
- * Chiude l'onboarding: aggiorna i campi condivisi di `profiles` (e alza il flag
- * `onboarding_complete`) e fa un upsert PARZIALE di `waiter_profiles` — le colonne
- * non elencate (languages, experience…) restano intatte.
+ * Chiude l'onboarding: scrive `waiter_profiles` (scrittura parziale — le colonne
+ * non elencate, languages, experience…, restano intatte) e poi i campi condivisi
+ * di `profiles`, alzando il flag `onboarding_complete`.
+ *
+ * ⚠️ **L'ordine conta, ed è questo.** Le due scritture non sono in transazione:
+ * alzando il flag per primo, un errore sulla seconda lasciava un account già
+ * «onboardato» sul database ma fermo sul wizard nell'app — e chi riprovava
+ * ripeteva l'errore senza avanzare mai. Il flag è l'ultima cosa che si scrive,
+ * così vale quello che dice: il profilo c'è davvero.
  */
 export async function completeOnboarding(
   userId: string,
   input: OnboardingInput
 ): Promise<void> {
-  const { error: profileError } = await supabase
+  await writeWaiterProfile(userId, { primary_role: input.primary_role });
+
+  // `.select()`: un UPDATE scartato dalla RLS tornerebbe 204 senza errore, e
+  // proseguire lascerebbe l'utente sul wizard a ogni avvio.
+  const { data, error } = await supabase
     .from("profiles")
     .update({
       full_name: input.full_name,
       city: input.city,
       onboarding_complete: true,
     })
-    .eq("id", userId);
-  if (profileError) throw new Error(profileError.message);
-
-  const { error: waiterError } = await supabase.from("waiter_profiles").upsert({
-    id: userId,
-    primary_role: input.primary_role,
-  });
-  if (waiterError) throw new Error(waiterError.message);
+    .eq("id", userId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("profile_not_saved");
 }
 
 /**

@@ -113,49 +113,38 @@ export async function getConversation(
   };
 }
 
-async function findConversation(
-  waiterId: string,
-  managerId: string
-): Promise<Conversation | null> {
-  const { data, error } = await supabase
-    .from("conversations")
-    .select("*")
-    .eq("waiter_id", waiterId)
-    .eq("manager_id", managerId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}
+/**
+ * Chi si vuole raggiungere: il titolare verso una persona dell'organico
+ * (`memberId` = `workspace_members.id`), il professionista verso l'azienda
+ * (`workspaceId`). L'altra estremità la sceglie il DB.
+ */
+export type OpenConversationInput =
+  | { memberId: string; workspaceId?: undefined }
+  | { workspaceId: string; memberId?: undefined };
 
 /**
- * Una conversazione per coppia (indice unico waiter+manager). Niente upsert:
- * non va sovrascritto lo shift_id storico del primo contatto.
+ * Apre la conversazione della coppia, o la ritrova: una per (professionista,
+ * titolare), e a crearla o riaprirla ci pensa la RPC `open_conversation`, che
+ * controlla anche che i due abbiano davvero un legame.
  */
-export async function getOrCreateConversation(params: {
-  waiterId: string;
-  managerId: string;
-  shiftId?: string | null;
-}): Promise<Conversation> {
-  const existing = await findConversation(params.waiterId, params.managerId);
-  if (existing) return existing;
-
-  const { data, error } = await supabase
+export async function openConversation(
+  input: OpenConversationInput
+): Promise<Conversation> {
+  const { data: id, error } = await supabase.rpc(
+    "open_conversation",
+    input.memberId
+      ? { p_member: input.memberId }
+      : { p_workspace: input.workspaceId }
+  );
+  if (error) throw new Error(error.message);
+  const { data, error: readError } = await supabase
     .from("conversations")
-    .insert({
-      waiter_id: params.waiterId,
-      manager_id: params.managerId,
-      shift_id: params.shiftId ?? null,
-    })
     .select("*")
-    .single();
-  if (!error) return data;
-
-  // Race sull'indice unico: un'altra sessione l'ha creata un attimo prima.
-  if (error.code === "23505") {
-    const retry = await findConversation(params.waiterId, params.managerId);
-    if (retry) return retry;
-  }
-  throw new Error(error.message);
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
+  if (!data) throw new Error("conversation_not_found");
+  return data;
 }
 
 /**

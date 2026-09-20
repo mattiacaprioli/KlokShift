@@ -3,6 +3,13 @@
  * stays consistent across features.
  */
 export const qk = {
+  /**
+   * Chi sono e dove (`get_my_context`): le appartenenze, le sedi gestite con i
+   * permessi, quelle in cui lavoro. Senza id: l'identità è la sessione.
+   */
+  context: {
+    mine: ["context", "mine"] as const,
+  },
   venues: {
     all: ["venues"] as const,
     /**
@@ -21,17 +28,15 @@ export const qk = {
     closed: (ownerId: string) => ["venues", "closed", ownerId] as const,
   },
   /**
-   * I collaboratori: `byOwner` è la lista che gestisce il titolare, `mine` sono
-   * i **miei** accessi delegati (senza id, come `venues.mine`: la RPC e la RLS
-   * partono da `auth.uid()`).
+   * I collaboratori dell'azienda: sono i `workspace_members` con
+   * `authority = 'collaborator'`, con permessi e ambito sul membro.
    */
   team: {
     all: ["team"] as const,
-    byOwner: (ownerId: string) => ["team", "byOwner", ownerId] as const,
-    mine: ["team", "mine"] as const,
-    /** Gli accessi di **una** persona: la scheda da cui si promuove (F3). */
-    person: (ownerId: string, userId: string) =>
-      ["team", "person", ownerId, userId] as const,
+    byWorkspace: (workspaceId: string) =>
+      ["team", "byWorkspace", workspaceId] as const,
+    /** I permessi attuali di un membro: la scheda da cui si promuove. */
+    member: (memberId: string) => ["team", "member", memberId] as const,
   },
   profile: {
     mine: (userId: string) => ["profile", "mine", userId] as const,
@@ -93,12 +98,9 @@ export const qk = {
   },
   documents: {
     all: ["documents"] as const,
-    // Per persona e non per scheda: chi lavora in due sedi dello stesso titolare
-    // ha una sola cartella di documenti (20260913100100).
-    byPerson: (personId: string) =>
-      ["documents", "byPerson", personId] as const,
-    /** Le cartelle del professionista: una per datore di lavoro. */
-    scopes: (waiterId: string) => ["documents", "scopes", waiterId] as const,
+    // Per membro (`staff_documents.member_id`): un membro dell'azienda ha una
+    // sola cartella, valida per tutte le sedi in cui lavora.
+    byMember: (memberId: string) => ["documents", "byMember", memberId] as const,
   },
   roles: {
     all: ["roles"] as const,
@@ -115,7 +117,7 @@ export const qk = {
      * Le persone del titolare, attraverso le sedi. Sotto il prefisso `staff.all`,
      * quindi ogni invalidazione dell'organico già esistente la copre.
      */
-    people: (ownerId: string) => ["staff", "people", ownerId] as const,
+    people: (workspaceId: string) => ["staff", "people", workspaceId] as const,
     /** La scheda di una persona, con tutte le sue sedi. */
     person: (personId: string) => ["staff", "person", personId] as const,
     invites: (waiterId: string) => ["staff", "invites", waiterId] as const,

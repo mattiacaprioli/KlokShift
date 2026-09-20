@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Tables } from "@/types/database";
+import type { Tables, TablesUpdate } from "@/types/database";
 
 export type VenueRole = Tables<"venue_roles">;
 
@@ -76,6 +76,23 @@ export async function createVenueRole(
 }
 
 /**
+ * Un update diretto che la RLS scarta torna 204 **senza errore**: si chiede la
+ * riga indietro e zero righe è un errore, non un salvataggio riuscito.
+ */
+async function updateRole(
+  id: string,
+  patch: TablesUpdate<"venue_roles">
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("venue_roles")
+    .update(patch)
+    .eq("id", id)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("not_allowed");
+}
+
+/**
  * Rinomina. Non scollega niente: turni e schede puntano all'`id`, non al nome —
  * è il motivo per cui questa tabella esiste al posto delle vecchie stringhe.
  */
@@ -83,30 +100,22 @@ export async function renameVenueRole(
   id: string,
   name: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("venue_roles")
-    .update({ name: name.trim() })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  await updateRole(id, { name: name.trim() });
 }
 
 /** Fuori dalle scelte future, intatto nello storico. */
 export async function archiveVenueRole(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("venue_roles")
-    .update({ archived_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  await updateRole(id, { archived_at: new Date().toISOString() });
 }
 
-/** I ruoli di una persona dell'organico. */
+/** Le mansioni di una riga di organico (`venue_members.id`). */
 export async function getStaffMemberRoles(
-  staffMemberId: string
+  venueMemberId: string
 ): Promise<VenueRole[]> {
   const { data, error } = await supabase
-    .from("staff_member_roles")
+    .from("venue_member_roles")
     .select("role:venue_roles(*)")
-    .eq("staff_member_id", staffMemberId);
+    .eq("venue_member_id", venueMemberId);
   if (error) throw new Error(error.message);
   const rows = (data as { role: VenueRole | null }[] | null) ?? [];
   return rows
@@ -116,25 +125,17 @@ export async function getStaffMemberRoles(
 }
 
 /**
- * Sostituisce per intero i ruoli di una persona: è una lista, non righe
- * indipendenti, e chi chiama ha sempre in mano l'elenco completo.
+ * Sostituisce per intero le mansioni di una riga di organico: è una lista, non
+ * righe indipendenti, e chi chiama ha sempre in mano l'elenco completo. Una
+ * chiamata sola e atomica (`set_member_roles`): o cambiano tutte o nessuna.
  */
 export async function setStaffMemberRoles(
-  staffMemberId: string,
+  venueMemberId: string,
   roleIds: string[]
 ): Promise<void> {
-  const { error: delError } = await supabase
-    .from("staff_member_roles")
-    .delete()
-    .eq("staff_member_id", staffMemberId);
-  if (delError) throw new Error(delError.message);
-
-  if (roleIds.length === 0) return;
-
-  const { error } = await supabase
-    .from("staff_member_roles")
-    .insert(
-      roleIds.map((role_id) => ({ staff_member_id: staffMemberId, role_id }))
-    );
+  const { error } = await supabase.rpc("set_member_roles", {
+    p_venue_member: venueMemberId,
+    p_role_ids: roleIds,
+  });
   if (error) throw new Error(error.message);
 }

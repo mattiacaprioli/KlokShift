@@ -4,9 +4,8 @@ import { useAuth } from "@/lib/auth";
 import { useAddSelfToStaff, useAddStaff } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
-import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import { RoleCheckboxes } from "./RoleCheckboxes";
-import type { AddStaffResult, StaffMember } from "@/features/staff/api";
+import type { AddStaffResult } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, Select } from "../ui/primitives";
@@ -99,11 +98,10 @@ export function AddStaffPanel({
   self?: boolean;
   onClose: () => void;
 }) {
-  const { ownerId } = useOwnerVenues();
-  const { session, profile } = useAuth();
+  const { workspaceId } = useOwnerVenues();
+  const { profile } = useAuth();
   const add = useAddStaff();
   const addSelf = useAddSelfToStaff();
-  const setRoles = useSetStaffMemberRoles();
   const toast = useToast();
   const { venueIds, single, node: venuePicker } = useVenueSelection();
   const [name, setName] = useState(() =>
@@ -134,45 +132,35 @@ export function AddStaffPanel({
   }
 
   /**
-   * Quel che viene dopo l'insert, uguale per le due modalità: i ruoli (che
-   * hanno bisogno dell'id della scheda, quindi non partono prima), il toast e
-   * la chiusura del pannello.
+   * Quel che viene dopo, uguale per le due modalità: il toast e la chiusura.
+   *
+   * ⚠️ Le mansioni non sono più un secondo passo: viaggiano dentro `add_member`,
+   * che le scrive nella stessa transazione della scheda.
    */
-  function finish(members: StaffMember[], msg: string) {
-    if (!single || roleIds.length === 0 || members.length !== 1) {
-      toast.show(single ? msg : `${msg} · assegna i ruoli in ogni sede`);
-      onClose();
-      return;
-    }
-    setRoles.mutate(
-      { staffMemberId: members[0].id, roleIds },
-      {
-        onSuccess: () => {
-          toast.show(msg);
-          onClose();
-        },
-        onError: (e) => toast.show(userErrorMessage(e), "error"),
-      }
-    );
+  function finish(msg: string) {
+    toast.show(single || roleIds.length === 0 ? msg : `${msg} · assegna le mansioni in ogni sede`);
+    onClose();
   }
 
   function submit() {
+    if (!workspaceId) return;
     setAlready(false);
 
+    // Le mansioni sono **per sede**: con più sedi la stessa lista non varrebbe
+    // per tutte, e si assegnano dopo dalla scheda.
+    const roles = single && roleIds.length > 0 ? roleIds : undefined;
+
     if (self) {
-      const myId = session?.user.id;
-      if (!myId) return;
       addSelf.mutate(
         {
-          ownerId: ownerId!,
-          myId,
+          workspaceId,
           venueIds,
-          fullName: name.trim(),
           employmentType: empType,
           phone: phone.trim() || null,
+          roleIds: roles,
         },
         {
-          onSuccess: (members) => finish(members, "Sei in organico"),
+          onSuccess: () => finish("Sei in organico"),
           onError: (e) => toast.show(userErrorMessage(e), "error"),
         }
       );
@@ -181,12 +169,13 @@ export function AddStaffPanel({
 
     add.mutate(
       {
-        ownerId: ownerId!,
+        workspaceId,
         venueIds,
         fullName: name.trim(),
         employmentType: empType,
         phone: phone.trim() || null,
         email: email.trim() || null,
+        roleIds: roles,
       },
       {
         onSuccess: (res) => {
@@ -194,7 +183,7 @@ export function AddStaffPanel({
             setAlready(true);
             return;
           }
-          finish(res.members, messageFor(res));
+          finish(messageFor(res));
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }

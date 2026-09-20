@@ -46,7 +46,7 @@ export function ConflictShiftList({ shifts }: { shifts: Conflict[] }) {
 export function AbsenceConflictsBlock({
   absence,
 }: {
-  absence: AbsenceWindow & { person_id: string };
+  absence: AbsenceWindow & { member_id: string };
 }) {
   const toast = useToast();
   const { conflicts, isLoading } = useAbsenceConflicts(

@@ -7,58 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
-      applications: {
-        Row: {
-          created_at: string
-          id: string
-          message: string | null
-          shift_id: string
-          status: Database["public"]["Enums"]["application_status"]
-          updated_at: string
-          waiter_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          message?: string | null
-          shift_id: string
-          status?: Database["public"]["Enums"]["application_status"]
-          updated_at?: string
-          waiter_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          message?: string | null
-          shift_id?: string
-          status?: Database["public"]["Enums"]["application_status"]
-          updated_at?: string
-          waiter_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "applications_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "shifts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "applications_waiter_id_fkey"
-            columns: ["waiter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       conversations: {
         Row: {
           created_at: string
@@ -66,6 +16,7 @@ export type Database = {
           manager_id: string
           shift_id: string | null
           waiter_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string
@@ -73,6 +24,7 @@ export type Database = {
           manager_id: string
           shift_id?: string | null
           waiter_id: string
+          workspace_id: string
         }
         Update: {
           created_at?: string
@@ -80,6 +32,7 @@ export type Database = {
           manager_id?: string
           shift_id?: string | null
           waiter_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -102,6 +55,128 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_hr: {
+        Row: {
+          contract_hours: number | null
+          contract_period: string | null
+          member_id: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          contract_hours?: number | null
+          contract_period?: string | null
+          member_id: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contract_hours?: number | null
+          contract_period?: string | null
+          member_id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_hr_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_invites: {
+        Row: {
+          channel: string
+          consumed_at: string | null
+          created_at: string
+          day_count: number
+          day_started_at: string | null
+          expires_at: string | null
+          id: string
+          last_sent_at: string | null
+          member_id: string
+          sent_count: number
+          token_hash: string | null
+        }
+        Insert: {
+          channel: string
+          consumed_at?: string | null
+          created_at?: string
+          day_count?: number
+          day_started_at?: string | null
+          expires_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          member_id: string
+          sent_count?: number
+          token_hash?: string | null
+        }
+        Update: {
+          channel?: string
+          consumed_at?: string | null
+          created_at?: string
+          day_count?: number
+          day_started_at?: string | null
+          expires_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          member_id?: string
+          sent_count?: number
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_invites_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_scope: {
+        Row: {
+          member_id: string
+          venue_id: string
+          workspace_id: string
+        }
+        Insert: {
+          member_id: string
+          venue_id: string
+          workspace_id: string
+        }
+        Update: {
+          member_id?: string
+          venue_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_scope_member_id_workspace_id_fkey"
+            columns: ["member_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "member_scope_venue_id_workspace_id_fkey"
+            columns: ["venue_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id", "workspace_id"]
           },
         ]
       }
@@ -226,8 +301,6 @@ export type Database = {
           notification_prefs: Json
           onboarding_complete: boolean
           phone: string | null
-          plan: string
-          role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
@@ -244,8 +317,6 @@ export type Database = {
           notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
-          plan?: string
-          role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
@@ -262,8 +333,6 @@ export type Database = {
           notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
-          plan?: string
-          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Relationships: []
@@ -371,8 +440,9 @@ export type Database = {
           id: string
           role_id: string | null
           shift_id: string
-          staff_member_id: string
           status: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
           worked_hours: number | null
         }
         Insert: {
@@ -381,8 +451,9 @@ export type Database = {
           id?: string
           role_id?: string | null
           shift_id: string
-          staff_member_id: string
           status?: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
           worked_hours?: number | null
         }
         Update: {
@@ -391,31 +462,32 @@ export type Database = {
           id?: string
           role_id?: string | null
           shift_id?: string
-          staff_member_id?: string
           status?: Database["public"]["Enums"]["assignment_status"]
+          venue_id?: string
+          venue_member_id?: string
           worked_hours?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "shift_assignments_role_id_fkey"
-            columns: ["role_id"]
+            foreignKeyName: "shift_assignments_role_id_venue_id_fkey"
+            columns: ["role_id", "venue_id"]
             isOneToOne: false
             referencedRelation: "venue_roles"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "venue_id"]
           },
           {
-            foreignKeyName: "shift_assignments_shift_id_fkey"
-            columns: ["shift_id"]
+            foreignKeyName: "shift_assignments_shift_id_venue_id_fkey"
+            columns: ["shift_id", "venue_id"]
             isOneToOne: false
             referencedRelation: "shifts"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "venue_id"]
           },
           {
-            foreignKeyName: "shift_assignments_staff_member_id_fkey"
-            columns: ["staff_member_id"]
+            foreignKeyName: "shift_assignments_venue_member_id_venue_id_fkey"
+            columns: ["venue_member_id", "venue_id"]
             isOneToOne: false
-            referencedRelation: "staff_members"
-            referencedColumns: ["id"]
+            referencedRelation: "venue_members"
+            referencedColumns: ["id", "venue_id"]
           },
         ]
       }
@@ -506,6 +578,7 @@ export type Database = {
           id: string
           role_id: string
           shift_id: string
+          venue_id: string
         }
         Insert: {
           count?: number
@@ -513,6 +586,7 @@ export type Database = {
           id?: string
           role_id: string
           shift_id: string
+          venue_id: string
         }
         Update: {
           count?: number
@@ -520,21 +594,22 @@ export type Database = {
           id?: string
           role_id?: string
           shift_id?: string
+          venue_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "shift_role_requirements_role_id_fkey"
-            columns: ["role_id"]
+            foreignKeyName: "shift_role_requirements_role_id_venue_id_fkey"
+            columns: ["role_id", "venue_id"]
             isOneToOne: false
             referencedRelation: "venue_roles"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "venue_id"]
           },
           {
-            foreignKeyName: "shift_role_requirements_shift_id_fkey"
-            columns: ["shift_id"]
+            foreignKeyName: "shift_role_requirements_shift_id_venue_id_fkey"
+            columns: ["shift_id", "venue_id"]
             isOneToOne: false
             referencedRelation: "shifts"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "venue_id"]
           },
         ]
       }
@@ -543,15 +618,11 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          dress_code: string | null
           end_time: string
-          hourly_rate: number | null
           id: string
-          kind: Database["public"]["Enums"]["shift_kind"]
           positions_filled: number
           positions_total: number
           require_confirmation: boolean
-          requirements: string[] | null
           start_time: string
           status: Database["public"]["Enums"]["shift_status"]
           title: string
@@ -561,15 +632,11 @@ export type Database = {
           created_at?: string
           date: string
           description?: string | null
-          dress_code?: string | null
           end_time: string
-          hourly_rate?: number | null
           id?: string
-          kind?: Database["public"]["Enums"]["shift_kind"]
           positions_filled?: number
           positions_total?: number
           require_confirmation?: boolean
-          requirements?: string[] | null
           start_time: string
           status?: Database["public"]["Enums"]["shift_status"]
           title: string
@@ -579,15 +646,11 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
-          dress_code?: string | null
           end_time?: string
-          hourly_rate?: number | null
           id?: string
-          kind?: Database["public"]["Enums"]["shift_kind"]
           positions_filled?: number
           positions_total?: number
           require_confirmation?: boolean
-          requirements?: string[] | null
           start_time?: string
           status?: Database["public"]["Enums"]["shift_status"]
           title?: string
@@ -611,9 +674,8 @@ export type Database = {
           id: string
           inps_protocol: string | null
           kind: Database["public"]["Enums"]["absence_kind"]
+          member_id: string
           note: string | null
-          owner_id: string
-          person_id: string
           requested_by: string | null
           resolution_note: string | null
           resolved_at: string | null
@@ -629,9 +691,8 @@ export type Database = {
           id?: string
           inps_protocol?: string | null
           kind: Database["public"]["Enums"]["absence_kind"]
+          member_id: string
           note?: string | null
-          owner_id: string
-          person_id: string
           requested_by?: string | null
           resolution_note?: string | null
           resolved_at?: string | null
@@ -647,9 +708,8 @@ export type Database = {
           id?: string
           inps_protocol?: string | null
           kind?: Database["public"]["Enums"]["absence_kind"]
+          member_id?: string
           note?: string | null
-          owner_id?: string
-          person_id?: string
           requested_by?: string | null
           resolution_note?: string | null
           resolved_at?: string | null
@@ -660,17 +720,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "staff_absences_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "staff_absences_member_id_fkey"
+            columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_absences_person_id_fkey"
-            columns: ["person_id"]
-            isOneToOne: false
-            referencedRelation: "staff_people"
+            referencedRelation: "workspace_members"
             referencedColumns: ["id"]
           },
           {
@@ -694,9 +747,9 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          member_id: string
           mime_type: string | null
           name: string
-          person_id: string
           size_bytes: number | null
           storage_path: string
           updated_at: string
@@ -706,9 +759,9 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          member_id: string
           mime_type?: string | null
           name: string
-          person_id: string
           size_bytes?: number | null
           storage_path: string
           updated_at?: string
@@ -718,9 +771,9 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          member_id?: string
           mime_type?: string | null
           name?: string
-          person_id?: string
           size_bytes?: number | null
           storage_path?: string
           updated_at?: string
@@ -728,10 +781,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "staff_documents_person_id_fkey"
-            columns: ["person_id"]
+            foreignKeyName: "staff_documents_member_id_fkey"
+            columns: ["member_id"]
             isOneToOne: false
-            referencedRelation: "staff_people"
+            referencedRelation: "workspace_members"
             referencedColumns: ["id"]
           },
           {
@@ -743,166 +796,84 @@ export type Database = {
           },
         ]
       }
-      staff_member_roles: {
+      venue_member_roles: {
         Row: {
           created_at: string
           role_id: string
-          staff_member_id: string
+          venue_id: string
+          venue_member_id: string
         }
         Insert: {
           created_at?: string
           role_id: string
-          staff_member_id: string
+          venue_id: string
+          venue_member_id: string
         }
         Update: {
           created_at?: string
           role_id?: string
-          staff_member_id?: string
+          venue_id?: string
+          venue_member_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "staff_member_roles_role_id_fkey"
-            columns: ["role_id"]
+            foreignKeyName: "venue_member_roles_role_id_venue_id_fkey"
+            columns: ["role_id", "venue_id"]
             isOneToOne: false
             referencedRelation: "venue_roles"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "venue_id"]
           },
           {
-            foreignKeyName: "staff_member_roles_staff_member_id_fkey"
-            columns: ["staff_member_id"]
+            foreignKeyName: "venue_member_roles_venue_member_id_venue_id_fkey"
+            columns: ["venue_member_id", "venue_id"]
             isOneToOne: false
-            referencedRelation: "staff_members"
-            referencedColumns: ["id"]
+            referencedRelation: "venue_members"
+            referencedColumns: ["id", "venue_id"]
           },
         ]
       }
-      staff_members: {
+      venue_members: {
         Row: {
           created_at: string
-          display_name: string
           employment_type: Database["public"]["Enums"]["employment_type"]
           id: string
           left_at: string | null
-          link_status: Database["public"]["Enums"]["staff_link_status"]
-          note: string | null
-          person_id: string
-          phone: string | null
+          member_id: string
           venue_id: string
-          waiter_id: string | null
+          workspace_id: string
         }
         Insert: {
           created_at?: string
-          display_name?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
           left_at?: string | null
-          link_status?: Database["public"]["Enums"]["staff_link_status"]
-          note?: string | null
-          person_id: string
-          phone?: string | null
+          member_id: string
           venue_id: string
-          waiter_id?: string | null
+          workspace_id: string
         }
         Update: {
           created_at?: string
-          display_name?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
           left_at?: string | null
-          link_status?: Database["public"]["Enums"]["staff_link_status"]
-          note?: string | null
-          person_id?: string
-          phone?: string | null
+          member_id?: string
           venue_id?: string
-          waiter_id?: string | null
+          workspace_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "staff_members_person_id_fkey"
-            columns: ["person_id"]
+            foreignKeyName: "venue_members_member_id_workspace_id_fkey"
+            columns: ["member_id", "workspace_id"]
             isOneToOne: false
-            referencedRelation: "staff_people"
-            referencedColumns: ["id"]
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
           },
           {
-            foreignKeyName: "staff_members_venue_id_fkey"
-            columns: ["venue_id"]
+            foreignKeyName: "venue_members_venue_id_workspace_id_fkey"
+            columns: ["venue_id", "workspace_id"]
             isOneToOne: false
             referencedRelation: "venues"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_members_waiter_id_fkey"
-            columns: ["waiter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      staff_people: {
-        Row: {
-          contract_hours: number | null
-          contract_period: string | null
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          invite_conflict_at: string | null
-          invite_count: number
-          invited_at: string | null
-          note: string | null
-          owner_id: string
-          phone: string | null
-          updated_at: string
-          waiter_id: string | null
-        }
-        Insert: {
-          contract_hours?: number | null
-          contract_period?: string | null
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          invite_conflict_at?: string | null
-          invite_count?: number
-          invited_at?: string | null
-          note?: string | null
-          owner_id: string
-          phone?: string | null
-          updated_at?: string
-          waiter_id?: string | null
-        }
-        Update: {
-          contract_hours?: number | null
-          contract_period?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          invite_conflict_at?: string | null
-          invite_count?: number
-          invited_at?: string | null
-          note?: string | null
-          owner_id?: string
-          phone?: string | null
-          updated_at?: string
-          waiter_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "staff_people_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_people_waiter_id_fkey"
-            columns: ["waiter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "workspace_id"]
           },
         ]
       }
@@ -941,75 +912,6 @@ export type Database = {
           },
         ]
       }
-      venue_access: {
-        Row: {
-          can_manage_documents: boolean
-          can_manage_shifts: boolean
-          can_manage_staff: boolean
-          can_manage_venue: boolean
-          can_view_hours: boolean
-          created_at: string
-          email: string | null
-          id: string
-          invite_count: number
-          invited_at: string | null
-          owner_id: string
-          status: string
-          updated_at: string
-          user_id: string | null
-          venue_id: string
-        }
-        Insert: {
-          can_manage_documents?: boolean
-          can_manage_shifts?: boolean
-          can_manage_staff?: boolean
-          can_manage_venue?: boolean
-          can_view_hours?: boolean
-          created_at?: string
-          email?: string | null
-          id?: string
-          invite_count?: number
-          invited_at?: string | null
-          owner_id: string
-          status?: string
-          updated_at?: string
-          user_id?: string | null
-          venue_id: string
-        }
-        Update: {
-          can_manage_documents?: boolean
-          can_manage_shifts?: boolean
-          can_manage_staff?: boolean
-          can_manage_venue?: boolean
-          can_view_hours?: boolean
-          created_at?: string
-          email?: string | null
-          id?: string
-          invite_count?: number
-          invited_at?: string | null
-          owner_id?: string
-          status?: string
-          updated_at?: string
-          user_id?: string | null
-          venue_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "venue_access_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "venue_access_venue_id_fkey"
-            columns: ["venue_id"]
-            isOneToOne: false
-            referencedRelation: "venues"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       venues: {
         Row: {
           address: string | null
@@ -1021,8 +923,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          owner_id: string
           staff_sees_planning: boolean
+          workspace_id: string
         }
         Insert: {
           address?: string | null
@@ -1034,8 +936,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
-          owner_id: string
           staff_sees_planning?: boolean
+          workspace_id: string
         }
         Update: {
           address?: string | null
@@ -1047,15 +949,15 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
-          owner_id?: string
           staff_sees_planning?: boolean
+          workspace_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "venues_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "venues_workspace_id_fkey"
+            columns: ["workspace_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1154,6 +1056,119 @@ export type Database = {
           },
         ]
       }
+      workspace_members: {
+        Row: {
+          authority: Database["public"]["Enums"]["member_authority"]
+          can_documents: boolean
+          can_hours: boolean
+          can_shifts: boolean
+          can_staff: boolean
+          can_venue: boolean
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          left_at: string | null
+          link_conflict_at: string | null
+          phone: string | null
+          scope: Database["public"]["Enums"]["venue_scope"]
+          status: Database["public"]["Enums"]["member_status"]
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          authority?: Database["public"]["Enums"]["member_authority"]
+          can_documents?: boolean
+          can_hours?: boolean
+          can_shifts?: boolean
+          can_staff?: boolean
+          can_venue?: boolean
+          created_at?: string
+          display_name: string
+          email?: string | null
+          id?: string
+          left_at?: string | null
+          link_conflict_at?: string | null
+          phone?: string | null
+          scope?: Database["public"]["Enums"]["venue_scope"]
+          status?: Database["public"]["Enums"]["member_status"]
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          authority?: Database["public"]["Enums"]["member_authority"]
+          can_documents?: boolean
+          can_hours?: boolean
+          can_shifts?: boolean
+          can_staff?: boolean
+          can_venue?: boolean
+          created_at?: string
+          display_name?: string
+          email?: string | null
+          id?: string
+          left_at?: string | null
+          link_conflict_at?: string | null
+          phone?: string | null
+          scope?: Database["public"]["Enums"]["venue_scope"]
+          status?: Database["public"]["Enums"]["member_status"]
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          name: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          name: string
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          plan?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       waiter_public_cards: {
@@ -1170,56 +1185,80 @@ export type Database = {
       }
     }
     Functions: {
-      can_manage_person: {
-        Args: { p_perm?: string; p_person: string }
-        Returns: boolean
+      add_member: {
+        Args: {
+          p_authority?: Database["public"]["Enums"]["member_authority"]
+          p_perms?: Json
+          p_person?: Json
+          p_scope?: Database["public"]["Enums"]["venue_scope"]
+          p_self?: boolean
+          p_venues?: Json
+          p_workspace: string
+        }
+        Returns: Json
       }
-      can_access_staff_person_documents: {
-        Args: { p_person: string }
-        Returns: boolean
-      }
-      chat_counterpart: {
-        Args: { p_is_manager: boolean; p_user: string }
-        Returns: {
-          avatar_url: string
-          name: string
-        }[]
-      }
-      claim_staff_invite_send: {
-        Args: { p_owner: string; p_person: string }
-        Returns: {
-          email: string
-          full_name: string
-          owner_name: string
-          venue_names: string[]
-        }[]
-      }
-      can_manage_venue: {
-        Args: { p_perm?: string; p_venue: string }
-        Returns: boolean
-      }
-      claim_staff_invites: { Args: never; Returns: number }
-      conversation_for_pair: {
-        Args: { p_manager: string; p_shift: string; p_waiter: string }
+      assign: {
+        Args: { p_role?: string; p_shift: string; p_venue_member: string }
         Returns: string
       }
-      delete_account: { Args: { p_user: string }; Returns: undefined }
-      find_team_candidate: {
-        Args: { p_email: string }
+      claim_invite_send: {
+        Args: {
+          p_caller: string
+          p_expires?: string
+          p_member: string
+          p_token_hash?: string
+        }
         Returns: {
-          avatar_url: string
-          full_name: string
-          id: string
-          role: string
+          channel: string
+          display_name: string
+          email: string
+          venue_names: string[]
+          workspace_name: string
         }[]
       }
-      find_waiter_by_email: {
-        Args: { p_email: string }
+      claim_invites: { Args: never; Returns: number }
+      consume_invite: {
+        Args: { p_hash: string; p_user: string }
+        Returns: string
+      }
+      create_shifts: { Args: { p_plans: Json }; Returns: string[] }
+      create_venue: {
+        Args: {
+          p_address?: string
+          p_city?: string
+          p_cuisine_type?: string
+          p_description?: string
+          p_logo_url?: string
+          p_name: string
+          p_workspace: string
+        }
+        Returns: string
+      }
+      create_workspace: { Args: { p_name: string }; Returns: string }
+      delete_account: { Args: { p_user: string }; Returns: undefined }
+      delete_shift: { Args: { p_shift: string }; Returns: undefined }
+      get_absence_availability: {
+        Args: { p_from: string; p_to: string }
         Returns: {
-          avatar_url: string
-          city: string
-          full_name: string
+          end_date: string
+          end_time: string
           id: string
+          member_id: string
+          start_date: string
+          start_time: string
+          status: Database["public"]["Enums"]["absence_status"]
+        }[]
+      }
+      get_absence_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          ferie_days: number
+          inps_protocols: string
+          malattia_days: number
+          member_id: string
+          member_name: string
+          permesso_days: number
+          permesso_hours: number
         }[]
       }
       get_chat_counterparts: {
@@ -1231,6 +1270,48 @@ export type Database = {
         }[]
       }
       get_chat_unread_count: { Args: never; Returns: number }
+      get_hours_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          hours: number
+          member_id: string
+          member_name: string
+          roles: string
+          shifts_count: number
+          venue_closed: boolean
+          venue_id: string
+          venue_name: string
+        }[]
+      }
+      get_member_performance: {
+        Args: { p_member: string }
+        Returns: {
+          declined_count: number
+          month_hours: number
+          month_shifts: number
+          no_show_count: number
+          past_total: number
+          total_hours: number
+          worked_count: number
+        }[]
+      }
+      get_member_worked_shifts: {
+        Args: { p_limit?: number; p_member: string }
+        Returns: {
+          date: string
+          end_time: string
+          hours: number
+          id: string
+          shift_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          title: string
+          venue_id: string
+          venue_name: string
+          worked_hours: number
+        }[]
+      }
+      get_my_context: { Args: never; Returns: Json }
       get_my_work_history: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
@@ -1238,7 +1319,6 @@ export type Database = {
           end_time: string
           hours: number
           key: string
-          kind: string
           logo_url: string
           start_time: string
           title: string
@@ -1252,64 +1332,11 @@ export type Database = {
           total_hours: number
         }[]
       }
-      get_owner_hours_summary: {
-        Args: { p_from: string; p_to: string }
-        Returns: {
-          hours: number
-          person_id: string
-          person_name: string
-          roles: string
-          shifts_count: number
-          venue_closed: boolean
-          venue_id: string
-          venue_name: string
-        }[]
-      }
-      get_person_performance: {
-        Args: { p_person: string }
-        Returns: {
-          declined_count: number
-          month_hours: number
-          month_shifts: number
-          no_show_count: number
-          past_total: number
-          total_hours: number
-          worked_count: number
-        }[]
-      }
-      get_person_worked_shifts: {
-        Args: { p_limit?: number; p_person: string }
-        Returns: {
-          date: string
-          end_time: string
-          hours: number
-          id: string
-          shift_id: string
-          start_time: string
-          status: Database["public"]["Enums"]["assignment_status"]
-          title: string
-          venue_id: string
-          venue_name: string
-          worked_hours: number
-        }[]
-      }
       get_rating_breakdown: {
         Args: { p_waiter: string }
         Returns: {
           cnt: number
           rating: number
-        }[]
-      }
-      get_staff_performance: {
-        Args: { p_staff_member: string }
-        Returns: {
-          declined_count: number
-          month_hours: number
-          month_shifts: number
-          no_show_count: number
-          past_total: number
-          total_hours: number
-          worked_count: number
         }[]
       }
       get_staff_planning: {
@@ -1319,63 +1346,15 @@ export type Database = {
           date: string
           end_time: string
           is_me: boolean
-          person_name: string
+          member_name: string
           role_name: string
           shift_id: string
-          staff_member_id: string
           start_time: string
           title: string
           venue_id: string
           venue_logo_url: string
+          venue_member_id: string
           venue_name: string
-        }[]
-      }
-      get_staff_worked_shifts: {
-        Args: { p_limit?: number; p_staff_member: string }
-        Returns: {
-          date: string
-          end_time: string
-          hours: number
-          id: string
-          shift_id: string
-          start_time: string
-          status: Database["public"]["Enums"]["assignment_status"]
-          title: string
-          worked_hours: number
-        }[]
-      }
-      get_venue_hours_summary: {
-        Args: { p_from: string; p_to: string; p_venue: string }
-        Returns: {
-          display_name: string
-          hours: number
-          roles: string
-          shifts_count: number
-          staff_member_id: string
-        }[]
-      }
-      get_absence_availability: {
-        Args: { p_from: string; p_to: string }
-        Returns: {
-          end_date: string
-          end_time: string
-          id: string
-          person_id: string
-          start_date: string
-          start_time: string
-          status: Database["public"]["Enums"]["absence_status"]
-        }[]
-      }
-      get_owner_absence_summary: {
-        Args: { p_from: string; p_to: string }
-        Returns: {
-          ferie_days: number
-          inps_protocols: string
-          malattia_days: number
-          permesso_days: number
-          permesso_hours: number
-          person_id: string
-          person_name: string
         }[]
       }
       get_waiter_public_card: {
@@ -1390,18 +1369,10 @@ export type Database = {
           rating_count: number
         }[]
       }
-      get_worked_with_waiters: {
-        Args: { p_venue: string }
-        Returns: {
-          avatar_url: string
-          full_name: string
-          id: string
-          primary_role: string
-        }[]
+      leave: {
+        Args: { p_member: string; p_venue?: string }
+        Returns: undefined
       }
-      is_my_assigned_shift: { Args: { p_shift: string }; Returns: boolean }
-      leave_venue: { Args: { p_staff_id: string }; Returns: undefined }
-      link_staff_invites_for_user: { Args: { p_user: string }; Returns: number }
       local_now: { Args: never; Returns: string }
       mark_conversation_read: {
         Args: { p_conversation: string }
@@ -1411,8 +1382,20 @@ export type Database = {
         Args: { t: Database["public"]["Enums"]["notification_type"] }
         Returns: string
       }
-      reassign_shift_assignment: {
-        Args: { p_assignment: string; p_staff_member: string }
+      open_conversation: {
+        Args: { p_member?: string; p_workspace?: string }
+        Returns: string
+      }
+      peek_invite: {
+        Args: { p_hash: string }
+        Returns: {
+          display_name: string
+          email: string
+          workspace_name: string
+        }[]
+      }
+      reassign: {
+        Args: { p_assignment: string; p_to_venue_member: string }
         Returns: string
       }
       record_absence: {
@@ -1421,18 +1404,41 @@ export type Database = {
           p_end_time?: string
           p_inps_protocol?: string
           p_kind: Database["public"]["Enums"]["absence_kind"]
+          p_member: string
           p_note?: string
-          p_person: string
           p_start: string
           p_start_time?: string
         }
         Returns: string
       }
+      record_attendance: {
+        Args: { p_assignment: string; p_patch: Json }
+        Returns: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          role_id: string | null
+          shift_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
+          worked_hours: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       register_push_token: {
         Args: { p_platform: string; p_token: string }
         Returns: undefined
       }
-      remove_staff_member: { Args: { p_staff_id: string }; Returns: undefined }
+      remove_member: {
+        Args: { p_member: string; p_venue?: string }
+        Returns: undefined
+      }
       request_absence: {
         Args: {
           p_end: string
@@ -1440,9 +1446,9 @@ export type Database = {
           p_inps_protocol?: string
           p_kind: Database["public"]["Enums"]["absence_kind"]
           p_note?: string
-          p_owner: string
           p_start: string
           p_start_time?: string
+          p_workspace: string
         }
         Returns: string
       }
@@ -1469,12 +1475,73 @@ export type Database = {
         }
         Returns: undefined
       }
-      respond_to_staff_invite: {
-        Args: { p_accept: boolean; p_staff_id: string }
+      respond_assignment: {
+        Args: {
+          p_assignment: string
+          p_status: Database["public"]["Enums"]["assignment_status"]
+        }
+        Returns: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          role_id: string | null
+          shift_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
+          worked_hours: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      respond_to_invite: {
+        Args: { p_accept: boolean; p_member: string }
         Returns: undefined
       }
       set_absence_inps_protocol: {
         Args: { p_absence: string; p_protocol: string }
+        Returns: undefined
+      }
+      set_assignment_role: {
+        Args: { p_assignment: string; p_role: string }
+        Returns: undefined
+      }
+      set_member_access: {
+        Args: {
+          p_authority: Database["public"]["Enums"]["member_authority"]
+          p_member: string
+          p_perms?: Json
+          p_scope?: Database["public"]["Enums"]["venue_scope"]
+          p_scope_venues?: string[]
+        }
+        Returns: undefined
+      }
+      set_member_roles: {
+        Args: { p_role_ids: string[]; p_venue_member: string }
+        Returns: undefined
+      }
+      set_member_venue: {
+        Args: {
+          p_employment_type?: Database["public"]["Enums"]["employment_type"]
+          p_member: string
+          p_role_ids?: string[]
+          p_venue: string
+        }
+        Returns: string
+      }
+      set_shift_status: {
+        Args: {
+          p_shift: string
+          p_status: Database["public"]["Enums"]["shift_status"]
+        }
+        Returns: undefined
+      }
+      set_venue_closed: {
+        Args: { p_closed: boolean; p_venue: string }
         Returns: undefined
       }
       shift_duration_hours: {
@@ -1485,6 +1552,19 @@ export type Database = {
         Args: { p_date: string; p_end: string; p_start: string }
         Returns: string
       }
+      transfer_ownership: {
+        Args: { p_member: string; p_workspace: string }
+        Returns: undefined
+      }
+      unassign: { Args: { p_assignment: string }; Returns: undefined }
+      update_member: {
+        Args: { p_member: string; p_patch: Json }
+        Returns: undefined
+      }
+      update_shift: {
+        Args: { p_payload: Json; p_shift: string }
+        Returns: undefined
+      }
       withdraw_absence: { Args: { p_absence: string }; Returns: undefined }
       withdraw_shift_change_request: {
         Args: { p_request: string }
@@ -1494,11 +1574,12 @@ export type Database = {
     Enums: {
       absence_kind: "ferie" | "permesso" | "malattia"
       absence_status: "pending" | "approved" | "rejected" | "withdrawn"
-      application_status: "pending" | "accepted" | "rejected" | "cancelled"
       assignment_status: "assigned" | "confirmed" | "declined" | "no_show"
       change_request_kind: "substitution" | "hours"
       change_request_status: "pending" | "approved" | "rejected" | "withdrawn"
       employment_type: "fisso" | "a_chiamata"
+      member_authority: "owner" | "collaborator" | "none"
+      member_status: "invited" | "active" | "left"
       message_kind:
         | "text"
         | "shift_change_request"
@@ -1506,9 +1587,6 @@ export type Database = {
         | "absence_request"
         | "absence_response"
       notification_type:
-        | "application_received"
-        | "application_accepted"
-        | "application_rejected"
         | "new_message"
         | "shift_assigned"
         | "staff_invite"
@@ -1527,10 +1605,8 @@ export type Database = {
         | "absence_request"
         | "absence_response"
         | "absence_sick"
-      shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
-      staff_link_status: "pending" | "active" | "left"
-      user_role: "waiter" | "manager"
+      venue_scope: "all" | "selected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1546,12 +1622,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1575,11 +1651,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1600,11 +1676,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1625,11 +1701,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1642,11 +1718,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1660,11 +1736,12 @@ export const Constants = {
     Enums: {
       absence_kind: ["ferie", "permesso", "malattia"],
       absence_status: ["pending", "approved", "rejected", "withdrawn"],
-      application_status: ["pending", "accepted", "rejected", "cancelled"],
       assignment_status: ["assigned", "confirmed", "declined", "no_show"],
       change_request_kind: ["substitution", "hours"],
       change_request_status: ["pending", "approved", "rejected", "withdrawn"],
       employment_type: ["fisso", "a_chiamata"],
+      member_authority: ["owner", "collaborator", "none"],
+      member_status: ["invited", "active", "left"],
       message_kind: [
         "text",
         "shift_change_request",
@@ -1673,9 +1750,6 @@ export const Constants = {
         "absence_response",
       ],
       notification_type: [
-        "application_received",
-        "application_accepted",
-        "application_rejected",
         "new_message",
         "shift_assigned",
         "staff_invite",
@@ -1695,10 +1769,8 @@ export const Constants = {
         "absence_response",
         "absence_sick",
       ],
-      shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],
-      staff_link_status: ["pending", "active", "left"],
-      user_role: ["waiter", "manager"],
+      venue_scope: ["all", "selected"],
     },
   },
 } as const

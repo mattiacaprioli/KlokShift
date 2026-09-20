@@ -109,9 +109,9 @@ export function PeopleWeek({
   const absencesByPerson = useMemo(() => {
     const map = new Map<string, AbsenceAvailability[]>();
     for (const a of absences) {
-      const list = map.get(a.person_id);
+      const list = map.get(a.member_id);
       if (list) list.push(a);
-      else map.set(a.person_id, [a]);
+      else map.set(a.member_id, [a]);
     }
     return map;
   }, [absences]);

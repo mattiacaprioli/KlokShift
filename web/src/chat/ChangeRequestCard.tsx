@@ -69,7 +69,7 @@ export function ChangeRequestCard({
     const busy = new Set(
       (assignmentsQuery.data ?? [])
         .filter((a) => isActiveAssignment(a.status))
-        .map((a) => a.staff_member_id)
+        .map((a) => a.venue_member_id)
     );
     return (staffQuery.data ?? []).filter(
       (m) => m.link_status === "active" && !busy.has(m.id)

@@ -3,11 +3,12 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { routeForNotification } from "@/features/notifications/routing";
+import type { ViewMode } from "@/features/team/viewModeStorage";
 import type { Enums } from "@/types/database";
 import { registerForPushNotificationsAsync } from "./register";
 import { savePushToken } from "./api";
 
-type Role = Enums<"user_role">;
+type Role = ViewMode;
 
 // Le push (remote notifications) non esistono in Expo Go dal SDK 53: qualsiasi
 // chiamata a expo-notifications lì lancia → salteremmo tutto. Serve una dev build.

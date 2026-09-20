@@ -16,6 +16,7 @@ import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { formatDate, formatShiftRange, isShiftOver } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
@@ -72,13 +73,17 @@ export default function WaiterShiftDetailScreen() {
   const startConversation = useStartConversation();
 
   function onContact() {
-    const ownerId = shift?.venue?.owner_id;
-    if (!ownerId) return;
+    const workspaceId = shift?.venue?.workspace_id;
+    if (!workspaceId) return;
     startConversation.mutate(
-      { waiterId, managerId: ownerId, shiftId: id },
+      { workspaceId },
       {
         onSuccess: (conv) => router.push(`/(waiter)/chat/${conv.id}`),
-        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(
+            userErrorMessage(e, "Impossibile aprire la chat. Riprova."),
+            "error"
+          ),
       }
     );
   }
@@ -102,7 +107,9 @@ export default function WaiterShiftDetailScreen() {
   const isOver = shift ? isShiftOver(shift) : false;
 
   /** Conferma presenza (o ri-conferma dopo un rifiuto). */
-  function onRespond(status: Enums<"assignment_status">) {
+  function onRespond(
+    status: Extract<Enums<"assignment_status">, "confirmed" | "declined">
+  ) {
     if (!myAssignment) return;
     respond.mutate(
       { id: myAssignment.id, status },
@@ -111,7 +118,8 @@ export default function WaiterShiftDetailScreen() {
           toast.show(
             status === "confirmed" ? "Presenza confermata" : "Turno rifiutato"
           ),
-        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
       }
     );
   }
@@ -125,9 +133,9 @@ export default function WaiterShiftDetailScreen() {
           setDeclineVisible(false);
           toast.show("Turno rifiutato");
         },
-        onError: () => {
+        onError: (e) => {
           setDeclineVisible(false);
-          toast.show("Operazione non riuscita. Riprova.", "error");
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error");
         },
       }
     );

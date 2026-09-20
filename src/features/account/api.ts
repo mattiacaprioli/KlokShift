@@ -12,10 +12,29 @@ export async function updateMyProfile(
   userId: string,
   input: { full_name?: string; avatar_url?: string | null }
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update(input)
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Profilo non aggiornato.");
+}
+
+/**
+ * Il professionista lascia una sede in cui è in organico (`leave`): si dimette
+ * da quel posto di lavoro, non dall'azienda. I suoi turni futuri lì vengono
+ * tolti dal server.
+ */
+export async function leaveVenue(
+  memberId: string,
+  venueId: string
+): Promise<void> {
+  const { error } = await supabase.rpc("leave", {
+    p_member: memberId,
+    p_venue: venueId,
+  });
   if (error) throw new Error(error.message);
 }
 

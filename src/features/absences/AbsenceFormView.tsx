@@ -29,7 +29,7 @@ type Props = {
   recording?: boolean;
   submitLabel: string;
   pending: boolean;
-  onSubmit: (values: AbsenceInput & { ownerId: string | null }) => void;
+  onSubmit: (values: AbsenceInput & { workspaceId: string | null }) => void;
 };
 
 /**
@@ -48,8 +48,8 @@ export function AbsenceFormView({
   onSubmit,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const [ownerId, setOwnerId] = useState<string | null>(
-    employers.length === 1 ? employers[0].ownerId : null
+  const [workspaceId, setWorkspaceId] = useState<string | null>(
+    employers.length === 1 ? employers[0].workspaceId : null
   );
   const [kind, setKind] = useState<AbsenceKind>("ferie");
   const [start, setStart] = useState(() => new Date());
@@ -67,7 +67,7 @@ export function AbsenceFormView({
   const rangeValid = endDate >= startDate;
   const timesValid =
     !isHourly || toTimeString(endTime) > toTimeString(startTime);
-  const needsEmployer = employers.length > 1 && !ownerId;
+  const needsEmployer = employers.length > 1 && !workspaceId;
   const canSubmit = !pending && rangeValid && timesValid && !needsEmployer;
 
   function onStartChange(d: Date) {
@@ -95,10 +95,10 @@ export function AbsenceFormView({
             <View className="flex-row flex-wrap gap-2">
               {employers.map((e) => (
                 <SelectChip
-                  key={e.personId}
+                  key={e.memberId}
                   label={e.label}
-                  active={ownerId === e.ownerId}
-                  onPress={() => setOwnerId(e.ownerId)}
+                  active={workspaceId === e.workspaceId}
+                  onPress={() => setWorkspaceId(e.workspaceId)}
                 />
               ))}
             </View>
@@ -211,7 +211,7 @@ export function AbsenceFormView({
           disabled={!canSubmit}
           onPress={() =>
             onSubmit({
-              ownerId,
+              workspaceId,
               kind,
               startDate,
               endDate,

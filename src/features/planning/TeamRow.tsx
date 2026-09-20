@@ -67,7 +67,7 @@ export function TeamAvatars({
     <View className="flex-row items-center">
       {shown.map((p, i) => (
         <View
-          key={p.staffMemberId}
+          key={p.venueMemberId}
           // Sovrapposti: l'insieme si legge come un gruppo, non come una fila.
           style={{ marginLeft: i === 0 ? 0 : -8 }}
           className={cn(

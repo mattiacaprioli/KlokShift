@@ -1,38 +1,204 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { functionErrorCode } from "@/lib/functionError";
-import type { Enums, Tables, TablesInsert, TablesUpdate } from "@/types/database";
-
-export type StaffMember = Tables<"staff_members">;
+import type { Json } from "@/types/database";
+import type { EmploymentType } from "@/features/workspace/types";
+import { isContractPeriod } from "./contract";
+import {
+  linkStatusOf,
+  type OwnerPerson,
+  type PersonMembership,
+  type ProfileBrief,
+  type StaffMember,
+  type StaffMemberWithWaiter,
+  type StaffPerson,
+  type StaffPersonDetail,
+  type StaffRoleRef,
+} from "./types";
 
 /**
- * La persona, un livello sopra la scheda.
+ * L'organico dell'azienda, dal DB nuovo ai tipi di sempre.
  *
- * Un titolare con più sedi ha **una** anagrafica per dipendente e tante
- * appartenenze (`staff_members`) quante sono le sedi in cui lavora: Marco a Roma
- * e a Milano è una persona con due schede, non due Marco. Sulla persona vivono
- * nome, telefono, note, l'account collegato e i documenti; sulla scheda il tipo
- * di impiego, lo stato dell'invito, i ruoli, i turni e le ore.
+ * Sotto ci sono `workspace_members` (la **persona**: anagrafica, account,
+ * `member_hr` per note e contratto) e `venue_members` (la sua **riga di organico**
+ * in una sede, con `venue_member_roles`). I tipi che le schermate usano sono in
+ * `./types` e restano quelli storici: qui si **producono** da quelle tabelle.
  *
- * Da 20260913110100 anche le **ore** sono di questo livello: `staff_members` resta
- * l'unità di *assegnazione* (il turno si fa in una sede, coi ruoli di quel
- * sede), `staff_people` è l'unità di *rendiconto* — 20 ore a Roma e 20 a Milano
- * sono 40 ore e una busta paga.
+ * Due id da non confondere:
+ *   - `StaffPerson.id` = `workspace_members.id` («member id»);
+ *   - `StaffMember.id` = `venue_members.id` («venue member id»): è il bersaglio
+ *     delle assegnazioni (`shift_assignments.venue_member_id`).
  *
- * ⚠️ `staff_members.display_name`, `.waiter_id`, `.phone` e `.note` sono un
- * **mirror** di sola lettura, riscritto da un trigger (20260913100000): scriverci
- * non dà errore e non salva niente. L'anagrafica si modifica da qui.
+ * Le scritture passano **solo** dalle RPC (`add_member`, `update_member`,
+ * `set_member_venue`, `remove_member`, `leave`): atomiche, con errori
+ * `raise exception '<codice>'` già tradotti da `userErrorMessage`.
+ *
+ * ⚠️ Questo file lo importa **anche la dashboard web**: niente Expo o React
+ * Native qui dentro.
  */
-export type StaffPerson = Tables<"staff_people">;
+export type {
+  LinkStatus,
+  OwnerPerson,
+  PersonMembership,
+  ProfileBrief,
+  StaffMember,
+  StaffMemberWithWaiter,
+  StaffPerson,
+  StaffPersonDetail,
+  StaffRoleRef,
+} from "./types";
+export { linkStatusOf } from "./types";
 
-/** Una mansione della persona, come la carica l'embed dell'organico. */
-export type StaffRoleRef = { id: string; name: string; sort_order: number };
+// ---------------------------------------------------------------------------
+// Forme grezze delle select (annotate `string`: gli embed annidati fanno
+// esplodere l'inferenza dei tipi generati, e il cast qui sotto è l'unico punto).
+// ---------------------------------------------------------------------------
 
-/** Roster row + the linked waiter's avatar/name (when waiter_id is set). */
-export type StaffMemberWithWaiter = StaffMember & {
-  waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
-  staff_member_roles: { role: StaffRoleRef | null }[];
+const PERSON_COLUMNS =
+  "id, workspace_id, user_id, display_name, phone, email, authority, status, link_conflict_at, created_at, " +
+  "hr:member_hr(note, contract_hours, contract_period)";
+
+const VENUE_EMBED =
+  "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, closed_at)";
+
+const ROLES_EMBED =
+  "roles:venue_member_roles(role:venue_roles(id, name, sort_order))";
+
+const MEMBERSHIPS_EMBED =
+  "memberships:venue_members(id, venue_id, employment_type, left_at, created_at, " +
+  VENUE_EMBED +
+  ", " +
+  ROLES_EMBED +
+  ")";
+
+const PEOPLE_SELECT: string =
+  PERSON_COLUMNS +
+  ", waiter:profiles!workspace_members_user_id_fkey(id, full_name, avatar_url), " +
+  MEMBERSHIPS_EMBED;
+
+// `birth_day`/`birth_month` e non una data di nascita: l'anno non esiste proprio
+// in `profiles`, quindi non c'è un'età da consegnare al titolare.
+const PERSON_DETAIL_SELECT: string =
+  PERSON_COLUMNS +
+  ", waiter:profiles!workspace_members_user_id_fkey(id, full_name, avatar_url, birth_day, birth_month), " +
+  MEMBERSHIPS_EMBED;
+
+const VENUE_STAFF_SELECT: string =
+  "id, venue_id, member_id, employment_type, left_at, created_at, " +
+  "member:workspace_members!venue_members_member_id_workspace_id_fkey(" +
+  "id, user_id, display_name, phone, status, hr:member_hr(note), " +
+  "waiter:profiles!workspace_members_user_id_fkey(id, full_name, avatar_url)), " +
+  ROLES_EMBED;
+
+type RawHr = {
+  note: string | null;
+  contract_hours: number | null;
+  contract_period: string | null;
 };
+
+type RawRoles = { role: StaffRoleRef | null }[];
+
+type RawVenueBrief = {
+  id: string;
+  name: string;
+  city: string | null;
+  closed_at: string | null;
+} | null;
+
+type RawVenueMember = {
+  id: string;
+  venue_id: string;
+  employment_type: EmploymentType;
+  left_at: string | null;
+  created_at: string;
+  venue: RawVenueBrief;
+  roles: RawRoles;
+};
+
+type RawMember = {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  display_name: string;
+  phone: string | null;
+  email: string | null;
+  authority: StaffPerson["authority"];
+  status: StaffPerson["status"];
+  link_conflict_at: string | null;
+  created_at: string;
+  /** Uno-a-uno: PostgREST lo dà come oggetto, ma un array non deve rompere. */
+  hr: RawHr | RawHr[] | null;
+  waiter:
+    | (ProfileBrief & { birth_day?: number | null; birth_month?: number | null })
+    | null;
+  memberships: RawVenueMember[];
+};
+
+type RawRosterRow = {
+  id: string;
+  venue_id: string;
+  member_id: string;
+  employment_type: EmploymentType;
+  left_at: string | null;
+  created_at: string;
+  member: {
+    id: string;
+    user_id: string | null;
+    display_name: string;
+    phone: string | null;
+    status: StaffPerson["status"];
+    hr: { note: string | null } | { note: string | null }[] | null;
+    waiter: ProfileBrief | null;
+  } | null;
+  roles: RawRoles;
+};
+
+function one<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function toPerson(row: RawMember): StaffPerson {
+  const hr = one(row.hr);
+  return {
+    id: row.id,
+    workspace_id: row.workspace_id,
+    full_name: row.display_name,
+    phone: row.phone,
+    note: hr?.note ?? null,
+    email: row.email,
+    waiter_id: row.user_id,
+    authority: row.authority,
+    status: row.status,
+    contract_hours: hr?.contract_hours ?? null,
+    contract_period:
+      hr?.contract_period && isContractPeriod(hr.contract_period)
+        ? hr.contract_period
+        : null,
+    // ⚠️ `member_invites` non ha nessun accesso da REST (contiene l'hash del
+    // token): l'ultimo invio non è leggibile dal client. Restano i campi, vuoti.
+    invited_at: null,
+    invite_count: 0,
+    invite_conflict_at: row.link_conflict_at,
+    created_at: row.created_at,
+  };
+}
+
+function toMembership(row: RawMember, vm: RawVenueMember): PersonMembership {
+  return {
+    id: vm.id,
+    venue_id: vm.venue_id,
+    link_status: linkStatusOf(row.status, vm.left_at),
+    employment_type: vm.employment_type,
+    created_at: vm.created_at,
+    left_at: vm.left_at,
+    venue: vm.venue,
+    staff_member_roles: vm.roles ?? [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ruoli e sintesi di riga
+// ---------------------------------------------------------------------------
 
 /**
  * I nomi dei ruoli di una persona, in un'unica riga ("Cameriere, Barman").
@@ -50,87 +216,6 @@ export function staffRoleNames(member: {
     .map((r) => r.name);
   return names.length > 0 ? names.join(", ") : null;
 }
-
-export async function getVenueStaff(
-  venueId: string
-): Promise<StaffMemberWithWaiter[]> {
-  const { data, error } = await supabase
-    .from("staff_members")
-    .select(
-      "*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url), staff_member_roles(role:venue_roles(id, name, sort_order))"
-    )
-    .eq("venue_id", venueId)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data as StaffMemberWithWaiter[] | null) ?? [];
-}
-
-/** Una sede in cui la persona lavora, con quel che è **della sede**. */
-export type PersonMembership = Pick<
-  StaffMember,
-  "id" | "venue_id" | "link_status" | "employment_type" | "created_at" | "left_at"
-> & {
-  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "closed_at"> | null;
-  staff_member_roles: { role: StaffRoleRef | null }[];
-};
-
-/**
- * La persona con **tutte** le sue appartenenze: è la scheda del dipendente.
- *
- * Una scheda per persona, non una per sede. Prima Marco ne aveva due (una per
- * sede) e ognuna mostrava le ore di quella sola sede — un'assenza a Milano non
- * scalfiva il 100% di affidabilità di Roma. Ore, presenze e affidabilità sono
- * dell'azienda; ruoli e tipo di impiego restano della sede, e stanno nelle
- * `memberships`.
- */
-export type StaffPersonDetail = StaffPerson & {
-  waiter: Pick<
-    Tables<"profiles">,
-    "id" | "full_name" | "avatar_url" | "birth_day" | "birth_month"
-  > | null;
-  memberships: PersonMembership[];
-};
-
-/**
- * Embed a tre livelli (`staff_people → staff_members → staff_member_roles →
- * venue_roles`), che compone due pezzi già in produzione: `memberships:` viene da
- * `getOwnerPeople`, i ruoli annidati da `getVenueStaff`. Entrambi non ambigui —
- * `staff_members` ha una sola FK verso `staff_people`.
- */
-export async function getStaffPerson(
-  personId: string
-): Promise<StaffPersonDetail | null> {
-  const { data, error } = await supabase
-    .from("staff_people")
-    .select(
-      // `birth_day`/`birth_month` e non una data di nascita: l'anno non esiste
-      // proprio in `profiles` (20260914160000), quindi non c'è un'età da
-      // consegnare al titolare insieme al compleanno.
-      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url, birth_day, birth_month), " +
-        "memberships:staff_members(id, venue_id, link_status, employment_type, created_at, left_at, " +
-        "venue:venues(id, name, city, closed_at), " +
-        "staff_member_roles(role:venue_roles(id, name, sort_order)))"
-    )
-    .eq("id", personId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as StaffPersonDetail | null) ?? null;
-}
-
-/** Una persona del titolare, con le sedi in cui lavora e la sua foto. */
-export type OwnerPerson = StaffPerson & {
-  waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
-  memberships: (Pick<
-    StaffMember,
-    "id" | "venue_id" | "link_status" | "employment_type"
-  > & {
-    venue: Pick<
-      Tables<"venues">,
-      "id" | "name" | "city" | "closed_at"
-    > | null;
-    staff_member_roles: { role: StaffRoleRef | null }[];
-  })[];
-};
 
 /**
  * Le sedi (aperte) in cui la persona lavora: i chip della riga dell'organico.
@@ -153,9 +238,6 @@ export function personVenueNames(person: OwnerPerson): string[] {
  * può essere "Cameriere" a Roma e "Barman" a Milano, e in una riga d'elenco
  * quello che si vuole sapere è cosa sa fare — non dove. Il dettaglio per sede
  * sta nella sua scheda, dove `WorkplaceCard` lo mostra già.
- *
- * Stesso criterio di `mergeRoles` in `assignments/hoursSummary.ts`, che fa la
- * stessa unione partendo dalle righe delle ore.
  */
 export function personRoleNames(person: OwnerPerson): string | null {
   const byId = new Map<string, StaffRoleRef>();
@@ -176,8 +258,7 @@ export function personRoleNames(person: OwnerPerson): string | null {
  * Il tipo di impiego, se è lo stesso **in tutte** le sedi della persona.
  *
  * `null` quando divergono: si può essere fissi a Roma e a chiamata a Milano, e
- * mostrarne uno solo sarebbe una bugia detta con sicurezza. In quel caso la riga
- * omette il chip e il dettaglio resta nella scheda.
+ * mostrarne uno solo sarebbe una bugia detta con sicurezza.
  */
 export function personEmploymentType(
   person: OwnerPerson
@@ -188,305 +269,189 @@ export function personEmploymentType(
   return open.every((m) => m.employment_type === first) ? first : null;
 }
 
-/**
- * Tutte le persone dell'organico del titolare, **attraverso le sedi**.
- *
- * È **l'elenco dell'organico**: dal 14/09/2026 la tab Staff mostra questo e non
- * più le schede di una sede, perché l'organico è dell'azienda. Serve anche alla
- * chat, dove il thread è per persona.
- *
- * I ruoli arrivano nello stesso embed (`staff_member_roles → venue_roles`) e non
- * da una query in più: è il frammento che `getVenueStaff` usa già, e
- * l'annidamento a quattro livelli è quello di `getStaffPerson`. Senza, ogni riga
- * dell'elenco resterebbe senza mansione o costerebbe una query per persona.
- */
-export async function getOwnerPeople(ownerId: string): Promise<OwnerPerson[]> {
-  const { data, error } = await supabase
-    .from("staff_people")
-    .select(
-      "*, waiter:profiles!staff_people_waiter_id_fkey(id, full_name, avatar_url), " +
-        "memberships:staff_members(id, venue_id, link_status, employment_type, " +
-        "venue:venues(id, name, city, closed_at), " +
-        "staff_member_roles(role:venue_roles(id, name, sort_order)))"
-    )
-    .eq("owner_id", ownerId)
-    .order("full_name", { ascending: true });
-  if (error) throw new Error(error.message);
-  // `as unknown`: su questo embed a quattro livelli PostgREST non riesce a
-  // inferire il tipo e il cast diretto non si sovrappone. Stessa scorciatoia di
-  // `shifts/api.ts` sugli embed annidati.
-  const people = (data as unknown as OwnerPerson[] | null) ?? [];
+// ---------------------------------------------------------------------------
+// Letture
+// ---------------------------------------------------------------------------
 
-  // Le appartenenze finite restano nel database (sono lo storico), ma **questo**
-  // è l'elenco dell'organico: chi se n'è andato non ha un chip di sede, non
-  // porta i suoi ruoli nella riga e, se non lavora più da nessuna parte, non
-  // compare. La sua scheda resta raggiungibile da Ore e dallo storico, dove
-  // `getStaffPerson` le appartenenze finite le mostra apposta.
-  return people
-    .map((p) => ({
-      ...p,
-      memberships: p.memberships.filter((m) => m.link_status !== "left"),
-    }))
+/** L'organico di una sede: le righe di `venue_members` con la persona e i ruoli. */
+export async function getVenueStaff(
+  venueId: string
+): Promise<StaffMemberWithWaiter[]> {
+  const { data, error } = await supabase
+    .from("venue_members")
+    .select(VENUE_STAFF_SELECT)
+    .eq("venue_id", venueId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  const rows = (data as unknown as RawRosterRow[] | null) ?? [];
+  return rows.flatMap((row): StaffMemberWithWaiter[] => {
+    const m = row.member;
+    // Una riga di organico senza la persona non è leggibile (RLS): si salta.
+    if (!m) return [];
+    return [
+      {
+        id: row.id,
+        venue_id: row.venue_id,
+        person_id: row.member_id,
+        display_name: m.display_name,
+        waiter_id: m.user_id,
+        phone: m.phone,
+        note: one(m.hr)?.note ?? null,
+        employment_type: row.employment_type,
+        link_status: linkStatusOf(m.status, row.left_at),
+        left_at: row.left_at,
+        created_at: row.created_at,
+        waiter: m.waiter,
+        staff_member_roles: row.roles ?? [],
+      },
+    ];
+  });
+}
+
+/**
+ * La persona con **tutte** le sue appartenenze: è la scheda del dipendente.
+ *
+ * Una scheda per persona, non una per sede. Ore, presenze e affidabilità sono
+ * dell'azienda; ruoli e tipo di impiego restano della sede, e stanno nelle
+ * `memberships` — comprese quelle finite, che sono lo storico delle ore.
+ */
+export async function getStaffPerson(
+  personId: string
+): Promise<StaffPersonDetail | null> {
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .select(PERSON_DETAIL_SELECT)
+    .eq("id", personId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const row = data as unknown as RawMember | null;
+  if (!row) return null;
+  const waiter = row.waiter
+    ? {
+        id: row.waiter.id,
+        full_name: row.waiter.full_name,
+        avatar_url: row.waiter.avatar_url,
+        birth_day: row.waiter.birth_day ?? null,
+        birth_month: row.waiter.birth_month ?? null,
+      }
+    : null;
+  return {
+    ...toPerson(row),
+    waiter,
+    memberships: row.memberships
+      .map((vm) => toMembership(row, vm))
+      .sort((a, b) => a.created_at.localeCompare(b.created_at)),
+  };
+}
+
+/**
+ * Tutte le persone dell'organico dell'azienda, **attraverso le sedi**.
+ *
+ * È **l'elenco dell'organico**: la tab Staff mostra questo, e serve anche alla
+ * chat, dove il thread è per persona. Una persona compare se lavora **adesso** in
+ * almeno una sede: chi è solo collaboratore (nessuna riga di organico) sta nella
+ * pagina Collaboratori, chi se n'è andato resta raggiungibile da Ore e dallo
+ * storico, dove `getStaffPerson` le appartenenze finite le mostra apposta.
+ */
+export async function getOwnerPeople(
+  workspaceId: string
+): Promise<OwnerPerson[]> {
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .select(PEOPLE_SELECT)
+    .eq("workspace_id", workspaceId)
+    .neq("status", "left")
+    .order("display_name", { ascending: true });
+  if (error) throw new Error(error.message);
+  const rows = (data as unknown as RawMember[] | null) ?? [];
+
+  return rows
+    .map((row): OwnerPerson => {
+      const memberships = row.memberships
+        .map((vm) => toMembership(row, vm))
+        .filter((m) => m.link_status !== "left");
+      return {
+        ...toPerson(row),
+        waiter: row.waiter
+          ? {
+              id: row.waiter.id,
+              full_name: row.waiter.full_name,
+              avatar_url: row.waiter.avatar_url,
+            }
+          : null,
+        memberships: memberships.map((m) => ({
+          id: m.id,
+          venue_id: m.venue_id,
+          link_status: m.link_status,
+          employment_type: m.employment_type,
+          venue: m.venue,
+          staff_member_roles: m.staff_member_roles,
+        })),
+      };
+    })
     .filter((p) => p.memberships.length > 0);
 }
 
-/**
- * L'appartenenza finita che c'è già per quella persona in quella sede, se c'è.
- *
- * ⚠️ Da quando uscire è `link_status = 'left'` e non un delete, riaggiungere
- * qualcuno che se n'era andato **non può** essere una insert: l'unique
- * `staff_members_venue_person_uq (venue_id, person_id)` la rifiuterebbe, con un
- * 23505 in faccia a chi voleva solo riprendere Marco per l'estate. Si rianima la
- * riga di prima, e lo storico di quella sede torna attaccato alla persona senza
- * un buco in mezzo.
- */
-async function findLeftMembership(
-  venueId: string,
-  personId: string
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("staff_members")
-    .select("id")
-    .eq("venue_id", venueId)
-    .eq("person_id", personId)
-    .eq("link_status", "left")
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data?.id ?? null;
-}
+// ---------------------------------------------------------------------------
+// Scritture: solo RPC
+// ---------------------------------------------------------------------------
 
-/** Rimette in organico un'appartenenza chiusa. `left_at` torna a null. */
-async function reviveMembership(
-  id: string,
-  fields: Pick<TablesInsert<"staff_members">, "employment_type" | "link_status">
-): Promise<StaffMember> {
-  const { data, error } = await supabase
-    .from("staff_members")
-    .update({
-      link_status: fields.link_status ?? "active",
-      employment_type: fields.employment_type,
-      left_at: null,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
+/** La risposta di `add_member`. */
+type AddMemberOutcome =
+  | "created_manual"
+  | "invited_in_app"
+  | "invite_email"
+  | "already_member"
+  | "self";
 
-/**
- * Aggiunge a una sede una persona che il titolare **ha già** (perché lavora in
- * un'altra delle sue sedi). Nessun invito: l'account, se c'è, è già collegato
- * alla persona e il trigger lo copia sulla scheda nuova.
- *
- * Se in quella sede c'era già stata e se n'era andata, si riprende quella riga
- * invece di crearne una seconda — vedi `findLeftMembership`.
- */
-export async function addPersonToVenue(
-  input: TablesInsert<"staff_members">
-): Promise<StaffMember> {
-  const left = await findLeftMembership(input.venue_id, input.person_id);
-  if (left) return reviveMembership(left, input);
-
-  const { data, error } = await supabase
-    .from("staff_members")
-    .insert(input)
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/**
- * Persona nuova + le sue prime appartenenze, in due scritture.
- *
- * Si aggiunge una **persona**, e le si dice in quali sedi lavora: dal 14/09/2026
- * non c'è più una sede attiva a cui "appartenere", quindi il form chiede le sedi
- * come chiede il nome.
- *
- * Se l'account è **già** una persona di questo titolare (lavora in un'altra sede)
- * si riusa quella: l'unique `staff_people (owner_id, waiter_id)` rifiuterebbe una
- * seconda anagrafica, e sarebbe comunque sbagliato crearla — è lo stesso Marco.
- *
- * Le appartenenze vanno in **una** insert di N righe: o passano tutte o non passa
- * nessuna, e non resta una persona in due sedi su tre senza che nessuno lo dica.
- * Se quella scrittura fallisce si cancella la persona appena creata: senza la
- * compensazione resterebbe una persona senza sedi, che nessuna schermata elenca e
- * che occuperebbe il posto nell'unique — il prossimo tentativo di invitare la
- * stessa email fallirebbe senza una ragione visibile. Stessa regola di
- * `createStaffDocument`.
- */
-export async function addStaffToVenues(args: {
-  ownerId: string;
-  venueIds: string[];
-  fullName: string;
-  employmentType: Enums<"employment_type">;
-  phone?: string | null;
-  email?: string | null;
-  waiterId?: string | null;
-  linkStatus?: Enums<"staff_link_status">;
-}): Promise<StaffMember[]> {
-  if (args.venueIds.length === 0) {
-    throw new Error("Scegli almeno una sede.");
-  }
-
-  let personId: string | null = null;
-  let created = false;
-
-  if (args.waiterId) {
-    const { data, error } = await supabase
-      .from("staff_people")
-      .select("id")
-      .eq("owner_id", args.ownerId)
-      .eq("waiter_id", args.waiterId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    personId = data?.id ?? null;
-  }
-
-  if (!personId) {
-    const { data, error } = await supabase
-      .from("staff_people")
-      .insert({
-        owner_id: args.ownerId,
-        full_name: args.fullName,
-        phone: args.phone ?? null,
-        email: args.email ?? null,
-        waiter_id: args.waiterId ?? null,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    personId = data.id;
-    created = true;
-  }
-
-  const person = personId;
-
-  // Le sedi in cui questa persona era già stata e se n'era andata: lì si
-  // rianima la riga di prima, perché l'unique (venue_id, person_id) non ne
-  // ammette una seconda. Vedi `findLeftMembership`.
-  const { data: leftRows, error: leftError } = await supabase
-    .from("staff_members")
-    .select("id, venue_id")
-    .eq("person_id", person)
-    .eq("link_status", "left")
-    .in("venue_id", args.venueIds);
-  if (leftError) {
-    if (created) await supabase.from("staff_people").delete().eq("id", person);
-    throw new Error(leftError.message);
-  }
-  const leftByVenue = new Map((leftRows ?? []).map((r) => [r.venue_id, r.id]));
-  const toInsert = args.venueIds.filter((v) => !leftByVenue.has(v));
-
-  const revived: StaffMember[] = [];
-  for (const [, id] of leftByVenue) {
-    revived.push(
-      await reviveMembership(id, {
-        employment_type: args.employmentType,
-        ...(args.linkStatus ? { link_status: args.linkStatus } : {}),
-      })
-    );
-  }
-
-  if (toInsert.length === 0) return revived;
-
-  const { data: members, error } = await supabase
-    .from("staff_members")
-    .insert(
-      toInsert.map((venue_id) => ({
-        venue_id,
-        person_id: person,
-        employment_type: args.employmentType,
-        ...(args.linkStatus ? { link_status: args.linkStatus } : {}),
-      }))
-    )
-    .select("*");
-
-  if (error) {
-    if (created) {
-      await supabase.from("staff_people").delete().eq("id", person);
-    }
-    throw new Error(error.message);
-  }
-  return [...revived, ...(members ?? [])];
-}
-
-/**
- * L'anagrafica della persona: vale in **tutte** le sedi del titolare. Rinominare
- * Marco dalla scheda di Milano lo rinomina anche a Roma, ed è il punto del
- * modello — è la stessa persona.
- */
-export async function updateStaffPerson(
-  id: string,
-  fields: TablesUpdate<"staff_people">
-): Promise<void> {
-  const { error } = await supabase
-    .from("staff_people")
-    .update(fields)
-    .eq("id", id);
-  if (error) throw new Error(error.message);
-}
-
-/**
- * Quel che è davvero della singola sede: `employment_type` e `link_status`. Si
- * può essere fissi a Roma e a chiamata a Milano.
- */
-export async function updateStaffMember(
-  id: string,
-  fields: TablesUpdate<"staff_members">
-): Promise<void> {
-  const { error } = await supabase
-    .from("staff_members")
-    .update(fields)
-    .eq("id", id);
-  if (error) throw new Error(error.message);
-}
-
-/**
- * Il titolare toglie una persona dall'organico di una sede.
- *
- * ⚠️ **Non è un delete.** Lo era, e portava via per cascata tutte le
- * `shift_assignments` di quella sede — ore lavorate comprese, cioè il riepilogo
- * che va al commercialista. Ora la RPC `remove_staff_member` (20260914102811)
- * mette `link_status = 'left'`: lo storico resta, i turni futuri vengono
- * annullati e contati nella notifica al professionista.
- */
-export async function removeStaffMember(id: string): Promise<void> {
-  const { error } = await supabase.rpc("remove_staff_member", {
-    p_staff_id: id,
-  });
-  if (error) throw new Error(error.message);
-}
-
-/** A waiter found by exact email (via the DEFINER RPC). Only public fields. */
-export type WaiterLookup = {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  city: string | null;
+type AddMemberResponse = {
+  member_id: string;
+  outcome: AddMemberOutcome;
+  venue_member_ids: string[];
 };
 
-/** Manager: look up a waiter by exact email to invite them. */
-export async function findWaiterByEmail(
-  email: string
-): Promise<WaiterLookup | null> {
-  const { data, error } = await supabase.rpc("find_waiter_by_email", {
-    p_email: email,
+type VenuePlacement = {
+  venueIds: string[];
+  employmentType: EmploymentType;
+  /** Le mansioni, solo se si aggiunge in **una** sede (sono per sede). */
+  roleIds?: string[];
+};
+
+function venuesPayload(p: VenuePlacement): Json {
+  return p.venueIds.map((venue_id) => ({
+    venue_id,
+    employment_type: p.employmentType,
+    ...(p.roleIds && p.venueIds.length === 1 ? { role_ids: p.roleIds } : {}),
+  }));
+}
+
+async function callAddMember(args: {
+  workspaceId: string;
+  person?: Json;
+  placement: VenuePlacement;
+  self?: boolean;
+}): Promise<AddMemberResponse> {
+  const { data, error } = await supabase.rpc("add_member", {
+    p_workspace: args.workspaceId,
+    p_person: args.person ?? {},
+    p_authority: "none",
+    p_venues: venuesPayload(args.placement),
+    p_self: args.self ?? false,
   });
   if (error) throw new Error(error.message);
-  const row = (data as WaiterLookup[] | null)?.[0];
-  return row ?? null;
+  return data as unknown as AddMemberResponse;
 }
 
 /**
- * Manda l'email d'invito a una persona in organico che non ha ancora un
- * account. Il server prende l'indirizzo dalla riga: qui si passa solo la
- * persona, così nessuna chiamata può spedire a un indirizzo arbitrario.
+ * Manda l'email d'invito a una persona in organico (o a un collaboratore) che
+ * non ha ancora un account. Il server prende l'indirizzo dalla scheda: qui si
+ * passa solo il membro, così nessuna chiamata può spedire a un indirizzo
+ * arbitrario. Il canale (link alla vetrina / token per la dashboard) lo decide
+ * il DB in base all'`authority`.
  */
-export async function sendStaffInvite(personId: string): Promise<void> {
+export async function sendStaffInvite(memberId: string): Promise<void> {
   const { error } = await supabase.functions.invoke("invite-staff", {
-    body: { personId },
+    body: { memberId },
   });
   if (!error) return;
 
@@ -509,6 +474,15 @@ export async function sendStaffInvite(personId: string): Promise<void> {
   if (code.includes("no_email")) {
     throw new UserFacingError("Questa scheda non ha un'email.");
   }
+  // La function verifica chi chiama con `auth.getUser()`: se la sessione non
+  // esiste più (revocata altrove) il token continua a valere per PostgREST ma
+  // non per GoTrue, quindi le altre schermate funzionano e solo l'invito no.
+  // Dire «riprova tra qualche minuto» manderebbe a sbattere all'infinito.
+  if (code.includes("invalid token") || code.includes("missing authorization")) {
+    throw new UserFacingError(
+      "La tua sessione non è più valida. Esci, rientra e riprova."
+    );
+  }
   if (code.includes("NOT_FOUND")) {
     // La Edge Function non è deployata: nessun workflow la pubblica, va fatto
     // a mano con `supabase functions deploy invite-staff`. Dirlo, invece di
@@ -528,11 +502,12 @@ export async function sendStaffInvite(personId: string): Promise<void> {
  * `already` non è nemmeno un successo.
  */
 export type AddStaffResult =
-  | { kind: "manual"; members: StaffMember[] }
-  | { kind: "app_invite"; members: StaffMember[] }
+  | { kind: "manual"; personId: string; venueMemberIds: string[] }
+  | { kind: "app_invite"; personId: string; venueMemberIds: string[] }
   | {
       kind: "email_invite";
-      members: StaffMember[];
+      personId: string;
+      venueMemberIds: string[];
       emailSent: boolean;
       /** Perché l'email non è partita, già in italiano. Assente se è partita. */
       emailError?: string;
@@ -540,220 +515,263 @@ export type AddStaffResult =
   | { kind: "already"; personId: string };
 
 /**
- * Aggiunge una persona all'organico, email o no.
+ * Aggiunge una persona all'organico, email o no: una sola RPC (`add_member`).
  *
- * ⚠️ La domanda «questa persona ha già KlokShift?» **non è del titolare**: lui ha
- * un'email e basta. Prima erano due modalità nel form — Manuale e Invita — e
- * sceglierle male voleva dire o un invito che non partiva o una scheda muta.
- * Ora si scrive l'email e la decisione è qui, in un posto solo, condiviso da app
- * e dashboard web:
+ * ⚠️ La domanda «questa persona ha già KlokShift?» **non è del titolare** e non
+ * è nemmeno del client: `add_member` guarda l'email e risponde con l'esito.
  *
  * - niente email  → scheda e basta (si potrà invitare dopo, dalla sua scheda);
- * - account trovato → invito in-app da accettare (`link_status = 'pending'`);
- * - nessun account → scheda con l'email + email d'invito. Quando quella persona
- *   si registrerà con quell'indirizzo, il trigger `profiles_link_staff_invites`
- *   la aggancerà a questa scheda.
+ * - account trovato → invito in-app da accettare (`invited_in_app`);
+ * - nessun account → scheda con l'email + email d'invito (`invite_email`):
+ *   quando quella persona si registrerà con quell'indirizzo, verrà agganciata;
+ * - già in azienda → `already_member`.
+ *
+ * Le mansioni (`roleIds`) si passano solo con **una** sede: sono per sede, e la
+ * stessa lista non varrebbe per due.
  */
 export async function addStaff(args: {
-  ownerId: string;
+  workspaceId: string;
   venueIds: string[];
   fullName: string;
-  employmentType: Enums<"employment_type">;
+  employmentType: EmploymentType;
   phone?: string | null;
   email?: string | null;
+  roleIds?: string[];
 }): Promise<AddStaffResult> {
   const email = args.email?.trim() || null;
-  if (!email) {
-    const members = await addStaffToVenues({ ...args, email: null });
-    return { kind: "manual", members };
-  }
+  const phone = args.phone?.trim() || null;
+  const res = await callAddMember({
+    workspaceId: args.workspaceId,
+    person: {
+      full_name: args.fullName.trim(),
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
+    },
+    placement: {
+      venueIds: args.venueIds,
+      employmentType: args.employmentType,
+      roleIds: args.roleIds,
+    },
+  });
 
-  const found = await findWaiterByEmail(email);
+  const base = { personId: res.member_id, venueMemberIds: res.venue_member_ids };
 
-  if (found) {
-    // Se l'accordo con lei esiste già, un secondo invito creerebbe una seconda
-    // scheda della stessa persona: le sue ore e i suoi documenti resterebbero
-    // sulla prima. Si manda la UI ad aprire quella.
-    const { data: mine, error } = await supabase
-      .from("staff_people")
-      .select("id")
-      .eq("owner_id", args.ownerId)
-      .eq("waiter_id", found.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (mine) return { kind: "already", personId: mine.id };
-
-    const members = await addStaffToVenues({
-      ...args,
-      fullName: found.full_name ?? args.fullName,
-      email,
-      waiterId: found.id,
-      linkStatus: "pending",
-    });
-    return { kind: "app_invite", members };
-  }
-
-  const members = await addStaffToVenues({ ...args, email });
-
-  // La scheda è valida anche senza l'email spedita: l'SMTP che rifiuta non è un
-  // buon motivo per buttare via il lavoro appena fatto dal titolare. Si dice che
-  // l'invito non è partito e si lascia il bottone «Reinvia» sulla scheda.
-  const personId = members[0]?.person_id;
-  if (!personId) return { kind: "email_invite", members, emailSent: false };
-  try {
-    await sendStaffInvite(personId);
-    return { kind: "email_invite", members, emailSent: true };
-  } catch (e) {
-    // Il motivo arriva fino al toast: vedi lo stesso ramo in `addTeamMember`.
-    return {
-      kind: "email_invite",
-      members,
-      emailSent: false,
-      emailError: e instanceof UserFacingError ? e.message : undefined,
-    };
+  switch (res.outcome) {
+    case "already_member":
+      return { kind: "already", personId: res.member_id };
+    case "invited_in_app":
+      return { kind: "app_invite", ...base };
+    case "invite_email":
+      // La scheda è valida anche senza l'email spedita: l'SMTP che rifiuta non è
+      // un buon motivo per buttare via il lavoro appena fatto dal titolare. Si
+      // dice che l'invito non è partito e si lascia il bottone «Reinvia».
+      try {
+        await sendStaffInvite(res.member_id);
+        return { kind: "email_invite", ...base, emailSent: true };
+      } catch (e) {
+        return {
+          kind: "email_invite",
+          ...base,
+          emailSent: false,
+          emailError: e instanceof UserFacingError ? e.message : undefined,
+        };
+      }
+    default:
+      return { kind: "manual", ...base };
   }
 }
 
 /**
- * Chi gestisce la sede si mette **da sé** nel proprio organico.
+ * Chi gestisce l'azienda si mette **da sé** nel proprio organico
+ * (`add_member` con `p_self: true`).
  *
  * Il caso vero è il titolare che lavora — fa il servizio, copre un buco, sta al
- * bar — e le cui ore prima non esistevano da nessuna parte: non nel planning,
- * non in `/ore`, non nell'export per il commercialista. Vale anche per un
- * collaboratore con il permesso Staff (il capo sala invitato per email), che
- * dopo si pianifica ma non si scrive le ore — la differenza la fa il database
- * (`private.my_delegate_staff_member_ids`, 20260919100000), non questa funzione.
- *
- * ⚠️ **Non passa da `addStaff`**, ed è il punto. Lì la domanda «questa persona
- * ha già KlokShift?» si risolve con `find_waiter_by_email`, che filtra
- * `role = 'waiter'`: un gestore non si trova mai. Scrivere la propria email in
- * quel form produceva una scheda non collegata, un'email d'invito a sé stessi e
- * un aggancio che non sarebbe mai avvenuto — `link_staff_invites_for_user`
- * scatta alla registrazione e rifiuta i manager. Tutto in silenzio.
- *
- * Qui l'account si conosce già: `myId`. Nessuna email sulla scheda e nessun
- * invito da spedire, perché **il consenso è il gesto stesso**.
+ * bar — e le cui ore prima non esistevano da nessuna parte. Vale anche per un
+ * collaboratore con il permesso Staff. Nessuna email e nessun invito: **il
+ * consenso è il gesto stesso**, e il nome è quello che ha già nell'azienda.
+ * `phone`, se c'è, si scrive sulla sua scheda con `update_member`.
  */
 export async function addSelfToStaff(args: {
-  /** L'azienda: per un collaboratore è il titolare, non chi sta scrivendo. */
-  ownerId: string;
-  /** `session.user.id` di chi si sta aggiungendo. */
-  myId: string;
+  workspaceId: string;
   venueIds: string[];
-  fullName: string;
-  employmentType: Enums<"employment_type">;
+  employmentType: EmploymentType;
+  roleIds?: string[];
   phone?: string | null;
-}): Promise<StaffMember[]> {
-  return addStaffToVenues({
-    ownerId: args.ownerId,
-    venueIds: args.venueIds,
-    fullName: args.fullName,
-    employmentType: args.employmentType,
-    phone: args.phone ?? null,
-    email: null,
-    waiterId: args.myId,
-    // Nessun `pending` da accettare: l'invito e la risposta sono la stessa
-    // persona. È anche il solo caso in cui un `waiter_id` nasce già 'active'
-    // senza passare da `respond_to_staff_invite`.
-    linkStatus: "active",
+}): Promise<{ personId: string; venueMemberIds: string[] }> {
+  const res = await callAddMember({
+    workspaceId: args.workspaceId,
+    placement: {
+      venueIds: args.venueIds,
+      employmentType: args.employmentType,
+      roleIds: args.roleIds,
+    },
+    self: true,
   });
-}
-
-/** Waiter: a pending staff invite joined with the venue. */
-export type PendingInvite = StaffMember & {
-  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "logo_url"> | null;
-};
-
-/** Waiter: their pending staff invites ("Richieste di collaborazione"). */
-export async function getMyPendingInvites(
-  waiterId: string
-): Promise<PendingInvite[]> {
-  const { data, error } = await supabase
-    .from("staff_members")
-    .select("*, venue:venues(id, name, city, logo_url)")
-    .eq("waiter_id", waiterId)
-    .eq("link_status", "pending")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data as PendingInvite[] | null) ?? [];
-}
-
-/** Waiter: a venue they're active staff for (their "Le tue sedi"). */
-export type MyEmployer = StaffMember & {
-  venue: Pick<
-    Tables<"venues">,
-    "id" | "name" | "city" | "logo_url" | "owner_id"
-  > | null;
-};
-
-/** Waiter: the venues where they are confirmed (active) staff. */
-export async function getMyEmployers(waiterId: string): Promise<MyEmployer[]> {
-  const { data, error } = await supabase
-    .from("staff_members")
-    .select("*, venue:venues(id, name, city, logo_url, owner_id)")
-    .eq("waiter_id", waiterId)
-    .eq("link_status", "active")
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data as MyEmployer[] | null) ?? [];
+  const phone = args.phone?.trim();
+  if (phone) await updateStaffPerson(res.member_id, { phone });
+  return { personId: res.member_id, venueMemberIds: res.venue_member_ids };
 }
 
 /**
- * Una "cartella" di documenti del professionista: **una per datore di lavoro**,
- * non una per sede.
- *
- * Se Giuseppe ha tre sedi e tu lavori in due, la cartella è una sola e i
- * documenti valgono per entrambe. Le sedi servono solo a dare un nome alla
- * cartella ("Da Buffa · Osteria Milano"), perché il nome del titolare non è quello
- * con cui uno riconosce il posto in cui lavora.
+ * Aggiunge (o rimette) una persona in organico in una sede. Nessun invito:
+ * l'accordo con l'azienda c'è già. Se in quella sede c'era stata e se n'era
+ * andata, la RPC rianima la riga di prima, con le mansioni che aveva — l'unique
+ * `(member, venue)` non ne ammette una seconda. Ritorna l'id della riga di
+ * organico (`venue_members.id`).
  */
-export type DocumentScope = StaffPerson & {
-  memberships: {
-    venue: Pick<Tables<"venues">, "id" | "name" | "city"> | null;
-  }[];
+export async function addPersonToVenue(args: {
+  memberId: string;
+  venueId: string;
+  employmentType: EmploymentType;
+  roleIds?: string[];
+}): Promise<string> {
+  const { data, error } = await supabase.rpc("set_member_venue", {
+    p_member: args.memberId,
+    p_venue: args.venueId,
+    p_employment_type: args.employmentType,
+    ...(args.roleIds ? { p_role_ids: args.roleIds } : {}),
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Cosa si può cambiare dell'anagrafica e del contratto (`update_member`). */
+export type StaffPersonPatch = {
+  full_name?: string;
+  phone?: string | null;
+  email?: string | null;
+  note?: string | null;
+  contract_hours?: number | null;
+  contract_period?: "day" | "week" | "month" | null;
 };
 
 /**
- * Come si chiama una cartella: i nomi delle sedi, non quello del titolare — è
- * così che uno riconosce il posto in cui lavora. Un'unica funzione perché la
- * stessa etichetta la mostrano l'app e (in futuro) la dashboard, e ricomporla a
- * mano è il modo in cui due schermate iniziano a ordinarla diversamente.
+ * L'anagrafica della persona: vale in **tutte** le sedi dell'azienda. Rinominare
+ * Marco dalla scheda di Milano lo rinomina anche a Roma, ed è il punto del
+ * modello — è la stessa persona. Le chiavi assenti non si toccano.
  */
-export function documentScopeLabel(scope: DocumentScope): string {
-  const names = scope.memberships
-    .map((m) => m.venue?.name)
-    .filter((n): n is string => !!n)
-    .sort((a, b) => a.localeCompare(b, "it"));
-  return names.length > 0 ? names.join(" · ") : "Sede";
-}
-
-/** Waiter: le sue cartelle documenti, una per titolare che lo ha in organico. */
-export async function getMyDocumentScopes(
-  waiterId: string
-): Promise<DocumentScope[]> {
-  const { data, error } = await supabase
-    .from("staff_people")
-    .select("*, memberships:staff_members(venue:venues(id, name, city))")
-    .eq("waiter_id", waiterId)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data as DocumentScope[] | null) ?? [];
-}
-
-/** Waiter: accept (true) or decline (false) a staff invite (via DEFINER RPC). */
-export async function respondToInvite(
-  staffId: string,
-  accept: boolean
+export async function updateStaffPerson(
+  id: string,
+  fields: StaffPersonPatch
 ): Promise<void> {
-  const { error } = await supabase.rpc("respond_to_staff_invite", {
-    p_staff_id: staffId,
-    p_accept: accept,
+  const { full_name, ...rest } = fields;
+  const patch: { [key: string]: Json | undefined } = { ...rest };
+  if (full_name !== undefined) patch.display_name = full_name;
+  const { error } = await supabase.rpc("update_member", {
+    p_member: id,
+    p_patch: patch,
   });
   if (error) throw new Error(error.message);
 }
 
-/** Waiter: resign from a venue's staff (via DEFINER RPC; notifies the owner). */
-export async function leaveVenue(staffId: string): Promise<void> {
-  const { error } = await supabase.rpc("leave_venue", { p_staff_id: staffId });
+/**
+ * Quel che è davvero della singola sede: tipo di impiego e mansioni, in **una**
+ * scrittura (`set_member_venue`). Si può essere fissi a Roma e a chiamata a
+ * Milano. `roleIds` assente = le mansioni non si toccano.
+ */
+export async function updateStaffMember(args: {
+  memberId: string;
+  venueId: string;
+  employmentType: EmploymentType;
+  roleIds?: string[];
+}): Promise<void> {
+  await addPersonToVenue(args);
+}
+
+/**
+ * Toglie una persona dall'organico: da una sede (`venueId`) o da tutta l'azienda.
+ *
+ * ⚠️ **Non è un delete.** Le assegnazioni passate restano (sono le ore che
+ * vanno al commercialista): la RPC segna l'uscita, libera i turni futuri e avvisa
+ * il professionista. Il titolare non esce dall'azienda (si passa la titolarità):
+ * per lui si può solo togliere una sede alla volta.
+ */
+export async function removeStaffMember(args: {
+  memberId: string;
+  venueId?: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc("remove_member", {
+    p_member: args.memberId,
+    ...(args.venueId ? { p_venue: args.venueId } : {}),
+  });
   if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Lato professionista
+// ---------------------------------------------------------------------------
+
+/** Una sede in cui lavoro, con la riga di organico (`venue_members.id`). */
+export type MyEmployer = Pick<
+  StaffMember,
+  "id" | "venue_id" | "person_id" | "employment_type" | "link_status" | "created_at"
+> & {
+  workspace_id: string;
+  venue: {
+    id: string;
+    name: string;
+    city: string | null;
+    logo_url: string | null;
+    workspace_id: string;
+  } | null;
+};
+
+type RawEmployer = {
+  id: string;
+  venue_id: string;
+  member_id: string;
+  workspace_id: string;
+  employment_type: EmploymentType;
+  left_at: string | null;
+  created_at: string;
+  workspace_members: { status: StaffPerson["status"] } | null;
+  venue: MyEmployer["venue"];
+};
+
+/** Le sedi in cui sono in organico **adesso** (appartenenza attiva). */
+export async function getMyEmployers(userId: string): Promise<MyEmployer[]> {
+  const select: string =
+    "id, venue_id, member_id, workspace_id, employment_type, left_at, created_at, " +
+    "workspace_members!venue_members_member_id_workspace_id_fkey!inner(status, user_id), " +
+    "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, logo_url, workspace_id)";
+  const { data, error } = await supabase
+    .from("venue_members")
+    .select(select)
+    .eq("workspace_members.user_id", userId)
+    .is("left_at", null)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  const rows = (data as unknown as RawEmployer[] | null) ?? [];
+  return rows
+    .filter((r) => r.workspace_members?.status === "active")
+    .map((r) => ({
+      id: r.id,
+      venue_id: r.venue_id,
+      person_id: r.member_id,
+      workspace_id: r.workspace_id,
+      employment_type: r.employment_type,
+      link_status: "active" as const,
+      created_at: r.created_at,
+      venue: r.venue,
+    }));
+}
+
+/**
+ * Lascio una sede (`leave`). Prende l'id della **riga di organico**, come il
+ * resto dell'app lato professionista, e da lì ricava persona e sede.
+ */
+export async function leaveVenue(venueMemberId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("venue_members")
+    .select("member_id, venue_id")
+    .eq("id", venueMemberId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("not_allowed");
+
+  const { error: leaveError } = await supabase.rpc("leave", {
+    p_member: data.member_id,
+    p_venue: data.venue_id,
+  });
+  if (leaveError) throw new Error(leaveError.message);
 }

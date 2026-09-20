@@ -1,31 +1,30 @@
-// Edge Function `invite-staff` — manda l'email d'invito a una persona che il
-// titolare ha messo in organico ma che **non ha ancora un account**.
+// Edge Function `invite-staff` — manda l'email d'invito a una persona che
+// l'azienda ha preparato ma che **non ha ancora un account**.
 //
-// Il ramo "persona già registrata" non passa di qui: quello resta
-// `find_waiter_by_email` + invito in-app. Qui c'è il caso normale — il titolare
-// ha l'email di Marco, Marco non sa nemmeno che KlokShift esiste.
+// Il body porta **solo** `{ memberId }`, mai un indirizzo: per spedire a qualcuno
+// bisogna prima averlo scritto sulla sua scheda (`add_member`), dove l'unique
+// (workspace, email) e il contatore di invii lo tengono sotto controllo. Senza
+// questo vincolo la function sarebbe un relay SMTP aperto a chiunque abbia un
+// account. Chi sei lo dice il JWT, mai il body.
 //
-// I due inviti non funzionano allo stesso modo, ed è voluto:
+// Il canale lo decide il DB (`claim_invite_send`), non il client:
 //
-//   organico (`personId`)  → email con un link alla vetrina. La persona si
+//   dipendente (authority `none`) → email con un link alla vetrina. La persona si
 //                            registra da sé, e l'account resta suo: è il suo
-//                            profilo di carriera, fra più aziende.
-//   collaboratore (`team`) → email con un token monouso verso `#/invito` sulla
-//                            dashboard, dove l'account nasce già `manager` nel
-//                            momento in cui sceglie la password (vedi
-//                            `accept-invite`). Un collaboratore è un posto dentro
-//                            l'azienda del titolare — non può possedere sedi — e
-//                            la scelta del ruolo era il punto in cui l'invito si
-//                            rompeva in silenzio.
+//                            profilo di carriera, fra più aziende. L'aggancio alla
+//                            scheda lo fa il trigger su auth.users quando l'email
+//                            risulta confermata.
+//   collaboratore           → email con un token monouso verso `#/invito` sulla
+//                            dashboard, dove l'account **nasce** nel momento in cui
+//                            sceglie la password (vedi `accept-invite`).
 //
-// In entrambi i casi il body porta **solo** un id di riga, mai un indirizzo: per
-// spedire a qualcuno il titolare deve prima averlo scritto su una propria
-// scheda, dove l'unique (owner_id, email) e `invite_count` lo tengono sotto
-// controllo. Senza questo vincolo la function sarebbe un relay SMTP aperto a
-// chiunque abbia un account.
+// ⚠️ Il token lo genera questa function e nel DB entra solo il suo hash. Chi
+// invita non lo conosce mai: se potesse sceglierlo, accetterebbe l'invito al
+// posto del destinatario creando un account con l'email di un altro, già
+// confermata. Per questo `claim_invite_send` è riservata alla service role.
 //
-// Controlli, rate limit e incremento stanno tutti nelle RPC `claim_*`, in una
-// transazione con `for update`: due tap sul bottone non producono due email.
+// Controlli, rate limit e incremento stanno tutti nella RPC, in una transazione
+// con `for update`: due tap sul bottone non producono due email.
 //
 // Deploy (richiede JWT, quindi NIENTE --no-verify-jwt):
 //   supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg
@@ -81,6 +80,7 @@ const STATUS: Record<string, number> = {
   already_linked: 403,
   no_email: 403,
   rate_limited: 429,
+  token_required: 500,
 };
 
 /** Il segreto che finisce nell'email: 32 byte casuali, in esadecimale. */
@@ -93,7 +93,7 @@ function newInviteToken(): string {
 /**
  * Quello che finisce nel database.
  *
- * ⚠️ Nel database va **solo** l'hash: chi legge `venue_access` non deve poter
+ * ⚠️ Nel database va **solo** l'hash: chi legge `member_invites` non deve poter
  * entrare nell'account di nessuno. Il token in chiaro esiste dentro questa
  * invocazione e dentro l'email, e non va mai loggato.
  */
@@ -125,32 +125,28 @@ function escapeHtml(s: string): string {
 
 /** "Osteria del Borgo", "A e B", "A, B e C" — mai una lista con la virgola finale. */
 function joinIt(names: string[]): string {
-  if (names.length === 0) return "un locale";
+  if (names.length === 0) return "una sede";
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
 }
 
+/** Il risultato di `claim_invite_send`. */
 type Payload = {
+  channel: "email" | "token";
   email: string;
-  full_name: string;
-  owner_name: string;
+  display_name: string;
+  workspace_name: string;
   venue_names: string[];
 };
 
-/** Il payload di `claim_venue_access_send`: una sede sola, nessun nome. */
-type TeamPayload = {
-  email: string;
-  owner_name: string;
-  venue_name: string;
-};
-
 function buildEmail(p: Payload) {
-  const venue = joinIt(p.venue_names);
+  // Le sedi in cui lavorerà; se non ce n'è ancora nessuna, l'azienda.
+  const venue = p.venue_names.length > 0 ? joinIt(p.venue_names) : p.workspace_name;
   // ⚠️ `invito.html` e non `/invito/`: la vetrina è statica su Pages, senza
   // fallback SPA, e l'entry sta alla radice (vedi `web-site/vite.config.mts`).
   // La cartella non esiste, e il link dell'invito finirebbe su un 404.
   const link = `${SITE_URL}/invito.html`;
-  const firstName = p.full_name.trim().split(/\s+/)[0] || "ciao";
+  const firstName = p.display_name.trim().split(/\s+/)[0] || "ciao";
 
   const subject = `${venue} ti ha aggiunto al suo organico su KlokShift`;
 
@@ -159,13 +155,13 @@ function buildEmail(p: Payload) {
   const text = [
     `Ciao ${firstName},`,
     ``,
-    `${p.owner_name} ti ha aggiunto all'organico di ${venue} su KlokShift,`,
-    `l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.`,
+    `${p.workspace_name} ti ha aggiunto all'organico di ${venue} su KlokShift,`,
+    `l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.`,
     ``,
     `Scarica l'app: ${link}`,
     ``,
     `Registrati con questo indirizzo (${p.email}): è quello che ti collega alla`,
-    `scheda che ${p.owner_name} ha già preparato.`,
+    `scheda che ${p.workspace_name} ha già preparato.`,
     ``,
     `---`,
     `Ricevi questa email perché ${venue} ha inserito il tuo indirizzo nel proprio`,
@@ -176,7 +172,7 @@ function buildEmail(p: Payload) {
 
   const e = {
     venue: escapeHtml(venue),
-    owner: escapeHtml(p.owner_name),
+    owner: escapeHtml(p.workspace_name),
     name: escapeHtml(firstName),
     email: escapeHtml(p.email),
   };
@@ -188,7 +184,7 @@ function buildEmail(p: Payload) {
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
   <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno aggiunto a un organico</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su KlokShift — l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su KlokShift — l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Scarica l'app</a>
@@ -221,14 +217,14 @@ function buildEmail(p: Payload) {
  * invocazione: metterlo qui dentro vorrebbe dire ricostruirlo, e un token
  * ricostruito a mano non è più un segreto.
  */
-function buildTeamEmail(p: TeamPayload, link: string) {
-  const subject = `${p.owner_name} ti ha dato accesso a ${p.venue_name} su KlokShift`;
+function buildTeamEmail(p: Payload, link: string) {
+  const subject = `${p.workspace_name} ti ha dato accesso alla gestione su KlokShift`;
 
   const text = [
     `Ciao,`,
     ``,
-    `${p.owner_name} ti ha dato accesso alla gestione di ${p.venue_name} su`,
-    `KlokShift: da lì organizzi i turni e segui l'organico della sede.`,
+    `${p.workspace_name} ti ha dato accesso alla gestione su KlokShift: da lì`,
+    `organizzi i turni e segui l'organico.`,
     ``,
     `Apri questo link e scegli una password: l'account lo creiamo in quel`,
     `momento, a nome di questo indirizzo (${p.email}).`,
@@ -236,20 +232,19 @@ function buildTeamEmail(p: TeamPayload, link: string) {
     `${link}`,
     ``,
     `Il link vale ${INVITE_TTL_DAYS} giorni ed è usabile una volta sola. Se è scaduto, chiedi a`,
-    `${p.owner_name} di rimandartelo.`,
+    `${p.workspace_name} di rimandartelo.`,
     ``,
     `Con quella password entri sia da qui che dall'app KlokShift.`,
     ``,
     `---`,
-    `Ricevi questa email perché ${p.owner_name} ti ha aggiunto ai collaboratori di`,
-    `${p.venue_name} su KlokShift. Se non ti riguarda, ignorala: finché non apri il`,
+    `Ricevi questa email perché ${p.workspace_name} ti ha aggiunto ai collaboratori su`,
+    `KlokShift. Se non ti riguarda, ignorala: finché non apri il`,
     `link e non scegli una password non viene creato nessun account.`,
     `Privacy: ${SITE_URL}/privacy.html`,
   ].join("\n");
 
   const e = {
-    venue: escapeHtml(p.venue_name),
-    owner: escapeHtml(p.owner_name),
+    owner: escapeHtml(p.workspace_name),
     email: escapeHtml(p.email),
   };
 
@@ -259,8 +254,8 @@ function buildTeamEmail(p: TeamPayload, link: string) {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;">
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
-  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso a una sede</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione di <strong>${e.venue}</strong> su KlokShift — da lì organizzi i turni e segui l'organico della sede.</p>
+  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso alla gestione</h1>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione su KlokShift — da lì organizzi i turni e segui l'organico.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Attiva il tuo accesso</a>
@@ -273,7 +268,7 @@ function buildTeamEmail(p: TeamPayload, link: string) {
     </td></tr>
   </table>
   <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">
-    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori di ${e.venue} su KlokShift. Se non ti riguarda, ignorala: finché non apri il link e non scegli una password non viene creato nessun account.<br>
+    Ricevi questa email perché ${e.owner} ti ha aggiunto ai collaboratori su KlokShift. Se non ti riguarda, ignorala: finché non apri il link e non scegli una password non viene creato nessun account.<br>
     <a href="${SITE_URL}/privacy.html" style="color:#8A8070;">Privacy</a>
   </p>
 </td></tr></table>
@@ -296,55 +291,40 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "invalid token" }, 401);
 
-  // Due inviti, una function: il collaboratore (`kind: "team"`) e la persona in
-  // organico (tutto il resto, incluse le versioni dell'app che il campo `kind`
-  // non lo mandano). Stessa autenticazione, stessi rate limit, stesso SMTP —
-  // cambia il destinatario, il testo e dove porta il link.
-  let body: { personId?: string; accessId?: string; kind?: string } = {};
+  let body: { memberId?: string } = {};
   try {
     body = (await req.json()) ?? {};
   } catch {
     return json({ error: "invalid json" }, 400);
   }
+  if (!body.memberId) return json({ error: "missing memberId" }, 400);
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  const isTeam = body.kind === "team";
-  const rowId = isTeam ? body.accessId : body.personId;
-  if (!rowId) return json({ error: isTeam ? "missing accessId" : "missing personId" }, 400);
-
   // Il token si genera **prima** del claim, così la RPC lo salva nella stessa
   // transazione dei contatori: o l'invito è registrato per intero, o non è
-  // partito. Un token scritto dopo lascerebbe una finestra in cui il tentativo è
-  // consumato e il link non apre niente.
-  const token = isTeam ? newInviteToken() : "";
+  // partito. Per il dipendente la RPC lo ignora (nessun token nel suo invito).
+  const token = newInviteToken();
   const expires = new Date(Date.now() + INVITE_TTL_DAYS * 86400_000).toISOString();
 
-  // Proprietà, stato della riga, rate limit e incremento: tutto qui dentro.
-  const { data, error } = isTeam
-    ? await admin.rpc("claim_venue_access_send", {
-        p_access: rowId,
-        p_owner: userData.user.id,
-        p_token_hash: await sha256hex(token),
-        p_expires: expires,
-      })
-    : await admin.rpc("claim_staff_invite_send", {
-        p_person: rowId,
-        p_owner: userData.user.id,
-      });
+  // Autorizzazione, stato della scheda, canale, rate limit e incremento: tutto qui.
+  const { data, error } = await admin.rpc("claim_invite_send", {
+    p_member: body.memberId,
+    p_caller: userData.user.id,
+    p_token_hash: await sha256hex(token),
+    p_expires: expires,
+  });
   if (error) return claimFailed(error.message);
 
-  const payload = (data as (Payload | TeamPayload)[] | null)?.[0];
+  const payload = (data as Payload[] | null)?.[0];
   if (!payload) return json({ error: "not_owner" }, 403);
 
   // ⚠️ Il token in chiaro vive qui e nell'email, e basta. Non va loggato: chi
   // legge i log della function entrerebbe nell'account di un collaboratore.
-  const mail = isTeam
-    ? buildTeamEmail(
-        payload as TeamPayload,
-        `${DASHBOARD_URL}/#/invito?t=${token}`
-      )
-    : buildEmail(payload as Payload);
+  const mail =
+    payload.channel === "token"
+      ? buildTeamEmail(payload, `${DASHBOARD_URL}/#/invito?t=${token}`)
+      : buildEmail(payload);
   const client = new SMTPClient({
     connection: {
       hostname: SMTP_HOST,

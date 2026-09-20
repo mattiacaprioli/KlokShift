@@ -2,75 +2,51 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import {
   addTeamMember,
-  addTeamVenue,
-  getMyVenueAccess,
-  getPersonAccess,
+  getMemberAccess,
   getTeam,
-  promoteStaffPerson,
   revokeTeamAccess,
   sendTeamInvite,
-  updateTeamPermissions,
+  setTeamAccess,
   type AddTeamMemberInput,
-  type TeamMember,
   type TeamPermissions,
 } from "./api";
+import type { VenueScope } from "@/features/workspace/types";
 
-/** I collaboratori del titolare. Lista vuota per chi non ne ha. */
-export function useTeam(ownerId: string) {
+/** I collaboratori dell'azienda. Lista vuota per chi non ne ha. */
+export function useTeam(workspaceId: string) {
   return useQuery({
-    queryKey: qk.team.byOwner(ownerId),
-    queryFn: () => getTeam(ownerId),
-    enabled: !!ownerId,
+    queryKey: qk.team.byWorkspace(workspaceId),
+    queryFn: () => getTeam(workspaceId),
+    enabled: !!workspaceId,
   });
 }
 
-/**
- * I **miei** accessi delegati: è ciò che dice a `OwnerVenuesProvider` cosa posso
- * fare su quali sedi. Vuoto per il titolare.
- */
-export function useMyVenueAccess(userId: string) {
+/** I permessi e l'ambito attuali di un membro: da dove parte la promozione. */
+export function useMemberAccess(memberId: string | undefined) {
   return useQuery({
-    queryKey: qk.team.mine,
-    queryFn: () => getMyVenueAccess(userId),
-    enabled: !!userId,
+    queryKey: qk.team.member(memberId ?? ""),
+    queryFn: () => getMemberAccess(memberId as string),
+    enabled: !!memberId,
   });
 }
 
 /**
  * Invalidazione condivisa da tutte le mutation dei collaboratori.
  *
- * Due chiavi e non una: `team.all` è la lista del titolare, `venues.mine` è
- * quella delle sedi — che per chi riceve o perde un accesso cambia. La seconda
- * riguarda un altro dispositivo, quindi non fa nulla qui e non costa niente:
- * serve al caso in cui il titolare modifichi i **propri** accessi.
+ * `team.all` è la lista del titolare, `context.mine` cambia per chi riceve,
+ * perde o vede cambiare i propri permessi di gestione, `venues.mine` perché le
+ * sedi gestite dipendono dal contesto.
  */
 function useTeamInvalidation() {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: qk.team.all });
+    qc.invalidateQueries({ queryKey: qk.context.mine });
     qc.invalidateQueries({ queryKey: qk.venues.mine });
+    // L'ambito «selezionate» può aver messo (o tolto) il collaboratore
+    // dall'organico di una sede: vedi il commento su `addTeamMember`.
+    qc.invalidateQueries({ queryKey: qk.staff.all });
   };
-}
-
-/** Gli accessi che il titolare ha dato a una persona dell'organico (F3). */
-export function usePersonAccess(
-  ownerId: string | undefined,
-  userId: string | null | undefined
-) {
-  return useQuery({
-    queryKey: qk.team.person(ownerId ?? "", userId ?? ""),
-    queryFn: () => getPersonAccess(ownerId as string, userId as string),
-    enabled: !!ownerId && !!userId,
-  });
-}
-
-/** Promuove (o ripromuove) un membro dell'organico su una sede. */
-export function usePromoteStaffPerson() {
-  const invalidate = useTeamInvalidation();
-  return useMutation({
-    mutationFn: promoteStaffPerson,
-    onSuccess: invalidate,
-  });
 }
 
 export function useAddTeamMember() {
@@ -81,25 +57,16 @@ export function useAddTeamMember() {
   });
 }
 
-export function useAddTeamVenue(ownerId: string) {
+/** Cambia permessi e ambito di un collaboratore, o promuove un dipendente. */
+export function useSetTeamAccess() {
   const invalidate = useTeamInvalidation();
   return useMutation({
     mutationFn: (vars: {
-      member: TeamMember;
-      venueId: string;
+      memberId: string;
       permissions: TeamPermissions;
-    }) => addTeamVenue(ownerId, vars.member, vars.venueId, vars.permissions),
-    onSuccess: invalidate,
-  });
-}
-
-export function useUpdateTeamPermissions() {
-  const invalidate = useTeamInvalidation();
-  return useMutation({
-    mutationFn: (vars: {
-      accessId: string;
-      permissions: Partial<TeamPermissions>;
-    }) => updateTeamPermissions(vars.accessId, vars.permissions),
+      scope: VenueScope;
+      venueIds: string[];
+    }) => setTeamAccess(vars),
     onSuccess: invalidate,
   });
 }
@@ -107,16 +74,16 @@ export function useUpdateTeamPermissions() {
 export function useRevokeTeamAccess() {
   const invalidate = useTeamInvalidation();
   return useMutation({
-    mutationFn: (accessIds: string[]) => revokeTeamAccess(accessIds),
+    mutationFn: (memberId: string) => revokeTeamAccess(memberId),
     onSuccess: invalidate,
   });
 }
 
-/** Rimanda l'email d'invito. Invalida per aggiornare `invited_at`. */
+/** Rimanda il link d'invito. Invalida per aggiornare lo stato dell'invito. */
 export function useSendTeamInvite() {
   const invalidate = useTeamInvalidation();
   return useMutation({
-    mutationFn: (accessId: string) => sendTeamInvite(accessId),
+    mutationFn: (memberId: string) => sendTeamInvite(memberId),
     onSuccess: invalidate,
   });
 }

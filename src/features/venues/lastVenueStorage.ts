@@ -25,14 +25,14 @@ import * as SecureStore from "expo-secure-store";
  * avvio dopo l'aggiornamento il form turno propone la sede che l'utente aveva
  * attiva prima del refactor, invece di ripartire dalla più vecchia.
  */
-const key = (ownerId: string) => `activeVenue.${ownerId}`;
+const key = (workspaceId: string) => `activeVenue.${workspaceId}`;
 
 export async function loadLastVenueId(
-  ownerId: string
+  workspaceId: string
 ): Promise<string | null> {
-  if (!ownerId) return null;
+  if (!workspaceId) return null;
   try {
-    return await SecureStore.getItemAsync(key(ownerId));
+    return await SecureStore.getItemAsync(key(workspaceId));
   } catch {
     // Una preferenza illeggibile non è un errore da mostrare: si riparte dalla
     // sede più vecchia, che è il default comunque.
@@ -41,13 +41,13 @@ export async function loadLastVenueId(
 }
 
 export async function saveLastVenueId(
-  ownerId: string,
+  workspaceId: string,
   venueId: string | null
 ): Promise<void> {
-  if (!ownerId) return;
+  if (!workspaceId) return;
   try {
-    if (venueId === null) await SecureStore.deleteItemAsync(key(ownerId));
-    else await SecureStore.setItemAsync(key(ownerId), venueId);
+    if (venueId === null) await SecureStore.deleteItemAsync(key(workspaceId));
+    else await SecureStore.setItemAsync(key(workspaceId), venueId);
   } catch {
     // Non riuscire a ricordare la sede è un fastidio al prossimo avvio, non un
     // motivo per far fallire il salvataggio che l'utente ha appena fatto.

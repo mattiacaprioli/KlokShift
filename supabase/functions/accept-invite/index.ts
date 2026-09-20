@@ -13,14 +13,19 @@
 // chi abbandonava a metà. Creando l'account al submit spariscono entrambe:
 // prima di quel momento non esiste nessun `auth.users`.
 //
+// Il ruolo non c'è più fra i metadati: il collaboratore è un membro dell'azienda
+// (`authority: collaborator`), non un account «manager». Crearlo con l'email già
+// confermata fa scattare da sola l'aggancio alla sua scheda (trigger su
+// auth.users); `consume_invite` poi la rende definitiva e brucia il token.
+//
 // ⚠️ **Questa function è pubblica** (`--no-verify-jwt`): chi la chiama un account
 // non ce l'ha ancora, è il motivo per cui esiste. Cosa la tiene stretta:
 //   - il body non contiene **mai** un indirizzo. Il token è l'unico input che
 //     seleziona una riga, e l'email si legge da lì — stessa regola di
 //     `invite-staff`, che senza di essa sarebbe un relay SMTP aperto;
 //   - il token è di 32 byte casuali e nel database c'è solo il suo SHA-256;
-//   - l'invito deve essere `pending`, non scaduto, non già speso: lo decidono
-//     `claim_venue_access_invite` e `consume_venue_access_invite`, in SQL;
+//   - l'invito deve essere valido, non scaduto, non già speso: lo decidono
+//     `peek_invite` e `consume_invite`, in SQL;
 //   - la password è rivalidata qui, non ci si fida del form.
 //
 // Deploy (NIENTE JWT, a differenza di `invite-staff` e `delete-account`):
@@ -55,6 +60,7 @@ const STATUS: Record<string, number> = {
   invite_used: 409,
   already_linked: 409,
   no_email: 409,
+  account_not_linked: 409,
 };
 
 function claimFailed(message: string) {
@@ -84,7 +90,7 @@ async function sha256hex(value: string): Promise<string> {
     .join("");
 }
 
-type Invite = { email: string; owner_name: string; venue_name: string };
+type Invite = { email: string; display_name: string; workspace_name: string };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -103,9 +109,7 @@ Deno.serve(async (req) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const hash = await sha256hex(token);
 
-  const { data, error } = await admin.rpc("claim_venue_access_invite", {
-    p_hash: hash,
-  });
+  const { data, error } = await admin.rpc("peek_invite", { p_hash: hash });
   if (error) return claimFailed(error.message);
 
   const invite = (data as Invite[] | null)?.[0];
@@ -118,8 +122,8 @@ Deno.serve(async (req) => {
   if (body.op === "peek") {
     return json({
       email: invite.email,
-      ownerName: invite.owner_name,
-      venueName: invite.venue_name,
+      displayName: invite.display_name,
+      workspaceName: invite.workspace_name,
     });
   }
 
@@ -132,40 +136,34 @@ Deno.serve(async (req) => {
 
   // ⚠️ L'ordine: prima l'account, poi il token bruciato. Al contrario, una
   // creazione fallita si porterebbe via il token e lascerebbe la persona fuori
-  // senza modo di rientrare. Così, nel caso peggiore (il consume fallisce dopo
-  // la creazione) il token resta vivo ma l'account esiste: il secondo tentativo
-  // cade su `email_taken`, che la pagina traduce in «accedi». Nessun vicolo cieco.
-  //
-  // `role: "manager"` è il punto di tutta la feature: `ensureProfile` legge il
-  // ruolo da `user_metadata` e `link_venue_access_for_user` aggancia solo i
-  // manager. Prima quella scelta la faceva l'invitato, in un menu, e sbagliarla
-  // lasciava l'invito muto per sempre.
+  // senza modo di rientrare. Così, nel caso peggiore (il consume fallisce dopo la
+  // creazione) l'account esiste ed è già agganciato alla scheda come `invited`:
+  // basta accedere e accettare dentro l'app. Nessun vicolo cieco.
   //
   // `email_confirm: true` non salta la conferma: la registra. Il token è arrivato
   // solo in quella casella, quindi il possesso è già dimostrato — ed è la stessa
-  // prova che dava il link GoTrue.
-  const { error: createError } = await admin.auth.admin.createUser({
+  // prova che dava il link GoTrue. È anche ciò che fa scattare l'aggancio.
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: invite.email,
     password,
     email_confirm: true,
-    user_metadata: { role: "manager", full_name: fullName || null },
+    user_metadata: { full_name: fullName || invite.display_name || null },
   });
 
-  if (createError) {
-    const message = createError.message.toLowerCase();
-    // Si è registrato da sé fra l'invito e adesso. L'accesso non è perso:
-    // `claim_staff_invites()` lo aggancia al primo `SIGNED_IN`.
+  if (createError || !created?.user) {
+    const message = (createError?.message ?? "").toLowerCase();
+    // Si è registrato da sé fra l'invito e adesso. L'accesso non è perso: la
+    // scheda si aggancia da sola alla conferma, o con `claim_invites()` al login.
     if (message.includes("already") || message.includes("registered")) {
       return json({ error: "email_taken" }, 409);
     }
-    return json({ error: "create_failed", detail: createError.message }, 502);
+    return json({ error: "create_failed", detail: createError?.message }, 502);
   }
 
-  // Il token è speso. Se questa fallisce non si torna indietro: l'account c'è, e
-  // rispondere con un errore su un'operazione riuscita manderebbe la persona a
-  // ritentare per niente. Il token resterebbe spendibile una seconda volta, ma
-  // la seconda volta trova l'email già presa e si ferma da sola.
-  await admin.rpc("consume_venue_access_invite", { p_hash: hash });
+  // Rende definitivo l'ingresso e brucia il token. Se fallisce non si torna
+  // indietro: l'account c'è, rispondere con un errore su un'operazione riuscita
+  // manderebbe la persona a ritentare per niente.
+  await admin.rpc("consume_invite", { p_hash: hash, p_user: created.user.id });
 
   return json({ ok: true, email: invite.email });
 });

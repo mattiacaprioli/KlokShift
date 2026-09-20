@@ -37,16 +37,90 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message:
       "Questo turno è già finito: data e orari li cambia solo chi ha il permesso Ore, e mai chi ci ha lavorato.",
   },
+  // ⚠️ I codici delle RPC (`raise exception '<codice>'`) vanno **prima** del
+  // generico sui permessi: sono ragioni precise, e «Non hai i permessi» le
+  // nasconderebbe. Sono tutti in `supabase/migrations/` (member_rpcs, shift_rpcs,
+  // workspace_rpcs); il messaggio arriva così com'è da PostgREST.
   {
-    // `guard_staff_link_consent` (20260919100100): anche qui prima del generico
-    // sui permessi, perché non è una questione di permessi — è che quella
-    // persona non ha detto sì.
-    match: ["staff_link_needs_consent"],
-    message:
-      "Questa persona deve accettare l'invito prima di entrare in organico: mandaglielo dalla sua scheda.",
+    match: ["owner_only"],
+    message: "Solo il titolare può farlo.",
   },
   {
-    match: ["row-level security", "permission denied", "insufficient privilege"],
+    match: ["use_transfer_ownership"],
+    message: "La titolarità non si modifica da qui: usa «Cedi la titolarità».",
+  },
+  {
+    match: ["owner_cannot_be_removed", "owner_cannot_leave"],
+    message:
+      "Il titolare non può uscire dall'azienda: prima cedi la titolarità a un'altra persona.",
+  },
+  {
+    match: ["workspace_needs_an_owner"],
+    message: "Un'azienda deve avere almeno un titolare.",
+  },
+  {
+    match: ["venue_not_in_workspace"],
+    message: "Quella sede non fa parte di questa azienda.",
+  },
+  {
+    match: ["venues_required"],
+    message: "Scegli almeno una sede.",
+  },
+  {
+    match: ["email_required"],
+    message: "Per invitare un collaboratore serve la sua email.",
+  },
+  {
+    match: ["needs_account"],
+    message:
+      "Questa persona non ha ancora un account: può ricevere un accesso da collaboratore solo dopo essersi registrata.",
+  },
+  {
+    match: ["email_locked"],
+    message: "L'email non si cambia una volta che la persona ha un account.",
+  },
+  {
+    match: ["member_left"],
+    message: "Questa persona ha lasciato l'azienda: riaggiungila prima.",
+  },
+  {
+    match: ["role_not_in_venue"],
+    message: "Quella mansione non appartiene a questa sede.",
+  },
+  {
+    match: ["not_in_roster"],
+    message: "Questa persona non è in organico in questa sede.",
+  },
+  {
+    match: ["already_assigned"],
+    message: "Questa persona è già su questo turno.",
+  },
+  {
+    match: ["shift_cancelled"],
+    message: "Questo turno è stato annullato.",
+  },
+  {
+    match: ["shift_finished"],
+    message: "Questo turno è già finito.",
+  },
+  {
+    match: ["invalid_status"],
+    message: "Stato non valido per questa azione.",
+  },
+  {
+    match: ["title_required", "name_required"],
+    message: "Manca il nome.",
+  },
+  {
+    match: ["workspace_limit"],
+    message: "Hai raggiunto il numero massimo di aziende.",
+  },
+  {
+    match: ["invalid_target"],
+    message: "Scegli una persona attiva, già registrata.",
+  },
+  {
+    match: ["row-level security", "permission denied", "insufficient privilege", "not_allowed"],
     message: "Non hai i permessi per farlo.",
   },
   {
@@ -69,7 +143,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "L'app non è allineata al server. Aggiornala e riprova.",
   },
   {
-    match: ["jwt expired", "invalid token", "not authenticated"],
+    match: ["jwt expired", "invalid token", "not authenticated", "not_authenticated"],
     message: "Sessione scaduta. Accedi di nuovo.",
   },
   {

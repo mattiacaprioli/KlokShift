@@ -39,11 +39,11 @@ export default function ManagerAbsencesScreen() {
     [rows]
   );
   const nameByPerson = useMemo(
-    () => new Map((rows ?? []).map((a) => [a.person_id, a.person?.full_name])),
+    () => new Map((rows ?? []).map((a) => [a.member_id, a.person?.full_name])),
     [rows]
   );
-  const nameFor = (a: { person_id: string }) =>
-    nameByPerson.get(a.person_id) ?? "Persona";
+  const nameFor = (a: { member_id: string }) =>
+    nameByPerson.get(a.member_id) ?? "Persona";
 
   return (
     <ScrollView

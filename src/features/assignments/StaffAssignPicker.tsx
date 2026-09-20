@@ -12,7 +12,8 @@ import type { ShiftTimes } from "@/lib/format";
 import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceCellLabel } from "@/features/absences/labels";
-import { staffRoleNames, type StaffMemberWithWaiter } from "@/features/staff/api";
+import { staffRoleNames } from "@/features/staff/api";
+import type { StaffMemberWithWaiter } from "@/features/staff/types";
 import { useSelfStaff } from "@/features/staff/self";
 import {
   ASSIGNMENT_STATUS_LABEL,
@@ -87,7 +88,7 @@ export function StaffAssignPicker({
             const absence = shiftTimes
               ? absenceForShift(
                   shiftTimes,
-                  absences.filter((a) => a.person_id === m.person_id)
+                  absences.filter((a) => a.member_id === m.person_id)
                 )
               : null;
 

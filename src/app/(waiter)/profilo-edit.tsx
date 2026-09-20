@@ -55,8 +55,22 @@ export default function WaiterProfileEditScreen() {
     },
   });
 
-  const watchedName = useWatch({ control, name: "full_name" });
-  const bioLen = (useWatch({ control, name: "bio" }) ?? "").length;
+  // ⚠️ `defaultValue`: `useWatch` si iscrive in un effect, quindi con il
+  // profilo già in cache il `reset()` qui sotto parte **prima** e la sua
+  // notifica va persa — nome e contatore bio resterebbero vuoti fino al primo
+  // tocco sul campo.
+  const watchedName = useWatch({
+    control,
+    name: "full_name",
+    defaultValue: profileQuery.data?.full_name ?? "",
+  });
+  const bioLen = (
+    useWatch({
+      control,
+      name: "bio",
+      defaultValue: profileQuery.data?.bio ?? "",
+    }) ?? ""
+  ).length;
 
   const data = profileQuery.data;
   useEffect(() => {

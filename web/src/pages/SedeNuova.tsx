@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { canCreateVenue } from "@/features/venues/gate";
 import { VenueFormCard } from "../venues/VenueFormCard";
@@ -13,18 +12,17 @@ import { PageHeader, Placeholder } from "../ui/primitives";
  * dopo il salvataggio: la sede nuova entra in `venues` e compare da sé nel
  * planning, nell'organico e nel picker del form turno.
  *
- * `plan` si legge da `profile` invece di `usePlan()` perché quell'hook importa
- * `expo-router`, che qui non esiste.
+ * `plan` si legge dal provider invece che da `usePlan()` perché quell'hook
+ * importa `expo-router`, che qui non esiste. È il piano dell'**azienda**.
  */
 export function SedeNuovaPage() {
-  const { profile } = useAuth();
-  const { venues, isOwner } = useOwnerVenues();
+  const { venues, isOwner, plan } = useOwnerVenues();
   const navigate = useNavigate();
 
   // Aprire una sede è del titolare e non si delega: `VenuesCard` già non mostra
   // il pulsante, ma questa pagina ha un indirizzo e ci si arriva anche da lì. La
-  // difesa vera è il trigger `venues_owner_not_delegate`, che rifiuta l'insert;
-  // qui si evita di far compilare un modulo destinato a un errore.
+  // difesa vera è la RPC `create_venue`, che rifiuta chi non è titolare; qui si
+  // evita di far compilare un modulo destinato a un errore.
   if (!isOwner) {
     return (
       <>
@@ -39,7 +37,7 @@ export function SedeNuovaPage() {
 
   const gate = canCreateVenue({
     venueCount: venues.length,
-    plan: profile?.plan === "free" ? "free" : "pro",
+    plan,
   });
 
   if (!gate.allowed) {

@@ -69,9 +69,9 @@ export type CoverageEmbeds = {
      * Facoltativo: la copertura non lo guarda. Lo porta `getOwnerShifts` perché
      * l'agenda della sede deve poter riconoscere i turni di **chi guarda** —
      * chi gestisce può stare in organico — e un'altra query per saperlo
-     * costerebbe più del campo.
+     * costerebbe più del campo. È la riga di organico (`venue_members.id`).
      */
-    staff_member_id?: string | null;
+    venue_member_id?: string | null;
   }[];
 };
 
@@ -103,7 +103,6 @@ export function shiftCoverage(shift: CoverageEmbeds): Coverage {
 
 /** Turno visto dai conteggi: i posti pubblicati più le relazioni della copertura. */
 export type CountableShift = CoverageEmbeds & {
-  kind: Enums<"shift_kind">;
   positions_filled: number;
   positions_total: number;
 };
@@ -147,7 +146,7 @@ export function shiftCounts(shift: CountableShift): {
   short: boolean;
 } {
   const coverage = shiftCoverage(shift);
-  const byRole = shift.kind === "internal" && coverage.required > 0;
+  const byRole = coverage.required > 0;
   const filled = byRole ? coverage.covered : shift.positions_filled;
   const total = byRole ? coverage.required : shift.positions_total;
   return { filled, total, short: filled < total };

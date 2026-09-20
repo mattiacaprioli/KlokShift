@@ -49,7 +49,7 @@ function errorMessage(code: string | undefined): string {
   );
 }
 
-type Invite = { email: string; ownerName: string; venueName: string };
+type Invite = { email: string; displayName: string; workspaceName: string };
 
 /**
  * Uno stato solo e non tre booleani: «sto verificando», «ecco l'invito» e «questo
@@ -110,11 +110,14 @@ export function InvitoPage() {
     void (async () => {
       const res = await callAcceptInvite<Invite>({ op: "peek", token });
       if (!active) return;
-      setState(
-        "code" in res
-          ? { status: "dead", message: errorMessage(res.code) }
-          : { status: "ok", invite: res.data }
-      );
+      if ("code" in res) {
+        setState({ status: "dead", message: errorMessage(res.code) });
+        return;
+      }
+      // Il nome l'ha già scritto chi invita: si propone, e resta modificabile —
+      // è la persona a sapere come si chiama.
+      setFullName((prev) => prev || res.data.displayName || "");
+      setState({ status: "ok", invite: res.data });
     })();
     return () => {
       active = false;
@@ -195,7 +198,7 @@ export function InvitoPage() {
   return (
     <AuthShell
       title="Scegli la tua password"
-      subtitle={`${invite.ownerName} ti ha dato accesso a ${invite.venueName}.`}
+      subtitle={`${invite.workspaceName} ti ha dato accesso alla gestione.`}
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">

@@ -26,8 +26,9 @@ export const CHANGE_REQUEST_KIND_LABEL: Record<ChangeRequestKind, string> = {
  *
  * ⚠️ Gli errori delle RPC sono frasi scritte per essere lette («Il turno è già
  * concluso», «Hai già una richiesta aperta su questo turno»): vanno mostrate
- * così come sono, quindi `UserFacingError` e non il messaggio generico. Stessa
- * scelta di `reassignShiftAssignment`.
+ * così come sono, quindi `UserFacingError` e non il messaggio generico. Non è
+ * il caso delle RPC dei turni (`assign`, `reassign`, `record_attendance`…), che
+ * sollevano codici tradotti da `userErrorMessage`.
  */
 export async function requestShiftChange(input: {
   assignmentId: string;
@@ -51,7 +52,7 @@ export async function requestShiftChange(input: {
 export async function resolveShiftChangeRequest(input: {
   requestId: string;
   approve: boolean;
-  /** `staff_members.id` di chi copre il turno. Null = il posto resta scoperto. */
+  /** `venue_members.id` di chi copre il turno. Null = il posto resta scoperto. */
   replacementStaffMemberId?: string | null;
   note?: string | null;
 }): Promise<void> {

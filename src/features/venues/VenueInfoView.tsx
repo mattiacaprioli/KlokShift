@@ -14,8 +14,8 @@ import type { Venue } from "./api";
  * descrizione gli servono — ma i dati della sede sono un permesso a sé
  * (`can_manage_venue`), e chiuderla è del titolare e basta.
  *
- * ⚠️ Non è la difesa: quella è la policy `venues: owner crud`, che accetta
- * scritture dal solo proprietario. Qui si evita un modulo che al salvataggio
+ * ⚠️ Non è la difesa: quella è la RLS su `venues`, che accetta scritture solo
+ * da chi ha «Dati della sede» su quella sede. Qui si evita un modulo che al salvataggio
  * darebbe un errore illeggibile.
  *
  * Gemella di `web/src/venues/VenueInfoCard.tsx`: due markup, stessa regola.
