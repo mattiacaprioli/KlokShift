@@ -474,6 +474,15 @@ export async function sendStaffInvite(memberId: string): Promise<void> {
   if (code.includes("no_email")) {
     throw new UserFacingError("Questa scheda non ha un'email.");
   }
+  // La function verifica chi chiama con `auth.getUser()`: se la sessione non
+  // esiste più (revocata altrove) il token continua a valere per PostgREST ma
+  // non per GoTrue, quindi le altre schermate funzionano e solo l'invito no.
+  // Dire «riprova tra qualche minuto» manderebbe a sbattere all'infinito.
+  if (code.includes("invalid token") || code.includes("missing authorization")) {
+    throw new UserFacingError(
+      "La tua sessione non è più valida. Esci, rientra e riprova."
+    );
+  }
   if (code.includes("NOT_FOUND")) {
     // La Edge Function non è deployata: nessun workflow la pubblica, va fatto
     // a mano con `supabase functions deploy invite-staff`. Dirlo, invece di

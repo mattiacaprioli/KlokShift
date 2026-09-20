@@ -23,6 +23,10 @@ export function IntroOverlay() {
   if (!session || !profile || profile.intro_seen) return null;
   // Chi lavora passa prima dal wizard di setup: intro solo a setup fatto.
   if (effective === "waiter" && !profile.onboarding_complete) return null;
+  // L'intro è decorativa: se per qualsiasi motivo non c'è una serie di slide
+  // per la vista attiva, si salta invece di portare giù l'app con sé.
+  const slides = INTRO_SLIDES[effective];
+  if (!slides?.length) return null;
 
   async function done() {
     if (dismissing) return;
@@ -37,7 +41,7 @@ export function IntroOverlay() {
 
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 50 }]}>
-      <IntroCarousel slides={INTRO_SLIDES[effective]} onDone={done} />
+      <IntroCarousel slides={slides} onDone={done} />
     </View>
   );
 }
