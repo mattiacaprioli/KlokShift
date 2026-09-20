@@ -63,13 +63,28 @@ export function signupIntent(
 }
 
 export function ViewModeProvider({ children }: PropsWithChildren) {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { canManage, canWork, isPending } = useOwnerVenues();
 
   const userId = session?.user.id ?? "";
   const intent = signupIntent(session?.user.user_metadata);
   const resolved = !isPending;
-  const canSwitch = canManage && canWork;
+  /**
+   * L'interruttore fra le due viste.
+   *
+   * Serve a chi gestisce **e** ha un lato professionista da cui tornare. Quel
+   * lato esiste se lavora da qualche parte, oppure se ha completato la propria
+   * scheda da professionista (`onboarding_complete`): è il caso di chi era un
+   * professionista e si è aperto un posto suo, e senza questa seconda
+   * condizione resterebbe chiuso nella gestione, con il proprio profilo di
+   * carriera irraggiungibile.
+   *
+   * Chi si è registrato come sede e non ha mai fatto quell'onboarding non vede
+   * l'interruttore: dall'altra parte non ha niente, e ci troverebbe solo il
+   * wizard di un profilo che non gli serve.
+   */
+  const canSwitch =
+    canManage && (canWork || !!profile?.onboarding_complete);
 
   // L'ultima vista, letta dal disco **insieme all'account a cui appartiene**:
   // derivarla invece di azzerarla in un effect evita un render in più al cambio
