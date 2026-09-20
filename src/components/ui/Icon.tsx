@@ -8,6 +8,7 @@ export type IconName =
   | "chevL"
   | "check"
   | "close"
+  | "plus"
   | "alert"
   | "calendar"
   | "clipboard"
@@ -76,6 +77,7 @@ export function Icon({
       {name === "chevL" && <Path {...p} d="M15 6l-6 6 6 6" />}
       {name === "check" && <Path {...p} d="M5 12l5 5 9-10" strokeWidth={2.2} />}
       {name === "close" && <Path {...p} d="M6 6l12 12M18 6L6 18" />}
+      {name === "plus" && <Path {...p} d="M12 5v14M5 12h14" />}
       {name === "alert" && (
         <Path {...p} d="M12 3l10 18H2L12 3zM12 10v5M12 18v.1" />
       )}

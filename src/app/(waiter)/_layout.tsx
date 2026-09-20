@@ -28,6 +28,7 @@ export default function WaiterLayout() {
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
       <Stack.Screen name="inviti" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="nuovo-messaggio" options={{ headerShown: false }} />
     </Stack>
   );
 }

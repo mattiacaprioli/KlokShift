@@ -11,6 +11,39 @@ export async function getMyContext(): Promise<MyContext> {
   return data as unknown as MyContext;
 }
 
+/**
+ * L'interruttore della chat fra colleghi, dell'azienda.
+ *
+ * Non sta in `get_my_context()` perché lo legge una sola schermata: le
+ * impostazioni. Il `select` lo può fare ogni membro (policy «workspaces: members
+ * read») — serve anche a chi non gestisce per sapere perché la rubrica è corta.
+ */
+export async function getStaffCanChat(workspaceId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("staff_can_chat")
+    .eq("id", workspaceId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.staff_can_chat ?? true;
+}
+
+/** Solo il titolare: la policy scarta la riga a tutti gli altri. */
+export async function setStaffCanChat(
+  workspaceId: string,
+  enabled: boolean
+): Promise<void> {
+  // ⚠️ Un update che la RLS scarta torna senza errore: `.select()` e zero righe
+  // sono un rifiuto, non un successo.
+  const { data, error } = await supabase
+    .from("workspaces")
+    .update({ staff_can_chat: enabled })
+    .eq("id", workspaceId)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("owner_only");
+}
+
 /** Apre un'azienda: chi la apre ne è il titolare. */
 export async function createWorkspace(name: string): Promise<string> {
   const { data, error } = await supabase.rpc("create_workspace", { p_name: name });

@@ -62,7 +62,8 @@ begin
     'staff_documents.INSERT(expires_at,member_id,mime_type,name,size_bytes,storage_path) | staff_documents.UPDATE(expires_at,name) | '
     'venues.UPDATE(address,city,cuisine_type,description,logo_url,name,staff_sees_planning) | '
     'waiter_profiles.INSERT(id,languages,primary_role) | '
-    'waiter_profiles.UPDATE(languages,primary_role)',
+    'waiter_profiles.UPDATE(languages,primary_role) | '
+    'workspaces.UPDATE(staff_can_chat)',
     'scritture dirette per authenticated (livello colonna)');
 
   -- 6. Funzioni: anon ne esegue tre, le riservate alla service role non sono di authenticated,

@@ -13,35 +13,28 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          manager_id: string
           shift_id: string | null
-          waiter_id: string
+          user_a: string
+          user_b: string
           workspace_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          manager_id: string
           shift_id?: string | null
-          waiter_id: string
+          user_a: string
+          user_b: string
           workspace_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          manager_id?: string
           shift_id?: string | null
-          waiter_id?: string
+          user_a?: string
+          user_b?: string
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "conversations_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "conversations_shift_id_fkey"
             columns: ["shift_id"]
@@ -50,8 +43,15 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversations_waiter_id_fkey"
-            columns: ["waiter_id"]
+            foreignKeyName: "conversations_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_b_fkey"
+            columns: ["user_b"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1077,6 +1077,7 @@ export type Database = {
           id: string
           name: string
           plan: string
+          staff_can_chat: boolean
         }
         Insert: {
           created_at?: string
@@ -1085,6 +1086,7 @@ export type Database = {
           id?: string
           name: string
           plan?: string
+          staff_can_chat?: boolean
         }
         Update: {
           created_at?: string
@@ -1093,6 +1095,7 @@ export type Database = {
           id?: string
           name?: string
           plan?: string
+          staff_can_chat?: boolean
         }
         Relationships: [
           {
@@ -1202,6 +1205,7 @@ export type Database = {
           avatar_url: string
           conversation_id: string
           name: string
+          subtitle: string
         }[]
       }
       get_chat_unread_count: { Args: never; Returns: number }
@@ -1302,6 +1306,19 @@ export type Database = {
           primary_role: string
           rating_avg: number
           rating_count: number
+        }[]
+      }
+      get_workspace_contacts: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          is_manager: boolean
+          member_id: string
+          name: string
+          user_id: string
+          venues: string
+          workspace_id: string
+          workspace_name: string
         }[]
       }
       leave: {

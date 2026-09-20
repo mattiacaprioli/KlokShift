@@ -46,6 +46,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Solo il titolare può farlo.",
   },
   {
+    match: ["chat_disabled"],
+    message:
+      "In questa azienda la chat fra colleghi è disattivata. Puoi comunque scrivere a chi gestisce.",
+  },
+  {
     match: ["use_transfer_ownership"],
     message: "La titolarità non si modifica da qui: usa «Cedi la titolarità».",
   },

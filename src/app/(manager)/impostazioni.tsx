@@ -10,6 +10,7 @@ import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { StaffChatToggle } from "@/features/chat/StaffChatToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useViewMode } from "@/features/team/ViewMode";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -20,7 +21,7 @@ export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
-  const { isOwner, canAny } = useOwnerVenues();
+  const { isOwner, canAny, workspaceId } = useOwnerVenues();
   const { canSwitch, setMode } = useViewMode();
 
   return (
@@ -134,6 +135,10 @@ export default function ManagerSettingsScreen() {
               <Icon name="chevR" size={18} color="#6A6358" />
             </Pressable>
           </Card>
+          {/* L'interruttore è dell'azienda, quindi lo vede solo chi la guida. */}
+          {isOwner && workspaceId ? (
+            <StaffChatToggle workspaceId={workspaceId} />
+          ) : null}
         </View>
 
         {/* Una guida compare solo a chi può fare quello che spiega: i

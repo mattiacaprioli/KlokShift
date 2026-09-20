@@ -3,7 +3,9 @@ import { qk } from "@/lib/queryKeys";
 import {
   createFirstVenue,
   getMyContext,
+  getStaffCanChat,
   respondToInvite,
+  setStaffCanChat,
   transferOwnership,
 } from "./api";
 
@@ -51,5 +53,28 @@ export function useTransferOwnership() {
     mutationFn: (vars: { workspaceId: string; memberId: string }) =>
       transferOwnership(vars.workspaceId, vars.memberId),
     onSuccess: invalidate,
+  });
+}
+
+/** L'interruttore della chat fra colleghi (lettura). */
+export function useStaffCanChat(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: qk.context.staffCanChat(workspaceId ?? ""),
+    queryFn: () => getStaffCanChat(workspaceId as string),
+    enabled: !!workspaceId,
+  });
+}
+
+/** Spegnerlo non cancella niente: le conversazioni aperte restano leggibili. */
+export function useSetStaffCanChat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { workspaceId: string; enabled: boolean }) =>
+      setStaffCanChat(vars.workspaceId, vars.enabled),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: qk.context.staffCanChat(vars.workspaceId) });
+      // La rubrica si accorcia (o si allunga) subito dopo.
+      qc.invalidateQueries({ queryKey: qk.chat.all });
+    },
   });
 }

@@ -12,7 +12,7 @@ Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristorant
 >
 > Seconda potatura il 2026-09-20 (`20260920001700`): con lui se n'è andato il **CV** del professionista, che serviva a farsi scegliere da chi non ti conosce — `waiter_experiences`, la `bio`, le specializzazioni e le colonne del modulo di candidatura. Il profilo lo legge solo chi ha già la persona in azienda, e quel che gli serve — le **lingue** — sta nella scheda di organico. Sono cadute anche le due schede «Professionista» (`(manager)/cameriere/[id]` e `/professionista/:id` sulla dashboard): il posto dove si guarda una persona è `staff/[id]`.
 
-⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **sede** (non "locale"/"ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (rotte, colonne della chat, tipi): non rinominarli.
+⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **sede** (non "locale"/"ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (rotte, tipi): non rinominarli. **Unica deroga** (2026-09-20, `20260920001900`): le colonne della chat sono `conversations.user_a` / `user_b`, perché lì non è cambiato il vocabolario ma il significato — vedi «La chat» qui sotto.
 
 ## Modello: chi è chi (2026-09-20)
 
@@ -32,6 +32,27 @@ venue_members      dove lavora (l'organico) — il bersaglio di shift_assignment
 - Il «cappello» con cui si usa l'app (gestione / lavoro) **non è un ruolo**: si ricava dalle appartenenze (`get_my_context()` → `useOwnerVenues()` e `useViewMode()`).
 - `staff_people`, `staff_members` e `venue_access` **non esistono più**. I tipi di dominio storici (`OwnerPerson`, `StaffMember`, …) restano in `src/features/staff/types.ts` e li **produce** il data layer: `StaffPerson.id` è un member id, `StaffMember.id` è un venue member id — non confonderli.
 - Le **scritture passano dalle RPC** (atomiche, con errori `raise exception '<codice>'` tradotti in `src/lib/errors.ts`). INSERT/UPDATE/DELETE diretti sono revocati tranne l'elenco in `supabase/tests/rls/050_surface.sql`. ⚠️ Un update diretto che la RLS scarta torna 204 **senza errore**: `.select()` e zero righe = errore.
+
+## La chat (2026-09-20)
+
+Una conversazione è fra **due membri qualsiasi della stessa azienda** —
+titolari, collaboratori e dipendenti nello stesso insieme — e la coppia è **non
+ordinata**: `conversations.user_a < user_b`, un indice unico solo per entrambi i
+versi. Chi «parla a nome dell'azienda» non si legge da una colonna, si ricava
+dall'authority (`private.speaks_for_workspace`).
+
+- **Nome e insegna**: la controparte è sempre una **persona** per nome; il luogo
+  (la sede se l'azienda ne ha una sola, altrimenti l'azienda) è il sottotitolo, e
+  lo vede solo chi **non** guida quell'azienda. Fonte unica `chat_counterpart`,
+  usata anche dal trigger delle notifiche: la notifica non deve mai nominare un
+  mittente diverso da quello del thread.
+- **L'interruttore**: `workspaces.staff_can_chat` (acceso di default) spegne la
+  chat **fra dipendenti**; verso chi gestisce si scrive sempre, e spegnerlo non
+  cancella i thread aperti. Lo applicano `open_conversation` (`chat_disabled`) e
+  `get_workspace_contacts` (la rubrica), non l'UI.
+- Le **card** (cambio turno, assenze) nascono sempre sul thread col titolare
+  (`conversation_for_pair(workspace, richiedente, titolare)`): in una chat fra
+  colleghi non compaiono.
 
 ## Spostare un turno (2026-09-20)
 

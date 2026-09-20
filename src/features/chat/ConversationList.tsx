@@ -34,9 +34,21 @@ function ConversationRow({
         size={48}
       />
       <View className="flex-1">
-        <Text className="text-base font-sans-bold text-t1" numberOfLines={1}>
-          {item.other.name}
-        </Text>
+        {/* Il luogo sta sulla stessa riga del nome: chi lavora per due aziende
+            distingue i thread senza che la riga diventi di tre righe. */}
+        <View className="flex-row items-baseline gap-1.5">
+          <Text
+            className="shrink text-base font-sans-bold text-t1"
+            numberOfLines={1}
+          >
+            {item.other.name}
+          </Text>
+          {item.other.subtitle ? (
+            <Text className="flex-1 text-xs text-t4" numberOfLines={1}>
+              · {item.other.subtitle}
+            </Text>
+          ) : null}
+        </View>
         <Text className="mt-0.5 text-sm text-t3" numberOfLines={1}>
           {preview}
         </Text>

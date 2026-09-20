@@ -114,12 +114,16 @@ export function ChatThread({ conversationId, userId }: Props) {
                 name={other.name}
                 size={40}
               />
-              <Text
-                className="flex-1 text-lg font-sans-bold text-t1"
-                numberOfLines={1}
-              >
-                {other.name}
-              </Text>
+              <View className="flex-1">
+                <Text className="text-lg font-sans-bold text-t1" numberOfLines={1}>
+                  {other.name}
+                </Text>
+                {other.subtitle ? (
+                  <Text className="text-xs text-t4" numberOfLines={1}>
+                    {other.subtitle}
+                  </Text>
+                ) : null}
+              </View>
             </>
           ) : (
             // Placeholder neutro finché non arriva la controparte (niente "?").

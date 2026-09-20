@@ -14,6 +14,7 @@ import {
   getConversation,
   getConversations,
   getMessagesPage,
+  getWorkspaceContacts,
   openConversation,
   markConversationRead,
   sendMessage,
@@ -131,6 +132,15 @@ export function useMarkConversationRead(conversationId: string, userId: string) 
       // La RPC marca letta anche la notifica 'new_message' della conversazione.
       qc.invalidateQueries({ queryKey: qk.notifications.all });
     },
+  });
+}
+
+/** La rubrica del «Nuovo messaggio»: chi posso raggiungere, azienda per azienda. */
+export function useWorkspaceContacts(userId: string | undefined) {
+  return useQuery({
+    queryKey: qk.chat.contacts(userId ?? ""),
+    queryFn: getWorkspaceContacts,
+    enabled: !!userId,
   });
 }
 

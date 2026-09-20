@@ -39,6 +39,7 @@ export default function ManagerLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="nuovo-messaggio" options={{ headerShown: false }} />
     </Stack>
   );
 }

@@ -9,6 +9,9 @@ export const qk = {
    */
   context: {
     mine: ["context", "mine"] as const,
+    /** L'interruttore della chat fra colleghi, per azienda. */
+    staffCanChat: (workspaceId: string) =>
+      ["context", "staffCanChat", workspaceId] as const,
   },
   venues: {
     all: ["venues"] as const,
@@ -193,6 +196,8 @@ export const qk = {
       ["chat", "messages", conversationId] as const,
     unreadAll: ["chat", "unread"] as const,
     unread: (userId: string) => ["chat", "unread", userId] as const,
+    /** Rubrica: chi posso raggiungere, in tutte le aziende in cui sono attivo. */
+    contacts: (userId: string) => ["chat", "contacts", userId] as const,
   },
   /**
    * Richieste di cambio turno.

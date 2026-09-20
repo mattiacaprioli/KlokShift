@@ -236,12 +236,12 @@ function PersonPanel({
           <div className="flex shrink-0 gap-2">
             {/* Scrivere a chi hai davanti è il gesto più frequente su questa
                 scheda: sta in testa, non in fondo alle performance. */}
-            {/* La conversazione è la coppia (professionista, titolare) e non è
-                scopata per sede: aprirla come collaboratore creerebbe un thread
-                che il titolare non vede e che al professionista arriva da uno
-                sconosciuto. */}
-            {/* E con sé stessi non esiste. */}
-            {person.waiter_id && isOwner && !isMe ? (
+            {/* Anche da collaboratore: da quando la conversazione è fra due
+                membri qualsiasi dell'azienda (20260920001900), il thread è suo
+                e porta il suo nome — non più un messaggio che al professionista
+                arrivava da uno sconosciuto. */}
+            {/* Con sé stessi non esiste. */}
+            {person.waiter_id && !isMe ? (
               <MessageButton memberId={person.id} />
             ) : null}
             <Button onClick={onClose}>Chiudi</Button>

@@ -131,8 +131,8 @@ begin
   perform tests.login('Ow');
   c1 := public.open_conversation(p_member => tests.id('M_Emp'));
   perform tests.raises(format('select public.open_conversation(p_member => %L)', tests.id('M_Ow')), 'not_allowed', 'non con sé stessi');
-  perform tests.login('Co');
-  perform tests.raises(format('select public.open_conversation(p_member => %L)', tests.id('M_Emp')), 'not_allowed', 'la chat non è per i collaboratori');
+  perform tests.login('Str');
+  perform tests.raises(format('select public.open_conversation(p_member => %L)', tests.id('M_Emp')), 'not_allowed', 'da fuori azienda non si scrive');
   perform tests.login('Emp');
   c2 := public.open_conversation(p_workspace => tests.id('W1'));
   perform tests.eq(c2, c1, 'una conversazione per coppia, da qualunque lato si apra');
@@ -159,11 +159,77 @@ begin
   perform public.mark_conversation_read(c1);
   perform tests.eq((select count(*) from public.messages where conversation_id = c1 and read_at is null and sender_id <> tests.id('Ow')), 0::bigint, 'letti');
   perform tests.eq(public.get_chat_unread_count(), 1, 'resta solo la card di Co, in un''altra conversazione');
-  -- Il titolare vede il professionista per nome; il professionista vede l'azienda
-  -- (due sedi: il nome dell'azienda, non di una sede).
+  -- Il titolare vede il professionista per nome, senza sottotitolo; il
+  -- professionista vede il titolare per nome, con sotto l'azienda (due sedi:
+  -- l'azienda, non una sede).
   perform tests.eq((select name from public.get_chat_counterparts(array[c1])), 'Emma Employee', 'il titolare vede il professionista');
+  perform tests.ok((select subtitle is null from public.get_chat_counterparts(array[c1])), 'il professionista non ha sottotitolo');
+  insert into public.messages (conversation_id, sender_id, content) values (c1, tests.id('Ow'), 'tutto ok?');
   perform tests.login('Emp');
-  perform tests.eq((select name from public.get_chat_counterparts(array[c1])), 'W1', 'il professionista vede l''azienda');
+  perform tests.eq((select name from public.get_chat_counterparts(array[c1])), 'Olivia Owner', 'il professionista vede il titolare per nome');
+  perform tests.eq((select subtitle from public.get_chat_counterparts(array[c1])), 'W1', 'e sotto l''azienda');
+  perform tests.ok((select body like 'Olivia Owner (W1): %' from public.notifications
+                     where user_id = tests.id('Emp') and type = 'new_message' and related_id = c1
+                     order by created_at desc limit 1),
+    'la notifica nomina persona e azienda');
+  perform tests.logout();
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Chat fra colleghi
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  c3 uuid; c4 uuid;
+begin
+  -- Due dipendenti della stessa azienda, che non condividono nemmeno la sede
+  -- (Emp sta in V1, Emp2 in V2): l'ambito è l'azienda.
+  perform tests.login('Emp');
+  c3 := public.open_conversation(p_member => tests.id('M_Emp2'));
+  perform tests.eq(public.open_conversation(p_member => tests.id('M_Emp2')), c3, 'una sola conversazione per coppia');
+  insert into public.messages (conversation_id, sender_id, content) values (c3, tests.id('Emp'), 'ciao Enzo');
+  perform tests.login('Emp2');
+  perform tests.eq(public.open_conversation(p_member => tests.id('M_Emp')), c3, 'la stessa da entrambi i lati, in qualunque ordine');
+  perform tests.eq((select count(*) from public.messages where conversation_id = c3), 1::bigint, 'e la legge');
+  -- Un collega è una persona, con sotto l'azienda del thread: nessuno dei due
+  -- parla a nome dell'azienda, quindi niente insegna al posto del nome.
+  perform tests.eq((select name from public.get_chat_counterparts(array[c3])), 'Emma Employee', 'il collega per nome');
+  perform tests.eq((select subtitle from public.get_chat_counterparts(array[c3])), 'W1', 'con l''azienda sotto');
+  perform tests.ok((select body like 'Emma Employee (W1): %' from public.notifications
+                     where user_id = tests.id('Emp2') and type = 'new_message' and related_id = c3),
+    'e la notifica dice lo stesso');
+
+  -- I collaboratori sono membri come gli altri.
+  perform tests.login('Co');
+  c4 := public.open_conversation(p_member => tests.id('M_Emp'));
+  perform tests.ok(c4 <> c3, 'un thread per coppia, non uno per azienda');
+
+  -- Da fuori non si entra, nemmeno conoscendo l'id del membro.
+  perform tests.login('Str');
+  perform tests.raises(format('select public.open_conversation(p_member => %L)', tests.id('M_Emp2')), 'not_allowed', 'l''estraneo resta fuori');
+  perform tests.eq((select count(*) from public.get_workspace_contacts()), 0::bigint, 'e ha la rubrica vuota');
+
+  -- La rubrica: Emp è dipendente in W1 e titolare in W2, e vede le due aziende.
+  perform tests.login('Emp');
+  perform tests.eq((select count(*) from public.get_workspace_contacts() where workspace_name = 'W1'), 4::bigint,
+    'in W1: titolare, due collaboratori e un collega');
+  perform tests.ok((select bool_and(user_id <> tests.id('Emp')) from public.get_workspace_contacts()), 'mai sé stessi');
+  perform tests.eq((select venues from public.get_workspace_contacts() where user_id = tests.id('Emp2')), 'V2', 'con la sede in cui lavora');
+
+  -- L'interruttore: spento, i dipendenti non si scrivono più fra loro, ma chi
+  -- gestisce resta raggiungibile.
+  perform tests.login('Ow');
+  update public.workspaces set staff_can_chat = false where id = tests.id('W1');
+  perform tests.login('Emp');
+  perform tests.raises(format('select public.open_conversation(p_member => %L)', tests.id('M_Emp2')), 'chat_disabled', 'chat fra colleghi spenta');
+  perform tests.eq((select count(*) from public.get_workspace_contacts() where workspace_name = 'W1'), 3::bigint, 'in rubrica restano solo titolare e collaboratori');
+  perform tests.ok(public.open_conversation(p_member => tests.id('M_Ow')) is not null, 'al titolare si scrive sempre');
+  perform tests.ok(public.open_conversation(p_member => tests.id('M_Co')) is not null, 'e a chi gestisce anche');
+  -- L'interruttore è del titolare, non di chi ci lavora: la policy scarta la
+  -- riga, e l'UPDATE tocca zero righe **senza sollevare** (vedi AGENTS.md).
+  update public.workspaces set staff_can_chat = true where id = tests.id('W1');
+  perform tests.ok((select not staff_can_chat from public.workspaces where id = tests.id('W1')),
+    'il dipendente non se lo riaccende');
   perform tests.logout();
 end $$;
 

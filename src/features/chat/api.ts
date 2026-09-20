@@ -15,14 +15,16 @@ export type MessageCursor = { created_at: string; id: string };
  * che è anche l'unica fonte usata dal trigger delle notifiche — così la lista
  * chat e la notifica non mostrano due mittenti diversi per lo stesso messaggio.
  *
- * Lato professionista viene da `get_waiter_public_card`. Lato gestore dipende da
- * quante sedi ha (20260913100200): con **una** è il nome della sede — si chatta
- * con "Trattoria da Mario", che è la UX giusta — con **più di una** è il nome del
- * titolare, perché il thread è uno per coppia e vale per tutte le sue sedi:
- * intestarlo a una delle tre sarebbe sbagliato due volte su tre.
+ * Sempre **una persona** per nome, da entrambi i lati (20260920001800): un
+ * messaggio lo scrive qualcuno, e il dipendente non deve rispondere a un
+ * marchio. Lato gestione il `subtitle` porta il luogo — la sede se l'azienda ne
+ * ha una sola, altrimenti l'azienda, perché il thread è uno per coppia e vale
+ * per tutte le sedi: intestarlo a una delle tre sarebbe sbagliato due volte su
+ * tre. Lato professionista è `null`: non c'è insegna da mostrare.
  */
 export type ChatCounterpart = {
   name: string;
+  subtitle: string | null;
   avatarUrl: string | null;
 };
 
@@ -53,13 +55,18 @@ async function getCounterparts(
   for (const row of data ?? []) {
     out.set(row.conversation_id, {
       name: row.name ?? FALLBACK_COUNTERPART.name,
+      subtitle: row.subtitle,
       avatarUrl: row.avatar_url,
     });
   }
   return out;
 }
 
-const FALLBACK_COUNTERPART: ChatCounterpart = { name: "Utente", avatarUrl: null };
+const FALLBACK_COUNTERPART: ChatCounterpart = {
+  name: "Utente",
+  subtitle: null,
+  avatarUrl: null,
+};
 
 /** Le conversazioni dell'utente con controparte, ultimo messaggio e non letti. */
 export async function getConversations(
@@ -72,7 +79,7 @@ export async function getConversations(
     .select(
       "*, last:messages!inner(content, created_at, sender_id), unread:messages(count)"
     )
-    .or(`waiter_id.eq.${userId},manager_id.eq.${userId}`)
+    .or(`user_a.eq.${userId},user_b.eq.${userId}`)
     .order("created_at", { ascending: false, referencedTable: "last" })
     .limit(1, { referencedTable: "last" })
     .is("unread.read_at", null)
@@ -114,18 +121,20 @@ export async function getConversation(
 }
 
 /**
- * Chi si vuole raggiungere: il titolare verso una persona dell'organico
- * (`memberId` = `workspace_members.id`), il professionista verso l'azienda
- * (`workspaceId`). L'altra estremità la sceglie il DB.
+ * Chi si vuole raggiungere: una **persona qualsiasi** della stessa azienda
+ * (`memberId` = `workspace_members.id`) oppure, senza sapere chi sia, il
+ * titolare dell'azienda (`workspaceId`). L'altra estremità la sceglie il DB.
  */
 export type OpenConversationInput =
   | { memberId: string; workspaceId?: undefined }
   | { workspaceId: string; memberId?: undefined };
 
 /**
- * Apre la conversazione della coppia, o la ritrova: una per (professionista,
- * titolare), e a crearla o riaprirla ci pensa la RPC `open_conversation`, che
- * controlla anche che i due abbiano davvero un legame.
+ * Apre la conversazione della coppia, o la ritrova: una per coppia di persone
+ * dentro un'azienda, e a crearla o riaprirla ci pensa la RPC
+ * `open_conversation`, che controlla anche che i due lavorino davvero insieme —
+ * e, fra due dipendenti, che l'azienda non abbia spento la chat fra colleghi
+ * (`chat_disabled`).
  */
 export async function openConversation(
   input: OpenConversationInput
@@ -145,6 +154,45 @@ export async function openConversation(
   if (readError) throw new Error(readError.message);
   if (!data) throw new Error("conversation_not_found");
   return data;
+}
+
+/**
+ * Una persona raggiungibile in chat, come la mostra il «Nuovo messaggio».
+ * `venues` sono le sedi in cui lavora (serve a distinguere due Marco in
+ * un'azienda con più sedi), `isManager` dice se gestisce — per tenere in cima
+ * chi risponde delle cose.
+ */
+export type ChatContact = {
+  memberId: string;
+  userId: string;
+  workspaceId: string;
+  workspaceName: string;
+  name: string;
+  avatarUrl: string | null;
+  venues: string | null;
+  isManager: boolean;
+};
+
+/**
+ * La rubrica: tutte le persone raggiungibili, in tutte le aziende in cui si è
+ * attivi. La RLS di `profiles` non lascia leggere i colleghi, quindi nome e
+ * foto arrivano dalla RPC DEFINER `get_workspace_contacts`, che applica anche
+ * l'interruttore `staff_can_chat` — spento, restano solo titolari e
+ * collaboratori.
+ */
+export async function getWorkspaceContacts(): Promise<ChatContact[]> {
+  const { data, error } = await supabase.rpc("get_workspace_contacts");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    memberId: row.member_id,
+    userId: row.user_id,
+    workspaceId: row.workspace_id,
+    workspaceName: row.workspace_name,
+    name: row.name,
+    avatarUrl: row.avatar_url,
+    venues: row.venues,
+    isManager: row.is_manager,
+  }));
 }
 
 /**

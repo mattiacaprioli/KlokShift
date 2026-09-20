@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
+  useSetStaffCanChat,
+  useStaffCanChat,
+} from "@/features/workspace/hooks";
+import {
   COLLABORATOR_TUTORIAL,
   type Tutorial,
 } from "@/features/team/tutorialContent";
@@ -32,7 +36,7 @@ export function ImpostazioniPage() {
   const { session } = useAuth();
   // Una guida compare solo a chi può fare quello che spiega: i collaboratori
   // sono del titolare, le assenze di chi gestisce l'organico.
-  const { isOwner, canAny } = useOwnerVenues();
+  const { isOwner, canAny, workspaceId } = useOwnerVenues();
   const canStaff = canAny("can_manage_staff");
 
   return (
@@ -43,6 +47,10 @@ export function ImpostazioniPage() {
         <AccountSection />
 
         <NotificationPrefsSection />
+
+        {isOwner && workspaceId ? (
+          <StaffChatSection workspaceId={workspaceId} />
+        ) : null}
 
         {isOwner || canStaff ? (
           <section>
@@ -84,6 +92,72 @@ export function ImpostazioniPage() {
         <DeleteAccountSection />
       </div>
     </>
+  );
+}
+
+/**
+ * «Chat fra colleghi», l'interruttore dell'azienda.
+ *
+ * Acceso di default: chi lavora insieme si parla comunque, e pretendere
+ * un'azione del titolare avrebbe reso la funzione invisibile quasi ovunque.
+ * Spegnerlo non cancella niente — i thread aperti restano leggibili, non se ne
+ * aprono di nuovi — e non isola mai nessuno da chi gestisce: al titolare e ai
+ * collaboratori si scrive sempre.
+ */
+function StaffChatSection({ workspaceId }: { workspaceId: string }) {
+  const toast = useToast();
+  const { data: enabled, isPending } = useStaffCanChat(workspaceId);
+  const save = useSetStaffCanChat();
+
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
+        Chat
+      </h2>
+      <Card className="p-0">
+        <label className="flex cursor-pointer items-center gap-4 px-4 py-3 has-disabled:cursor-not-allowed">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-t1">
+              Chat fra colleghi
+            </span>
+            <span className="mt-0.5 block text-xs text-t3">
+              Chi è in organico può scriversi. A te e ai collaboratori si scrive
+              comunque.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="peer sr-only"
+            checked={enabled ?? true}
+            disabled={isPending || save.isPending}
+            onChange={(e) =>
+              save.mutate(
+                { workspaceId, enabled: e.target.checked },
+                {
+                  onSuccess: () =>
+                    toast.show(
+                      e.target.checked
+                        ? "I colleghi possono scriversi"
+                        : "Chat fra colleghi disattivata"
+                    ),
+                  onError: (err) =>
+                    toast.show(
+                      userErrorMessage(err, "Salvataggio non riuscito"),
+                      "error"
+                    ),
+                }
+              )
+            }
+          />
+          {/* L'interruttore è solo disegno: lo stato vero è la checkbox qui
+              sopra, che resta quella che legge lo screen reader. */}
+          <span
+            aria-hidden
+            className="relative h-5 w-9 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-t3 after:transition peer-checked:after:translate-x-4 peer-checked:after:bg-gold-ink"
+          />
+        </label>
+      </Card>
+    </section>
   );
 }
 

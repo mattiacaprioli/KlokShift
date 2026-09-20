@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { useConversations, useStartConversation } from "@/features/chat/hooks";
+import {
+  useConversations,
+  useStartConversation,
+  useWorkspaceContacts,
+} from "@/features/chat/hooks";
 import { useChatThread } from "@/features/chat/useChatThread";
-import { useOwnerPeople } from "@/features/staff/hooks";
 import { userErrorMessage } from "@/lib/errors";
 import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -52,8 +55,8 @@ export function ChatPage() {
       />
 
       {picking ? (
-        <StaffPicker
-          managerId={userId}
+        <ContactPicker
+          userId={userId}
           onOpened={(conversationId) => {
             setPicking(false);
             navigate(`/chat/${conversationId}`);
@@ -94,8 +97,15 @@ export function ChatPage() {
                   )}
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-t1">
-                      {c.other.name}
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <span className="truncate text-sm font-semibold text-t1">
+                        {c.other.name}
+                      </span>
+                      {c.other.subtitle ? (
+                        <span className="truncate text-[11px] text-t4">
+                          · {c.other.subtitle}
+                        </span>
+                      ) : null}
                     </span>
                     {c.lastMessage ? (
                       <span className="shrink-0 text-[11px] text-t4">
@@ -135,42 +145,42 @@ export function ChatPage() {
 }
 
 /**
- * Scelta del destinatario per una chat nuova. L'elenco sono le **persone del
- * titolare**, non l'organico della sede attiva, e solo quelle con un account
- * (senza, non c'è nessuno dall'altra parte).
+ * Scelta del destinatario per una chat nuova: la **rubrica dell'azienda**, la
+ * stessa dell'app (`get_workspace_contacts`).
  *
- * Il perimetro è il titolare perché il thread lo è: uno per coppia (dipendente,
- * titolare), non uno per sede. Se qui si fermasse alla sede attiva, Giuseppe dalla
- * pagina di Roma non potrebbe scrivere a chi ha solo a Milano — pur avendo con lui
- * una conversazione già aperta.
+ * Non è più «le persone del titolare»: da quando si parlano tutti i membri, qui
+ * ci sono anche i colleghi e chi collabora alla gestione. Restano fuori solo
+ * quelli senza account — dall'altra parte non ci sarebbe nessuno — e, se
+ * l'azienda ha spento la chat fra colleghi, chi non gestisce niente.
  *
  * Chi ha già una conversazione resta in lista: riaprirla è lo stesso gesto, e
- * `getOrCreateConversation` non ne crea una seconda.
+ * `open_conversation` non ne crea una seconda.
  */
-function StaffPicker({
-  managerId,
+function ContactPicker({
+  userId,
   onOpened,
 }: {
-  managerId: string;
+  userId: string;
   onOpened: (conversationId: string) => void;
 }) {
   const toast = useToast();
   const [filter, setFilter] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const startConversation = useStartConversation();
-  const { data, isPending, isError, error } = useOwnerPeople(managerId);
+  const { data, isPending, isError, error } = useWorkspaceContacts(userId);
 
-  // ⚠️ Con un account collegato **e non il proprio**: da quando chi gestisce
-  // può stare nel proprio organico, la sua scheda compare in questo elenco — e
-  // `conversations` è una coppia (professionista, titolare), quindi con sé
-  // stessi il thread non esiste.
-  const linked = (data ?? []).filter(
-    (p) => p.waiter_id && p.waiter_id !== managerId
-  );
+  const contacts = data ?? [];
   const needle = filter.trim().toLowerCase();
   const shown = needle
-    ? linked.filter((p) => p.full_name.toLowerCase().includes(needle))
-    : linked;
+    ? contacts.filter(
+        (c) =>
+          c.name.toLowerCase().includes(needle) ||
+          (c.venues ?? "").toLowerCase().includes(needle)
+      )
+    : contacts;
+  // L'azienda si nomina solo a chi ne ha più di una: per tutti gli altri
+  // sarebbe la stessa riga ripetuta sopra ogni nome.
+  const multiWorkspace = new Set(contacts.map((c) => c.workspaceId)).size > 1;
 
   function open(memberId: string) {
     setOpeningId(memberId);
@@ -192,14 +202,14 @@ function StaffPicker({
         <Spinner />
       ) : isError ? (
         <QueryError error={error} />
-      ) : linked.length === 0 ? (
+      ) : contacts.length === 0 ? (
         <p className="py-6 text-center text-xs text-t4">
           Nessuno nel tuo organico ha un account collegato: invitali dallo Staff
           per poterci scrivere.
         </p>
       ) : (
         <>
-          {linked.length > 6 ? (
+          {contacts.length > 6 ? (
             <Input
               autoFocus
               value={filter}
@@ -214,44 +224,41 @@ function StaffPicker({
             </p>
           ) : (
             <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
-              {shown.map((person) => {
-                const venuesLabel = person.memberships
-                  .map((m) => m.venue?.name)
-                  .filter((n): n is string => !!n)
-                  .sort((a, b) => a.localeCompare(b, "it"))
-                  .join(" · ");
-                const allPending = person.memberships.every(
-                  (m) => m.link_status === "pending"
-                );
-                return (
-                  <button
-                    key={person.id}
-                    disabled={startConversation.isPending}
-                    onClick={() => open(person.id)}
-                    className="focus-gold flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-bg-1 disabled:opacity-40"
-                  >
-                    <Avatar url={person.waiter?.avatar_url} name={person.full_name} size={32} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-t1">
-                        {person.full_name}
-                      </span>
-                      {/* Le sedi e non i ruoli: qui serve sapere "chi è questo",
-                          e con più sedi la sede lo dice meglio del ruolo. */}
-                      <span className="block truncate text-xs text-t4">
-                        {venuesLabel || "Nessuna sede"}
-                      </span>
+              {shown.map((contact) => (
+                <button
+                  key={contact.memberId}
+                  disabled={startConversation.isPending}
+                  onClick={() => open(contact.memberId)}
+                  className="focus-gold flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-bg-1 disabled:opacity-40"
+                >
+                  <Avatar
+                    url={contact.avatarUrl ?? undefined}
+                    name={contact.name}
+                    size={32}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-t1">
+                      {contact.name}
                     </span>
-                    {allPending ? (
-                      <Pill tone="warning">Invito in attesa</Pill>
-                    ) : null}
-                    <span className="shrink-0 text-xs text-gold">
-                      {openingId === person.id && startConversation.isPending
-                        ? "Apertura…"
-                        : "Scrivi"}
+                    {/* Le sedi e non i ruoli: qui serve sapere "chi è questo",
+                        e con più sedi la sede lo dice meglio del ruolo. */}
+                    <span className="block truncate text-xs text-t4">
+                      {[
+                        multiWorkspace ? contact.workspaceName : null,
+                        contact.venues ?? "Nessuna sede",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
-                  </button>
-                );
-              })}
+                  </span>
+                  {contact.isManager ? <Pill>Gestione</Pill> : null}
+                  <span className="shrink-0 text-xs text-gold">
+                    {openingId === contact.memberId && startConversation.isPending
+                      ? "Apertura…"
+                      : "Scrivi"}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
         </>
@@ -310,6 +317,9 @@ function Thread({
         <p className="text-sm font-semibold text-t1">
           {other?.name ?? " "}
         </p>
+        {other?.subtitle ? (
+          <p className="text-xs text-t4">{other.subtitle}</p>
+        ) : null}
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 py-4">

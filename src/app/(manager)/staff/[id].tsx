@@ -834,11 +834,10 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
               title={person.full_name}
               titleClassName="text-2xl"
               right={
-                // La conversazione è la coppia (professionista, titolare) e
-                // non è scopata per sede: aprirla come collaboratore creerebbe
-                // un thread che il titolare non vede e che al professionista
-                // arriva da uno sconosciuto. E con sé stessi non esiste.
-                waiterId && isOwner && !isMe ? (
+                // Anche da collaboratore: da quando la conversazione è fra due
+                // membri qualsiasi dell'azienda (20260920001900) il thread è
+                // suo e porta il suo nome. Con sé stessi non esiste.
+                waiterId && !isMe ? (
                   <Pressable
                     disabled={startConversation.isPending}
                     onPress={onMessage}
