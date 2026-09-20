@@ -76,11 +76,18 @@ const PEOPLE_SELECT: string =
   ", waiter:profiles!workspace_members_user_id_fkey(id, full_name, avatar_url), " +
   MEMBERSHIPS_EMBED;
 
+// Le lingue arrivano da `waiter_profiles`, che è il profilo della **persona**:
+// la RLS le concede a chi ce l'ha in azienda (`private.visible_profile_ids()`),
+// e un embed che la RLS scarta torna `null`, non un errore. Sono l'unico campo
+// del vecchio profilo-vetrina che serve a comporre una sala, e stanno qui
+// perché è qui che il titolare guarda chi ha.
+//
 // `birth_day`/`birth_month` e non una data di nascita: l'anno non esiste proprio
 // in `profiles`, quindi non c'è un'età da consegnare al titolare.
 const PERSON_DETAIL_SELECT: string =
   PERSON_COLUMNS +
-  ", waiter:profiles!workspace_members_user_id_fkey(id, full_name, avatar_url, birth_day, birth_month), " +
+  ", waiter:profiles!workspace_members_user_id_fkey(id, full_name, avatar_url, birth_day, birth_month, " +
+  "waiter_profile:waiter_profiles(languages)), " +
   MEMBERSHIPS_EMBED;
 
 const VENUE_STAFF_SELECT: string =
@@ -129,7 +136,12 @@ type RawMember = {
   /** Uno-a-uno: PostgREST lo dà come oggetto, ma un array non deve rompere. */
   hr: RawHr | RawHr[] | null;
   waiter:
-    | (ProfileBrief & { birth_day?: number | null; birth_month?: number | null })
+    | (ProfileBrief & {
+        birth_day?: number | null;
+        birth_month?: number | null;
+        /** Uno-a-uno su `profiles.id`: oggetto, oppure `null` se la RLS lo scarta. */
+        waiter_profile?: { languages: string[] | null } | null;
+      })
     | null;
   memberships: RawVenueMember[];
 };
@@ -333,6 +345,9 @@ export async function getStaffPerson(
         avatar_url: row.waiter.avatar_url,
         birth_day: row.waiter.birth_day ?? null,
         birth_month: row.waiter.birth_month ?? null,
+        // Appiattito qui: che le lingue stiano in un'altra tabella è un fatto
+        // di PostgREST, non qualcosa che le due schede devono sapere.
+        languages: row.waiter.waiter_profile?.languages ?? [],
       }
     : null;
   return {

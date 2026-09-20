@@ -2,7 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { functionErrorCode } from "@/lib/functionError";
-import { isPasswordValid } from "@/features/auth/schema";
+import {
+  isPasswordValid,
+  passwordMismatchMessage,
+} from "@/features/auth/schema";
 import { Button, Field, Input, PasswordInput, Spinner } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { PasswordChecklist } from "../ui/PasswordChecklist";
@@ -135,7 +138,7 @@ export function InvitoPage() {
       return;
     }
     if (password !== confirm) {
-      setError("Le due password non coincidono.");
+      setError(passwordMismatchMessage);
       return;
     }
 

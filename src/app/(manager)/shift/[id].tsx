@@ -618,9 +618,9 @@ export default function ShiftDetailScreen() {
             ))
           ) : (
             assignments.map((a) => {
-              // ⚠️ Non la propria riga: la scheda pubblica di un gestore non
-              // esiste (`waiter_public_cards` filtra i professionisti) e la chat
-              // con sé stessi nemmeno.
+              // La scheda di organico si apre per chiunque, anche per sé; la
+              // chat con sé stessi no, ed è l'unica cosa per cui serve ancora
+              // sapere se la riga è mia.
               const waiterId = myRoster.has(a.venue_member_id)
                 ? null
                 : (a.staff_member?.waiter_id ?? null);
@@ -630,8 +630,8 @@ export default function ShiftDetailScreen() {
                   key={a.id}
                   assignment={a}
                   onPress={
-                    waiterId
-                      ? () => router.push(`/(manager)/cameriere/${waiterId}`)
+                    memberId
+                      ? () => router.push(`/(manager)/staff/${memberId}`)
                       : undefined
                   }
                   onMessage={

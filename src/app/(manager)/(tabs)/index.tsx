@@ -143,9 +143,10 @@ export default function ManagerHome() {
     .map((a) => {
       const sm = a.staff_member;
       const isMe = self.isSelf(sm?.waiter_id);
-      // ⚠️ Non la propria: `waiter_public_cards` contiene solo i
-      // professionisti, quindi la scheda pubblica di un gestore è vuota.
-      const waiterId = isMe ? null : (sm?.waiter_id ?? null);
+      // Si apre la scheda di organico, anche la propria: da quando il CV non
+      // c'è più non esiste una «scheda pubblica» da professionista che per un
+      // gestore sarebbe vuota, e `staff/[id]` sa già dire «questo sei tu».
+      const personId = sm?.person_id ?? null;
       return {
         key: `asg-${a.id}`,
         name: sm?.display_name ?? "Staff",
@@ -158,8 +159,8 @@ export default function ManagerHome() {
         end: a.shift?.end_time ?? "",
         venue: venueBadge(a.shift?.venue_id),
         isMe,
-        onPress: waiterId
-          ? () => router.push(`/(manager)/cameriere/${waiterId}`)
+        onPress: personId
+          ? () => router.push(`/(manager)/staff/${personId}`)
           : undefined,
       };
     })

@@ -17,8 +17,6 @@ export default function WaiterLayout() {
       <Stack.Screen name="documento/new" options={{ headerShown: false }} />
       <Stack.Screen name="assenze" options={{ headerShown: false }} />
       <Stack.Screen name="assenza/new" options={{ headerShown: false }} />
-      <Stack.Screen name="esperienza/new" options={{ headerShown: false }} />
-      <Stack.Screen name="esperienza/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="qr" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />
       <Stack.Screen name="tutorial" options={{ headerShown: false }} />

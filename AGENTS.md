@@ -9,6 +9,8 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. Le **sedi** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore e costruiscono la propria reputazione. Niente Stripe nel MVP.
 
 > Il marketplace (professionisti che cercano turni e si candidano ad annunci) è stato rimosso dal codice il 2026-09-12 e dal DB il 2026-09-20 (`applications`, `shift_kind`, i `notification_type` `application_*` e i campi da annuncio dei turni non esistono più): non va riesumato senza una decisione di prodotto.
+>
+> Seconda potatura il 2026-09-20 (`20260920001700`): con lui se n'è andato il **CV** del professionista, che serviva a farsi scegliere da chi non ti conosce — `waiter_experiences`, la `bio`, le specializzazioni e le colonne del modulo di candidatura. Il profilo lo legge solo chi ha già la persona in azienda, e quel che gli serve — le **lingue** — sta nella scheda di organico. Sono cadute anche le due schede «Professionista» (`(manager)/cameriere/[id]` e `/professionista/:id` sulla dashboard): il posto dove si guarda una persona è `staff/[id]`.
 
 ⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **sede** (non "locale"/"ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (rotte, colonne della chat, tipi): non rinominarli.
 

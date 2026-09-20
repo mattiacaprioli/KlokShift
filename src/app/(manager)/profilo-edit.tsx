@@ -29,7 +29,8 @@ import { useToast } from "@/providers/Toast";
  * solo il telefono restava con il nome scritto in fase di registrazione.
  *
  * Gli stessi due campi della dashboard (`web/src/pages/Impostazioni.tsx`): il
- * resto di `profiles` è roba del professionista (città, bio, lingue).
+ * resto è roba del professionista: la città in `profiles`, ruolo e lingue in
+ * `waiter_profiles`.
  */
 export default function ManagerAccountEditScreen() {
   const router = useRouter();

@@ -4,10 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, Text, View } from "@/tw";
+import { ScrollView, View } from "@/tw";
 import { AvatarPickerField } from "@/components/ui/AvatarPickerField";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
@@ -25,8 +24,6 @@ import {
   waiterProfileSchema,
   type WaiterProfileForm,
 } from "@/features/waiterProfile/schema";
-
-const BIO_MAX = 180;
 
 export default function WaiterProfileEditScreen() {
   const router = useRouter();
@@ -46,31 +43,21 @@ export default function WaiterProfileEditScreen() {
     defaultValues: {
       full_name: "",
       city: "",
-      bio: "",
       primary_role: "",
       languages: [],
-      specializations: "",
-      experience: "",
       birthday: null,
     },
   });
 
   // ⚠️ `defaultValue`: `useWatch` si iscrive in un effect, quindi con il
   // profilo già in cache il `reset()` qui sotto parte **prima** e la sua
-  // notifica va persa — nome e contatore bio resterebbero vuoti fino al primo
+  // notifica va persa — il nome sotto all'avatar resterebbe vuoto fino al primo
   // tocco sul campo.
   const watchedName = useWatch({
     control,
     name: "full_name",
     defaultValue: profileQuery.data?.full_name ?? "",
   });
-  const bioLen = (
-    useWatch({
-      control,
-      name: "bio",
-      defaultValue: profileQuery.data?.bio ?? "",
-    }) ?? ""
-  ).length;
 
   const data = profileQuery.data;
   useEffect(() => {
@@ -79,11 +66,8 @@ export default function WaiterProfileEditScreen() {
     reset({
       full_name: data.full_name ?? "",
       city: data.city ?? "",
-      bio: data.bio ?? "",
       primary_role: wp?.primary_role ?? "",
       languages: wp?.languages ?? [],
-      specializations: wp?.specializations ?? "",
-      experience: wp?.experience ?? "",
       // O tutti e due o niente: è il CHECK `profiles_birthday_valid` letto dal
       // lato client, e una riga a metà qui diventerebbe un salvataggio rifiutato.
       birthday:
@@ -98,11 +82,8 @@ export default function WaiterProfileEditScreen() {
       await save.mutateAsync({
         full_name: values.full_name,
         city: values.city || null,
-        bio: values.bio || null,
         primary_role: values.primary_role || null,
         languages: values.languages,
-        specializations: values.specializations || null,
-        experience: values.experience || null,
         birthday: values.birthday,
       });
       await refreshProfile();
@@ -183,51 +164,15 @@ export default function WaiterProfileEditScreen() {
                 placeholder="Milano"
               />
               <ControlledBirthday control={control} name="birthday" />
-            </View>
-
-            <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-              <View>
-                <ControlledInput
-                  control={control}
-                  name="bio"
-                  label="Bio · come ti presenti"
-                  placeholder="Raccontati a chi cerca personale…"
-                  multiline
-                  numberOfLines={4}
-                  maxLength={BIO_MAX}
-                  className="h-28"
-                  textAlignVertical="top"
-                />
-                <Text className="mt-1 self-end text-xs text-t3">
-                  {bioLen}/{BIO_MAX}
-                </Text>
-              </View>
+              {/* Le lingue stanno qui e non in un riquadro a parte: da quando il
+                  profilo non è più una vetrina sono l'unico campo «su di te» che
+                  resta, e da sole non fanno una sezione. */}
               <ControlledMultiChips
                 control={control}
                 name="languages"
                 label="Lingue parlate"
                 options={LANGUAGE_OPTIONS}
               />
-              <ControlledInput
-                control={control}
-                name="specializations"
-                label="Specializzazioni"
-                placeholder="Vini naturali, Cocktail classici"
-              />
-              <ControlledInput
-                control={control}
-                name="experience"
-                label="Esperienza"
-                placeholder="6 anni · Sala alta cucina"
-              />
-            </View>
-
-            <View className="flex-row gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
-              <Icon name="shield" size={20} color="#4FC97D" />
-              <Text className="flex-1 text-sm leading-5 text-t3">
-                Le recensioni le scrivono i clienti e non si modificano: è ciò
-                che rende la tua reputazione affidabile.
-              </Text>
             </View>
 
             <GoldButton

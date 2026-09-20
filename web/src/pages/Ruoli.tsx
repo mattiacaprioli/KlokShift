@@ -10,6 +10,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
 import { userErrorMessage } from "@/lib/errors";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "../ui/Toast";
 import {
   Button,
@@ -109,10 +110,16 @@ export function RuoliPage() {
     ? lastVenueId
     : editable[0]?.id;
   const venue = venueId ? venueById(venueId) : undefined;
+  const navigate = useNavigate();
   const toast = useToast();
   const { data, isPending, isError, error } = useVenueRoles(venueId);
   const create = useCreateVenueRole();
   const [draft, setDraft] = useState("");
+
+  // I ruoli non stanno nel menu: ci si arriva da dentro (dalla scheda di una
+  // persona, quando la sede non ha ancora una mansione da spuntare). Senza un
+  // ritorno si resta in una pagina che la navigazione laterale non sa indicare.
+  const back = <Button onClick={() => navigate(-1)}>← Indietro</Button>;
 
   function add(name: string) {
     if (!venueId || !name.trim()) return;
@@ -128,7 +135,7 @@ export function RuoliPage() {
   if (venues.length === 0) {
     return (
       <>
-        <PageHeader title="Ruoli" />
+        <PageHeader title="Ruoli" actions={back} />
         <NoVenues detail="Ti serve una sede prima di definirne i ruoli." />
       </>
     );
@@ -137,7 +144,7 @@ export function RuoliPage() {
   if (editable.length === 0) {
     return (
       <>
-        <PageHeader title="Ruoli" />
+        <PageHeader title="Ruoli" actions={back} />
         <Placeholder
           title="Non puoi modificare le mansioni"
           detail="Le mansioni fanno parte dei dati della sede: servono i permessi «Dati della sede»."
@@ -168,20 +175,23 @@ export function RuoliPage() {
             : "Le mansioni che assegni allo staff e che chiedi sui turni."
         }
         actions={
-          editable.length > 1 ? (
-            <Select
-              value={venueId ?? ""}
-              onChange={(e) => choose(e.target.value)}
-              className="w-56"
-              aria-label="Ruoli di quale sede"
-            >
-              {editable.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </Select>
-          ) : undefined
+          <>
+            {back}
+            {editable.length > 1 ? (
+              <Select
+                value={venueId ?? ""}
+                onChange={(e) => choose(e.target.value)}
+                className="w-56"
+                aria-label="Ruoli di quale sede"
+              >
+                {editable.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+          </>
         }
       />
 

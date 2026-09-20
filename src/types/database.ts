@@ -289,7 +289,6 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          bio: string | null
           birth_day: number | null
           birth_month: number | null
           city: string | null
@@ -305,7 +304,6 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
-          bio?: string | null
           birth_day?: number | null
           birth_month?: number | null
           city?: string | null
@@ -321,7 +319,6 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
-          bio?: string | null
           birth_day?: number | null
           birth_month?: number | null
           city?: string | null
@@ -962,89 +959,27 @@ export type Database = {
           },
         ]
       }
-      waiter_experiences: {
-        Row: {
-          company_name: string
-          created_at: string
-          detail: string | null
-          end_year: number | null
-          id: string
-          role: string | null
-          start_year: number | null
-          waiter_id: string
-        }
-        Insert: {
-          company_name: string
-          created_at?: string
-          detail?: string | null
-          end_year?: number | null
-          id?: string
-          role?: string | null
-          start_year?: number | null
-          waiter_id: string
-        }
-        Update: {
-          company_name?: string
-          created_at?: string
-          detail?: string | null
-          end_year?: number | null
-          id?: string
-          role?: string | null
-          start_year?: number | null
-          waiter_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "waiter_experiences_waiter_id_fkey"
-            columns: ["waiter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       waiter_profiles: {
         Row: {
-          availability_days: string[] | null
-          cv_url: string | null
-          documents: string[] | null
-          experience: string | null
-          hourly_rate_min: number | null
           id: string
           languages: string[]
           primary_role: string | null
           rating_avg: number
           rating_count: number
-          specializations: string | null
-          years_experience: number | null
         }
         Insert: {
-          availability_days?: string[] | null
-          cv_url?: string | null
-          documents?: string[] | null
-          experience?: string | null
-          hourly_rate_min?: number | null
           id: string
           languages?: string[]
           primary_role?: string | null
           rating_avg?: number
           rating_count?: number
-          specializations?: string | null
-          years_experience?: number | null
         }
         Update: {
-          availability_days?: string[] | null
-          cv_url?: string | null
-          documents?: string[] | null
-          experience?: string | null
-          hourly_rate_min?: number | null
           id?: string
           languages?: string[]
           primary_role?: string | null
           rating_avg?: number
           rating_count?: number
-          specializations?: string | null
-          years_experience?: number | null
         }
         Relationships: [
           {

@@ -157,7 +157,7 @@ export default function OnboardingScreen() {
             <Mono gold>Il tuo profilo</Mono>
             <Display className="mt-2 text-[32px]">Chi sei?</Display>
             <Text className="mt-2 font-sans text-[13.5px] leading-5 text-t3">
-              Queste informazioni appariranno sul tuo profilo pubblico.
+              Le vede chi ti mette in turno, per sapere chi sta chiamando.
             </Text>
           </View>
           <ControlledInput

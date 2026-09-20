@@ -246,12 +246,12 @@ end $$;
 do $$
 begin
   perform tests.anon();
-  perform tests.raises('select count(*) from public.waiter_experiences', 'permission denied', 'le esperienze non sono pubbliche');
+  perform tests.raises('select count(*) from public.waiter_profiles', 'permission denied', 'il profilo professionale non è pubblico');
   perform tests.eq((select count(*) from public.waiter_public_cards), 0::bigint, 'nessuna carta senza un profilo professionale');
 
   perform tests.login('Emp');
-  insert into public.waiter_profiles (id, primary_role) values (tests.id('Emp'), 'Cameriere');
-  insert into public.waiter_experiences (waiter_id, company_name) values (tests.id('Emp'), 'Da Mario');
+  insert into public.waiter_profiles (id, primary_role, languages)
+    values (tests.id('Emp'), 'Cameriere', array['Italiano', 'Inglese']);
   perform tests.raises(format('update public.waiter_profiles set rating_avg = 5 where id = %L', tests.id('Emp')),
     'permission denied', 'il rating non si scrive a mano');
 
@@ -263,10 +263,13 @@ begin
   perform tests.logout();
   perform tests.eq((select rating_count from public.waiter_profiles where id = tests.id('Emp')), 1, 'il trigger aggiorna il rating');
 
+  -- Le lingue le legge chi ha la persona in azienda: è il percorso su cui poggia
+  -- la riga «Lingue» della scheda di organico, non una vetrina aperta a tutti.
   perform tests.login('Ow');
-  perform tests.eq((select count(*) from public.waiter_experiences), 1::bigint, 'il titolare vede il percorso di chi ha in azienda');
+  perform tests.eq((select array_to_string(languages, ',') from public.waiter_profiles where id = tests.id('Emp')),
+    'Italiano,Inglese', 'il titolare legge le lingue di chi ha in azienda');
   perform tests.login('Emp2');
-  perform tests.eq((select count(*) from public.waiter_experiences), 0::bigint, 'un collega no');
+  perform tests.eq((select count(*) from public.waiter_profiles where id = tests.id('Emp')), 0::bigint, 'un collega no');
   perform tests.logout();
 end $$;
 

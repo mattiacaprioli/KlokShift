@@ -11,11 +11,8 @@ export type ProfileWithWaiter = Profile & {
 export type WaiterProfileInput = {
   full_name: string;
   city: string | null;
-  bio: string | null;
   primary_role: string | null;
   languages: string[];
-  specializations: string | null;
-  experience: string | null;
   /** Giorno e mese insieme, o `null`: l'anno non si salva (20260914160000). */
   birthday: { day: number; month: number } | null;
 };
@@ -24,12 +21,17 @@ export type WaiterProfileInput = {
  * Esempi mostrati come placeholder sotto il campo "ruolo principale". Il campo è
  * **testo libero**: era una lista chiusa finché coincideva con quella
  * dell'organico, ma i ruoli ora li scrive ogni sede per sé e nessun elenco
- * fisso potrebbe descrivere tutti. Qui è comunque una vetrina, non un dato che
- * deve combaciare con qualcosa.
+ * fisso potrebbe descrivere tutti. È come la persona si presenta, non un dato
+ * che deve combaciare con i ruoli che le assegna una sede.
  */
 export const PRIMARY_ROLE_EXAMPLES = "Es. Cameriere, Barman, Chef de rang…";
 
-/** Lingue parlate (scelta multipla). Lista curata → dati normalizzati e filtrabili. */
+/**
+ * Lingue parlate (scelta multipla). Lista curata perché è l'unico campo del
+ * vecchio profilo-vetrina che serve a lavorare: chi compone la sala lo legge
+ * dalla scheda di organico, e un testo libero lì dentro non si potrebbe
+ * scorrere con l'occhio.
+ */
 export const LANGUAGE_OPTIONS = [
   "Italiano",
   "Inglese",
@@ -44,24 +46,26 @@ export const LANGUAGE_OPTIONS = [
 ] as const;
 
 /**
- * Un professionista (profilo + waiter_profile) per id. `waiter_profile` è `null`
+ * Il proprio profilo (join 1:1 con `waiter_profiles`). `waiter_profile` è `null`
  * per chi non ha (ancora) un profilo professionale: si crea dal wizard o dalla
- * modifica del profilo. La lettura da parte di una sede la decide la RLS.
+ * modifica del profilo.
+ *
+ * Prende un id e non `auth.uid()` perché è così che la chiama chi ha già la
+ * sessione in mano, ma l'unico id che ci passa è il proprio: la variante «per
+ * id di un altro» esisteva per le schede che il gestore apriva su un
+ * professionista, cadute col CV.
  */
-export async function getWaiterProfileById(
-  waiterId: string
+export async function getMyWaiterProfile(
+  userId: string
 ): Promise<ProfileWithWaiter | null> {
   const { data, error } = await supabase
     .from("profiles")
     .select("*, waiter_profile:waiter_profiles(*)")
-    .eq("id", waiterId)
+    .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as ProfileWithWaiter | null) ?? null;
 }
-
-/** Il profilo del cameriere loggato (join 1:1 con waiter_profiles). */
-export const getMyWaiterProfile = getWaiterProfileById;
 
 /**
  * Scrive la riga di `waiter_profiles` della persona in sessione, creandola se non
@@ -77,6 +81,9 @@ export const getMyWaiterProfile = getWaiterProfileById;
  * esiste ancora, perché il permesso si controlla prima di sapere se ci sarà un
  * conflitto. Due passaggi allora: la riga (senza toccarla se c'è già) e poi i
  * campi.
+ *
+ * Dopo la potatura del CV (20260920001700) le colonne aggiornabili sono due,
+ * `primary_role` e `languages`: l'elenco si è accorciato, la trappola no.
  */
 export async function writeWaiterProfile(
   userId: string,
@@ -113,7 +120,6 @@ export async function saveWaiterProfile(
     .update({
       full_name: input.full_name,
       city: input.city,
-      bio: input.bio,
       // Le due colonne si scrivono sempre insieme: scriverne una sola violerebbe
       // `profiles_birthday_valid`, che è esattamente ciò che deve fare.
       birth_day: input.birthday?.day ?? null,
@@ -125,7 +131,5 @@ export async function saveWaiterProfile(
   await writeWaiterProfile(userId, {
     primary_role: input.primary_role,
     languages: input.languages,
-    specializations: input.specializations,
-    experience: input.experience,
   });
 }

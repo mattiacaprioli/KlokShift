@@ -14,9 +14,9 @@ export type OnboardingInput = {
 };
 
 /**
- * Chiude l'onboarding: scrive `waiter_profiles` (scrittura parziale — le colonne
- * non elencate, languages, experience…, restano intatte) e poi i campi condivisi
- * di `profiles`, alzando il flag `onboarding_complete`.
+ * Chiude l'onboarding: scrive `waiter_profiles` (scrittura parziale — le lingue,
+ * l'unica altra colonna, restano intatte) e poi i campi condivisi di `profiles`,
+ * alzando il flag `onboarding_complete`.
  *
  * ⚠️ **L'ordine conta, ed è questo.** Le due scritture non sono in transazione:
  * alzando il flag per primo, un errore sulla seconda lasciava un account già

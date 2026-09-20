@@ -120,10 +120,17 @@ export type OwnerPerson = StaffPerson & {
   })[];
 };
 
-/** La scheda della persona: tutte le appartenenze e il compleanno. */
+/**
+ * La scheda della persona: tutte le appartenenze, e di suo — compleanno e
+ * lingue — quel poco che mette lei dal proprio profilo e che l'azienda legge
+ * senza poterlo scrivere.
+ */
 export type StaffPersonDetail = StaffPerson & {
   waiter:
-    | (ProfileBrief & Pick<Tables<"profiles">, "birth_day" | "birth_month">)
+    | (ProfileBrief &
+        Pick<Tables<"profiles">, "birth_day" | "birth_month"> & {
+          languages: string[];
+        })
     | null;
   memberships: PersonMembership[];
 };

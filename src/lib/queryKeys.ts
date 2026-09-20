@@ -40,12 +40,6 @@ export const qk = {
   },
   profile: {
     mine: (userId: string) => ["profile", "mine", userId] as const,
-    byId: (userId: string) => ["profile", "byId", userId] as const,
-  },
-  experiences: {
-    byWaiter: (waiterId: string) =>
-      ["experiences", "byWaiter", waiterId] as const,
-    detail: (id: string) => ["experiences", "detail", id] as const,
   },
   /**
    * I turni sono dell'**azienda**, non di una sede: `scope` è `venuesKey`, cioè

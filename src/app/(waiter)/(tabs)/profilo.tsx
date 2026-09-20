@@ -3,15 +3,12 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
-import { ExperienceTimeline } from "@/components/ui/ExperienceTimeline";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { NavRow } from "@/components/ui/NavRow";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
-import { useExperiences } from "@/features/experiences/hooks";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
@@ -55,21 +52,6 @@ function employersOf(memberships: Membership[]): MyEmployer[] {
         employment_type: w.employment_type,
       }))
     );
-}
-
-type Tab = "esperienze" | "statistiche";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "esperienze", label: "Esperienze" },
-  { id: "statistiche", label: "Statistiche" },
-];
-
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="gap-0.5">
-      <Mono>{label}</Mono>
-      <Text className="text-sm text-t2">{value}</Text>
-    </View>
-  );
 }
 
 /** Una sede dentro la card del datore di lavoro: identità e "Lascia". */
@@ -264,19 +246,13 @@ export default function WaiterProfiloScreen() {
   const { session, profile } = useAuth();
   const name = profile?.full_name ?? "Cameriere";
   const userId = session!.user.id;
-  const [tab, setTab] = useState<Tab>("esperienze");
 
   const profileQuery = useMyWaiterProfile(userId);
   const data = profileQuery.data;
   const wp = data?.waiter_profile ?? null;
   const role = wp?.primary_role ?? null;
   const city = data?.city ?? null;
-  const bio = data?.bio ?? null;
   const languages = wp?.languages ?? [];
-  const specializations = wp?.specializations ?? null;
-  const hasProfileInfo = !!bio || languages.length > 0 || !!specializations;
-
-  const experiences = useExperiences(userId).data ?? [];
 
   const { memberships } = useOwnerVenues();
   const employers = employersOf(memberships);
@@ -296,7 +272,7 @@ export default function WaiterProfiloScreen() {
     >
       {/* Barra: occhiello + impostazioni */}
       <View className="flex-row items-center justify-between">
-        <Mono>Profilo · Pubblico</Mono>
+        <Mono>Profilo</Mono>
         <Pressable
           onPress={() => router.push("/(waiter)/impostazioni")}
           hitSlop={8}
@@ -330,6 +306,12 @@ export default function WaiterProfiloScreen() {
           </View>
           {subtitle ? (
             <Text className="text-sm text-t2">{subtitle}</Text>
+          ) : null}
+          {/* Le lingue restano qui, sotto al nome, e non in una scheda «il tuo
+              profilo»: sono l'unica cosa che sopravvive al CV, e un dato che
+              scrivi senza rivederlo mai è un dato che smetti di aggiornare. */}
+          {languages.length > 0 ? (
+            <Text className="text-xs text-t3">{languages.join(" · ")}</Text>
           ) : null}
         </View>
       </View>
@@ -372,8 +354,7 @@ export default function WaiterProfiloScreen() {
           profilo visto dall'altra parte del bancone. */}
       <ManagerSwitchRow />
 
-      {/* Fuori dai tab qui sotto, che sono la parte **pubblica** del profilo:
-          i documenti li vede solo la sede a cui li carichi. */}
+      {/* I documenti li vede solo l'azienda a cui li carichi. */}
       <NavRow
         icon="clipboard"
         title="I tuoi documenti"
@@ -387,90 +368,18 @@ export default function WaiterProfiloScreen() {
         onPress={() => router.push("/(waiter)/assenze")}
       />
 
-      {/* Tabs */}
-      <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">
-        {TABS.map((t) => {
-          const active = t.id === tab;
-          return (
-            <Pressable
-              key={t.id}
-              onPress={() => setTab(t.id)}
-              className={cn(
-                "flex-1 items-center rounded-xl py-2.5",
-                active && "bg-bg-2",
-              )}
-            >
-              <Text
-                className={cn(
-                  "text-sm",
-                  active ? "font-sans-semibold text-t1" : "text-t3",
-                )}
-              >
-                {t.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+      {/* Il lavoro fatto, in due numeri. Era un tab su due, in coppia con le
+          esperienze: senza il CV non c'è più niente con cui alternarsi. */}
+      <View className="gap-3">
+        <View className="flex-row gap-2.5">
+          <StatCard value={String(history.count)} label="Turni svolti" />
+          <StatCard value={formatHours(history.totalHours)} label="Ore totali" />
+        </View>
+        <GhostButton
+          label="Vedi storico turni"
+          onPress={() => router.push("/(waiter)/storico")}
+        />
       </View>
-
-      {tab === "esperienze" ? (
-        <View className="gap-6">
-          <View>
-            <SectionHeader
-              title="Esperienze"
-              actionLabel="Aggiungi"
-              onAction={() => router.push("/(waiter)/esperienza/new")}
-            />
-            {experiences.length > 0 ? (
-              <ExperienceTimeline
-                items={experiences}
-                onPressItem={(id) =>
-                  router.push(`/(waiter)/esperienza/${id}`)
-                }
-              />
-            ) : (
-              <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
-                <Text className="text-sm leading-5 text-t3">
-                  Aggiungi i tuoi lavori passati per farti notare da chi
-                  cerca personale.
-                </Text>
-                <GoldButton
-                  label="Aggiungi esperienza"
-                  onPress={() => router.push("/(waiter)/esperienza/new")}
-                />
-              </View>
-            )}
-          </View>
-
-          {hasProfileInfo ? (
-            <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-              <Mono>Il tuo profilo</Mono>
-              {bio ? (
-                <Text className="text-sm leading-5 text-t2">{bio}</Text>
-              ) : null}
-              {languages.length > 0 ? (
-                <InfoLine label="Lingue" value={languages.join(" · ")} />
-              ) : null}
-              {specializations ? (
-                <InfoLine label="Specializzazioni" value={specializations} />
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      {tab === "statistiche" ? (
-        <View className="gap-3">
-          <View className="flex-row gap-2.5">
-            <StatCard value={String(history.count)} label="Turni svolti" />
-            <StatCard value={formatHours(history.totalHours)} label="Ore totali" />
-          </View>
-          <GhostButton
-            label="Vedi storico turni"
-            onPress={() => router.push("/(waiter)/storico")}
-          />
-        </View>
-      ) : null}
     </ScrollView>
   );
 }

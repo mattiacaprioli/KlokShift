@@ -19,15 +19,28 @@ export const passwordRules = [
 export const isPasswordValid = (v: string): boolean =>
   passwordRules.every((rule) => rule.test(v));
 
+/** Il messaggio delle due password diverse, uguale ovunque le si chieda due volte. */
+export const passwordMismatchMessage = "Le due password non coincidono.";
+
 // Il ruolo si sceglie in una schermata dedicata e arriva come parametro di rotta,
 // quindi qui restano solo le credenziali.
-export const signupSchema = z.object({
-  fullName: z.string().trim().min(1, "Inserisci il tuo nome."),
-  email: z.string().trim().email("Inserisci un'email valida."),
-  password: z
-    .string()
-    .refine(isPasswordValid, "La password non rispetta i requisiti indicati."),
-});
+//
+// La password si scrive due volte come su `Invito.tsx` e `NuovaPassword.tsx`: si
+// digita alla cieca, e un refuso qui costa un account con una password che
+// nessuno conosce — recuperabile solo dall'email di reset.
+export const signupSchema = z
+  .object({
+    fullName: z.string().trim().min(1, "Inserisci il tuo nome."),
+    email: z.string().trim().email("Inserisci un'email valida."),
+    password: z
+      .string()
+      .refine(isPasswordValid, "La password non rispetta i requisiti indicati."),
+    confirmPassword: z.string().min(1, "Ripeti la password."),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: passwordMismatchMessage,
+    path: ["confirmPassword"],
+  });
 
 export type LoginForm = z.infer<typeof loginSchema>;
 export type SignupForm = z.infer<typeof signupSchema>;

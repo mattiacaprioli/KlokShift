@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { isPasswordValid } from "@/features/auth/schema";
+import {
+  isPasswordValid,
+  passwordMismatchMessage,
+} from "@/features/auth/schema";
 import { Button, Field, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { PasswordChecklist } from "../ui/PasswordChecklist";
@@ -37,7 +40,7 @@ export function NuovaPasswordPage() {
       return;
     }
     if (password !== confirm) {
-      setError("Le due password non coincidono.");
+      setError(passwordMismatchMessage);
       return;
     }
     setBusy(true);

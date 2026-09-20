@@ -13,7 +13,11 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
-import { signupSchema, type SignupForm } from "@/features/auth/schema";
+import {
+  isPasswordValid,
+  signupSchema,
+  type SignupForm,
+} from "@/features/auth/schema";
 import { PasswordChecklist } from "@/features/auth/PasswordChecklist";
 import {
   resendLabel,
@@ -37,10 +41,24 @@ export default function SignupAccount() {
   const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit } = useForm<SignupForm>({
+    // `onTouched` e non il submit: con la validazione al solo invio, togliere un
+    // carattere a una password già tutta verde non dava alcun segnale fino alla
+    // pressione del bottone — e la checklist qui sotto invita a guardare i
+    // requisiti, non il campo.
+    mode: "onTouched",
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "" },
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
   });
   const password = useWatch({ control, name: "password" }) ?? "";
+  const confirmPassword = useWatch({ control, name: "confirmPassword" }) ?? "";
+  // Il bottone non si accende finché la password non è davvero buona: la
+  // checklist dice già cosa manca, quindi non è un blocco muto.
+  const passwordReady = isPasswordValid(password) && password === confirmPassword;
 
   const onSubmit = handleSubmit(async (values) => {
     if (loading) return;
@@ -125,6 +143,14 @@ export default function SignupAccount() {
             secureTextEntry
             autoCapitalize="none"
           />
+          <ControlledInput
+            control={control}
+            name="confirmPassword"
+            label="Ripeti la password"
+            placeholder="La stessa password"
+            secureTextEntry
+            autoCapitalize="none"
+          />
           <PasswordChecklist value={password} />
 
           {apiError ? (
@@ -151,7 +177,7 @@ export default function SignupAccount() {
             className="mt-2"
             size="lg"
             label={loading ? "Creazione…" : "Crea account"}
-            disabled={loading}
+            disabled={loading || !passwordReady}
             onPress={onSubmit}
           />
         </View>

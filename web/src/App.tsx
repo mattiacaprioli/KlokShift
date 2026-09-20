@@ -22,7 +22,6 @@ import { OrePage } from "./pages/Ore";
 import { StaffPage } from "./pages/Staff";
 import { AssenzePage } from "./pages/Assenze";
 import { RuoliPage } from "./pages/Ruoli";
-import { ProfessionistaPage } from "./pages/Professionista";
 import { SedePage } from "./pages/Sede";
 import { SedeNuovaPage } from "./pages/SedeNuova";
 import { SedeDettaglioPage } from "./pages/SedeDettaglio";
@@ -108,12 +107,6 @@ function Dashboard({ userId }: { userId: string }) {
           <Route path="/staff" element={<StaffPage />} />
           <Route path="/assenze" element={<AssenzePage />} />
           <Route path="/ruoli" element={<RuoliPage />} />
-          {/* Profilo pubblico: si arriva dall'organico o dal dettaglio di un
-              turno, non c'è una voce di menu (non è una lista da sfogliare). */}
-          <Route
-            path="/professionista/:id"
-            element={<ProfessionistaPage />}
-          />
           <Route path="/notifiche" element={<NotifichePage />} />
           {/* Stessa pagina con e senza thread aperto: la lista resta a sinistra. */}
           <Route path="/chat" element={<ChatPage />} />

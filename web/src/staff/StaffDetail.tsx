@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -166,8 +166,7 @@ function PersonPanel({
    *
    * Da quando chi gestisce la sede può mettersi in organico, la propria scheda
    * si apre da qui — e metà di ciò che c'è dentro è scritto per guardare
-   * qualcun altro: la chat, il profilo pubblico da professionista (che un
-   * account gestore non ha), la promozione a collaboratore.
+   * qualcun altro: la chat, la promozione a collaboratore.
    */
   const isMe = !!person.waiter_id && person.waiter_id === session?.user.id;
   /**
@@ -305,8 +304,8 @@ function PersonPanel({
               <Performance
                 personId={person.id}
                 // ⚠️ `null` sulla propria scheda: `waiter_public_cards`
-                // contiene solo i professionisti, quindi il profilo pubblico di
-                // un gestore è una pagina vuota e la sua card non esiste.
+                // contiene solo i professionisti, quindi un gestore non ha una
+                // card e la media clienti non avrebbe niente da leggere.
                 waiterId={isMe ? null : (person.waiter_id ?? null)}
                 showVenue={multiVenue}
               />
@@ -457,6 +456,7 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
 
       <InviteRow person={person} />
       <BirthdayRow person={person} />
+      <LanguagesRow person={person} />
     </section>
   );
 }
@@ -555,6 +555,31 @@ function BirthdayRow({ person }: { person: StaffPersonDetail }) {
         Compleanno
       </span>
       <span className="text-sm font-semibold text-t1">{label}</span>
+    </div>
+  );
+}
+
+/**
+ * Le lingue parlate, in sola lettura come il compleanno qui sopra: le mette il
+ * professionista dal suo profilo nell'app, e spariscono quando non ce ne sono.
+ *
+ * A differenza del compleanno servono a comporre una squadra — chi fa i turni
+ * del sabato vuole sapere chi può stare in sala con dei turisti. È quel che
+ * resta del profilo-vetrina (20260920001700), e sta qui perché è qui che si
+ * guarda chi si ha, non su una pagina a parte.
+ */
+function LanguagesRow({ person }: { person: StaffPersonDetail }) {
+  const languages = person.waiter?.languages ?? [];
+  if (languages.length === 0) return null;
+
+  return (
+    <div className="flex items-baseline gap-2 rounded-xl border border-border bg-bg-card px-4 py-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+        Lingue
+      </span>
+      <span className="text-sm font-semibold text-t1">
+        {languages.join(" · ")}
+      </span>
     </div>
   );
 }
@@ -1006,20 +1031,6 @@ function Performance({
         Performance
       </span>
 
-      {/* Con le recensioni spente resta il link alla scheda: chi è, cosa sa
-          fare. La media clienti invece non ha più dove vivere. */}
-      {waiterId && !REVIEWS_ENABLED ? (
-        <Card className="flex items-center justify-between gap-3 p-4">
-          <span className="text-sm text-t2">Profilo del professionista</span>
-          <Link
-            to={`/professionista/${waiterId}`}
-            className="focus-gold text-xs text-gold underline underline-offset-2"
-          >
-            Apri
-          </Link>
-        </Card>
-      ) : null}
-
       {waiterId && REVIEWS_ENABLED ? (
         <Card className="flex items-center justify-between gap-3 p-4">
           <span className="text-sm text-t2">Valutazione clienti</span>
@@ -1032,14 +1043,10 @@ function Performance({
             ) : (
               <span className="text-xs text-t4">Nessuna recensione</span>
             )}
-            {/* Qui c'è solo la media: le recensioni per esteso stanno sul
-                profilo pubblico. */}
-            <Link
-              to={`/professionista/${waiterId}`}
-              className="focus-gold text-xs text-gold underline underline-offset-2"
-            >
-              Profilo
-            </Link>
+            {/* ⚠️ Qui c'è solo la media. Le recensioni per esteso stavano sul
+                profilo pubblico del professionista, caduto col CV
+                (20260920001700): riaccendendo `REVIEWS_ENABLED` serve una
+                pagina nuova dove metterle, questo link non esiste più. */}
           </span>
         </Card>
       ) : null}

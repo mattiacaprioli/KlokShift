@@ -3,7 +3,11 @@ import { Link } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth";
-import { signupSchema, type SignupForm } from "@/features/auth/schema";
+import {
+  isPasswordValid,
+  signupSchema,
+  type SignupForm,
+} from "@/features/auth/schema";
 import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { PasswordChecklist } from "../ui/PasswordChecklist";
@@ -40,10 +44,24 @@ export function RegistrazionePage() {
     handleSubmit,
     formState: { errors },
   } = useForm<SignupForm>({
+    // `onTouched` e non il submit: con la validazione al solo invio, togliere un
+    // carattere a una password già tutta verde non dava alcun segnale fino alla
+    // pressione del bottone — e la checklist qui sotto invita a guardare i
+    // requisiti, non il campo.
+    mode: "onTouched",
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "" },
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
   });
   const password = useWatch({ control, name: "password" }) ?? "";
+  const confirmPassword = useWatch({ control, name: "confirmPassword" }) ?? "";
+  // Il bottone non si accende finché la password non è davvero buona: la
+  // checklist dice già cosa manca, quindi non è un blocco muto.
+  const passwordReady = isPasswordValid(password) && password === confirmPassword;
 
   const onSubmit = handleSubmit(async (values) => {
     if (busy) return;
@@ -108,6 +126,15 @@ export function RegistrazionePage() {
               autoComplete="new-password"
             />
           </Field>
+          <Field
+            label="Ripeti la password"
+            error={errors.confirmPassword?.message}
+          >
+            <PasswordInput
+              {...register("confirmPassword")}
+              autoComplete="new-password"
+            />
+          </Field>
 
           <PasswordChecklist value={password} />
 
@@ -126,7 +153,7 @@ export function RegistrazionePage() {
             </p>
           ) : null}
 
-          <Button type="submit" variant="gold" disabled={busy}>
+          <Button type="submit" variant="gold" disabled={busy || !passwordReady}>
             {busy ? "Creazione…" : "Crea account"}
           </Button>
 

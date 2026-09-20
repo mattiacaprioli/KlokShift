@@ -427,6 +427,7 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
 
       <PersonInviteRow person={person} />
       <PersonBirthdayRow person={person} />
+      <PersonLanguagesRow person={person} />
     </View>
   );
 }
@@ -542,6 +543,34 @@ function PersonBirthdayRow({ person }: { person: StaffPersonDetail }) {
         <Mono>Compleanno</Mono>
         <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
           {label}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Le lingue parlate, in sola lettura come il compleanno qui sopra: le mette il
+ * professionista dal suo profilo, e arrivano qui solo se ha scelto di metterle.
+ * Sparisce quando non ce ne sono, per la stessa ragione — una riga «non
+ * indicate» sarebbe un invito a chiederle.
+ *
+ * A differenza del compleanno, però, questa riga serve a comporre una squadra:
+ * chi fa i turni del sabato vuole sapere chi può stare in sala con dei turisti.
+ * È l'unica cosa che resta del profilo-vetrina (20260920001700) e sta qui
+ * perché è qui che il titolare guarda chi ha, non su una pagina a parte.
+ */
+function PersonLanguagesRow({ person }: { person: StaffPersonDetail }) {
+  const languages = person.waiter?.languages ?? [];
+  if (languages.length === 0) return null;
+
+  return (
+    <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
+      <Icon name="message" size={18} color="#EAB54C" />
+      <View className="flex-1">
+        <Mono>Lingue</Mono>
+        <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
+          {languages.join(" · ")}
         </Text>
       </View>
     </View>
@@ -873,10 +902,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           {/* I pannelli inattivi restano montati e solo nascosti: i form tengono
               gli edit in stato locale, e cambiare tab non deve buttarli via. */}
           <TabPanel active={tab === "dati"}>
-            {/* La propria scheda non porta a una scheda pubblica da
-                professionista: `waiter_public_cards` contiene solo i
-                professionisti, quindi quella pagina per un gestore sarebbe
-                vuota. Nome e foto si cambiano dal profilo. */}
+            {/* Questa scheda è l'unica che c'è: quella «pubblica» da
+                professionista portava il CV, ed è caduta col marketplace. Per
+                chi ha un account resta il solo fatto che ce l'ha — è ciò che
+                distingue chi riceve i turni sul telefono da chi è solo una riga
+                nella rubrica del titolare. */}
             {isMe ? (
               <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
                 <Icon name="user" size={18} color="#EAB54C" />
@@ -888,20 +918,15 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                 </View>
               </View>
             ) : waiterId ? (
-              <Pressable
-                onPress={() => router.push(`/(manager)/cameriere/${waiterId}`)}
-              >
-                <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
-                  <Icon name="verified" size={18} color="#EAB54C" />
-                  <View className="flex-1">
-                    <Mono gold>Account app collegato</Mono>
-                    <Text className="mt-0.5 text-sm text-t2">
-                      Vedi profilo ed esperienze
-                    </Text>
-                  </View>
-                  <Icon name="chevR" size={18} color="#8c857a" />
+              <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
+                <Icon name="verified" size={18} color="#EAB54C" />
+                <View className="flex-1">
+                  <Mono gold>Account app collegato</Mono>
+                  <Text className="mt-0.5 text-sm text-t2">
+                    Riceve i turni e le notifiche sul telefono
+                  </Text>
                 </View>
-              </Pressable>
+              </View>
             ) : null}
             <PersonIdentityForm person={person} />
             {/* Le ore da contratto sono un accordo fra la persona e l'azienda,

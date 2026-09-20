@@ -13,8 +13,12 @@
  *
  * Cosa gating: la scheda «Cosa dicono di te» e le celle rating in home
  * professionista, il tab Recensioni e il bottone del QR nel suo profilo, il
- * rating in «Chi lavora oggi» e nella scheda staff lato sede, le recensioni
- * sulla scheda del professionista (app e dashboard).
+ * rating in «Chi lavora oggi» e nella scheda staff lato sede.
+ *
+ * ⚠️ Le recensioni **per esteso** non hanno più una casa: stavano sulla scheda
+ * pubblica del professionista (app e dashboard), caduta col CV il 2026-09-20
+ * (`20260920001700`). Riaccendendo, la media si rivede da sola dove già c'è —
+ * l'elenco no, va deciso dove metterlo.
  *
  * ⚠️ Riaccendendo, ricontrollare anche: le slide di `introContent.ts`, la copy
  * di `(auth)/welcome.tsx` e la schermata di fine onboarding — sono state

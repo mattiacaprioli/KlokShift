@@ -82,6 +82,10 @@ Dopo aver toccato una migration: `run.sh reset && run.sh test`, poi
 `gen-types.sh` e `git diff src/types/database.ts`. Quando lo schema nuovo è sul
 progetto remoto, `yarn db:types` (CLI con token) sostituisce `gen-types.sh`.
 
-> ⚠️ Il progetto remoto ha ancora lo schema storico finché la baseline non viene
-> applicata con un reset (distruttivo: azzera `public`, lascia `auth.users`).
-> La history di `supabase_migrations.schema_migrations` va poi riallineata a mano.
+> Il remoto **è sulla baseline**: tutte le versioni `20260920*` risultano
+> applicate. Da qui in avanti non si riscrivono i file della baseline — una
+> modifica a un file già registrato non tocca il database reale e farebbe
+> divergere repo e produzione, sanabile solo con un altro reset distruttivo
+> (azzera `public`, lascia `auth.users`, e la history di
+> `supabase_migrations.schema_migrations` va riallineata a mano). Si aggiunge un
+> file nuovo, come `20260920001600_move_assignment` e `20260920001700_drop_career_showcase`.

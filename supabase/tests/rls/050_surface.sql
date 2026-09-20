@@ -43,7 +43,7 @@ begin
         where table_schema = 'public' and grantee = 'authenticated'
           and privilege_type in ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE')
         group by table_name) t),
-    'notifications:DELETE | push_tokens:DELETE | staff_documents:DELETE | venue_roles:DELETE,INSERT,UPDATE | waiter_experiences:DELETE,INSERT,UPDATE',
+    'notifications:DELETE | push_tokens:DELETE | staff_documents:DELETE | venue_roles:DELETE,INSERT,UPDATE',
     'scritture dirette per authenticated (livello tabella)');
 
   -- 5. Scritture per colonna: l'elenco esatto.
@@ -57,12 +57,12 @@ begin
              where table_schema = 'public' and grantee = 'authenticated')
         group by table_name, privilege_type) t),
     'messages.INSERT(content,conversation_id,sender_id) | notifications.UPDATE(read_at) | profiles.INSERT(full_name,id) | '
-    'profiles.UPDATE(avatar_url,bio,birth_day,birth_month,city,full_name,intro_seen,notification_prefs,onboarding_complete,phone) | '
+    'profiles.UPDATE(avatar_url,birth_day,birth_month,city,full_name,intro_seen,notification_prefs,onboarding_complete,phone) | '
     'reviews.INSERT(comment,rating,receipt_ref,reviewer_name,shift_id,tags,venue_id,waiter_id) | '
     'staff_documents.INSERT(expires_at,member_id,mime_type,name,size_bytes,storage_path) | staff_documents.UPDATE(expires_at,name) | '
     'venues.UPDATE(address,city,cuisine_type,description,logo_url,name,staff_sees_planning) | '
-    'waiter_profiles.INSERT(availability_days,cv_url,documents,experience,hourly_rate_min,id,languages,primary_role,specializations,years_experience) | '
-    'waiter_profiles.UPDATE(availability_days,cv_url,documents,experience,hourly_rate_min,languages,primary_role,specializations,years_experience)',
+    'waiter_profiles.INSERT(id,languages,primary_role) | '
+    'waiter_profiles.UPDATE(languages,primary_role)',
     'scritture dirette per authenticated (livello colonna)');
 
   -- 6. Funzioni: anon ne esegue tre, le riservate alla service role non sono di authenticated,

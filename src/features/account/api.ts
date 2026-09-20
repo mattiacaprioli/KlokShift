@@ -5,7 +5,7 @@ export const AVATARS_BUCKET = "avatars";
 
 /**
  * I campi del proprio profilo modificabili da qualunque ruolo. Il cameriere ne
- * ha molti altri (città, bio, ruolo, lingue): quelli stanno in
+ * ha qualcuno in più (città, ruolo, lingue): quelli stanno in
  * `saveWaiterProfile`, che scrive anche `waiter_profiles`.
  */
 export async function updateMyProfile(
