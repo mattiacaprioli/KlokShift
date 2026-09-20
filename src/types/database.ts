@@ -1378,6 +1378,10 @@ export type Database = {
         Args: { p_conversation: string }
         Returns: undefined
       }
+      move_assignment: {
+        Args: { p_assignment: string; p_to_date?: string; p_to_shift?: string }
+        Returns: string
+      }
       notification_category: {
         Args: { t: Database["public"]["Enums"]["notification_type"] }
         Returns: string

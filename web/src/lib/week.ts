@@ -49,6 +49,22 @@ export function isToday(dateStr: string): boolean {
   return dateStr === toDateString(new Date());
 }
 
+/**
+ * Un giorno già passato. Nel planning è un bersaglio che si rifiuta: un turno
+ * non si sposta all'indietro nel tempo.
+ *
+ * Il database è un filo più permissivo — `guard_finished_shift_times` lascia
+ * correggere lo storico a chi ha il permesso «Ore» — ma correggere il passato è
+ * un'operazione da fare consapevolmente dalla pagina Ore, non trascinando in
+ * una griglia dove metà delle celle sono giorni andati.
+ */
+export function isPastDay(dateStr: string): boolean {
+  return dateStr < toDateString(new Date());
+}
+
+/** Il motivo, uguale in tutte e tre le viste. */
+export const PAST_DAY_REASON = "Un turno non si sposta nel passato.";
+
 // --- Vista mese -----------------------------------------------------------
 
 export function startOfMonth(d: Date): Date {

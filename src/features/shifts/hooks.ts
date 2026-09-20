@@ -129,7 +129,7 @@ export function useShift(id: string, enabled = true) {
 /** Shift detail joined with its venue (waiter detail view). */
 export function useShiftWithVenue(id: string) {
   return useQuery({
-    queryKey: qk.shifts.detail(id),
+    queryKey: qk.shifts.detailWithVenue(id),
     queryFn: () => getShiftWithVenue(id),
   });
 }
@@ -139,11 +139,9 @@ export function useUpdateShiftStatus(shiftId: string) {
   return useMutation({
     mutationFn: (status: Enums<"shift_status">) =>
       updateShiftStatus(shiftId, status),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
-      qc.invalidateQueries({ queryKey: qk.shifts.byOwnerAll });
-      qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
-    },
+    // Annullare un turno cambia anche lo storico filtrato per stato e «chi
+    // lavora oggi»: le stesse viste di qualunque altra scrittura.
+    onSuccess: () => invalidateShiftViews(qc, shiftId),
   });
 }
 
@@ -154,9 +152,13 @@ export function useUpdateShiftStatus(shiftId: string) {
  *
  * Si invalidano i **prefissi** e non le chiavi complete: lo scope è `venuesKey`,
  * che qui non si ha a portata di mano, e in una sessione ce n'è uno solo vivo.
+ *
+ * ⚠️ È **l'unica**: `features/assignments/hooks.ts` la richiama invece di
+ * tenerne una propria più corta. Due liste diverse volevano dire che la stessa
+ * scrittura rinfrescava viste diverse a seconda di chi la faceva partire.
  */
-function invalidateAfterShiftWrite(qc: QueryClient, shiftId: string) {
-  qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
+export function invalidateShiftViews(qc: QueryClient, shiftId?: string) {
+  if (shiftId) qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
   qc.invalidateQueries({ queryKey: qk.shifts.byOwnerAll });
   qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
   qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
@@ -171,7 +173,7 @@ export function useUpdateShift(shiftId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (fields: ShiftFieldsPatch) => updateShift(shiftId, fields),
-    onSuccess: () => invalidateAfterShiftWrite(qc, shiftId),
+    onSuccess: () => invalidateShiftViews(qc, shiftId),
   });
 }
 
@@ -224,7 +226,7 @@ export function useMoveShiftToDate() {
     },
 
     onSettled: (_data, _error, { shiftId }) =>
-      invalidateAfterShiftWrite(qc, shiftId),
+      invalidateShiftViews(qc, shiftId),
   });
 }
 
@@ -234,7 +236,7 @@ export function useDeleteShift(shiftId: string) {
   return useMutation({
     mutationFn: () => deleteShift(shiftId),
     onSuccess: () => {
-      invalidateAfterShiftWrite(qc, shiftId);
+      invalidateShiftViews(qc, shiftId);
       qc.invalidateQueries({ queryKey: qk.assignments.all });
     },
   });

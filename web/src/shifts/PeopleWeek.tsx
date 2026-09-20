@@ -26,14 +26,18 @@ import { formatHours, formatShiftRange } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
 import { personRoleNames } from "@/features/staff/api";
-import { dayLabel, isToday } from "../lib/week";
+import { dayLabel, isPastDay, isToday, PAST_DAY_REASON } from "../lib/week";
 import { Placeholder, Spinner } from "../ui/primitives";
 import {
   dropClass,
   useShiftDrag,
-  type ReassignDragPayload,
+  type PersonDragPayload,
   type ReassignTarget,
 } from "./dragContext";
+
+/** Altra riga *e* altro giorno: sono due gesti in uno, e non si indovina quale. */
+const DIAGONAL_REASON =
+  "Una cosa per volta: un'altra persona lo stesso giorno, oppure la stessa persona un altro giorno.";
 
 /**
  * La settimana pivotata **per persona**: righe = organico, colonne = giorni.
@@ -50,6 +54,7 @@ export function PeopleWeek({
   onOpen,
   onCreate,
   onReassign,
+  onMovePerson,
 }: {
   days: string[];
   shifts: ShiftWithAssignees[];
@@ -77,7 +82,10 @@ export function PeopleWeek({
    */
   onCreate: (date: string, personId: string) => void;
   /** Turno trascinato sulla riga di un'altra persona dello stesso giorno. */
-  onReassign: (payload: ReassignDragPayload, to: ReassignTarget) => void;
+  onReassign: (payload: PersonDragPayload, to: ReassignTarget) => void;
+  /** Turno trascinato su un altro giorno della **stessa** riga: si sposta solo
+   *  quella persona, i colleghi restano dov'erano. */
+  onMovePerson: (payload: PersonDragPayload, toDate: string) => void;
 }) {
   const { ownerId, venues, isMultiVenue } = useOwnerVenues();
   const peopleQuery = useOwnerPeople(ownerId);
@@ -144,6 +152,13 @@ export function PeopleWeek({
     }
     return map;
   }, [peopleQuery.data]);
+
+  /** Le sedi in cui una persona è in organico, per il ramo «altro giorno». */
+  const venueIdsOf = (personId: string) =>
+    (peopleQuery.data ?? [])
+      .find((p) => p.id === personId)
+      ?.memberships.filter((m) => m.link_status === "active")
+      .map((m) => m.venue_id) ?? [];
 
   const rows = useMemo(() => {
     const scope = new Set(venueIds);
@@ -251,28 +266,56 @@ export function PeopleWeek({
                   const personAbsences =
                     absencesByPerson.get(person.personId) ?? [];
                   const absence = absenceOnDay(day, personAbsences);
-                  // Si accetta solo dalla stessa colonna: trascinare su un
-                  // altro giorno *di un'altra persona* sarebbe spostamento e
-                  // riassegnazione insieme, e nessuno saprebbe cosa aspettarsi.
+                  // Il chip che si trascina è **una persona su un turno**, e la
+                  // cella su cui cade decide quale delle due cose cambia:
                   //
-                  // ⚠️ E solo se la persona lavora **nella sede di quel turno**:
-                  // è l'unico controllo che impedisce un'assegnazione incoerente,
-                  // perché il database la accetterebbe senza dire niente.
-                  const { state, ...dropHandlers } = dnd.dropProps({
+                  //   stessa colonna, altra riga → cambia la persona (reassign)
+                  //   stessa riga, altro giorno  → cambia il turno (move)
+                  //   altra riga E altro giorno  → sarebbero le due insieme: no
+                  //
+                  // ⚠️ Per cambiare persona serve che chi riceve lavori **nella
+                  // sede di quel turno**: è l'unico controllo che impedisce
+                  // un'assegnazione incoerente, perché il database la
+                  // accetterebbe senza dire niente. Spostando di giorno la
+                  // persona è la stessa, quindi il vincolo è già soddisfatto.
+                  const targetOf = (d: PersonDragPayload) =>
+                    membershipOf.get(`${person.personId}:${d.venueId}`);
+                  const sameRow = (d: PersonDragPayload) =>
+                    d.personId === person.personId;
+                  const { state, reason, ...dropHandlers } = dnd.dropProps({
                     key: `person:${person.personId}:${day}`,
-                    accepts: (d) =>
-                      d.mode === "reassign" &&
-                      d.date === day &&
-                      membershipOf.get(`${person.personId}:${d.venueId}`)?.id !==
-                        undefined &&
-                      membershipOf.get(`${person.personId}:${d.venueId}`)?.id !==
-                        d.fromStaffMemberId,
+                    accepts: (d) => {
+                      if (d.mode !== "person") return false;
+                      if (isPastDay(day)) return false;
+                      if (d.date === day) {
+                        const to = targetOf(d);
+                        return !!to && to.id !== d.fromStaffMemberId;
+                      }
+                      return sameRow(d) && !isPastDay(d.date);
+                    },
+                    rejects: (d) => {
+                      if (d.mode !== "person") return null;
+                      if (isPastDay(day)) return PAST_DAY_REASON;
+                      if (d.date !== day && !sameRow(d)) return DIAGONAL_REASON;
+                      // Togliere qualcuno da un turno già svolto ne cancella le
+                      // ore: è una correzione dello storico, e lo storico si
+                      // corregge dove si vede quel che si sta perdendo.
+                      if (d.date !== day && isPastDay(d.date)) {
+                        return "Un turno già svolto non si sposta: correggi le presenze dalla pagina Ore.";
+                      }
+                      if (d.date === day && !targetOf(d)) {
+                        return `${person.name} non lavora nella sede di questo turno.`;
+                      }
+                      return null;
+                    },
                     onDrop: (d) => {
-                      if (d.mode !== "reassign") return;
-                      const to = membershipOf.get(
-                        `${person.personId}:${d.venueId}`
-                      );
-                      if (to) onReassign(d, to);
+                      if (d.mode !== "person") return;
+                      if (d.date === day) {
+                        const to = targetOf(d);
+                        if (to) onReassign(d, to);
+                      } else {
+                        onMovePerson(d, day);
+                      }
                     },
                   });
 
@@ -291,7 +334,10 @@ export function PeopleWeek({
                             ? `${absenceCellLabel(absence)}. Nuovo turno per ${person.name} il ${day}`
                             : `Nuovo turno per ${person.name} il ${day}`
                         }
-                        title={absence ? absenceCellLabel(absence) : undefined}
+                        title={
+                          reason ??
+                          (absence ? absenceCellLabel(absence) : undefined)
+                        }
                         {...dropHandlers}
                         style={absence ? absenceCellStyle(absence) : undefined}
                         className={cn(
@@ -310,6 +356,7 @@ export function PeopleWeek({
                     <div
                       key={day}
                       {...dropHandlers}
+                      title={reason ?? undefined}
                       style={absence ? absenceCellStyle(absence) : undefined}
                       className={cn(
                         "group flex min-h-14 flex-col gap-1 rounded-xl border p-1",
@@ -336,14 +383,20 @@ export function PeopleWeek({
                               )
                             )
                           }
+                          personId={person.personId}
+                          personVenueIds={venueIdsOf(person.personId)}
                           fromStaffName={person.name}
                           venue={venueOf(ps.venueId)}
                           showVenue={showVenue}
+                          // Annullato: come nelle viste settimana e mese, non si
+                          // trascina — `notify_on_shift_change` salta i turni
+                          // cancellati, quindi nessuno saprebbe dello spostamento.
+                          cancelled={byId.get(ps.shiftId)?.status === "cancelled"}
                           busyStaffIds={
                             byId
                               .get(ps.shiftId)
-                              ?.shift_assignments.map(
-                                (a) => a.staff_member?.id ?? ""
+                              ?.shift_assignments.flatMap((a) =>
+                                a.staff_member ? [a.staff_member.id] : []
                               ) ?? []
                           }
                           onOpen={() => {
@@ -454,16 +507,25 @@ function absenceCellStyle(a: Pick<AbsenceAvailability, "status">): CSSProperties
 function PersonShiftChip({
   personShift,
   conflict,
+  personId,
+  personVenueIds,
   fromStaffName,
   venue,
   showVenue,
+  cancelled,
   busyStaffIds,
   onOpen,
 }: {
   personShift: PersonShift;
   /** Il turno cade in un'assenza approvata della persona: va coperto. */
   conflict: boolean;
+  /** La persona della riga: dice se il rilascio è sulla stessa o su un'altra. */
+  personId: string;
+  /** Le sedi in cui lavora: limitano i turni su cui può essere spostata. */
+  personVenueIds: string[];
   fromStaffName: string;
+  /** Turno annullato: non si trascina, come in settimana e mese. */
+  cancelled: boolean;
   /** La sede del turno: nome e colore. `null` con una sede sola. */
   venue: { name: string; accent: string } | null;
   /**
@@ -484,31 +546,40 @@ function PersonShiftChip({
         if (dnd.swallowClick()) return;
         onOpen();
       }}
-      {...dnd.dragProps(
-        {
-          mode: "reassign",
-          shiftId: personShift.shiftId,
-          title: personShift.title,
-          date: personShift.date,
-          assignmentId: personShift.assignmentId,
-          fromStaffMemberId: personShift.staffMemberId,
-          fromStaffName,
-          venueId: personShift.venueId,
-          busyStaffIds,
-        },
-        `${personShift.title} · ${fromStaffName}`
-      )}
-      title={[
-        venue?.name,
-        personShift.title,
-        formatShiftRange(personShift.start_time, personShift.end_time),
-        active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
-        conflict ? "In conflitto con un'assenza" : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")}
+      {...(cancelled
+        ? {}
+        : dnd.dragProps(
+            {
+              mode: "person",
+              shiftId: personShift.shiftId,
+              title: personShift.title,
+              date: personShift.date,
+              assignmentId: personShift.assignmentId,
+              personId,
+              personVenueIds,
+              fromStaffMemberId: personShift.staffMemberId,
+              fromStaffName,
+              venueId: personShift.venueId,
+              busyStaffIds,
+            },
+            `${personShift.title} · ${fromStaffName}`
+          ))}
+      title={
+        cancelled
+          ? `${personShift.title} · annullato: riattivalo dal pannello per spostarlo`
+          : [
+              venue?.name,
+              personShift.title,
+              formatShiftRange(personShift.start_time, personShift.end_time),
+              active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
+              conflict ? "In conflitto con un'assenza" : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+      }
       className={cn(
-        "focus-gold cursor-grab rounded-lg border px-1.5 py-1 text-left transition active:cursor-grabbing",
+        "focus-gold rounded-lg border px-1.5 py-1 text-left transition",
+        cancelled ? "opacity-50" : "cursor-grab active:cursor-grabbing",
         active && conflict
           ? "border-warning bg-warning/15 hover:bg-warning/25"
           : active

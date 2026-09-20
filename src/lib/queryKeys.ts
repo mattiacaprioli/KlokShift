@@ -82,6 +82,15 @@ export const qk = {
       ["shifts", "pastCount", scope, filters] as const,
     pastCountAll: ["shifts", "pastCount"] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
+    /**
+     * Il turno **con la sua sede** (lato professionista). Chiave a parte da
+     * `detail`: è lo stesso id ma un payload diverso, e finché le due query
+     * condividevano la chiave vinceva quella che montava per prima — chi
+     * arrivava dopo si ritrovava un turno senza `venue`, o con una `venue` che
+     * il suo tipo non prevedeva.
+     */
+    detailWithVenue: (id: string) =>
+      ["shifts", "detail", id, "venue"] as const,
   },
   reviews: {
     all: ["reviews"] as const,

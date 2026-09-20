@@ -350,6 +350,32 @@ export async function reassignShiftAssignment(
 }
 
 /**
+ * Sposta **una persona** da un turno a un altro, lasciando dov'è il resto della
+ * squadra. È `reassignShiftAssignment` ribaltata: lì cambia la persona e resta
+ * il turno, qui resta la persona e cambia il turno.
+ *
+ * `to` è un turno che esiste già quel giorno, oppure una data: in quel caso la
+ * RPC crea il gemello del turno di partenza (stessa sede, stesso titolo, stessi
+ * orari) e ci mette la persona. Stessa meccanica di `reassign` — delete e
+ * insert nella stessa transazione — quindi partono «Turno revocato» e «Nuovo
+ * turno assegnato», e la conferma non si eredita.
+ *
+ * Ritorna l'id della nuova riga di assegnazione.
+ */
+export async function moveAssignment(
+  assignmentId: string,
+  to: { shiftId: string } | { date: string }
+): Promise<string> {
+  const { data, error } = await supabase.rpc("move_assignment", {
+    p_assignment: assignmentId,
+    p_to_shift: "shiftId" in to ? to.shiftId : undefined,
+    p_to_date: "date" in to ? to.date : undefined,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
  * Presenza a turno concluso: stato (presente/assente) e/o ore effettive.
  * Ritorna la riga scritta. Il DB può rifiutare (`not_allowed`: le proprie
  * presenze le segna solo il titolare; `status` chiede «Turni», `worked_hours`

@@ -9,17 +9,15 @@ import type { ShiftWithAssignees } from "./types";
  * Chi riceve una notifica se cambia la data (o l'orario) di un turno.
  *
  * Gemello client di `notify_on_shift_change()`
- * (`supabase/migrations/20260910120300_notify_triggers.sql`): gli assegnati
- * attivi **con account collegato**. Le due condizioni vanno tenute allineate a
- * mano — se il trigger cambia destinatari, questo file va cambiato con lui, o
- * l'interfaccia prometterà avvisi che nessuno riceve.
- *
- * Nota: il trigger fa ancora una `union` con i candidati accettati, ma quel
- * ramo non produce più righe — nessuno scrive più in `applications`.
+ * (`supabase/migrations/20260920000800_shifts.sql`): gli assegnati attivi **con
+ * account collegato**. Le due condizioni vanno tenute allineate a mano — se il
+ * trigger cambia destinatari, questo file va cambiato con lui, o l'interfaccia
+ * prometterà avvisi che nessuno riceve.
  *
  * Serve a dire la verità prima di trascinare un turno su un altro giorno: lo
  * spostamento non è mai solo uno spostamento, è una notifica sul telefono di
- * qualcuno.
+ * qualcuno. Il conto completo delle conseguenze — chi dovrà riconfermare, chi
+ * quel giorno non c'è — sta in `moveImpact.ts`.
  */
 export type ShiftNotifyRecipients = {
   /** Nomi di chi è assegnato e verrà avvisato, per poterli nominare. */
@@ -71,11 +69,14 @@ export type ReassignNotifyPlan = {
 /**
  * Chi viene avvisato quando un turno passa di mano.
  *
- * Gemello client di due trigger: `notify_on_assignment_removed`
- * (20260909193312) per chi esce — che si ferma su rifiuto, account mancante,
- * turno annullato e turni già passati — e `notify_on_assignment`
- * (20260712075549) per chi entra, che chiede solo un account collegato (e non
- * salta i turni passati: chi entra viene avvisato comunque).
+ * Gemello client di due trigger, entrambi in `20260920000800_shifts.sql`:
+ * `notify_on_assignment_removed` per chi esce — che si ferma su rifiuto,
+ * account mancante, turno annullato e turni già passati — e
+ * `notify_on_assignment` per chi entra, che chiede solo un account collegato
+ * (e non salta i turni passati: chi entra viene avvisato comunque).
+ *
+ * Vale anche quando la persona è la stessa su entrambi i lati: è il caso di
+ * `move_assignment`, dove esce da un turno ed entra in un altro.
  */
 export function reassignNotifyPlan(input: {
   shiftDate: string;

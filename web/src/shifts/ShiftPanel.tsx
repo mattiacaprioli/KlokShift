@@ -11,7 +11,17 @@ import {
   useShiftRoleRequirements,
   useUpdateInternalShift,
 } from "@/features/assignments/hooks";
-import { useUpdateShiftStatus } from "@/features/shifts/hooks";
+import {
+  useOwnerShiftsRange,
+  useUpdateShiftStatus,
+} from "@/features/shifts/hooks";
+import {
+  hasMoveImpact,
+  moveHeadline,
+  moveImpactLines,
+  shiftMoveImpact,
+} from "@/features/shifts/moveImpact";
+import { useAuth } from "@/lib/auth";
 import { useVenueStaff } from "@/features/staff/hooks";
 import { Link } from "react-router-dom";
 import { useVenueRoles } from "@/features/roles/hooks";
@@ -25,7 +35,7 @@ import {
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
-import { formatShiftSummary, isShiftOver } from "@/lib/format";
+import { formatShiftSummary, isShiftOver, todayString } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -249,6 +259,9 @@ function InternalForm({
   // Solo le sedi su cui si possono fare i turni: il selettore non deve offrire
   // una sede su cui l'insert verrebbe poi rifiutato dalla RLS.
   const { venuesWith, can } = useOwnerVenues();
+  // Chi salva può essere in turno: il trigger non avvisa sé stessi, e la
+  // finestra non deve promettere una notifica in più di quelle che partono.
+  const { session } = useAuth();
   const venues = venuesWith("can_manage_shifts");
   const isMultiVenue = venues.length > 1;
   const { venueId: lastVenueId, choose } = useLastVenue();
@@ -304,6 +317,10 @@ function InternalForm({
   const formStart = watch("start_time");
   const formEnd = watch("end_time");
   const absencesQuery = useAbsenceAvailability(formDate, formDate, !!formDate);
+  // I turni del giorno d'arrivo: servono a dire, prima di salvare, se qualcuno
+  // ci finirebbe sopra un turno che ha già. Stessa query del planning, quindi
+  // di norma è già in cache.
+  const targetDayQuery = useOwnerShiftsRange(formDate, formDate);
   const staffQuery = useVenueStaff(formVenueId || undefined);
   const rolesQuery = useVenueRoles(formVenueId || undefined);
 
@@ -489,7 +506,19 @@ function InternalForm({
   const pending = create.isPending || update.isPending;
   const mutationError = create.error ?? update.error;
 
-  function onSubmit(values: InternalShiftForm) {
+  /**
+   * Cambiare la data o l'orario di un turno già assegnato non è un salvataggio
+   * come un altro: manda notifiche e riapre le conferme. Fino al 20/09/2026 lo
+   * diceva solo il trascinamento nel planning, e da qui si salvava in silenzio.
+   * Le frasi sono le stesse — `moveImpactLines`.
+   */
+  const [pendingMove, setPendingMove] = useState<{
+    values: InternalShiftForm;
+    message: string;
+    notifies: boolean;
+  } | null>(null);
+
+  function save(values: InternalShiftForm) {
     const payload = {
       title: values.title,
       date: values.date,
@@ -504,6 +533,7 @@ function InternalForm({
       roleTargets,
     };
     if (shift) {
+      setPendingMove(null);
       update.mutate(payload, { onSuccess: onClose });
       return;
     }
@@ -520,6 +550,64 @@ function InternalForm({
         },
       }
     );
+  }
+
+  function onSubmit(values: InternalShiftForm) {
+    // Solo in modifica, e solo se è davvero cambiato *quando*: aggiungere una
+    // persona o correggere una nota non riapre niente.
+    const moved =
+      !!shift &&
+      (values.date !== shift.date ||
+        values.start_time !== shift.start_time.slice(0, 5) ||
+        values.end_time !== shift.end_time.slice(0, 5));
+    if (!moved || !shift) {
+      save(values);
+      return;
+    }
+    const impact = shiftMoveImpact({
+      shiftId: shift.id,
+      cancelled: shift.status === "cancelled",
+      assignees: (assignmentsQuery.data ?? []).flatMap((a) =>
+        a.staff_member
+          ? [
+              {
+                status: a.status,
+                personId: a.staff_member.person_id,
+                displayName: a.staff_member.display_name,
+                waiterId: a.staff_member.waiter_id,
+              },
+            ]
+          : []
+      ),
+      to: {
+        date: values.date,
+        start_time: values.start_time,
+        end_time: values.end_time,
+      },
+      myWaiterId: session?.user.id,
+      absences: absencesQuery.data ?? [],
+      dayShifts: targetDayQuery.data ?? [],
+    });
+    if (!hasMoveImpact(impact)) {
+      save(values);
+      return;
+    }
+    setPendingMove({
+      values,
+      message: [
+        moveHeadline(
+          shift.title,
+          shift,
+          {
+            date: values.date,
+            start_time: values.start_time,
+            end_time: values.end_time,
+          }
+        ),
+        ...moveImpactLines(impact),
+      ].join(" "),
+      notifies: impact.notify.total > 0,
+    });
   }
 
   return (
@@ -565,7 +653,10 @@ function InternalForm({
 
             <div className="grid grid-cols-3 gap-3">
               <Field label="Data" error={errors.date?.message}>
-                <Input type="date" {...register("date")} />
+                {/* Nel passato non si programma: correggere uno storico è
+                    un'operazione della pagina Ore, non di questo form (e il
+                    database la concede solo a chi ha quel permesso). */}
+                <Input type="date" min={todayString()} {...register("date")} />
               </Field>
               <Field label="Inizio" error={errors.start_time?.message}>
                 <Input type="time" {...register("start_time")} />
@@ -862,6 +953,18 @@ function InternalForm({
           </p>
         ) : null}
       </footer>
+
+      {/* Stessa finestra, stesse frasi del trascinamento nel planning. */}
+      {pendingMove ? (
+        <ConfirmDialog
+          title="Sposta il turno"
+          message={pendingMove.message}
+          confirmLabel={pendingMove.notifies ? "Salva e avvisa" : "Salva"}
+          pending={pending}
+          onConfirm={() => save(pendingMove.values)}
+          onCancel={() => setPendingMove(null)}
+        />
+      ) : null}
     </form>
   );
 }

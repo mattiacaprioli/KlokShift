@@ -50,9 +50,9 @@ export type PersonShift = {
   assignmentId: string;
   /**
    * L'appartenenza su cui questo turno è assegnato, cioè la persona **in quella
-   * sede**. Serve al drag & drop: `reassign_shift_assignment` vuole uno
-   * `staff_members.id`, e chi riceve il turno deve averne uno **nella sede del
-   * turno** — nessun vincolo del database lo impedisce, ma un'assegnazione con
+   * sede**. Serve al drag & drop: la RPC `reassign` vuole un `venue_members.id`,
+   * e chi riceve il turno deve averne uno **nella sede del turno** — nessun
+   * vincolo del database lo impedisce, ma un'assegnazione con
    * `staff_member.venue_id ≠ shift.venue_id` è un dato rotto in silenzio.
    */
   staffMemberId: string;

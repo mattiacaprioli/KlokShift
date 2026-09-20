@@ -3,11 +3,13 @@ import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
+import { invalidateShiftViews } from "@/features/shifts/hooks";
 import type { InternalShiftPlan } from "./api";
 import {
   createInternalShift,
   createInternalShifts,
   getInternalShiftPlans,
+  moveAssignment,
   getMyAssignedUpcoming,
   getMyAssignmentForShift,
   getShiftAssignments,
@@ -74,14 +76,15 @@ export function useOwnerTodayAssignments() {
 }
 
 /**
- * Viste manager toccate da qualunque creazione di turni interni.
+ * Viste manager toccate da qualunque scrittura sui turni.
  *
- * Prefissi e non chiavi complete: lo scope è `venuesKey`, che qui non si ha, e
- * in una sessione ce n'è uno solo vivo.
+ * Fino al 20/09/2026 ce n'erano **due** con questo nome, una qui e una in
+ * `features/shifts/hooks.ts`, e la differenza si vedeva: dopo un trascinamento
+ * nel planning le ore per persona si aggiornavano, dopo lo stesso spostamento
+ * fatto dal pannello no. Ora è una sola, la più completa, e questa la richiama.
  */
 function invalidateAfterShiftWrite(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: qk.shifts.byOwnerAll });
-  qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
+  invalidateShiftViews(qc);
   qc.invalidateQueries({ queryKey: qk.assignments.all });
 }
 
@@ -256,6 +259,81 @@ export function useReassignShiftAssignment() {
       invalidateAfterShiftWrite(qc);
       // Le statistiche per persona cambiano da entrambi i lati.
       qc.invalidateQueries({ queryKey: qk.staff.all });
+    },
+  });
+}
+
+/**
+ * Sposta **una persona** da un turno a un altro: il gesto orizzontale della
+ * vista per persona, «Marco giovedì invece che mercoledì», mentre i colleghi
+ * di mercoledì restano dove sono.
+ *
+ * `to` è un turno che esiste già quel giorno, oppure una data soltanto: in quel
+ * caso la RPC crea il gemello del turno di partenza. La patch ottimistica c'è
+ * **solo nel primo caso** — è uno spostamento di riga fra due turni già in
+ * cache — perché nel secondo il turno d'arrivo non esiste ancora, e inventarne
+ * uno in cache per mezzo secondo costa più di quanto renda.
+ */
+export function useMoveAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      assignmentId: string;
+      /** Il turno da cui parte: serve alle invalidazioni, non alla RPC. */
+      fromShiftId: string;
+      to: { shiftId: string } | { date: string };
+    }) => moveAssignment(vars.assignmentId, vars.to),
+
+    onMutate: async ({ assignmentId, fromShiftId, to }) => {
+      if (!("shiftId" in to)) return { previous: undefined };
+      const queryKey = qk.shifts.rangeAny;
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueriesData<ShiftWithAssignees[]>({ queryKey });
+      qc.setQueriesData<ShiftWithAssignees[]>({ queryKey }, (rows) => {
+        if (!rows) return rows;
+        const row = rows
+          .find((s) => s.id === fromShiftId)
+          ?.shift_assignments.find((a) => a.id === assignmentId);
+        if (!row) return rows;
+        return rows.map((s) => {
+          if (s.id === fromShiftId) {
+            return {
+              ...s,
+              shift_assignments: s.shift_assignments.filter(
+                (a) => a.id !== assignmentId
+              ),
+            };
+          }
+          if (s.id !== to.shiftId) return s;
+          // La riga arriva sempre `assigned`: chi si sposta non porta con sé la
+          // conferma che aveva sull'altro turno. Il ruolo lo rimette a posto il
+          // refetch — nella sede d'arrivo può non esistere.
+          return {
+            ...s,
+            shift_assignments: [
+              ...s.shift_assignments,
+              { ...row, status: "assigned" as const },
+            ],
+          };
+        });
+      });
+      return { previous };
+    },
+
+    onError: (_error, _vars, context) => {
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
+    },
+
+    onSettled: (_data, _error, { fromShiftId, to }) => {
+      qc.invalidateQueries({ queryKey: qk.assignments.byShift(fromShiftId) });
+      qc.invalidateQueries({ queryKey: qk.shifts.detail(fromShiftId) });
+      if ("shiftId" in to) {
+        qc.invalidateQueries({ queryKey: qk.assignments.byShift(to.shiftId) });
+        qc.invalidateQueries({ queryKey: qk.shifts.detail(to.shiftId) });
+      }
+      invalidateAfterShiftWrite(qc);
     },
   });
 }

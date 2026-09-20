@@ -31,6 +31,25 @@ venue_members      dove lavora (l'organico) — il bersaglio di shift_assignment
 - `staff_people`, `staff_members` e `venue_access` **non esistono più**. I tipi di dominio storici (`OwnerPerson`, `StaffMember`, …) restano in `src/features/staff/types.ts` e li **produce** il data layer: `StaffPerson.id` è un member id, `StaffMember.id` è un venue member id — non confonderli.
 - Le **scritture passano dalle RPC** (atomiche, con errori `raise exception '<codice>'` tradotti in `src/lib/errors.ts`). INSERT/UPDATE/DELETE diretti sono revocati tranne l'elenco in `supabase/tests/rls/050_surface.sql`. ⚠️ Un update diretto che la RLS scarta torna 204 **senza errore**: `.select()` e zero righe = errore.
 
+## Spostare un turno (2026-09-20)
+
+> **Un turno si sposta nel tempo; una persona si sposta da un turno a un altro.**
+
+Sono due operazioni diverse e due RPC diverse — `update_shift` con una data
+nuova (si muove tutta la squadra) e `move_assignment` (si muove una persona
+sola, e se nel giorno d'arrivo non c'è niente nasce il gemello del turno di
+partenza). Vale ovunque: settimana e mese trascinano la card del turno, la vista
+per persona trascina il chip di una persona su un turno e quindi in verticale
+cambia la persona (`reassign`) e in orizzontale il turno.
+
+Le conseguenze — notifiche, conferme riaperte, assenze, sovrapposizioni — le
+calcola **solo** `src/features/shifts/moveImpact.ts`, e le dicono con le stesse
+frasi il trascinamento, il pannello della dashboard e il form dell'app. Non
+scrivere avvisi a mano in un punto solo: la divergenza fra le tre strade è
+esattamente il bug che questo modulo ha chiuso. ⚠️ `moveImpact.ts` e `notify.ts`
+sono gemelli **manuali** dei trigger SQL: se cambia `notify_on_shift_change`,
+cambiali con lui.
+
 ## Stack
 | Categoria | Tecnologia |
 |-----------|-----------|

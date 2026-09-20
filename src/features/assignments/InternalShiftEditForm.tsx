@@ -3,8 +3,10 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
+import { useAuth } from "@/lib/auth";
 import {
   SHIFT_RANGE_ERROR,
   isValidShiftRange,
@@ -35,6 +37,14 @@ import {
 } from "@/features/assignments/status";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
+import { useOwnerShiftsRange } from "@/features/shifts/hooks";
+import {
+  hasMoveImpact,
+  moveHeadline,
+  moveImpactLines,
+  shiftMoveImpact,
+} from "@/features/shifts/moveImpact";
+import { useAbsenceAvailability } from "@/features/absences/hooks";
 import type { Shift } from "@/features/shifts/types";
 
 // "HH:MM[:SS]" -> Date di oggi con quell'orario (per i TimeField).
@@ -62,6 +72,9 @@ function EditForm({
 }: SeededProps) {
   const router = useRouter();
   const toast = useToast();
+  // Il trigger non avvisa chi sta modificando: senza questo la finestra
+  // prometterebbe una notifica in più di quelle che partono davvero.
+  const { session } = useAuth();
   const { venueById, isMultiVenue } = useOwnerVenues();
   // Solo da due sedi in su: con una sola, dire quale è rumore.
   const venue = isMultiVenue ? venueById(shift.venue_id) : undefined;
@@ -119,6 +132,18 @@ function EditForm({
     .filter((id) => isActiveAssignment(memberStatus(id)))
     .map((id) => selected[id]);
 
+  /**
+   * Cambiare giorno o orario di un turno già assegnato manda notifiche e
+   * riapre le conferme. Fino al 20/09/2026 lo diceva solo il trascinamento
+   * nella dashboard, e da qui si salvava in silenzio: stesso effetto, due
+   * racconti opposti. Le frasi arrivano da `moveImpactLines`, condivise.
+   */
+  const [pendingMove, setPendingMove] = useState<string | null>(null);
+  const assignmentsQuery = useShiftAssignments(shift.id);
+  const targetDate = toDateString(date);
+  const absencesQuery = useAbsenceAvailability(targetDate, targetDate);
+  const targetDayQuery = useOwnerShiftsRange(targetDate, targetDate);
+
   function onSubmit() {
     if (selectedIds.length === 0) {
       toast.show("Seleziona almeno una persona.", "error");
@@ -128,6 +153,53 @@ function EditForm({
       toast.show(SHIFT_RANGE_ERROR, "error");
       return;
     }
+    const to = {
+      date: toDateString(date),
+      start_time: toTimeString(start),
+      end_time: toTimeString(end),
+    };
+    const moved =
+      to.date !== shift.date ||
+      to.start_time !== shift.start_time.slice(0, 5) ||
+      to.end_time !== shift.end_time.slice(0, 5);
+    if (!moved) {
+      save();
+      return;
+    }
+    const impact = shiftMoveImpact({
+      shiftId: shift.id,
+      cancelled: shift.status === "cancelled",
+      assignees: (assignmentsQuery.data ?? []).flatMap((a) =>
+        a.staff_member
+          ? [
+              {
+                status: a.status,
+                personId: a.staff_member.person_id,
+                displayName: a.staff_member.display_name,
+                waiterId: a.staff_member.waiter_id,
+              },
+            ]
+          : []
+      ),
+      to,
+      myWaiterId: session?.user.id,
+      absences: absencesQuery.data ?? [],
+      dayShifts: targetDayQuery.data ?? [],
+    });
+    if (!hasMoveImpact(impact)) {
+      save();
+      return;
+    }
+    setPendingMove(
+      [
+        moveHeadline(shift.title, shift, to),
+        ...moveImpactLines(impact),
+      ].join(" ")
+    );
+  }
+
+  function save() {
+    setPendingMove(null);
     const dateStr = toDateString(date);
     update.mutate(
       {
@@ -245,6 +317,17 @@ function EditForm({
           onPress={onSubmit}
         />
       </ScrollView>
+
+      {/* Le stesse frasi del trascinamento nella dashboard. */}
+      <ConfirmModal
+        visible={pendingMove !== null}
+        title="Sposta il turno"
+        message={pendingMove ?? ""}
+        confirmLabel="Salva e avvisa"
+        pending={update.isPending}
+        onConfirm={save}
+        onCancel={() => setPendingMove(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

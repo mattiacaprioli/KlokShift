@@ -14,6 +14,7 @@ do $$
 declare
   ids uuid[];
   fut uuid; past uuid; a_emp uuid; a_co uuid; a_ow uuid;
+  fut2 uuid; twin uuid; v2s uuid; a_new uuid;
   r public.shift_assignments;
   v_ow uuid; v_co uuid; v_emp uuid; v_emp2 uuid;
   v_n bigint;
@@ -138,6 +139,62 @@ begin
   perform tests.logout();
   perform tests.ok(exists (select 1 from public.notifications where type = 'shift_updated' and user_id = tests.id('Emp')), 'Emp avvisato della modifica');
   perform tests.ok(not exists (select 1 from public.notifications where type = 'shift_updated' and user_id = tests.id('Ow')), 'chi modifica non si avvisa');
+
+  -- ---- spostare una PERSONA da un turno a un altro ----
+  perform tests.login('Ow');
+  select id into a_co  from public.shift_assignments where shift_id = fut and venue_member_id = v_co;
+  select id into a_emp from public.shift_assignments where shift_id = fut and venue_member_id = v_emp;
+
+  perform tests.raises(format('select public.move_assignment(%L)', a_co),
+    'invalid_target', 'senza destinazione non si sposta niente');
+  perform tests.raises(format('select public.move_assignment(%L, %L, %L)', a_co, fut, current_date + 2),
+    'invalid_target', 'o un turno o una data, mai entrambi');
+
+  -- Senza un turno dove metterla: nasce il gemello di quello di partenza.
+  a_new := public.move_assignment(a_co, null, current_date + 2);
+  select shift_id into twin from public.shift_assignments where id = a_new;
+  perform tests.eq((select count(*) from public.shift_assignments where id = a_co), 0::bigint, 'Co esce dal turno di partenza');
+  perform tests.eq((select date::text from public.shifts where id = twin), (current_date + 2)::text, 'il gemello è nel giorno d''arrivo');
+  perform tests.eq((select title from public.shifts where id = twin), 'Cena', 'stesso titolo');
+  perform tests.eq((select start_time::text from public.shifts where id = twin), '19:00:00', 'stessi orari');
+  perform tests.eq((select venue_id from public.shifts where id = twin), tests.id('V1'), 'e stessa sede: un turno non cambia sede');
+  perform tests.eq((select status::text from public.shift_assignments where id = a_new), 'assigned',
+    'chi arriva non eredita la conferma che aveva sull''altro turno');
+  perform tests.logout();
+  perform tests.ok(exists (select 1 from public.notifications where type = 'shift_unassigned' and user_id = tests.id('Co')), 'Co sa di essere uscito');
+  perform tests.ok(exists (select 1 from public.notifications where type = 'shift_assigned' and user_id = tests.id('Co')), 'e sa del turno nuovo');
+
+  -- Con un turno già lì: ci si aggancia invece di crearne un altro.
+  perform tests.login('Ow');
+  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Pranzo', 'date', (current_date + 3)::text,
+    'start_time', '11:00', 'end_time', '15:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp)))));
+  fut2 := ids[1];
+  a_new := public.move_assignment(a_new, fut2);
+  perform tests.eq((select shift_id from public.shift_assignments where id = a_new), fut2, 'Co passa sul turno che c''era già');
+  perform tests.eq((select count(*) from public.shift_assignments where shift_id = twin), 0::bigint, 'il gemello resta senza nessuno');
+  perform tests.eq(public.move_assignment(a_new, fut2), a_new, 'spostarla dov''è già non fa niente');
+
+  perform tests.raises(format('select public.move_assignment(%L, %L)', a_emp, fut2),
+    'already_assigned', 'Emp è già su quel turno');
+
+  -- Un turno di una sede dove la persona non è in organico.
+  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V2'), 'title', 'Altrove', 'date', (current_date + 3)::text,
+    'start_time', '18:00', 'end_time', '23:00')));
+  v2s := ids[1];
+  perform tests.raises(format('select public.move_assignment(%L, %L)', a_new, v2s),
+    'not_in_roster', 'in V2 Co non lavora');
+
+  -- Turno finito: vale la stessa regola di unassign.
+  select id into a_co from public.shift_assignments where shift_id = past and venue_member_id = v_co;
+  perform tests.login('Co');
+  perform tests.raises(format('select public.move_assignment(%L, %L, %L)', a_co, null, current_date + 4),
+    'finished_shift_locked', 'Co non si sposta via da un turno finito');
+
+  perform tests.login('Ow');
+  perform public.unassign(a_new);   -- il resto della suite conta su un fut2 vuoto di Co
 
   -- ---- visibilità ----
   perform tests.login('Emp');

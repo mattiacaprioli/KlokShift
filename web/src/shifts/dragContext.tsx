@@ -21,6 +21,16 @@ import {
  * un'interfaccia da scrivania, e **il trascinamento resta solo una
  * scorciatoia** — data e persona si cambiano comunque dal pannello del turno,
  * quindi nessuna operazione diventa raggiungibile solo trascinando.
+ *
+ * ## La regola, una sola per tutte e tre le viste (20/09/2026)
+ *
+ * **Un turno si sposta nel tempo; una persona si sposta da un turno a un
+ * altro.** Settimana e mese trascinano la card del turno, quindi fanno la
+ * prima cosa. La vista per persona trascina il chip di *una persona su un
+ * turno*, quindi fa la seconda: in verticale cambia la persona e resta il
+ * giorno, in orizzontale resta la persona e cambia il turno. In diagonale non
+ * fa niente, perché sarebbero due cose insieme — e lo **dice**, invece di
+ * restare spenta: è a questo che serve `rejects`.
  */
 
 export type ShiftDragPayload =
@@ -31,29 +41,39 @@ export type ShiftDragPayload =
       sourceDate: string;
     }
   | {
-      mode: "reassign";
+      /**
+       * Una persona su un turno. Lo stesso carico si legge in due modi a
+       * seconda di dove cade: altra riga = cambia persona, altro giorno =
+       * cambia turno.
+       */
+      mode: "person";
       shiftId: string;
       title: string;
-      /** Il giorno non cambia: si cambia solo la persona. */
       date: string;
       assignmentId: string;
+      /** La persona (`staff_people.id`): la riga da cui parte il chip. */
+      personId: string;
       fromStaffMemberId: string;
       fromStaffName: string;
       /**
        * La sede del turno. Chi lo riceve deve avere un'appartenenza **lì**:
-       * `reassign_shift_assignment` vuole uno `staff_members.id`, e nessuna FK
-       * garantisce che sia della stessa sede del turno.
+       * `reassign` vuole un `venue_members.id`, e nessuna FK garantisce che sia
+       * della stessa sede del turno.
        */
       venueId: string;
+      /**
+       * Le sedi in cui **questa persona** è in organico. Servono al ramo «altro
+       * giorno»: il turno d'arrivo dev'essere di una di queste, altrimenti la
+       * RPC risponde `not_in_roster` e la finestra avrebbe offerto una scelta
+       * impossibile.
+       */
+      personVenueIds: string[];
       /** Chi è già sul turno: `unique (shift_id, venue_member_id)`. */
       busyStaffIds: string[];
     };
 
 export type MoveDragPayload = Extract<ShiftDragPayload, { mode: "move" }>;
-export type ReassignDragPayload = Extract<
-  ShiftDragPayload,
-  { mode: "reassign" }
->;
+export type PersonDragPayload = Extract<ShiftDragPayload, { mode: "person" }>;
 
 /**
  * Chi riceve un turno riassegnato: l'**appartenenza** nella sede del turno, più
@@ -66,7 +86,7 @@ export type ReassignDragPayload = Extract<
  * finisce a scrivere un cast.
  */
 export type ReassignTarget = {
-  /** `staff_members.id` nella sede del turno. */
+  /** `venue_members.id` nella sede del turno. */
   id: string;
   person_id: string;
   display_name: string;
@@ -75,17 +95,40 @@ export type ReassignTarget = {
   roles: { id: string; name: string }[];
 };
 
-export type DropState = "idle" | "candidate" | "over" | "invalid";
+export type DropState =
+  | "idle"
+  /** Può ricevere il carico in volo: si offre. */
+  | "candidate"
+  /** Il cursore è qui e va bene. */
+  | "over"
+  /** Il cursore è qui e non va bene: si spiega, forte. */
+  | "invalid"
+  /**
+   * Non può riceverlo, e si vede da lontano senza passarci sopra. Tono
+   * sommesso e non l'errore pieno: in una griglia mensile i giorni passati sono
+   * metà delle celle, e mezza pagina rossa non è un avviso, è un allarme.
+   */
+  | "blocked";
 
 type DropSpec = {
   /** Identità stabile della cella, per sapere chi è sotto il cursore. */
   key: string;
+  /** «Questo carico mi riguarda e posso prenderlo.» */
   accepts: (payload: ShiftDragPayload) => boolean;
+  /**
+   * «Mi riguarda, ma non posso — ed ecco perché.» Il motivo accende la cella di
+   * rosso **subito**, senza aspettare il passaggio del cursore, e finisce nel
+   * suo `title`. Una cella che non c'entra niente non ritorna nulla e resta
+   * spenta: il rosso è un'informazione, e ovunque non è informazione.
+   */
+  rejects?: (payload: ShiftDragPayload) => string | null;
   onDrop: (payload: ShiftDragPayload) => void;
 };
 
 type DropHandlers = {
   state: DropState;
+  /** Perché la cella rifiuta, quando `state` è "invalid" per un motivo detto. */
+  reason: string | null;
   onDragEnter: (e: DragEvent) => void;
   onDragOver: (e: DragEvent) => void;
   onDragLeave: (e: DragEvent) => void;
@@ -117,6 +160,8 @@ export function dropClass(state: DropState): string {
       return "border-border-gold bg-gold/10 ring-1 ring-gold/40";
     case "invalid":
       return "border-error/40 bg-error/10 cursor-no-drop";
+    case "blocked":
+      return "opacity-40 cursor-no-drop";
     case "candidate":
       return "border-dashed border-border-gold/60";
     default:
@@ -155,8 +200,9 @@ export function ShiftDragProvider({ children }: PropsWithChildren) {
   );
 
   const dropProps = useCallback(
-    ({ key, accepts, onDrop }: DropSpec): DropHandlers => {
+    ({ key, accepts, rejects, onDrop }: DropSpec): DropHandlers => {
       const ok = drag != null && accepts(drag);
+      const reason = drag != null && !ok ? (rejects?.(drag) ?? null) : null;
       const state: DropState =
         drag == null
           ? "idle"
@@ -166,10 +212,16 @@ export function ShiftDragProvider({ children }: PropsWithChildren) {
               : "invalid"
             : ok
               ? "candidate"
-              : "idle";
+              : // Un rifiuto motivato si vede da lontano: è l'unico modo di
+                // spiegare un gesto che non funziona *prima* di provarlo. Il
+                // rosso pieno resta al passaggio del cursore.
+                reason
+                ? "blocked"
+                : "idle";
 
       return {
         state,
+        reason,
         onDragEnter: (e) => {
           e.preventDefault();
           setOverKey((k) => (k === key ? k : key));
@@ -202,7 +254,7 @@ export function ShiftDragProvider({ children }: PropsWithChildren) {
   const isSource = useCallback(
     (shiftId: string, assignmentId?: string) => {
       if (!drag) return false;
-      if (drag.mode === "reassign") return drag.assignmentId === assignmentId;
+      if (drag.mode === "person") return drag.assignmentId === assignmentId;
       return drag.shiftId === shiftId;
     },
     [drag]
