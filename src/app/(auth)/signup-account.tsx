@@ -19,17 +19,17 @@ import {
   resendLabel,
   useResendConfirmation,
 } from "@/features/auth/useResendConfirmation";
-import type { Enums } from "@/types/database";
+import type { ViewMode } from "@/features/team/viewModeStorage";
 
-type Role = Enums<"user_role">;
+type Intent = ViewMode;
 
 export default function SignupAccount() {
   const { signUp } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ role?: string }>();
-  const role: Role = params.role === "manager" ? "manager" : "waiter";
-  const roleLabel = role === "manager" ? "Ristoratore" : "Professionista";
+  const params = useLocalSearchParams<{ intent?: string }>();
+  const intent: Intent = params.intent === "manager" ? "manager" : "waiter";
+  const intentLabel = intent === "manager" ? "Gestione sede" : "Professionista";
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false);
@@ -51,7 +51,7 @@ export default function SignupAccount() {
       email: values.email.trim(),
       password: values.password,
       fullName: values.fullName.trim(),
-      role,
+      intent,
     });
     setLoading(false);
     if (res.error) {
@@ -91,7 +91,7 @@ export default function SignupAccount() {
         </Pressable>
 
         <Mono gold className="mt-6">
-          {roleLabel}
+          {intentLabel}
         </Mono>
         <Display className="mt-2 text-[28px]">Crea il tuo account</Display>
         <Text className="mt-2 font-sans text-[13.5px] text-t3">

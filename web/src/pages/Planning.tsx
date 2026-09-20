@@ -288,7 +288,7 @@ export function PlanningPage() {
 
   function requestReassign(payload: ReassignDragPayload, to: ReassignTarget) {
     if (busy) return;
-    // `unique (shift_id, staff_member_id)`: è l'unico rifiuto che vale la pena
+    // `unique (shift_id, venue_member_id)`: è l'unico rifiuto che vale la pena
     // spiegare, perché guardando la griglia non si deduce.
     if (payload.busyStaffIds.includes(to.id)) {
       toast.show(`${to.display_name} è già su questo turno.`, "error");
@@ -312,7 +312,7 @@ export function PlanningPage() {
     const absence = shift
       ? absenceForShift(
           shift,
-          absences.filter((a) => a.person_id === to.person_id)
+          absences.filter((a) => a.member_id === to.person_id)
         )
       : null;
     if (!plan.notifiesFrom && !plan.notifiesTo && !absence) {

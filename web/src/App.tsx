@@ -63,11 +63,10 @@ export function App() {
 
   return (
     // Sopra tutto il resto: `RealtimeSync` deve sapere quali sedi ascoltare,
-    // `AppLayout` quante sono, e il gate qui sotto se questa persona ha una
-    // delega — che per un professionista promosso (F3) è l'unica cosa che lo
-    // distingue da un professionista qualunque.
+    // `AppLayout` quante sono, e il gate qui sotto se questa persona gestisce
+    // un'azienda — l'unica cosa che la distingue da un professionista.
     <OwnerVenuesProvider>
-      <Dashboard userId={session.user.id} isManager={profile.role === "manager"} />
+      <Dashboard userId={session.user.id} />
     </OwnerVenuesProvider>
   );
 }
@@ -76,28 +75,21 @@ export function App() {
  * La dashboard vera, dentro `OwnerVenuesProvider`.
  *
  * Il gate del professionista sta qui e non in `App` perché la risposta arriva
- * dal provider: dal 16/09/2026 un membro dell'organico può essere promosso a
- * gestire una sede senza che il suo ruolo cambi, quindi `role !== 'manager'` da
- * solo non basta più a dire «questa pagina non fa per te».
+ * dal provider: chi gestisce non è un ruolo scritto sul profilo, è chi ha
+ * un'appartenenza con `authority` in un'azienda (`get_my_context`).
  */
-function Dashboard({
-  userId,
-  isManager,
-}: {
-  userId: string;
-  isManager: boolean;
-}) {
-  const { hasVenueAccess, isPending } = useOwnerVenues();
+function Dashboard({ userId }: { userId: string }) {
+  const { canManage, isPending } = useOwnerVenues();
 
-  // Prima di sapere se ha una delega non si può rispondere: mostrargli
+  // Prima di sapere se gestisce qualcosa non si può rispondere: mostrargli
   // `NotForWaitersPage` e poi sostituirla con la dashboard sarebbe peggio di
   // un attimo di attesa.
-  if (!isManager && isPending) return <Spinner label="Caricamento…" />;
+  if (isPending) return <Spinner label="Caricamento…" />;
 
   // La dashboard è uno strumento da scrivania per chi gestisce una sede. Il
   // professionista non ha nulla da farci: schermata esplicita, non un redirect
   // silenzioso che lo lascerebbe a chiedersi cosa è andato storto.
-  if (!isManager && !hasVenueAccess) return <NotForWaitersPage />;
+  if (!canManage) return <NotForWaitersPage />;
 
   return (
     <>

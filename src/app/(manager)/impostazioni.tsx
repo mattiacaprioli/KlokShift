@@ -90,7 +90,7 @@ export default function ManagerSettingsScreen() {
             {/* Solo il titolare fa entrare qualcuno nel proprio account: un
                 collaboratore che potesse invitarne altri sarebbe una catena di
                 deleghe senza un modello di ruoli sotto. Nascondere la riga non
-                è la difesa — quella è la RLS su `venue_access`. */}
+                è la difesa — quella sono le RPC `add_member` e `set_member_access`. */}
             {isOwner ? (
               <Pressable
                 onPress={() => router.push("/(manager)/team")}

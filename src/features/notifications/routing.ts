@@ -1,11 +1,13 @@
 import type { Href } from "expo-router";
 import type { Enums } from "@/types/database";
+import type { ViewMode } from "@/features/team/viewModeStorage";
 
-type Role = Enums<"user_role">;
+/** La vista con cui si sta usando l'app: decide anche dove atterra una notifica. */
+type Role = ViewMode;
 type NotificationType = Enums<"notification_type">;
 
 /**
- * Rotta da aprire per una notifica, in base al ruolo e al tipo. Fonte unica usata
+ * Rotta da aprire per una notifica, in base alla vista attiva e al tipo. Fonte unica usata
  * sia dagli screen Notifiche (`onOpen`) sia dal tap sulle push (`PushRegistrar`).
  * `null` = niente da aprire (es. turno annullato: la RLS lo nasconde già al
  * cameriere; rimozione dallo staff: non c'è più una risorsa da mostrare).
@@ -18,7 +20,7 @@ export function routeForNotification(
   if (role === "waiter") {
     if (type === "staff_invite") return "/(waiter)/inviti";
     // Niente da accettare: la scheda che la sede aveva preparato è già sua. Il
-    // `related_id` è una `staff_members`, quindi il ramo finale la scambierebbe
+    // `related_id` è una `venue_members`, quindi il ramo finale la scambierebbe
     // per un turno e aprirebbe una schermata vuota.
     if (type === "staff_linked") return "/(waiter)/(tabs)";
     // Per i messaggi related_id è la conversazione, non un turno. Vale anche per
@@ -42,20 +44,12 @@ export function routeForNotification(
       type === "absence_sick"
     )
       return null;
-    // shift_unassigned: la delete dell'assegnazione gli toglie anche la lettura
+    // shift_unassigned: togliendo l'assegnazione gli si toglie anche la lettura
     // del turno (is_my_assigned_shift), quindi non c'è nulla da aprire.
-    //
-    // I tre `application_*` sono notifiche storiche: il marketplace non esiste
-    // più, e il dettaglio turno ora parla solo di assegnazioni — aprirlo direbbe
-    // "turno riservato allo staff" su una candidatura di mesi fa. Restano
-    // leggibili in lista, ma non portano da nessuna parte.
     if (
       type === "shift_cancelled" ||
       type === "staff_removed" ||
-      type === "shift_unassigned" ||
-      type === "application_received" ||
-      type === "application_accepted" ||
-      type === "application_rejected"
+      type === "shift_unassigned"
     )
       return null;
     return relatedId ? `/(waiter)/shift/${relatedId}` : null;

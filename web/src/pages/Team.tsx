@@ -4,24 +4,21 @@ import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
-  permissionsForNewVenue,
-  permissionsOf,
   TEAM_PERMISSIONS,
   TEAM_PERMISSION_HINT,
   TEAM_PERMISSION_LABEL,
   type TeamMember,
   type TeamPermission,
   type TeamPermissions,
-  type VenueAccess,
 } from "@/features/team/api";
 import {
   useAddTeamMember,
-  useAddTeamVenue,
   useRevokeTeamAccess,
   useSendTeamInvite,
+  useSetTeamAccess,
   useTeam,
-  useUpdateTeamPermissions,
 } from "@/features/team/hooks";
+import type { VenueScope } from "@/features/workspace/types";
 import { NoVenues } from "../venues/NoVenues";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
@@ -164,38 +161,124 @@ function PermissionToggles({
   );
 }
 
-/** Una sede di un collaboratore, con i suoi permessi. */
-function VenueAccessRow({ row }: { row: VenueAccess }) {
+/**
+ * Cosa può fare e dove, per un collaboratore.
+ *
+ * ⚠️ I permessi stanno **sulla persona**, non sulla sede. Prima erano una riga
+ * per (persona, sede) e si potevano dare mestieri diversi in sedi diverse: in
+ * pratica non succedeva mai, e ogni regola del database doveva chiedersi «su
+ * quale sede?» anche quando la risposta era sempre la stessa.
+ */
+function AccessBlock({ member }: { member: TeamMember }) {
   const toast = useToast();
-  const { venueById } = useOwnerVenues();
-  const update = useUpdateTeamPermissions();
+  const { venues } = useOwnerVenues();
+  const save = useSetTeamAccess();
   const revoke = useRevokeTeamAccess();
   const [confirming, setConfirming] = useState(false);
 
-  const name = venueById(row.venue_id)?.name ?? "Sede";
+  /** Un cambio per volta: la RPC vuole permessi e ambito insieme. */
+  function apply(next: {
+    permissions?: TeamPermissions;
+    scope?: VenueScope;
+    venueIds?: string[];
+  }) {
+    save.mutate(
+      {
+        memberId: member.memberId,
+        permissions: next.permissions ?? member.permissions,
+        scope: next.scope ?? member.scope,
+        venueIds: next.venueIds ?? member.venueIds,
+      },
+      { onError: (e) => toast.show(userErrorMessage(e), "error") }
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-3 px-5 py-4">
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <span className="truncate text-xs font-semibold uppercase tracking-wider text-t3">
-          {name}
-        </span>
+    <div className="flex flex-col gap-4 border-t border-border px-5 py-4">
+      <Group label="Cosa può fare">
+        <PermissionToggles
+          value={member.permissions}
+          disabled={save.isPending}
+          onChange={(perm, on) =>
+            apply({ permissions: { ...member.permissions, [perm]: on } })
+          }
+        />
+      </Group>
+
+      <Group label="Dove">
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            aria-pressed={member.scope === "all"}
+            onClick={() =>
+              apply(
+                member.scope === "all"
+                  ? { scope: "selected", venueIds: [] }
+                  : { scope: "all" }
+              )
+            }
+            className={cn(
+              "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
+              member.scope === "all"
+                ? "bg-gold text-gold-ink"
+                : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
+            )}
+          >
+            Tutte le sedi
+          </button>
+          {member.scope === "selected"
+            ? venues.map((v) => {
+                const on = member.venueIds.includes(v.id);
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      apply({
+                        scope: "selected",
+                        venueIds: on
+                          ? member.venueIds.filter((id) => id !== v.id)
+                          : [...member.venueIds, v.id],
+                      })
+                    }
+                    className={cn(
+                      "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
+                      on
+                        ? "bg-gold text-gold-ink"
+                        : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
+                    )}
+                  >
+                    {v.name}
+                  </button>
+                );
+              })
+            : null}
+        </div>
+        {member.scope === "all" ? (
+          <span className="text-[11px] text-t4">
+            Comprende anche le sedi che aprirai in futuro.
+          </span>
+        ) : null}
+      </Group>
+
+      <div className="flex justify-end">
         {confirming ? (
-          <span className="flex shrink-0 items-center gap-2">
+          <span className="flex items-center gap-2">
             <span className="text-xs text-t3">Togliere l&apos;accesso?</span>
-            <Button
-              className="px-3 py-1 text-xs"
-              onClick={() => setConfirming(false)}
-            >
+            <Button className="px-3 py-1.5 text-xs" onClick={() => setConfirming(false)}>
               Annulla
             </Button>
             <Button
               variant="danger"
-              className="px-3 py-1 text-xs"
+              className="px-3 py-1.5 text-xs"
               disabled={revoke.isPending}
               onClick={() =>
-                revoke.mutate([row.id], {
-                  onSuccess: () => toast.show("Accesso revocato"),
+                revoke.mutate(member.memberId, {
+                  onSuccess: () => {
+                    setConfirming(false);
+                    toast.show("Accesso revocato");
+                  },
                   onError: (e) => toast.show(userErrorMessage(e), "error"),
                 })
               }
@@ -204,152 +287,20 @@ function VenueAccessRow({ row }: { row: VenueAccess }) {
             </Button>
           </span>
         ) : (
-          // Un'azione rara e distruttiva: presente, ma senza il peso di un
-          // pulsante accanto a ogni sede.
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            className="px-3 py-1.5 text-xs"
             onClick={() => setConfirming(true)}
-            className="focus-gold shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-t4 transition hover:bg-error/10 hover:text-error"
           >
             Togli l&apos;accesso
-          </button>
+          </Button>
         )}
       </div>
-      <PermissionToggles
-        value={permissionsOf(row)}
-        disabled={update.isPending}
-        onChange={(perm, next) =>
-          update.mutate(
-            { accessId: row.id, permissions: { [perm]: next } },
-            { onError: (e) => toast.show(userErrorMessage(e), "error") }
-          )
-        }
-      />
     </div>
   );
 }
 
-/**
- * Le sedi che il collaboratore non ha ancora, da dargli senza ripassare dal
- * modulo d'invito — che lo faceva già, ma nessuno pensa di "invitare" chi è
- * attivo da una settimana.
- *
- * Un clic sulla sede non basta a dare l'accesso: apre la sezione come sarà, con
- * i permessi da confermare. Si sta aprendo la gestione di una sede a qualcuno, e
- * i permessi vanno visti prima, non corretti dopo.
- *
- * Con un invito ancora in sospeso la riga nuova resta `pending` come le altre e
- * non parte una seconda email: si aggancia tutto allo stesso primo accesso.
- */
-function AddVenueRow({
-  ownerId,
-  member,
-}: {
-  ownerId: string;
-  member: TeamMember;
-}) {
-  const toast = useToast();
-  const { venues } = useOwnerVenues();
-  const add = useAddTeamVenue(ownerId);
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const [permissions, setPermissions] =
-    useState<TeamPermissions>(DEFAULT_PERMISSIONS);
-
-  const missing = venues.filter((v) => !member.venueIds.includes(v.id));
-  if (missing.length === 0) return null;
-
-  const picked = missing.find((v) => v.id === pickedId);
-
-  if (!picked) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3">
-        <span className="mr-1 text-xs text-t4">Aggiungi una sede</span>
-        {missing.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => {
-              setPermissions(permissionsForNewVenue(member, DEFAULT_PERMISSIONS));
-              setPickedId(v.id);
-            }}
-            className="focus-gold inline-flex items-center gap-1.5 rounded-full border border-dashed border-border-2 px-3 py-1.5 text-xs font-medium text-t3 transition hover:border-gold/40 hover:text-gold"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              aria-hidden
-            >
-              <path d="M6 2.5v7M2.5 6h7" />
-            </svg>
-            {v.name}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3 bg-bg-2/30 px-5 py-4">
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <span className="truncate text-xs font-semibold uppercase tracking-wider text-t3">
-          {picked.name}
-        </span>
-        <span className="flex shrink-0 items-center gap-2">
-          <Button
-            className="px-3 py-1 text-xs"
-            disabled={add.isPending}
-            onClick={() => setPickedId(null)}
-          >
-            Annulla
-          </Button>
-          <Button
-            variant="gold"
-            className="px-3 py-1 text-xs"
-            disabled={add.isPending}
-            onClick={() =>
-              add.mutate(
-                { member, venueId: picked.id, permissions },
-                {
-                  onSuccess: () => {
-                    setPickedId(null);
-                    toast.show(
-                      member.status === "pending"
-                        ? "Sede aggiunta: la vedrà quando accetta l'invito"
-                        : `Accesso a ${picked.name} aggiunto`
-                    );
-                  },
-                  onError: (e) => toast.show(userErrorMessage(e), "error"),
-                }
-              )
-            }
-          >
-            {add.isPending ? "Aggiungo…" : "Aggiungi"}
-          </Button>
-        </span>
-      </div>
-      <PermissionToggles
-        value={permissions}
-        disabled={add.isPending}
-        onChange={(perm, next) =>
-          setPermissions((prev) => ({ ...prev, [perm]: next }))
-        }
-      />
-    </div>
-  );
-}
-
-function MemberCard({
-  ownerId,
-  member,
-}: {
-  ownerId: string;
-  member: TeamMember;
-}) {
+function MemberCard({ member }: { member: TeamMember }) {
   const toast = useToast();
   const invite = useSendTeamInvite();
   const pending = member.status === "pending";
@@ -381,19 +332,18 @@ function MemberCard({
       {pending ? (
         <div className="mx-5 mb-4 flex items-center gap-4 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3">
           {/* Due strade, e vanno dette tutt'e due: chi non aveva un account lo
-              crea aprendo il link, chi ce l'ha già entra al primo accesso dopo
-              l'invito (`claimInvites` in lib/auth.tsx). Nominarne una sola —
-              com'era fino al 16/09 — fa sembrare l'invito rotto all'altra metà. */}
+              crea aprendo il link, chi ce l'ha già accetta l'invito dall'app.
+              Nominarne una sola fa sembrare l'invito rotto all'altra metà. */}
           <p className="flex-1 text-xs leading-relaxed text-t2">
-            Entra aprendo il link che gli abbiamo mandato e scegliendo una
-            password: l&apos;account nasce lì. Se ne aveva già uno, gli basta
-            rientrare.
+            Se non aveva un account, lo crea aprendo il link che gli abbiamo
+            mandato e scegliendo una password. Se ce l&apos;aveva già, trova
+            l&apos;invito da accettare quando entra.
           </p>
           <Button
             className="shrink-0 px-3 py-1.5 text-xs"
             disabled={invite.isPending}
             onClick={() =>
-              invite.mutate(member.rows[0].id, {
+              invite.mutate(member.memberId, {
                 onSuccess: () => toast.show("Invito spedito"),
                 onError: (e) => toast.show(userErrorMessage(e), "error"),
               })
@@ -404,48 +354,55 @@ function MemberCard({
         </div>
       ) : null}
 
-      <div className="divide-y divide-border border-t border-border">
-        {member.rows.map((row) => (
-          <VenueAccessRow key={row.id} row={row} />
-        ))}
-        <AddVenueRow ownerId={ownerId} member={member} />
-      </div>
+      <AccessBlock member={member} />
     </Card>
   );
 }
 
 /** Il modulo d'invito: email, sedi, permessi. */
-function InviteForm({ ownerId }: { ownerId: string }) {
+function InviteForm({ workspaceId }: { workspaceId: string }) {
   const toast = useToast();
   const { venues, isMultiVenue } = useOwnerVenues();
   const add = useAddTeamMember();
 
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  /** Vuoto = tutte le sedi, anche quelle future. */
   const [picked, setPicked] = useState<string[]>([]);
   const [permissions, setPermissions] =
     useState<TeamPermissions>(DEFAULT_PERMISSIONS);
 
-  const venueIds = isMultiVenue ? picked : venues.map((v) => v.id);
+  // Con una sede sola la domanda non si pone, e l'ambito resta «tutte»: così
+  // una sede aperta domani non lo lascia fuori.
+  const allVenues = !isMultiVenue || picked.length === 0;
 
   function submit() {
-    if (!email.trim() || venueIds.length === 0) return;
+    if (!fullName.trim() || !email.trim()) return;
     add.mutate(
-      { ownerId, email: email.trim(), venueIds, permissions },
+      {
+        workspaceId,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        permissions,
+        scope: allVenues ? "all" : "selected",
+        venueIds: picked,
+      },
       {
         onSuccess: (res) => {
           if (res.kind === "already") {
-            toast.show("Ha già accesso a tutte le sedi scelte.", "error");
+            toast.show("Collabora già alla gestione.", "error");
             return;
           }
           toast.show(
-            res.kind === "linked"
-              ? `${res.name ?? "Il collaboratore"} ora ha accesso`
+            res.kind === "invited_in_app"
+              ? "Invito mandato: lo accetta dall'app"
               : res.emailSent
                 ? "Invito spedito"
                 : res.emailError
                   ? `Invito creato · email non spedita: ${res.emailError}`
                   : "Invito creato · email non spedita, riprova dalla lista"
           );
+          setFullName("");
           setEmail("");
           setPicked([]);
           setPermissions(DEFAULT_PERMISSIONS);
@@ -461,12 +418,20 @@ function InviteForm({ ownerId }: { ownerId: string }) {
         <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
         <h2 className="font-serif text-xl text-t1">Invita un collaboratore</h2>
         <p className="mt-1.5 text-xs leading-relaxed text-t3">
-          Se ha già un account da sede con l&apos;email confermata, l&apos;accesso
-          parte subito. Altrimenti gli mandiamo un link: lo apre, sceglie una
-          password ed è dentro, senza registrarsi. Finché non lo apre non esiste
-          nessun account.
+          Se ha già un account, trova l&apos;invito da accettare quando entra.
+          Altrimenti gli mandiamo un link: lo apre, sceglie una password ed è
+          dentro, senza registrarsi. Finché non lo apre non esiste nessun
+          account.
         </p>
       </div>
+
+      <Field label="Nome e cognome">
+        <Input
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Come lo chiami tu"
+        />
+      </Field>
 
       <Field label="Email">
         <Input
@@ -478,7 +443,7 @@ function InviteForm({ ownerId }: { ownerId: string }) {
       </Field>
 
       {isMultiVenue ? (
-        <Group label="Su quali sedi">
+        <Group label="Dove">
           <div className="flex flex-wrap gap-1.5">
             {venues.map((v) => {
               const on = picked.includes(v.id);
@@ -504,6 +469,11 @@ function InviteForm({ ownerId }: { ownerId: string }) {
               );
             })}
           </div>
+          <span className="text-[11px] text-t4">
+            {allVenues
+              ? "Nessuna scelta: vale su tutte le sedi, anche quelle che aprirai."
+              : "Vale solo sulle sedi scelte."}
+          </span>
         </Group>
       ) : null}
 
@@ -521,7 +491,7 @@ function InviteForm({ ownerId }: { ownerId: string }) {
           variant="gold"
           className="w-full py-2.5"
           onClick={submit}
-          disabled={add.isPending || !email.trim() || venueIds.length === 0}
+          disabled={add.isPending || !fullName.trim() || !email.trim()}
         >
           {add.isPending ? "Invio…" : "Invita"}
         </Button>
@@ -546,15 +516,16 @@ function InviteForm({ ownerId }: { ownerId: string }) {
  * alla lista meno spazio di quanto chiedono le pastiglie dei permessi.
  *
  * ⚠️ Solo il titolare: un collaboratore viene rimandato alla home. La difesa vera
- * è la RLS su `venue_access` — qui si evita solo una pagina vuota.
+ * è il DB, che lascia `set_member_access` al solo titolare — qui si evita solo
+ * una pagina vuota.
  */
 export function TeamPage() {
-  const { ownerId, isOwner, isLoading } = useOwnerVenues();
-  const team = useTeam(isOwner ? (ownerId ?? "") : "");
+  const { workspaceId, isOwner, isLoading } = useOwnerVenues();
+  const team = useTeam(isOwner ? (workspaceId ?? "") : "");
 
   if (isLoading) return <Spinner label="Caricamento…" />;
   if (!isOwner) return <Navigate to="/" replace />;
-  if (!ownerId) return <NoVenues />;
+  if (!workspaceId) return <NoVenues />;
 
   const members = team.data ?? [];
   const pendingCount = members.filter((m) => m.status === "pending").length;
@@ -588,21 +559,15 @@ export function TeamPage() {
           ) : members.length === 0 ? (
             <Placeholder
               title="Nessun collaboratore"
-              detail="Invita chi organizza i turni con te: sceglierai su quali sedi entra e cosa può fare."
+              detail="Invita chi organizza i turni con te: sceglierai cosa può fare e su quali sedi."
             />
           ) : (
-            members.map((m) => (
-              <MemberCard
-                key={m.userId ?? m.email ?? m.rows[0].id}
-                ownerId={ownerId}
-                member={m}
-              />
-            ))
+            members.map((m) => <MemberCard key={m.memberId} member={m} />)
           )}
         </section>
 
         <aside className="xl:sticky xl:top-8">
-          <InviteForm ownerId={ownerId} />
+          <InviteForm workspaceId={workspaceId} />
         </aside>
       </div>
     </>

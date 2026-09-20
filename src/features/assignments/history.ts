@@ -16,12 +16,6 @@ export type WorkHistoryItem = {
   start_time: string;
   end_time: string;
   hours: number;
-  /**
-   * Come è nato il turno. L'RPC distingue ancora `marketplace` per lo storico
-   * di quando esisteva il marketplace; la UI non lo mostra più, perché oggi
-   * ogni turno nuovo è un'assegnazione.
-   */
-  kind: "staff" | "marketplace";
 };
 
 /**
@@ -47,10 +41,10 @@ export function useMyWorkHistoryTotals(waiterId: string) {
 
 /**
  * Storico dei turni svolti dal professionista, a pagine: le assegnazioni
- * passate non rifiutate né segnate come assenza (più, per chi ce l'ha, lo
- * storico marketplace di prima). Solo ore lavorate, nessun dato economico.
+ * passate non rifiutate né segnate come assenza. Solo ore lavorate, nessun dato
+ * economico.
  *
- * L'unione e l'ordinamento li fa il database (`get_my_work_history`): erano
+ * L'ordinamento lo fa il database (`get_my_work_history`): erano
  * impossibili lato client senza scaricare tutto, perché si ordina per la data
  * del turno, che sta in una tabella collegata.
  */
@@ -77,7 +71,6 @@ export function useMyWorkHistory(waiterId: string) {
         start_time: r.start_time,
         end_time: r.end_time,
         hours: r.hours,
-        kind: r.kind === "staff" ? "staff" : "marketplace",
       })),
     [list.data]
   );

@@ -12,11 +12,12 @@ import {
   toDateString,
   toTimeString,
 } from "@/lib/format";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { VenuePicker } from "@/features/venues/VenuePicker";
 import { useLastVenue } from "@/features/venues/useLastVenue";
 import { useVenueStaff } from "@/features/staff/hooks";
-import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import type { StaffMemberWithWaiter } from "@/features/staff/types";
 import { useVenueRoles } from "@/features/roles/hooks";
 import { RequireConfirmationField } from "@/features/assignments/RequireConfirmationField";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
@@ -103,7 +104,7 @@ export function StaffShiftForm({ initialDate }: Props) {
    * della sede precedente e quelle di `targets` sono `venue_roles.id` della
    * sede precedente. Portarle su un turno di un'altra sede produce
    * assegnazioni incoerenti che **il database accetta** — nessuna FK lega
-   * `shift_assignments.staff_member_id` alla sede del turno — e che poi nessuna
+   * `shift_assignments.venue_member_id` alla sede del turno — e che poi nessuna
    * schermata sa leggere.
    *
    * Reset silenzioso, con un avviso solo se c'era qualcosa da perdere: una
@@ -151,7 +152,7 @@ export function StaffShiftForm({ initialDate }: Props) {
         description: note.trim() || null,
         require_confirmation: requireConfirmation,
         staff: selectedIds.map((id) => ({
-          staff_member_id: id,
+          venue_member_id: id,
           role_id: selected[id],
         })),
         roleTargets,
@@ -161,8 +162,11 @@ export function StaffShiftForm({ initialDate }: Props) {
           toast.show("Turno assegnato allo staff");
           router.back();
         },
-        onError: () =>
-          toast.show("Impossibile creare il turno. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(
+            userErrorMessage(e, "Impossibile creare il turno. Riprova."),
+            "error"
+          ),
       }
     );
   }

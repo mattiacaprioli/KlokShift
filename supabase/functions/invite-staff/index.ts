@@ -93,7 +93,7 @@ function newInviteToken(): string {
 /**
  * Quello che finisce nel database.
  *
- * ⚠️ Nel database va **solo** l'hash: chi legge `venue_access` non deve poter
+ * ⚠️ Nel database va **solo** l'hash: chi legge `member_invites` non deve poter
  * entrare nell'account di nessuno. Il token in chiaro esiste dentro questa
  * invocazione e dentro l'email, e non va mai loggato.
  */
@@ -125,7 +125,7 @@ function escapeHtml(s: string): string {
 
 /** "Osteria del Borgo", "A e B", "A, B e C" — mai una lista con la virgola finale. */
 function joinIt(names: string[]): string {
-  if (names.length === 0) return "un locale";
+  if (names.length === 0) return "una sede";
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
 }
@@ -156,7 +156,7 @@ function buildEmail(p: Payload) {
     `Ciao ${firstName},`,
     ``,
     `${p.workspace_name} ti ha aggiunto all'organico di ${venue} su KlokShift,`,
-    `l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.`,
+    `l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.`,
     ``,
     `Scarica l'app: ${link}`,
     ``,
@@ -184,7 +184,7 @@ function buildEmail(p: Payload) {
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
   <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno aggiunto a un organico</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su KlokShift — l'app con cui il locale organizza i turni e tu tieni il conto delle tue ore.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su KlokShift — l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Scarica l'app</a>
@@ -254,7 +254,7 @@ function buildTeamEmail(p: Payload, link: string) {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;">
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
-  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso a una sede</h1>
+  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso alla gestione</h1>
   <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione su KlokShift — da lì organizzi i turni e segui l'organico.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">

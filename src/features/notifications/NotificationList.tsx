@@ -8,9 +8,6 @@ import type { Enums } from "@/types/database";
 import type { Notification } from "./api";
 
 const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
-  application_received: "clipboard",
-  application_accepted: "check",
-  application_rejected: "close",
   new_message: "message",
   shift_assigned: "calendar",
   shift_cancelled: "alert",

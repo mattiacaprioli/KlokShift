@@ -37,7 +37,7 @@ function idOf(row: Row, field: string): string | undefined {
  *
  * Serve perché i trigger del database moltiplicano gli eventi: assegnare 10
  * persone a un turno produce 10 eventi su `shift_assignments`, e il trigger
- * `sync_internal_positions_filled` ne aggiunge altrettanti su `shifts`. Senza
+ * trigger che tiene i posti (`positions_filled`) ne aggiunge altrettanti su `shifts`. Senza
  * debounce erano 20 giri di refetch per un'azione sola.
  */
 function useBurstInvalidate(qc: QueryClient, ms = 300) {
@@ -74,6 +74,13 @@ function useBurstInvalidate(qc: QueryClient, ms = 300) {
 
 /**
  * Listener realtime app-wide per il dominio turni/organico. Nessuna UI.
+ *
+ * Le tabelle ascoltate: `shifts`, `shift_assignments`, `venue_members`,
+ * `venue_member_roles`, `venue_roles` (tutte filtrate per `venue_id`),
+ * `workspace_members` (per azienda, e per account: cambiano i permessi di chi
+ * guarda) e `messages`. Le notifiche hanno il loro canale
+ * (`useNotificationsRealtime`). `role` è la vista attiva, non un attributo
+ * dell'account: decide solo quali canali aprire.
  *
  * Due principi, entrambi imparati risolvendo il Disk IO budget esaurito:
  *
@@ -121,10 +128,10 @@ export function RealtimeSync({
   // serve spegnerlo da qui.
   // Solo `venuesKey`, non `venueIds`: vedi il punto 3 qui sopra. La stringa è la
   // stessa lista, ed è l'unica forma che si può mettere nelle dipendenze.
-  const { ownerId, venuesKey } = useOwnerVenues();
+  const { workspaceId, venuesKey } = useOwnerVenues();
 
   useEffect(() => {
-    if (!isManager || !ownerId || venuesKey === "") return;
+    if (!isManager || !workspaceId || venuesKey === "") return;
 
     // Dentro l'effetto, non fuori: `venueIds` è un array nuovo a ogni render e
     // nelle dipendenze rimonterebbe il canale in continuazione. La verità è
@@ -132,15 +139,15 @@ export function RealtimeSync({
     const ids = venuesKey.split(",");
     // Tetto di sicurezza: `VENUE_LIMIT` è `Infinity`, quindi la stringa del
     // filtro non ha un limite naturale. Oltre la soglia si **spezza in più
-    // binding**, non si toglie il filtro: senza filtro arriverebbero gli eventi
-    // dei turni `kind='marketplace'` di tutta la piattaforma (la policy SELECT
-    // di `shifts` è permissiva su quelli).
+    // binding**, non si toglie il filtro: Realtime valuta la RLS per ogni
+    // subscriber su ogni riga cambiata, e senza filtro il costo cresce con
+    // l'attività di tutta la piattaforma invece che con la propria.
     const chunks: string[][] = [];
     for (let i = 0; i < ids.length; i += REALTIME_FILTER_MAX) {
       chunks.push(ids.slice(i, i + REALTIME_FILTER_MAX));
     }
 
-    const channel = supabase.channel(`sync:owner:${ownerId}`);
+    const channel = supabase.channel(`sync:owner:${workspaceId}`);
 
     for (const chunk of chunks) {
       const filter = `venue_id=in.(${chunk.join(",")})`;
@@ -158,19 +165,36 @@ export function RealtimeSync({
           invalidate(qk.shifts.pastCountAll);
         }
       );
+      // Organico: chi è in sede, con quali mansioni, e le mansioni stesse.
       channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "staff_members", filter },
+        { event: "*", schema: "public", table: "venue_members", filter },
         () => {
           invalidate(qk.staff.all);
         }
       );
-    }
-
-    channel
-      .on(
+      channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "shift_assignments" },
+        { event: "*", schema: "public", table: "venue_member_roles", filter },
+        () => {
+          invalidate(qk.staff.all);
+          invalidate(qk.roles.all);
+        }
+      );
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "venue_roles", filter },
+        () => {
+          invalidate(qk.roles.all);
+          // Il fabbisogno e il ruolo di ogni assegnazione portano il nome.
+          invalidate(qk.shifts.rangeAny);
+          invalidate(qk.shifts.byOwnerAll);
+        }
+      );
+      // `shift_assignments` porta `venue_id`: si filtra come i turni.
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shift_assignments", filter },
         (payload) => {
           const shiftId = idOf(rowOf(payload), "shift_id");
           if (shiftId) {
@@ -187,7 +211,25 @@ export function RealtimeSync({
           // Ore lavorate e performance dell'organico.
           invalidate(qk.staff.all);
         }
-      )
+      );
+    }
+
+    // Le persone dell'azienda: nuovi arrivi, inviti accettati, permessi.
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "workspace_members",
+        filter: `workspace_id=eq.${workspaceId}`,
+      },
+      () => {
+        invalidate(qk.staff.all);
+        invalidate(qk.team.all);
+      }
+    );
+
+    channel
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
@@ -201,7 +243,34 @@ export function RealtimeSync({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isManager, ownerId, venuesKey, invalidate]);
+  }, [isManager, workspaceId, venuesKey, invalidate]);
+
+  // Cosa **io** posso fare e dove: cambia quando qualcuno accetta un invito,
+  // mi toglie un permesso o mi mette in organico. Vale per ogni vista, quindi
+  // non dipende da `role`. Il filtro per account tiene il subscriber leggero:
+  // gli eventi che arrivano sono solo le mie righe.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`sync:me:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "workspace_members",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          invalidate(qk.context.mine);
+          invalidate(qk.venues.mine);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, invalidate]);
 
   useEffect(() => {
     if (isManager) return;

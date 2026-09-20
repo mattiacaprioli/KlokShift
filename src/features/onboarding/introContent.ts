@@ -1,7 +1,8 @@
 import type { IconName } from "@/components/ui/Icon";
-import type { Enums } from "@/types/database";
+import type { ViewMode } from "@/features/team/viewModeStorage";
 
-type Role = Enums<"user_role">;
+/** La vista attiva: `waiter` = lavoro, `manager` = gestione. */
+type Role = ViewMode;
 
 export type IntroSlide = {
   icon: IconName;

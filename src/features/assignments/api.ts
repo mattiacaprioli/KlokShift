@@ -7,10 +7,18 @@ import {
 } from "@/lib/format";
 import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
-import type { StaffMember, StaffRoleRef } from "@/features/staff/api";
+import type {
+  StaffMember,
+  StaffRoleRef,
+} from "@/features/staff/types";
 import { isActiveAssignment } from "./status";
 import type { OwnerHoursRow } from "./hoursSummary";
-import { UserFacingError } from "@/lib/errors";
+import {
+  toStaffMember,
+  VENUE_MEMBER_BY_ACCOUNT,
+  VENUE_MEMBER_FULL,
+  VENUE_MEMBER_WITH_RATING,
+} from "./embeds";
 
 export type Assignment = Tables<"shift_assignments">;
 
@@ -23,7 +31,13 @@ export type AssignmentWithShift = Assignment & {
 
 type WaiterMini = Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url">;
 
-/** Assignment + the staff member (and their linked waiter, if any). */
+/**
+ * Assignment + la persona in organico (e il suo account, se ce l'ha).
+ *
+ * La chiave resta `staff_member`: è la riga di organico (`venue_members`) letta
+ * nella forma `StaffMember`, con nome e account che stanno sulla persona.
+ * L'assegnazione punta a lei con `venue_member_id`.
+ */
 export type AssignmentWithStaff = Assignment & {
   /** Il ruolo ricoperto su questo turno, non le mansioni della scheda. */
   role: { id: string; name: string } | null;
@@ -58,96 +72,21 @@ export type TodayAssignmentRow = Assignment & {
 };
 
 /**
- * Quanti posti ha un turno interno. Se c'è un fabbisogno per ruolo è lui a
- * dettare il totale: chiamare qualcuno in più — o lasciare in elenco chi ha
- * rifiutato — non aggiunge posti da coprire. Contarli faceva dire "3/4" alla
- * home su un turno che il pannello dava (giustamente) per completo, perché
- * `positions_filled` lo tiene il trigger DB sui soli assegnati attivi.
- * Senza fabbisogno il totale sono le persone chiamate.
- */
-function internalPositionsTotal(targetSum: number, activeStaff: number): number {
-  return Math.max(1, targetSum > 0 ? targetSum : activeStaff);
-}
-
-/**
  * Una persona su un turno, col ruolo che ricopre **quel giorno**.
  *
+ * `venue_member_id` è la riga di organico (`venue_members.id`), non la persona.
  * `role_id` null non è un errore: chi ha più mansioni e non ne ha ancora scelta
  * una resta assegnato ma non copre nessun fabbisogno, cioè esattamente quello
  * che succede nella realtà finché non lo si decide. (Con una sola mansione lo
  * riempie il trigger `default_assignment_role`.)
  */
 export type StaffAssignmentInput = {
-  staff_member_id: string;
+  venue_member_id: string;
   role_id: string | null;
 };
 
 /** Fabbisogno per ruolo così come lo scrivono i form. */
 export type RoleTargetInput = { role_id: string; count: number };
-
-/**
- * Create a shift and assign it to the given roster members in one go.
- * Positions are pre-filled by the assignees.
- */
-export async function createInternalShift(input: {
-  venue_id: string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  description: string | null;
-  staff: StaffAssignmentInput[];
-  /** Fabbisogno per ruolo (es. 2 Cameriere + 1 Sommelier). */
-  roleTargets?: RoleTargetInput[];
-  /**
-   * Chiede la conferma anche ai dipendenti fissi (default: no).
-   *
-   * Di norma lo stato iniziale di ogni assegnazione lo decide il database
-   * (`default_assignment_confirmation`, 20260915100000) guardando
-   * `staff_members.employment_type`: il fisso nasce già `confirmed`, chi è a
-   * chiamata deve rispondere. Questo flag è l'eccezione per il singolo turno —
-   * straordinario, festivo — e vale per tutti.
-   */
-  require_confirmation?: boolean;
-}): Promise<Shift> {
-  const { staff, roleTargets, ...fields } = input;
-  const targets = (roleTargets ?? []).filter((t) => t.count > 0);
-  const targetSum = targets.reduce((s, t) => s + t.count, 0);
-  const { data: shift, error } = await supabase
-    .from("shifts")
-    .insert({
-      ...fields,
-      kind: "internal",
-      status: "open",
-      positions_total: internalPositionsTotal(targetSum, staff.length),
-      positions_filled: staff.length,
-    })
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-
-  if (targets.length > 0) {
-    const { error: rErr } = await supabase
-      .from("shift_role_requirements")
-      .insert(
-        targets.map((t) => ({
-          shift_id: shift.id,
-          role_id: t.role_id,
-          count: t.count,
-        }))
-      );
-    if (rErr) throw new Error(rErr.message);
-  }
-
-  if (staff.length > 0) {
-    const rows = staff.map((s) => ({ shift_id: shift.id, ...s }));
-    const { error: aErr } = await supabase
-      .from("shift_assignments")
-      .insert(rows);
-    if (aErr) throw new Error(aErr.message);
-  }
-  return shift;
-}
 
 /**
  * La "ricetta" di un turno interno: campi, fabbisogno per ruolo e chi ci lavora.
@@ -158,15 +97,13 @@ export type InternalShiftPlan = {
   /**
    * ⚠️ La sede sta **sul piano**, non sulla chiamata.
    *
-   * Prima `createInternalShifts` prendeva un `venue_id` solo e lo applicava a
-   * tutte le copie: andava bene finché una vista conteneva una sede sola.
    * Con il planning unificato, duplicare una settimana che contiene Roma e
    * Milano spingerebbe tutti i turni in una sede sola — e il compilatore non se
    * ne accorgerebbe mai, perché sono entrambe stringhe.
    *
-   * Anche `staff_member_id` e `role_id` sono legati alla sede del turno che ha
-   * generato il piano: spostare il piano di sede senza rimapparli produrrebbe
-   * assegnazioni che il database accetta e che nessuna schermata sa leggere.
+   * Anche `venue_member_id` e `role_id` sono legati alla sede del turno che ha
+   * generato il piano: il server rifiuta (`not_in_roster`, `role_not_in_venue`)
+   * chi non è in organico o un ruolo che non è di quella sede.
    */
   venue_id: string;
   title: string;
@@ -174,11 +111,70 @@ export type InternalShiftPlan = {
   start_time: string;
   end_time: string;
   description: string | null;
-  /** Vedi `createInternalShift`. Va ricopiato: fa parte della ricetta del turno. */
+  /**
+   * Chiede la conferma anche ai dipendenti fissi (default: no). Di norma lo
+   * stato iniziale di ogni assegnazione lo decide il database guardando
+   * `venue_members.employment_type`: il fisso nasce già `confirmed`, chi è a
+   * chiamata deve rispondere. Questo flag è l'eccezione per il singolo turno —
+   * straordinario, festivo — e vale per tutti. Fa parte della ricetta.
+   */
   require_confirmation: boolean;
   roleTargets: RoleTargetInput[];
   staff: StaffAssignmentInput[];
 };
+
+/** Un piano come lo vuole la RPC `create_shifts` (`role_targets`, non `roleTargets`). */
+function planPayload(p: InternalShiftPlan) {
+  return {
+    venue_id: p.venue_id,
+    title: p.title,
+    description: p.description,
+    date: p.date,
+    start_time: p.start_time,
+    end_time: p.end_time,
+    require_confirmation: p.require_confirmation,
+    role_targets: p.roleTargets.filter((t) => t.count > 0),
+    staff: p.staff,
+  };
+}
+
+/**
+ * Crea più turni interni **in una sola chiamata**, tutto o niente: la RPC
+ * `create_shifts` scrive turni, fabbisogni e assegnazioni nella stessa
+ * transazione e calcola i posti. Un errore (persona fuori organico, ruolo di
+ * un'altra sede, permesso mancante) non lascia niente a metà.
+ *
+ * I trigger DB fanno il resto: ogni assegnato riceve la sua notifica.
+ * Ritorna gli id dei turni creati, nell'ordine dei piani.
+ */
+export async function createInternalShifts(
+  plans: InternalShiftPlan[]
+): Promise<string[]> {
+  if (plans.length === 0) return [];
+  const { data, error } = await supabase.rpc("create_shifts", {
+    p_plans: plans.map(planPayload),
+  });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** Crea un turno interno e lo assegna alle persone indicate. */
+export async function createInternalShift(
+  input: Omit<InternalShiftPlan, "require_confirmation" | "roleTargets"> & {
+    /** Fabbisogno per ruolo (es. 2 Cameriere + 1 Sommelier). */
+    roleTargets?: RoleTargetInput[];
+    require_confirmation?: boolean;
+  }
+): Promise<string> {
+  const [id] = await createInternalShifts([
+    {
+      ...input,
+      roleTargets: input.roleTargets ?? [],
+      require_confirmation: input.require_confirmation ?? false,
+    },
+  ]);
+  return id;
+}
 
 /** Legge i turni indicati e ne ricava i piani riproducibili. */
 export async function getInternalShiftPlans(
@@ -188,7 +184,7 @@ export async function getInternalShiftPlans(
   const { data, error } = await supabase
     .from("shifts")
     .select(
-      "venue_id, title, date, start_time, end_time, description, require_confirmation, shift_role_requirements(role_id, count), shift_assignments(staff_member_id, role_id, status)"
+      "venue_id, title, date, start_time, end_time, description, require_confirmation, shift_role_requirements(role_id, count), shift_assignments(venue_member_id, role_id, status)"
     )
     .in("id", shiftIds)
     .order("date", { ascending: true })
@@ -212,102 +208,20 @@ export async function getInternalShiftPlans(
     // Il ruolo viaggia con la persona: copiare "Marco" senza "come barman"
     // creerebbe una settimana di turni scoperti.
     staff: (s.shift_assignments ?? [])
-      .filter((a) => isActiveAssignment(a.status) && !!a.staff_member_id)
+      .filter((a) => isActiveAssignment(a.status))
       .map((a) => ({
-        staff_member_id: a.staff_member_id,
+        venue_member_id: a.venue_member_id,
         role_id: a.role_id,
       })),
   }));
 }
 
 /**
- * Crea più turni interni in blocco: **tre statement** (turni, fabbisogni,
- * assegnazioni) invece di tre per turno. Ogni statement è atomico, quindi un
- * errore non lascia turni a metà — al più senza fabbisogno per ruolo, cosa
- * visibile e correggibile dal pannello del turno.
- *
- * I trigger DB fanno il resto, come per il turno singolo: ogni assegnato riceve
- * la sua notifica e `positions_filled` resta sincronizzato.
- */
-export async function createInternalShifts(
-  plans: InternalShiftPlan[]
-): Promise<Shift[]> {
-  if (plans.length === 0) return [];
-
-  const { data: created, error } = await supabase
-    .from("shifts")
-    .insert(
-      plans.map((p) => {
-        const targetSum = p.roleTargets.reduce(
-          (s, t) => s + Math.max(0, t.count),
-          0
-        );
-        return {
-          venue_id: p.venue_id,
-          title: p.title,
-          date: p.date,
-          start_time: p.start_time,
-          end_time: p.end_time,
-          description: p.description,
-          require_confirmation: p.require_confirmation,
-          kind: "internal" as const,
-          status: "open" as const,
-          positions_total: internalPositionsTotal(targetSum, p.staff.length),
-          positions_filled: p.staff.length,
-        };
-      })
-    )
-    .select("*");
-  if (error) throw new Error(error.message);
-
-  // `INSERT ... RETURNING` restituisce le righe nell'ordine in cui sono state
-  // inserite: l'indice riallinea ogni turno creato al piano che lo ha generato.
-  // Non è però una garanzia scritta del protocollo, e sbagliare l'allineamento
-  // vorrebbe dire assegnare le persone al turno sbagliato **in silenzio**: si
-  // verifica su data e ora e si fallisce forte se non torna.
-  const shifts = created ?? [];
-  const aligned =
-    shifts.length === plans.length &&
-    shifts.every(
-      (s, i) =>
-        s.date === plans[i].date &&
-        s.start_time.slice(0, 5) === plans[i].start_time.slice(0, 5)
-    );
-  if (!aligned) {
-    throw new UserFacingError(
-      `Turni creati (${shifts.length}), ma non è stato possibile riconoscerne l'ordine: fabbisogni e assegnazioni non sono stati applicati. Aprili dal planning e completali a mano.`
-    );
-  }
-
-  const reqRows = shifts.flatMap((shift, i) =>
-    plans[i].roleTargets
-      .filter((t) => t.count > 0)
-      .map((t) => ({ shift_id: shift.id, role_id: t.role_id, count: t.count }))
-  );
-  if (reqRows.length > 0) {
-    const { error: rErr } = await supabase
-      .from("shift_role_requirements")
-      .insert(reqRows);
-    if (rErr) throw new Error(rErr.message);
-  }
-
-  const assignRows = shifts.flatMap((shift, i) =>
-    plans[i].staff.map((s) => ({ shift_id: shift.id, ...s }))
-  );
-  if (assignRows.length > 0) {
-    const { error: aErr } = await supabase
-      .from("shift_assignments")
-      .insert(assignRows);
-    if (aErr) throw new Error(aErr.message);
-  }
-
-  return shifts;
-}
-
-/**
  * Modifica completa di un turno interno: campi base, fabbisogno per ruolo e
- * staff assegnato (diff: i nuovi ricevono la notifica via trigger, i rimossi
- * vengono eliminati e il trigger risincronizza i coperti).
+ * persone assegnate. Una sola RPC (`update_shift`), atomica: il server fa il
+ * diff delle assegnazioni (i nuovi ricevono la notifica, i rimossi escono, chi
+ * resta cambia ruolo) e ricalcola i posti. Se giorno o orario cambiano avvisa
+ * gli assegnati e riapre la conferma.
  */
 export async function updateInternalShift(
   shiftId: string,
@@ -317,92 +231,24 @@ export async function updateInternalShift(
     start_time: string;
     end_time: string;
     description: string | null;
-    /** Vedi `createInternalShift`. */
+    /** Vedi `InternalShiftPlan.require_confirmation`. */
     require_confirmation: boolean;
     roleTargets: RoleTargetInput[];
     staff: StaffAssignmentInput[];
   }
 ): Promise<void> {
   const { roleTargets, staff, ...fields } = input;
-  const targets = roleTargets.filter((t) => t.count > 0);
-  const targetSum = targets.reduce((s, t) => s + t.count, 0);
-
-  // 0) Stato attuale delle assegnazioni: serve prima di toccare il turno,
-  //    perché i posti non contano chi ha rifiutato (e serve poi per il diff).
-  const { data: existing, error: eErr } = await supabase
-    .from("shift_assignments")
-    .select("id, staff_member_id, role_id, status")
-    .eq("shift_id", shiftId);
-  if (eErr) throw new Error(eErr.message);
-  const current = new Map((existing ?? []).map((a) => [a.staff_member_id, a]));
-  // Chi viene aggiunto adesso nasce `assigned`, quindi conta come posto.
-  const activeStaff = staff.filter((s) => {
-    const row = current.get(s.staff_member_id);
-    return !row || isActiveAssignment(row.status);
-  }).length;
-
-  // 1) Campi base (il trigger notify_on_shift_updated avvisa gli assegnati
-  //    se giorno/orario cambiano).
-  const { error: sErr } = await supabase
-    .from("shifts")
-    .update({
+  const { error } = await supabase.rpc("update_shift", {
+    p_shift: shiftId,
+    p_payload: {
       ...fields,
-      positions_total: internalPositionsTotal(targetSum, activeStaff),
-    })
-    .eq("id", shiftId);
-  if (sErr) throw new Error(sErr.message);
-
-  // 2) Fabbisogno per ruolo: replace completo (tabella piccola).
-  const { error: dErr } = await supabase
-    .from("shift_role_requirements")
-    .delete()
-    .eq("shift_id", shiftId);
-  if (dErr) throw new Error(dErr.message);
-  if (targets.length > 0) {
-    const { error: rErr } = await supabase
-      .from("shift_role_requirements")
-      .insert(targets.map((t) => ({ shift_id: shiftId, ...t })));
-    if (rErr) throw new Error(rErr.message);
-  }
-
-  // 3) Diff assegnazioni (sullo stato letto al punto 0).
-  const toAdd = staff.filter((s) => !current.has(s.staff_member_id));
-  if (toAdd.length > 0) {
-    const { error } = await supabase
-      .from("shift_assignments")
-      .insert(toAdd.map((s) => ({ shift_id: shiftId, ...s })));
-    if (error) throw new Error(error.message);
-  }
-
-  // 3b) Chi resta ma cambia ruolo. Senza questo passaggio spostare qualcuno da
-  //     "Cameriere" a "Barman" non si salverebbe: non entra e non esce, quindi
-  //     nessuno dei due rami sopra lo tocca. Un UPDATE va bene — qui non cambia
-  //     la persona, quindi non c'è nessuno da avvisare.
-  const toRetag = staff.filter((s) => {
-    const row = current.get(s.staff_member_id);
-    return !!row && row.role_id !== s.role_id;
+      role_targets: roleTargets.filter((t) => t.count > 0),
+      staff,
+    },
   });
-  for (const s of toRetag) {
-    const row = current.get(s.staff_member_id);
-    if (!row) continue;
-    const { error } = await supabase
-      .from("shift_assignments")
-      .update({ role_id: s.role_id })
-      .eq("id", row.id);
-    if (error) throw new Error(error.message);
-  }
-
-  const keep = new Set(staff.map((s) => s.staff_member_id));
-  const toRemove = (existing ?? [])
-    .filter((a) => !keep.has(a.staff_member_id))
-    .map((a) => a.id);
-  if (toRemove.length > 0) {
-    const { error } = await supabase
-      .from("shift_assignments")
-      .delete()
-      .in("id", toRemove);
-    if (error) throw new Error(error.message);
-  }
+  // Le eccezioni della RPC (`finished_shift_locked`, `not_in_roster`…) sono
+  // tradotte da `userErrorMessage`: il messaggio grezzo ne conserva il codice.
+  if (error) throw new Error(error.message);
 }
 
 export type ShiftRoleRequirement = Tables<"shift_role_requirements"> & {
@@ -428,63 +274,97 @@ export async function getShiftAssignments(
 ): Promise<AssignmentWithStaff[]> {
   const { data, error } = await supabase
     .from("shift_assignments")
-    .select(
-      "*, role:venue_roles(id, name), staff_member:staff_members(*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url), staff_member_roles(role:venue_roles(id, name, sort_order)))"
-    )
+    .select(`*, role:venue_roles(id, name), ${VENUE_MEMBER_FULL}`)
     .eq("shift_id", shiftId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as AssignmentWithStaff[] | null) ?? [];
+  return (data ?? []).map(({ venue_member, ...row }) => ({
+    ...row,
+    staff_member: venue_member ? toStaffMember(venue_member) : null,
+  }));
 }
 
-export async function updateAssignmentStatus(
+/**
+ * Il professionista conferma o rifiuta il **proprio** turno (RPC
+ * `respond_assignment`). Ritorna la riga aggiornata: un turno finito o
+ * annullato, o non suo, è un errore e non un 200 muto.
+ */
+export async function respondToAssignment(
   id: string,
-  status: Enums<"assignment_status">
-): Promise<void> {
-  const { error } = await supabase
-    .from("shift_assignments")
-    .update({ status })
-    .eq("id", id);
+  status: Extract<Enums<"assignment_status">, "confirmed" | "declined">
+): Promise<Assignment> {
+  const { data, error } = await supabase.rpc("respond_assignment", {
+    p_assignment: id,
+    p_status: status,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Aggiunge una persona (riga di organico) a un turno, nel ruolo indicato. */
+export async function assignToShift(
+  shiftId: string,
+  venueMemberId: string,
+  roleId?: string | null
+): Promise<string> {
+  const { data, error } = await supabase.rpc("assign", {
+    p_shift: shiftId,
+    p_venue_member: venueMemberId,
+    p_role: roleId ?? undefined,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Toglie una persona dal turno. */
+export async function unassignFromShift(assignmentId: string): Promise<void> {
+  const { error } = await supabase.rpc("unassign", {
+    p_assignment: assignmentId,
+  });
   if (error) throw new Error(error.message);
 }
 
 /**
- * Passa un'assegnazione a un'altra persona dello stessa sede.
+ * Passa un'assegnazione a un'altra persona della stessa sede.
  *
- * Delete + insert dentro una transazione (RPC `reassign_shift_assignment`,
- * migration 20260911120000), non un update di `staff_member_id`: solo così
+ * Cancella e ricrea nella stessa transazione (RPC `reassign`): solo così
  * scattano entrambe le notifiche — «Turno revocato» a chi esce, «Nuovo turno
  * assegnato» a chi entra — e chi entra non eredita lo stato (magari
- * "confermato") né le ore di chi esce. Il perché per esteso sta nella migration.
+ * "confermato") né le ore di chi esce.
  *
- * Ritorna l'id della nuova riga. Gli errori arrivano già in italiano dalla RPC
- * (persona di un'altra sede, persona già sul turno).
+ * `toVenueMemberId` è una riga di organico (`StaffMember.id`), non una persona.
+ * Ritorna l'id della nuova riga.
  */
 export async function reassignShiftAssignment(
   assignmentId: string,
-  toStaffMemberId: string
+  toVenueMemberId: string
 ): Promise<string> {
-  const { data, error } = await supabase.rpc("reassign_shift_assignment", {
+  const { data, error } = await supabase.rpc("reassign", {
     p_assignment: assignmentId,
-    p_staff_member: toStaffMemberId,
+    p_to_venue_member: toVenueMemberId,
   });
-  // Le tre eccezioni di quella RPC sono frasi scritte per essere lette
-  // («Questa persona è già su questo turno»): vanno mostrate così come sono,
-  // non sostituite dal messaggio generico.
-  if (error) throw new UserFacingError(error.message);
-  return data as string;
+  // Le eccezioni della RPC (`not_in_roster`, `already_assigned`…) hanno la loro
+  // frase italiana in `userErrorMessage`: il messaggio grezzo ne porta il codice.
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-/** Presenza a turno concluso: stato (presente/assente) e/o ore effettive. */
+/**
+ * Presenza a turno concluso: stato (presente/assente) e/o ore effettive.
+ * Ritorna la riga scritta. Il DB può rifiutare (`not_allowed`: le proprie
+ * presenze le segna solo il titolare; `status` chiede «Turni», `worked_hours`
+ * chiede «Ore»): l'errore arriva qui e va mostrato, non ingoiato.
+ */
 export async function setAssignmentPresence(
   id: string,
   fields: { status?: Enums<"assignment_status">; worked_hours?: number | null }
-): Promise<void> {
-  const { error } = await supabase
-    .from("shift_assignments")
-    .update(fields)
-    .eq("id", id);
+): Promise<Assignment> {
+  const { data, error } = await supabase.rpc("record_attendance", {
+    p_assignment: id,
+    p_patch: fields,
+  });
   if (error) throw new Error(error.message);
+  return data;
 }
 
 /**
@@ -510,10 +390,10 @@ export type StaffPerformance = {
 };
 
 export async function getPersonPerformance(
-  personId: string
+  memberId: string
 ): Promise<StaffPerformance | null> {
   const { data, error } = await supabase
-    .rpc("get_person_performance", { p_person: personId })
+    .rpc("get_member_performance", { p_member: memberId })
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ?? null;
@@ -543,11 +423,11 @@ export type StaffWorkedShift = {
 export const STAFF_RECENT_SHIFTS = 6;
 
 export async function getPersonWorkedShifts(
-  personId: string,
+  memberId: string,
   limit = STAFF_RECENT_SHIFTS
 ): Promise<StaffWorkedShift[]> {
-  const { data, error } = await supabase.rpc("get_person_worked_shifts", {
-    p_person: personId,
+  const { data, error } = await supabase.rpc("get_member_worked_shifts", {
+    p_member: memberId,
     p_limit: limit,
   });
   if (error) throw new Error(error.message);
@@ -555,14 +435,12 @@ export async function getPersonWorkedShifts(
 }
 
 /**
- * Storico lavoro del professionista ("Le mie ore"): i turni svolti, in
- * un'unica lista (comprese, per chi ce l'ha, le vecchie candidature accettate).
+ * Storico lavoro del professionista ("Le mie ore"): i turni svolti.
  *
- * L'unione la fa il database (`get_my_work_history`). Il client non poteva
+ * La lista la fa il database (`get_my_work_history`). Il client non può
  * paginare da solo: l'ordinamento è per `shifts.date`, che sta in una tabella
  * collegata, e PostgREST non sa ordinare le righe padre per una colonna
- * dell'embed — quindi prima si scaricavano **due storie intere** e si fondevano
- * in memoria.
+ * dell'embed.
  */
 export const WORK_HISTORY_PAGE_SIZE = 20;
 
@@ -575,7 +453,6 @@ export type WorkHistoryRow = {
   start_time: string;
   end_time: string;
   hours: number;
-  kind: string;
 };
 
 export async function getMyWorkHistoryPage(
@@ -625,19 +502,25 @@ export function monthBounds(month: string): { start: string; end: string } {
  * due join e sommava qui — e la pagina Ore offre dodici mesi a portata di click,
  * cioè dodici dataset completi.
  *
- * ⚠️ Nessun parametro per il titolare: la RPC è INVOKER e usa `auth.uid()`. Il
- * perimetro è «la MIA azienda» e non è negoziabile dal client.
+ * ⚠️ Nessun parametro per l'azienda: la RPC usa `auth.uid()`. Il perimetro è
+ * «le sedi su cui HO il permesso Ore» e non è negoziabile dal client.
  */
 export async function getOwnerHoursSummary(
   month: string
 ): Promise<OwnerHoursRow[]> {
   const { start, end } = monthBounds(month);
-  const { data, error } = await supabase.rpc("get_owner_hours_summary", {
+  const { data, error } = await supabase.rpc("get_hours_summary", {
     p_from: start,
     p_to: end,
   });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  // La RPC parla di `member_*` (la persona = `workspace_members.id`): il resto
+  // dell'app e gli export leggono ancora `person_*`, che è la stessa cosa.
+  return (data ?? []).map(({ member_id, member_name, ...row }) => ({
+    ...row,
+    person_id: member_id,
+    person_name: member_name,
+  }));
 }
 
 /**
@@ -659,9 +542,9 @@ export async function getMyAssignedUpcoming(
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      "*, role:venue_roles(id, name), staff_member:staff_members!inner(waiter_id), shift:shifts!inner(*, venue:venues(*))"
+      `*, role:venue_roles(id, name), ${VENUE_MEMBER_BY_ACCOUNT}, shift:shifts!inner(*, venue:venues(*))`
     )
-    .eq("staff_member.waiter_id", waiterId)
+    .eq("venue_member.member.user_id", waiterId)
     .neq("status", "declined")
     // Da ieri: il turno che il professionista sta lavorando adesso non deve
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
@@ -689,9 +572,9 @@ export async function getMyAssignmentForShift(
 ): Promise<MyAssignment | null> {
   const { data, error } = await supabase
     .from("shift_assignments")
-    .select("*, role:venue_roles(id, name), staff_member:staff_members!inner(waiter_id)")
+    .select(`*, role:venue_roles(id, name), ${VENUE_MEMBER_BY_ACCOUNT}`)
     .eq("shift_id", shiftId)
-    .eq("staff_member.waiter_id", waiterId)
+    .eq("venue_member.member.user_id", waiterId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as MyAssignment | null) ?? null;
@@ -712,7 +595,7 @@ export async function getOwnerTodayAssignments(
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      "*, role:venue_roles(id, name), staff_member:staff_members!inner(*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))), shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)"
+      `*, role:venue_roles(id, name), ${VENUE_MEMBER_WITH_RATING}, shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)`
     )
     // `venue_id` resta nel select del sub-embed: serve al badge della sede.
     .in("shift.venue_id", venueIds)
@@ -722,7 +605,12 @@ export async function getOwnerTodayAssignments(
     .neq("shift.status", "cancelled")
     .neq("status", "declined");
   if (error) throw new Error(error.message);
-  const rows = (data as TodayAssignmentRow[] | null) ?? [];
+  const rows: TodayAssignmentRow[] = (data ?? []).map(
+    ({ venue_member, ...row }) => ({
+      ...row,
+      staff_member: venue_member ? toStaffMember(venue_member) : null,
+    })
+  );
   return rows
     // Di ieri resta solo ciò che non è ancora finito; di oggi resta tutto.
     .filter((r) => r.shift != null && !isShiftOver(r.shift))

@@ -5,7 +5,6 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { QueryError } from "@/components/ui/QueryError";
-import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { VenuePlanningToggle } from "@/features/planning/VenuePlanningToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -21,12 +20,11 @@ import { VenueInfoView } from "@/features/venues/VenueInfoView";
  */
 export default function VenueEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session } = useAuth();
   const router = useRouter();
   const toast = useToast();
-  const ownerId = session!.user.id;
-  const { venues, can, isLoading, isError, refetch } = useOwnerVenues();
-  const close = useSetVenueClosed(ownerId);
+  const { workspaceId, venues, can, isLoading, isError, refetch } =
+    useOwnerVenues();
+  const close = useSetVenueClosed(workspaceId ?? "");
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const venue = venues.find((v) => v.id === id) ?? null;
@@ -81,11 +79,11 @@ export default function VenueEditScreen() {
     <>
       <VenueFormView
         venue={venue}
-        ownerId={ownerId}
+        workspaceId={workspaceId}
         onSaved={() => router.back()}
         footer={
           <View className="gap-6">
-            <VenuePlanningToggle venue={venue} ownerId={ownerId} />
+            <VenuePlanningToggle venue={venue} ownerId={workspaceId ?? ""} />
             <GhostButton
               label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}
               disabled={close.isPending}

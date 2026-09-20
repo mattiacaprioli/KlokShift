@@ -55,7 +55,7 @@ export function ShiftTeamSection({
       <SectionHeader className="mb-0" title="Con chi lavori" />
       <Card className="rounded-3xl border-border-2 px-4 py-2">
         {team.people.map((p) => (
-          <TeamRow key={p.staffMemberId} person={p} />
+          <TeamRow key={p.venueMemberId} person={p} />
         ))}
       </Card>
       <Text className="px-1 text-[12px] text-t4">

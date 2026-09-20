@@ -2,13 +2,13 @@ import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
 
 /**
- * Documenti di una **persona** dell'organico: HACCP, contratto, visita medica,
+ * Documenti di un **membro** dell'azienda: HACCP, contratto, visita medica,
  * patentino. Quello che una sede deve poter esibire in un'ispezione.
  *
- * Stanno sulla persona (`staff_people`) e non sulla singola scheda, da
- * 20260913100100: chi lavora in due sedi dello stesso titolare li carica una
- * volta, e dimettersi da una delle due non li porta via. Spariscono quando la
- * persona esce dall'organico di quel titolare, cioè quando lascia l'ultima sede.
+ * Stanno sul membro (`workspace_members`, colonna `member_id`) e non sulla
+ * singola sede: chi lavora in due sedi della stessa azienda li carica una volta,
+ * e dimettersi da una delle due non li porta via. Il percorso nel bucket è
+ * `<member_id>/<file>`.
  *
  * ⚠️ Questo file lo importa **anche la dashboard web**: niente Expo qui dentro.
  * La scelta del file sul telefono vive in `pickDocument.ts`, che è solo nativo.
@@ -46,14 +46,14 @@ export type DocumentFile = {
 
 export type DocumentMeta = { name: string; expires_at: string | null };
 
-/** I documenti di una persona, scadenze più vicine in cima. */
+/** I documenti di un membro, scadenze più vicine in cima. */
 export async function getStaffDocuments(
-  personId: string
+  memberId: string
 ): Promise<StaffDocument[]> {
   const { data, error } = await supabase
     .from("staff_documents")
     .select("*")
-    .eq("person_id", personId)
+    .eq("member_id", memberId)
     .order("expires_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -61,17 +61,17 @@ export async function getStaffDocuments(
 }
 
 /**
- * Il path dentro il bucket. La prima cartella **deve** essere la persona: è da lì
- * che la policy su `storage.objects` ricava chi può leggere il file, e il check
- * `staff_documents_path_owner_ck` lo impone anche a livello di riga.
+ * Il path dentro il bucket. La prima cartella **deve** essere il membro
+ * (`<member_id>/<file>`): è da lì che la policy su `storage.objects` ricava chi
+ * può leggere il file, e il check sulla riga lo impone anche lì.
  *
  * Il suffisso casuale non è paranoia: `storage_path` è `unique` e due tap
  * ravvicinati cadono nello stesso millisecondo.
  */
-function documentPath(personId: string, fileName: string): string {
+function documentPath(memberId: string, fileName: string): string {
   const ext = (fileName.split(".").pop() ?? "bin").toLowerCase();
   const rand = Math.random().toString(36).slice(2, 8);
-  return `${personId}/${Date.now()}-${rand}.${ext}`;
+  return `${memberId}/${Date.now()}-${rand}.${ext}`;
 }
 
 async function uploadFile(path: string, file: DocumentFile): Promise<void> {
@@ -93,18 +93,18 @@ async function uploadFile(path: string, file: DocumentFile): Promise<void> {
  * errore visibile a ogni tap — invece di un file invisibile a tutti.
  */
 export async function createStaffDocument(
-  personId: string,
+  memberId: string,
   uploadedBy: string,
   meta: DocumentMeta,
   file: DocumentFile
 ): Promise<StaffDocument> {
-  const path = documentPath(personId, file.fileName);
+  const path = documentPath(memberId, file.fileName);
   await uploadFile(path, file);
 
   const { data, error } = await supabase
     .from("staff_documents")
     .insert({
-      person_id: personId,
+      member_id: memberId,
       uploaded_by: uploadedBy,
       name: meta.name.trim(),
       expires_at: meta.expires_at,
@@ -128,11 +128,14 @@ export async function updateStaffDocument(
   id: string,
   meta: DocumentMeta
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("staff_documents")
     .update({ name: meta.name.trim(), expires_at: meta.expires_at })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) throw new Error(error.message);
+  // Un update che la RLS scarta torna 204 senza errore: zero righe = non salvato.
+  if (!data || data.length === 0) throw new Error("not_allowed");
 }
 
 /**
@@ -145,31 +148,34 @@ export async function replaceStaffDocumentFile(
   doc: StaffDocument,
   file: DocumentFile
 ): Promise<void> {
-  const path = documentPath(doc.person_id, file.fileName);
+  const path = documentPath(doc.member_id, file.fileName);
   await uploadFile(path, file);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("staff_documents")
     .update({
       storage_path: path,
       mime_type: file.mimeType,
       size_bytes: file.sizeBytes,
     })
-    .eq("id", doc.id);
-  if (error) {
+    .eq("id", doc.id)
+    .select("id");
+  if (error || !data || data.length === 0) {
     await supabase.storage.from(DOCUMENTS_BUCKET).remove([path]);
-    throw new Error(error.message);
+    throw new Error(error?.message ?? "not_allowed");
   }
 
   await supabase.storage.from(DOCUMENTS_BUCKET).remove([doc.storage_path]);
 }
 
 export async function deleteStaffDocument(doc: StaffDocument): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("staff_documents")
     .delete()
-    .eq("id", doc.id);
+    .eq("id", doc.id)
+    .select("id");
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("not_allowed");
   // Best-effort, come per gli avatar: se fallisce resta un file che nessuno
   // raggiunge più, non una riga che punta al vuoto.
   await supabase.storage.from(DOCUMENTS_BUCKET).remove([doc.storage_path]);

@@ -1,73 +1,72 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import {
+  createVenue,
   getMyClosedVenues,
   getMyVenues,
-  saveVenue,
   setVenueClosed,
+  updateVenue,
   updateVenueLogo,
   type VenueInput,
 } from "./api";
 
 /**
- * Le sedi a cui si ha accesso — proprie o delegate. `enabled: false` tiene la
- * query spenta (è così che `OwnerVenuesProvider` sta zitto quando l'utente è un
- * professionista).
+ * Le sedi che si gestiscono. `enabled: false` tiene la query spenta (è così che
+ * `OwnerVenuesProvider` sta zitto per chi non gestisce niente).
  *
  * ⚠️ Non usarlo direttamente nelle schermate: passa da `useOwnerVenues()`, che
  * espone anche `venueIds` e `venuesKey` — le due forme che servono a interrogare
  * e a mettere in cache i turni di tutte le sedi insieme.
+ *
+ * ⚠️ Gli id non entrano nella query key: l'identità di questa lista è la
+ * sessione (la cache si svuota al cambio di persona). Per questo il provider la
+ * accende solo quando gli id sono noti, e chi cambia i permessi di un
+ * collaboratore invalida `qk.context.mine` e `qk.venues.mine` insieme.
  */
-export function useMyVenues(
-  enabled: boolean,
-  userId: string,
-  /**
-   * Le sedi delegate, da `venue_access`. ⚠️ Non entrano nella query key: la
-   * chiave resta `qk.venues.mine` perché l'identità di questa lista è la
-   * sessione, e la cache si svuota al cambio di persona (`syncAccount` in
-   * `lib/auth.tsx`). Aggiungerle qui vorrebbe dire una voce di cache nuova ogni
-   * volta che il titolare tocca un permesso.
-   *
-   * ⚠️ Il rovescio: cambiare questi id **non** rifà la query. Per questo
-   * `OwnerVenuesProvider` la accende solo quando gli accessi sono arrivati.
-   */
-  accessVenueIds: readonly string[]
-) {
+export function useMyVenues(enabled: boolean, venueIds: readonly string[]) {
   return useQuery({
     queryKey: qk.venues.mine,
-    queryFn: () => getMyVenues(userId, accessVenueIds),
+    queryFn: () => getMyVenues(venueIds),
     enabled,
   });
 }
 
-export function useMyClosedVenues(ownerId: string) {
+export function useMyClosedVenues(workspaceId: string) {
   return useQuery({
-    queryKey: qk.venues.closed(ownerId),
-    queryFn: () => getMyClosedVenues(ownerId),
-    enabled: !!ownerId,
+    queryKey: qk.venues.closed(workspaceId),
+    queryFn: () => getMyClosedVenues(workspaceId),
+    enabled: !!workspaceId,
   });
+}
+
+/** Cosa cambia quando l'insieme o i dati delle sedi cambiano. */
+function useInvalidateVenues(workspaceId: string) {
+  const qc = useQueryClient();
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: qk.context.mine }),
+      qc.invalidateQueries({ queryKey: qk.venues.mine }),
+      qc.invalidateQueries({ queryKey: qk.venues.closed(workspaceId) }),
+    ]);
 }
 
 /**
  * Chiude o riapre una sede. Invalida entrambe le liste: una sede che si chiude
  * esce da `mine` ed entra in `closed`, e il contrario quando si riapre.
  */
-export function useSetVenueClosed(ownerId: string) {
-  const qc = useQueryClient();
+export function useSetVenueClosed(workspaceId: string) {
+  const invalidate = useInvalidateVenues(workspaceId);
   return useMutation({
     mutationFn: (vars: { venueId: string; closed: boolean }) =>
       setVenueClosed(vars.venueId, vars.closed),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.venues.mine });
-      qc.invalidateQueries({ queryKey: qk.venues.closed(ownerId) });
-    },
+    onSuccess: invalidate,
   });
 }
 
 /**
- * Logo della sede. Invalida solo `venues.mine`: il logo compare anche sulle
- * card turno del professionista, ma quelle sono query sue, su un altro
- * dispositivo — le rivedrà al prossimo caricamento.
+ * Logo della sede. Il logo compare anche sulle card turno del professionista,
+ * ma quelle sono query sue, su un altro dispositivo: le rivedrà al prossimo
+ * caricamento.
  */
 export function useUpdateVenueLogo() {
   const qc = useQueryClient();
@@ -76,17 +75,24 @@ export function useUpdateVenueLogo() {
       updateVenueLogo(vars.venueId, vars.logoUrl),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.venues.mine });
+      qc.invalidateQueries({ queryKey: qk.context.mine });
     },
   });
 }
 
-export function useSaveVenue(ownerId: string) {
-  const qc = useQueryClient();
+/**
+ * Salva una sede: la crea (`createVenue`) o ne modifica i dati (`updateVenue`).
+ * Il nome è quello di prima (`useSaveVenue`) perché è ciò che i form già
+ * chiamano; cambia solo il primo argomento, che ora è l'azienda.
+ */
+export function useSaveVenue(workspaceId: string) {
+  const invalidate = useInvalidateVenues(workspaceId);
   return useMutation({
-    mutationFn: (vars: { input: VenueInput; venueId?: string }) =>
-      saveVenue(ownerId, vars.input, vars.venueId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.venues.mine });
+    mutationFn: async (vars: { input: VenueInput; venueId?: string }) => {
+      if (vars.venueId) return updateVenue(vars.venueId, vars.input);
+      const id = await createVenue(workspaceId, vars.input);
+      return { id };
     },
+    onSuccess: invalidate,
   });
 }

@@ -13,10 +13,9 @@ import type { PlanTier } from "@/features/plan/devOverride";
  *
  * ⚠️ Due cose da ricordare quando il limite diventerà reale:
  *
- *  1. `profiles.plan` è **scrivibile dal client** (la policy su `profiles` è
- *     `ALL id = auth.uid()`), quindi un gate solo qui sarebbe cosmetico: servirà
- *     anche un controllo lato DB — un trigger su `venues` o una RPC DEFINER per
- *     la creazione.
+ *  1. Il piano è dell'azienda (`workspaces.plan`, `useOwnerVenues().plan`) e un
+ *     gate solo qui sarebbe cosmetico: la creazione passa dalla RPC
+ *     `create_venue`, ed è lì che il limite andrà messo davvero.
  *  2. `venueCount` conta solo le sedi **aperte** (`getMyVenues` filtra
  *     `closed_at is null`). Chiudere e riaprire non deve diventare il modo di
  *     aggirare il limite: quando esisterà, anche la riapertura dovrà passare da

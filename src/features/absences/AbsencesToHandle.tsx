@@ -53,7 +53,7 @@ export function AbsencesToHandle({
             >
               <Pressable
                 onPress={() =>
-                  pending ? setResolving(a) : onOpenPerson(a.person_id)
+                  pending ? setResolving(a) : onOpenPerson(a.member_id)
                 }
                 className="flex-row items-center gap-3"
               >

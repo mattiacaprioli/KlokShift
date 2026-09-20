@@ -54,7 +54,7 @@ export function RegistrazionePage() {
       email: values.email.trim(),
       password: values.password,
       fullName: values.fullName.trim(),
-      role: "manager",
+      intent: "manager",
       // Il link di conferma deve riportare qui, non al Site URL del progetto
       // (che porta all'app). Richiede questo URL fra i "Redirect URLs" di
       // Supabase; se manca, si torna al Site URL e la registrazione è comunque

@@ -8,17 +8,18 @@ import { DocumentFormView } from "@/features/documents/DocumentFormView";
 import { useCreateStaffDocument } from "@/features/documents/hooks";
 
 /**
- * Aggiunta di un documento, lato professionista. `personId` è l'anagrafica che un
- * datore di lavoro ha di lui: una per titolare, valida per tutte le sue sedi. Non
- * è una cartella personale unica — ogni datore vede solo la propria.
+ * Aggiunta di un documento, lato professionista. `memberId` è l'appartenenza
+ * (`workspace_members.id`) che ha con quell'azienda: una per azienda, valida
+ * per tutte le sue sedi. Non è una cartella personale unica — ogni azienda vede
+ * solo la propria.
  */
 export default function NewWaiterDocumentScreen() {
-  const { personId } = useLocalSearchParams<{ personId: string }>();
+  const { memberId } = useLocalSearchParams<{ memberId: string }>();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
-  const create = useCreateStaffDocument(personId);
+  const create = useCreateStaffDocument(memberId);
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>

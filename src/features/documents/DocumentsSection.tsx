@@ -18,8 +18,8 @@ import {
 import type { StaffDocument } from "./api";
 
 type Props = {
-  /** La **persona**, non la scheda: i documenti valgono in tutte le sue sedi. */
-  personId: string;
+  /** Il **membro** (`workspace_members.id`): i documenti valgono in tutte le sue sedi. */
+  memberId: string;
   /**
    * Dove si aggiunge un documento. Assente = sola lettura: la sede e il
    * professionista collegato hanno gli stessi diritti sulla scheda, ma sul
@@ -34,18 +34,18 @@ type Props = {
  *
  * Condivisa fra la scheda staff del gestore e il profilo del professionista:
  * sono le stesse righe viste dalle due parti. Chi può toccarle lo decide la RLS
- * (`can_access_staff_person_documents`), non questo componente.
+ * (`staff_documents`), non questo componente.
  */
 export function DocumentsSection({
-  personId,
+  memberId,
   onAdd,
   title = "Documenti",
 }: Props) {
   const toast = useToast();
-  const query = useStaffDocuments(personId);
+  const query = useStaffDocuments(memberId);
   const docs = query.data ?? [];
   const open = useDocumentUrl();
-  const remove = useDeleteStaffDocument(personId);
+  const remove = useDeleteStaffDocument(memberId);
   const [toDelete, setToDelete] = useState<StaffDocument | null>(null);
 
   async function onOpen(doc: StaffDocument) {

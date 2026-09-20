@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { absenceConflicts, type AbsenceWindow } from "./conflicts";
 import {
   getAbsence,
@@ -9,7 +10,7 @@ import {
   removeFromShifts,
   getAbsencesToHandle,
   getCompanyAbsences,
-  getMyAbsenceEmployers,
+  absenceEmployersOf,
   getMyAbsences,
   getOwnerAbsenceSummary,
   getPersonAbsences,
@@ -42,19 +43,21 @@ export function useMyAbsences(waiterId: string | undefined) {
   });
 }
 
-export function useMyAbsenceEmployers(waiterId: string | undefined) {
-  return useQuery({
-    queryKey: qk.absences.employers(waiterId ?? ""),
-    queryFn: () => getMyAbsenceEmployers(waiterId as string),
-    enabled: !!waiterId,
-  });
+/**
+ * Le aziende a cui chiedere un'assenza: nessuna query, si ricavano dalle
+ * appartenenze (`get_my_context`). Stessi nomi di `UseQueryResult`.
+ */
+export function useMyAbsenceEmployers() {
+  const { memberships, isLoading, isError, refetch } = useOwnerVenues();
+  const data = useMemo(() => absenceEmployersOf(memberships), [memberships]);
+  return { data, isLoading, isError, refetch };
 }
 
-export function usePersonAbsences(personId: string | undefined, enabled = true) {
+export function usePersonAbsences(memberId: string | undefined, enabled = true) {
   return useQuery({
-    queryKey: qk.absences.byPerson(personId ?? ""),
-    queryFn: () => getPersonAbsences(personId as string),
-    enabled: enabled && !!personId,
+    queryKey: qk.absences.byPerson(memberId ?? ""),
+    queryFn: () => getPersonAbsences(memberId as string),
+    enabled: enabled && !!memberId,
   });
 }
 
@@ -153,19 +156,19 @@ export function useAbsenceAvailability(from: string, to: string, enabled = true)
  * `enabled` va spento sulle assenze chiuse: non hanno niente da togliere.
  */
 export function useAbsenceConflicts(
-  absence: (AbsenceWindow & { person_id: string }) | null,
+  absence: (AbsenceWindow & { member_id: string }) | null,
   enabled = true
 ) {
   const on = enabled && !!absence;
   const query = useQuery({
     queryKey: qk.assignments.personRange(
-      absence?.person_id ?? "",
+      absence?.member_id ?? "",
       absence?.start_date ?? "",
       absence?.end_date ?? ""
     ),
     queryFn: () =>
       getPersonShiftsInRange(
-        absence!.person_id,
+        absence!.member_id,
         absence!.start_date,
         absence!.end_date
       ),
@@ -197,16 +200,16 @@ export function useRemoveFromShifts() {
 }
 
 /**
- * Il riepilogo assenze del mese. Come `useOwnerHoursSummary`, `ownerId` è solo
+ * Il riepilogo assenze del mese. Come `useOwnerHoursSummary`, `workspaceId` è solo
  * la chiave di cache: la RPC usa `auth.uid()`.
  */
 export function useOwnerAbsenceSummary(
-  ownerId: string | undefined,
+  workspaceId: string | undefined,
   month: string
 ) {
   return useQuery({
-    queryKey: qk.absences.summary(ownerId ?? "", month),
+    queryKey: qk.absences.summary(workspaceId ?? "", month),
     queryFn: () => getOwnerAbsenceSummary(month),
-    enabled: !!ownerId,
+    enabled: !!workspaceId,
   });
 }

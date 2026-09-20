@@ -1,4 +1,4 @@
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -8,35 +8,43 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import {
-  useMyPendingInvites,
-  useRespondToInvite,
-} from "@/features/staff/hooks";
-import type { PendingInvite } from "@/features/staff/api";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { useRespondToInvite } from "@/features/workspace/hooks";
+import type { Membership } from "@/features/workspace/types";
 
-function InviteCard({ invite }: { invite: PendingInvite }) {
+/**
+ * Un invito ricevuto: entrare nell'organico di un'azienda, o collaborare alla
+ * sua gestione.
+ *
+ * ⚠️ **Accettare è il consenso.** Finché non lo si fa, l'azienda ha una scheda
+ * con un nome ma non vede i turni, le ore o i documenti di questa persona: lo
+ * garantisce il DB (`status = 'invited'` non compare in nessun perimetro), non
+ * questa schermata.
+ */
+function InviteCard({ invite }: { invite: Membership }) {
   const toast = useToast();
   const respond = useRespondToInvite();
-  const venueName = invite.venue?.name ?? "Una sede";
 
-  function accept() {
+  const isCollaborator = invite.authority !== "none";
+  const venueNames = [...new Set(invite.works.map((w) => w.venue_name))];
+  const logo = invite.venues.find((v) => v.logo_url)?.logo_url ?? undefined;
+
+  function answer(accept: boolean) {
     respond.mutate(
-      { staffId: invite.id, accept: true },
+      { memberId: invite.member_id, accept },
       {
-        onSuccess: () => toast.show(`Ora fai parte dello staff di ${venueName}`),
-        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
-      }
-    );
-  }
-  function decline() {
-    respond.mutate(
-      { staffId: invite.id, accept: false },
-      {
-        onSuccess: () => toast.show("Richiesta rifiutata"),
-        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+        onSuccess: () =>
+          toast.show(
+            accept
+              ? isCollaborator
+                ? `Ora gestisci ${invite.workspace_name}`
+                : `Ora fai parte dell'organico di ${invite.workspace_name}`
+              : "Invito rifiutato"
+          ),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
   }
@@ -44,28 +52,35 @@ function InviteCard({ invite }: { invite: PendingInvite }) {
   return (
     <Card className="rounded-3xl border-border-2 p-5">
       <View className="flex-row items-center gap-3">
-        <Avatar uri={invite.venue?.logo_url ?? undefined} name={venueName} size={48} />
+        <Avatar uri={logo} name={invite.workspace_name} size={48} />
         <View className="flex-1">
-          <Text className="text-base font-sans-bold text-t1">{venueName}</Text>
-          {invite.venue?.city ? (
-            <Text className="text-xs text-t3">{invite.venue.city}</Text>
+          <Text className="text-base font-sans-bold text-t1">
+            {invite.workspace_name}
+          </Text>
+          {venueNames.length > 0 ? (
+            <Text className="text-xs text-t3">{venueNames.join(" · ")}</Text>
           ) : null}
         </View>
       </View>
       <Text className="mt-3 text-sm text-t2">
-        Ti ha invitato a entrare nel suo staff
-        {invite.employment_type === "fisso" ? " fisso" : " a chiamata"}.
+        {isCollaborator
+          ? "Ti ha invitato a collaborare alla gestione."
+          : `Ti ha invitato nel suo organico${
+              invite.works.some((w) => w.employment_type === "fisso")
+                ? " come dipendente fisso"
+                : " a chiamata"
+            }.`}
       </Text>
       <View className="mt-4 gap-2.5">
         <GoldButton
           label={respond.isPending ? "Attendere…" : "Accetta"}
           disabled={respond.isPending}
-          onPress={accept}
+          onPress={() => answer(true)}
         />
         <GhostButton
           label="Rifiuta"
           disabled={respond.isPending}
-          onPress={decline}
+          onPress={() => answer(false)}
         />
       </View>
     </Card>
@@ -74,12 +89,10 @@ function InviteCard({ invite }: { invite: PendingInvite }) {
 
 export default function WaiterInvitesScreen() {
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
-  const userId = session!.user.id;
-
-  const query = useMyPendingInvites(userId);
-  const invites = query.data ?? [];
-  const pull = usePullToRefresh(query.refetch);
+  // Gli inviti arrivano dal contesto, che il provider tiene già aggiornato: non
+  // c'è una query in più da fare per questa schermata.
+  const { pendingInvites, isPending, isError, refetch } = useOwnerVenues();
+  const pull = usePullToRefresh(refetch);
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -101,19 +114,19 @@ export default function WaiterInvitesScreen() {
           />
         }
       >
-        {query.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-16" />
-        ) : query.isError ? (
-          <QueryError onRetry={() => query.refetch()} />
-        ) : invites.length === 0 ? (
+        {isError ? (
+          <QueryError onRetry={refetch} />
+        ) : pendingInvites.length === 0 && !isPending ? (
           <View className="mt-16">
             <EmptyState
               title="Nessuna richiesta"
-              subtitle="Quando una sede ti invita nel suo staff lo vedrai qui."
+              subtitle="Quando un'azienda ti invita nel suo organico lo vedrai qui."
             />
           </View>
         ) : (
-          invites.map((inv) => <InviteCard key={inv.id} invite={inv} />)
+          pendingInvites.map((inv) => (
+            <InviteCard key={inv.member_id} invite={inv} />
+          ))
         )}
       </ScrollView>
     </View>

@@ -316,8 +316,8 @@ function InternalForm({
       setStaffRoles(
         Object.fromEntries(
           assignmentsQuery.data
-            .filter((a) => !!a.staff_member_id)
-            .map((a) => [a.staff_member_id, a.role_id])
+            .filter((a) => !!a.venue_member_id)
+            .map((a) => [a.venue_member_id, a.role_id])
         )
       );
     }
@@ -338,7 +338,7 @@ function InternalForm({
    * della sede precedente e quelle di `roleTargets` sono `venue_roles.id` della
    * sede precedente. Portarle su un turno di un'altra sede produce assegnazioni
    * incoerenti che **il database accetta** — nessuna FK lega
-   * `shift_assignments.staff_member_id` alla sede del turno.
+   * `shift_assignments.venue_member_id` alla sede del turno.
    *
    * ⚠️ Due guardie, non una. Su un turno esistente esce subito: lì il campo è
    * disabilitato, e senza la guardia l'effetto sovrascriverebbe gli assegnati
@@ -391,7 +391,7 @@ function InternalForm({
     return new Map(
       (assignmentsQuery.data ?? [])
         .filter((a) => wanted.has(a.id))
-        .map((a) => [a.staff_member_id, wanted.get(a.id)])
+        .map((a) => [a.venue_member_id, wanted.get(a.id)])
     );
   }, [changeRequests.data, assignmentsQuery.data]);
   const staffIds = useMemo(() => Object.keys(staffRoles), [staffRoles]);
@@ -406,7 +406,7 @@ function InternalForm({
   const statusById = useMemo(
     () =>
       new Map<string, AssignmentStatus>(
-        (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.status])
+        (assignmentsQuery.data ?? []).map((a) => [a.venue_member_id, a.status])
       ),
     [assignmentsQuery.data]
   );
@@ -498,7 +498,7 @@ function InternalForm({
       description: values.description.trim() || null,
       require_confirmation: values.require_confirmation,
       staff: staffIds.map((id) => ({
-        staff_member_id: id,
+        venue_member_id: id,
         role_id: staffRoles[id] ?? null,
       })),
       roleTargets,
@@ -724,7 +724,7 @@ function InternalForm({
                               end_time: formEnd,
                             },
                             (absencesQuery.data ?? []).filter(
-                              (a) => a.person_id === member.person_id
+                              (a) => a.member_id === member.person_id
                             )
                           )
                         : null;

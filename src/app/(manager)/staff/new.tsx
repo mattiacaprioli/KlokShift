@@ -15,9 +15,9 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
 import { useAddSelfToStaff, useAddStaff } from "@/features/staff/hooks";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
-import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import { useAuth } from "@/lib/auth";
-import type { AddStaffResult, StaffMember } from "@/features/staff/api";
+import { userErrorMessage } from "@/lib/errors";
+import type { AddStaffResult } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
 function TypeChips({
@@ -106,11 +106,11 @@ export default function StaffNewScreen() {
   // passa per l'URL.
   const { self } = useLocalSearchParams<{ self?: string }>();
   const isSelf = self === "1";
-  const { session, profile } = useAuth();
+  const { profile } = useAuth();
   // ⚠️ L'azienda, non chi sta scrivendo: per un collaboratore `session.user.id`
-  // non è il titolare, e `staff_people.owner_id` deve restare quello della sede.
-  // Vedi `OwnerVenuesProvider`.
-  const { ownerId, venuesWith } = useOwnerVenues();
+  // non è l'azienda, e la persona appartiene a quest'ultima. Vedi
+  // `OwnerVenuesProvider`.
+  const { workspaceId, venuesWith } = useOwnerVenues();
   // Solo le sedi in cui si può gestire l'organico: un collaboratore con i soli
   // turni non deve trovare fra i chip una sede su cui l'insert verrebbe
   // rifiutato dalla RLS.
@@ -122,7 +122,6 @@ export default function StaffNewScreen() {
 
   const add = useAddStaff();
   const addSelf = useAddSelfToStaff();
-  const setRoles = useSetStaffMemberRoles();
   const pending = add.isPending || addSelf.isPending;
 
   /**
@@ -181,49 +180,38 @@ export default function StaffNewScreen() {
   }
 
   /**
-   * Quel che viene dopo l'insert, uguale per le due modalità: i ruoli (che
-   * hanno bisogno dell'id della scheda, quindi non possono partire prima), il
-   * toast e l'uscita.
+   * Quel che viene dopo, uguale per le due modalità: il toast e l'uscita.
+   *
+   * ⚠️ I ruoli non sono più un secondo passo: viaggiano dentro `add_member`,
+   * che li scrive nella stessa transazione della scheda. Prima erano un
+   * `setStaffMemberRoles` dopo l'insert, e se falliva restava una persona senza
+   * mansioni con un messaggio d'errore che non diceva cosa fare.
    */
-  function finish(members: StaffMember[], msg: string) {
-    if (!singleVenue || roleIds.length === 0 || members.length !== 1) {
-      toast.show(singleVenue ? msg : `${msg} · assegna i ruoli in ogni sede`);
-      router.back();
-      return;
-    }
-    setRoles.mutate(
-      { staffMemberId: members[0].id, roleIds },
-      {
-        onSuccess: () => {
-          toast.show(msg);
-          router.back();
-        },
-        onError: () =>
-          toast.show("Scheda creata, ma i ruoli non sono stati salvati.", "error"),
-      }
-    );
+  function finish(msg: string) {
+    toast.show(singleVenue || roleIds.length === 0 ? msg : `${msg} · assegna le mansioni in ogni sede`);
+    router.back();
   }
 
   function submit() {
-    if (!ownerId || venueIds.size === 0 || !name.trim()) return;
+    if (!workspaceId || venueIds.size === 0 || !name.trim()) return;
     setAlready(null);
 
+    // Le mansioni sono **per sede**: con più sedi la stessa lista non varrebbe
+    // per tutte, e si assegnano dopo dalla scheda.
+    const roles = singleVenue && roleIds.length > 0 ? roleIds : undefined;
+
     if (isSelf) {
-      const myId = session?.user.id;
-      if (!myId) return;
       addSelf.mutate(
         {
-          ownerId,
-          myId,
+          workspaceId,
           venueIds: [...venueIds],
-          fullName: name.trim(),
           employmentType: empType,
           phone: phone.trim() || null,
+          roleIds: roles,
         },
         {
-          onSuccess: (members) => finish(members, "Sei in organico"),
-          onError: () =>
-            toast.show("Operazione non riuscita. Riprova.", "error"),
+          onSuccess: () => finish("Sei in organico"),
+          onError: (e) => toast.show(userErrorMessage(e), "error"),
         }
       );
       return;
@@ -231,12 +219,13 @@ export default function StaffNewScreen() {
 
     add.mutate(
       {
-        ownerId,
+        workspaceId,
         venueIds: [...venueIds],
         fullName: name.trim(),
         employmentType: empType,
         phone: phone.trim() || null,
         email: email.trim() || null,
+        roleIds: roles,
       },
       {
         onSuccess: (res) => {
@@ -244,9 +233,9 @@ export default function StaffNewScreen() {
             setAlready(res.personId);
             return;
           }
-          finish(res.members, messageFor(res));
+          finish(messageFor(res));
         },
-        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
   }

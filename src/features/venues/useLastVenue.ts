@@ -35,22 +35,22 @@ export type LastVenue = {
 };
 
 export function useLastVenue(): LastVenue {
-  const { ownerId, venues, isPending } = useOwnerVenues();
-  const owner = ownerId ?? "";
+  const { workspaceId, venues, isPending } = useOwnerVenues();
+  const owner = workspaceId ?? "";
 
   // La preferenza letta dal disco, **insieme all'account a cui appartiene**.
   // Tenerli appaiati permette di derivare `savedId` invece di azzerarlo in un
   // effect quando si cambia account: un `setState` sincrono nel corpo di un
   // effect è un giro di render in più, e il lint di React lo vieta.
   const [saved, setSaved] = useState<{
-    ownerId: string;
+    workspaceId: string;
     id: string | null;
   } | null>(null);
 
   useEffect(() => {
     let alive = true;
     void loadLastVenueId(owner).then((id) => {
-      if (alive) setSaved({ ownerId: owner, id });
+      if (alive) setSaved({ workspaceId: owner, id });
     });
     return () => {
       alive = false;
@@ -60,7 +60,7 @@ export function useLastVenue(): LastVenue {
   // `undefined` = non ancora letta *per questo account*. Distinguerlo da `null`
   // (letta, non c'era) è ciò che evita di proporre una sede prima di sapere
   // quale l'utente aveva usato l'ultima volta.
-  const savedId = saved?.ownerId === owner ? saved.id : undefined;
+  const savedId = saved?.workspaceId === owner ? saved.id : undefined;
   const resolving = savedId === undefined || isPending;
 
   // La sede persistita può non esistere più: chiusa, cancellata, o di un altro
@@ -72,7 +72,7 @@ export function useLastVenue(): LastVenue {
 
   const choose = useCallback(
     (id: string) => {
-      setSaved({ ownerId: owner, id });
+      setSaved({ workspaceId: owner, id });
       void saveLastVenueId(owner, id);
     },
     [owner]

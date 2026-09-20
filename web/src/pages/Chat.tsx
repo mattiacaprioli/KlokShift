@@ -172,10 +172,10 @@ function StaffPicker({
     ? linked.filter((p) => p.full_name.toLowerCase().includes(needle))
     : linked;
 
-  function open(memberId: string, waiterId: string) {
+  function open(memberId: string) {
     setOpeningId(memberId);
     startConversation.mutate(
-      { waiterId, managerId },
+      { memberId },
       {
         onSuccess: (conv) => onOpened(conv.id),
         onError: (e) => {
@@ -227,7 +227,7 @@ function StaffPicker({
                   <button
                     key={person.id}
                     disabled={startConversation.isPending}
-                    onClick={() => open(person.id, person.waiter_id as string)}
+                    onClick={() => open(person.id)}
                     className="focus-gold flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-bg-1 disabled:opacity-40"
                   >
                     <Avatar url={person.waiter?.avatar_url} name={person.full_name} size={32} />

@@ -8,9 +8,9 @@ import {
 import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import { useOwnerVenues, venuesKeyOf } from "@/features/venues/OwnerVenues";
-import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
+import type { Enums } from "@/types/database";
 import {
-  createShift,
+  deleteShift,
   getOwnerPastShiftsCount,
   getOwnerPastShiftsPage,
   getOwnerShifts,
@@ -19,6 +19,7 @@ import {
   getShiftWithVenue,
   updateShift,
   updateShiftStatus,
+  type ShiftFieldsPatch,
   type ShiftWithAssignees,
 } from "./api";
 import {
@@ -133,21 +134,6 @@ export function useShiftWithVenue(id: string) {
   });
 }
 
-/**
- * ⚠️ La mutation non sa **quale** sede: il `venue_id` viaggia nell'input, perché
- * è il turno ad avere una sede. Glielo passa il form, dove la sede è un campo.
- */
-export function useCreateShift() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: TablesInsert<"shifts">) => createShift(input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.shifts.byOwnerAll });
-      qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
-    },
-  });
-}
-
 export function useUpdateShiftStatus(shiftId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -184,7 +170,7 @@ function invalidateAfterShiftWrite(qc: QueryClient, shiftId: string) {
 export function useUpdateShift(shiftId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (fields: TablesUpdate<"shifts">) => updateShift(shiftId, fields),
+    mutationFn: (fields: ShiftFieldsPatch) => updateShift(shiftId, fields),
     onSuccess: () => invalidateAfterShiftWrite(qc, shiftId),
   });
 }
@@ -239,5 +225,17 @@ export function useMoveShiftToDate() {
 
     onSettled: (_data, _error, { shiftId }) =>
       invalidateAfterShiftWrite(qc, shiftId),
+  });
+}
+
+/** Elimina un turno; aggiorna ogni vista che lo mostrava. */
+export function useDeleteShift(shiftId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteShift(shiftId),
+    onSuccess: () => {
+      invalidateAfterShiftWrite(qc, shiftId);
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
+    },
   });
 }

@@ -9,16 +9,23 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { unregisterCurrentPushToken } from "@/features/push/api";
-import type { Enums, Tables } from "@/types/database";
+import type { Tables } from "@/types/database";
 
 type Profile = Tables<"profiles">;
-type Role = Enums<"user_role">;
+
+/**
+ * Cosa la persona dice di voler fare, alla registrazione: gestire un'azienda o
+ * lavorarci. È **solo un suggerimento** per la prima schermata (finisce in
+ * `user_metadata.intent`): non è un ruolo, non dà permessi, e le appartenenze
+ * reali le dice `get_my_context()`. Il profilo non ha più un campo `role`.
+ */
+type Intent = "manager" | "waiter";
 
 type SignUpParams = {
   email: string;
   password: string;
   fullName: string;
-  role: Role;
+  intent: Intent;
   /**
    * Dove riportare l'utente dopo il click sul link di conferma email. Serve
    * solo alla dashboard web, che vive su un URL: sul mobile si omette e vale
@@ -95,14 +102,14 @@ async function ensureProfile(user: User): Promise<Profile | null> {
     .maybeSingle();
   if (existing) return existing;
 
-  const meta = (user.user_metadata ?? {}) as {
-    full_name?: string;
-    role?: string;
-  };
-  const role: Role = meta.role === "manager" ? "manager" : "waiter";
+  // Di norma il profilo lo ha già creato il trigger su `auth.users` alla
+  // registrazione. Questo insert è la rete di sicurezza: il trigger non deve mai
+  // bloccare una registrazione, quindi in caso di errore ripiega su un warning e
+  // qui lo si ricrea.
+  const meta = (user.user_metadata ?? {}) as { full_name?: string };
   const { data: created } = await supabase
     .from("profiles")
-    .insert({ id: user.id, full_name: meta.full_name ?? null, role })
+    .insert({ id: user.id, full_name: meta.full_name ?? null })
     .select("*")
     .single();
 
@@ -110,9 +117,9 @@ async function ensureProfile(user: User): Promise<Profile | null> {
 }
 
 /**
- * Aggancia gli inviti che aspettavano questo indirizzo — le schede
- * dell'organico e gli accessi da collaboratore — e ricarica le liste se ne ha
- * agganciato qualcuno.
+ * Aggancia le schede che aspettavano questo indirizzo (organico e collaboratori:
+ * ora sono la stessa cosa, un membro dell'azienda) e ricarica le liste se ne ha
+ * agganciato qualcuna.
  *
  * ⚠️ **A ogni accesso, non solo alla creazione del profilo.** Prima questa
  * chiamata stava dentro `ensureProfile`, sul solo ramo di insert: copriva
@@ -131,7 +138,7 @@ async function ensureProfile(user: User): Promise<Profile | null> {
  */
 async function claimInvites(): Promise<void> {
   try {
-    const { data } = await supabase.rpc("claim_staff_invites");
+    const { data } = await supabase.rpc("claim_invites");
     // Invalidazione larga e non mirata: agganciare un invito cambia le sedi, i
     // collaboratori, l'organico e le notifiche insieme, e capita una volta
     // nella vita di un account. Elencare le chiavi vorrebbe dire dimenticarne
@@ -201,10 +208,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!active) return;
       setProfile(nextProfile);
       setLoading(false);
-      // Dopo il profilo, non prima: `link_venue_access_for_user` legge
-      // `profiles.role`, e su una registrazione appena fatta la riga potrebbe
-      // non esserci ancora. Non attesa: la UI è già pronta e l'invalidazione
-      // arriva da sé quando la RPC risponde.
+      // Dopo il profilo, non prima: l'aggancio notifica il titolare, e su una
+      // registrazione appena fatta la riga potrebbe non esserci ancora. Non
+      // attesa: la UI è già pronta e l'invalidazione arriva da sé quando la RPC
+      // risponde.
       if (claim && nextProfile) void claimInvites();
     }
 
@@ -279,13 +286,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     email,
     password,
     fullName,
-    role,
+    intent,
     emailRedirectTo,
   }: SignUpParams) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, role }, emailRedirectTo },
+      options: { data: { full_name: fullName, intent }, emailRedirectTo },
     });
     if (error) {
       return {

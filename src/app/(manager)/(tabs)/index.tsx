@@ -12,6 +12,7 @@ import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
 import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
+import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { ProUpsellCard } from "@/features/plan/ProLock";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
@@ -100,12 +101,12 @@ export default function ManagerHome() {
    *
    * `shifts` è già ordinato per data e ora e comincia da oggi, quindi il primo
    * che mi riguarda è il prossimo. Le proprie schede sono una per sede e un
-   * turno è di una sede sola: si confrontano gli id delle appartenenze, che
-   * l'organico porta già nel suo embed.
+   * turno è di una sede sola: si confrontano gli id delle righe di organico
+   * (`venue_member_id`), che il contesto porta già.
    */
   const self = useSelfStaff();
+  const mine = useMyRosterIds();
   const myNextShift = useMemo(() => {
-    const mine = new Set((self.person?.memberships ?? []).map((m) => m.id));
     if (mine.size === 0) return undefined;
     // `shiftsQuery.data` e non `shifts`: quel `?? []` crea un array nuovo a ogni
     // render, e come dipendenza rifarebbe il memo sempre.
@@ -114,12 +115,12 @@ export default function ManagerHome() {
         s.status !== "cancelled" &&
         s.shift_assignments.some(
           (a) =>
-            a.staff_member_id &&
-            mine.has(a.staff_member_id) &&
+            a.venue_member_id &&
+            mine.has(a.venue_member_id) &&
             a.status !== "declined",
         ),
     );
-  }, [shiftsQuery.data, self.person]);
+  }, [shiftsQuery.data, mine]);
 
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
   const venueBadge = (venueId: string | undefined) => {

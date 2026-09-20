@@ -38,7 +38,9 @@ import { useStaffPlanning } from "@/features/planning/hooks";
 import { VenuePlanningList } from "@/features/planning/VenuePlanningList";
 import type { ShiftWithVenue } from "@/features/shifts/types";
 import { useMyEmployers } from "@/features/staff/hooks";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
 import {
   addDaysToDate,
   formatDayLabel,
@@ -165,10 +167,17 @@ export default function WaiterShiftsScreen() {
     () => (myAbsences.data ?? []).filter((a) => a.status === "approved"),
     [myAbsences.data]
   );
+  // Le assenze stanno sulla **persona** (`member_id`) e la persona è una per
+  // azienda: la mia in quell'azienda si ricava dalle appartenenze del contesto.
+  const { memberships } = useOwnerVenues();
   function absenceNoteFor(shift: ShiftWithVenue): string | null {
+    const workspaceId = shift.venue?.workspace_id;
+    const memberId = memberships.find(
+      (m) => m.workspace_id === workspaceId
+    )?.member_id;
     const hit = absenceForShift(
       shift,
-      approvedAbsences.filter((a) => a.owner_id === shift.venue?.owner_id)
+      approvedAbsences.filter((a) => !!memberId && a.member_id === memberId)
     );
     return hit ? MY_ABSENCE_NOTE[hit.kind] : null;
   }
@@ -225,7 +234,8 @@ export default function WaiterShiftsScreen() {
       { id, status: "confirmed" },
       {
         onSuccess: () => toast.show("Presenza confermata"),
-        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
       }
     );
   }
@@ -239,9 +249,9 @@ export default function WaiterShiftsScreen() {
           setDeclining(null);
           toast.show("Turno rifiutato");
         },
-        onError: () => {
+        onError: (e) => {
           setDeclining(null);
-          toast.show("Operazione non riuscita. Riprova.", "error");
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error");
         },
       }
     );

@@ -23,7 +23,8 @@ import {
   isShiftOver,
   shiftDurationHours,
 } from "@/lib/format";
-import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -35,7 +36,7 @@ import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
 import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
-import { useSelfStaff } from "@/features/staff/self";
+import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
 
@@ -125,12 +126,13 @@ function AssignedRow({
 /**
  * Riga presenza per un turno interno concluso: presente/assente + ore effettive.
  *
- * ⚠️ `locked` è la riga **propria** di un collaboratore. Il database congela in
- * silenzio status e `worked_hours` sulle righe di chi le sta scrivendo se quella
- * non è la sua azienda (`freeze_assignment_payroll`), e
- * `setAssignmentPresence` fa un update senza `.select()`: senza questo ramo i
- * bottoni ci sono, si toccano, tornano 200 e non salvano niente. Il titolare non
- * è mai `locked` — le proprie ore le scrive lui, nessun altro lo farà.
+ * ⚠️ `locked` è la riga **propria** di un collaboratore. Il database non gli
+ * lascia decidere di sé stesso (`record_attendance` solleva `not_allowed` su una
+ * riga che è sua, se non è il titolare): senza questo ramo i bottoni ci sono, si
+ * toccano e rispondono con un errore. Il titolare non è mai `locked` — le
+ * proprie ore le scrive lui, nessun altro lo farà. Anche quando `locked` è
+ * falso un rifiuto del DB si mostra: la UI non offre ciò che sa non funzionare,
+ * ma non è lei a decidere.
  */
 function PresenceRow({
   assignment,
@@ -144,6 +146,7 @@ function PresenceRow({
   locked?: boolean;
 }) {
   const presence = useSetAssignmentPresence(shiftId);
+  const toast = useToast();
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Staff";
   const present = isWorked(assignment.status);
@@ -152,8 +155,14 @@ function PresenceRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(plannedHours);
 
+  function onError(e: unknown) {
+    toast.show(userErrorMessage(e, "Impossibile salvare. Riprova."), "error");
+  }
   function setPresent(p: boolean) {
-    presence.mutate({ id: assignment.id, status: p ? "confirmed" : "no_show" });
+    presence.mutate(
+      { id: assignment.id, status: p ? "confirmed" : "no_show" },
+      { onError }
+    );
     if (!p) setEditing(false);
   }
   function step(delta: number) {
@@ -162,13 +171,13 @@ function PresenceRow({
   function saveHours() {
     presence.mutate(
       { id: assignment.id, worked_hours: draft },
-      { onSuccess: () => setEditing(false) }
+      { onSuccess: () => setEditing(false), onError }
     );
   }
   function resetPlanned() {
     presence.mutate(
       { id: assignment.id, worked_hours: null },
-      { onSuccess: () => setEditing(false) }
+      { onSuccess: () => setEditing(false), onError }
     );
   }
 
@@ -311,12 +320,11 @@ export default function ShiftDetailScreen() {
   const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
-  const managerId = session!.user.id;
   const startConversation = useStartConversation();
   // Chi gestisce può essere in turno: la propria riga si riconosce, e su di essa
   // presenze e ore sono del titolare e non del collaboratore.
-  const self = useSelfStaff();
+  const myRoster = useMyRosterIds();
+  const { authority } = useOwnerVenues();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -345,9 +353,9 @@ export default function ShiftDetailScreen() {
         setCancelVisible(false);
         toast.show("Turno annullato");
       },
-      onError: () => {
+      onError: (e) => {
         setCancelVisible(false);
-        toast.show("Operazione non riuscita.", "error");
+        toast.show(userErrorMessage(e, "Operazione non riuscita."), "error");
       },
     });
   }
@@ -358,9 +366,9 @@ export default function ShiftDetailScreen() {
         setRestoreVisible(false);
         toast.show("Turno ripristinato");
       },
-      onError: () => {
+      onError: (e) => {
         setRestoreVisible(false);
-        toast.show("Operazione non riuscita.", "error");
+        toast.show(userErrorMessage(e, "Operazione non riuscita."), "error");
       },
     });
   }
@@ -368,16 +376,22 @@ export default function ShiftDetailScreen() {
   function onChangeShiftStatus(status: Enums<"shift_status">) {
     statusMutation.mutate(status, {
       onSuccess: () => toast.show("Turno aggiornato"),
-      onError: () => toast.show("Operazione non riuscita.", "error"),
+      onError: (e) =>
+        toast.show(userErrorMessage(e, "Operazione non riuscita."), "error"),
     });
   }
 
-  function onMessage(waiterId: string) {
+  /** La chat si apre con la **persona** (`workspace_members.id`), non con la riga di sede. */
+  function onMessage(memberId: string) {
     startConversation.mutate(
-      { waiterId, managerId, shiftId: id },
+      { memberId },
       {
         onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
-        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(
+            userErrorMessage(e, "Impossibile aprire la chat. Riprova."),
+            "error"
+          ),
       }
     );
   }
@@ -596,11 +610,9 @@ export default function ShiftDetailScreen() {
                 plannedHours={plannedHours}
                 shiftId={id}
                 // La propria riga, quando le proprie ore non sono mie da
-                // scrivere: il collaboratore. Senza `shift` si ricade su «è la
-                // mia azienda?», che è la stessa domanda del DB.
+                // scrivere: il collaboratore (`authority !== 'owner'`).
                 locked={
-                  self.isSelf(a.staff_member?.waiter_id) &&
-                  !self.canEditOwnPayroll(shift?.venue_id ?? "")
+                  myRoster.has(a.venue_member_id) && authority !== "owner"
                 }
               />
             ))
@@ -609,9 +621,10 @@ export default function ShiftDetailScreen() {
               // ⚠️ Non la propria riga: la scheda pubblica di un gestore non
               // esiste (`waiter_public_cards` filtra i professionisti) e la chat
               // con sé stessi nemmeno.
-              const waiterId = self.isSelf(a.staff_member?.waiter_id)
+              const waiterId = myRoster.has(a.venue_member_id)
                 ? null
                 : (a.staff_member?.waiter_id ?? null);
+              const memberId = a.staff_member?.person_id;
               return (
                 <AssignedRow
                   key={a.id}
@@ -621,7 +634,9 @@ export default function ShiftDetailScreen() {
                       ? () => router.push(`/(manager)/cameriere/${waiterId}`)
                       : undefined
                   }
-                  onMessage={waiterId ? () => onMessage(waiterId) : undefined}
+                  onMessage={
+                    waiterId && memberId ? () => onMessage(memberId) : undefined
+                  }
                   changeRequested={requestedByAssignment.get(a.id)}
                 />
               );

@@ -13,7 +13,7 @@ import { useRecordAbsence } from "@/features/absences/hooks";
  * Nasce già approvata, senza card in chat.
  */
 export default function RecordStaffAbsenceScreen() {
-  const { personId } = useLocalSearchParams<{ personId: string }>();
+  const { memberId } = useLocalSearchParams<{ memberId: string }>();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
@@ -28,9 +28,9 @@ export default function RecordStaffAbsenceScreen() {
         recording
         submitLabel="Registra"
         pending={record.isPending}
-        onSubmit={({ ownerId: _ownerId, ...input }) =>
+        onSubmit={({ workspaceId: _workspaceId, ...input }) =>
           record.mutate(
-            { personId, ...input },
+            { memberId, ...input },
             {
               onSuccess: () => {
                 toast.show("Assenza registrata");

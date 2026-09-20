@@ -48,11 +48,12 @@ export function useOwnerVenueRoles() {
   });
 }
 
-export function useStaffMemberRoles(staffMemberId: string | undefined) {
+/** Le mansioni di una riga di organico (`venue_members.id`). */
+export function useStaffMemberRoles(venueMemberId: string | undefined) {
   return useQuery({
-    queryKey: qk.roles.byStaffMember(staffMemberId ?? ""),
-    queryFn: () => getStaffMemberRoles(staffMemberId as string),
-    enabled: !!staffMemberId,
+    queryKey: qk.roles.byStaffMember(venueMemberId ?? ""),
+    queryFn: () => getStaffMemberRoles(venueMemberId as string),
+    enabled: !!venueMemberId,
   });
 }
 
@@ -85,6 +86,7 @@ export function useArchiveVenueRole() {
 export function useSetStaffMemberRoles() {
   const invalidate = useRolesInvalidation();
   return useMutation({
+    // `staffMemberId` è l'id della riga di organico (`venue_members.id`).
     mutationFn: (vars: { staffMemberId: string; roleIds: string[] }) =>
       setStaffMemberRoles(vars.staffMemberId, vars.roleIds),
     onSuccess: invalidate,

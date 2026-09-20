@@ -26,7 +26,7 @@ import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useOwnerShifts } from "@/features/shifts/hooks";
-import { useSelfStaff } from "@/features/staff/self";
+import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -77,8 +77,6 @@ export default function ManagerShiftsScreen() {
   const canCreateShift = venueQuery.canAny("can_manage_shifts");
   const upcomingQuery = useOwnerShifts();
   const pull = usePullToRefresh(() => upcomingQuery.refetch());
-  // La propria scheda nell'organico, se chi gestisce lavora anche lui.
-  const self = useSelfStaff();
 
   const today = todayString();
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
@@ -159,19 +157,15 @@ export default function ManagerShiftsScreen() {
   /**
    * I turni su cui c'è **chi guarda**, per chi gestisce e lavora.
    *
-   * Le proprie schede sono una per sede (`staff_people` → N `staff_members`) e
-   * un turno è di una sede sola: si confrontano gli id delle appartenenze, che
-   * `OwnerPerson` porta già nell'embed dell'organico. Le appartenenze finite
-   * restano fuori — `getOwnerPeople` le filtra.
+   * Le proprie righe di organico sono una per sede (`venue_members`) e un turno
+   * è di una sede sola: si confrontano gli id delle righe, che il contesto
+   * (`get_my_context().works`) porta già.
    */
-  const myMemberIds = useMemo(
-    () => new Set((self.person?.memberships ?? []).map((m) => m.id)),
-    [self.person]
-  );
+  const myMemberIds = useMyRosterIds();
   const isMine = useCallback(
     (s: ShiftWithCount) =>
       s.shift_assignments.some(
-        (a) => a.staff_member_id && myMemberIds.has(a.staff_member_id)
+        (a) => a.venue_member_id && myMemberIds.has(a.venue_member_id)
       ),
     [myMemberIds]
   );

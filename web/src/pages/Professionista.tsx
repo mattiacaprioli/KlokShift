@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
 import { useStartConversation } from "@/features/chat/hooks";
+import { useOwnerPeople } from "@/features/staff/hooks";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useExperiences } from "@/features/experiences/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useWaiterProfile } from "@/features/waiterProfile/hooks";
@@ -30,9 +31,10 @@ export function ProfessionistaPage() {
 
 function Profile({ waiterId }: { waiterId: string }) {
   const navigate = useNavigate();
-  const { session } = useAuth();
   const toast = useToast();
   const startConversation = useStartConversation();
+  const { workspaceId } = useOwnerVenues();
+  const people = useOwnerPeople(workspaceId).data ?? [];
 
   const card = useWaiterPublicCard(waiterId).data;
   const profileQuery = useWaiterProfile(waiterId);
@@ -43,9 +45,17 @@ function Profile({ waiterId }: { waiterId: string }) {
   const name = card?.full_name ?? profile?.full_name ?? "Professionista";
   const roleCity = [card?.primary_role, card?.city].filter(Boolean).join(" · ");
 
+  // La conversazione si apre dalla **scheda** della persona (`memberId`), non
+  // dal profilo pubblico: qui si conosce solo l'account, e una chat esiste fra
+  // un'azienda e una persona del suo organico.
   function onMessage() {
+    const memberId = people.find((p) => p.waiter_id === waiterId)?.id;
+    if (!memberId) {
+      toast.show("Questa persona non fa parte del tuo organico.", "error");
+      return;
+    }
     startConversation.mutate(
-      { waiterId, managerId: session!.user.id },
+      { memberId },
       {
         onSuccess: (conv) => navigate(`/chat/${conv.id}`),
         onError: () =>

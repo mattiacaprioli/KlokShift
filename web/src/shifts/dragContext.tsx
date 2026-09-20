@@ -45,7 +45,7 @@ export type ShiftDragPayload =
        * garantisce che sia della stessa sede del turno.
        */
       venueId: string;
-      /** Chi è già sul turno: `unique (shift_id, staff_member_id)`. */
+      /** Chi è già sul turno: `unique (shift_id, venue_member_id)`. */
       busyStaffIds: string[];
     };
 

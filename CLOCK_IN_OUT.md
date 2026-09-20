@@ -1,5 +1,13 @@
 # Clock in / clock out del turno (timbratura con QR in sede)
 
+> ⚠️ **Piano non ancora implementato, scritto prima del refactor del 2026-09-20.**
+> Le decisioni di prodotto valgono ancora; i riferimenti al database sono da
+> riscrivere sul modello nuovo (vedi `supabase/README.md`):
+> `staff_members` → `venue_members` (`shift_assignments.venue_member_id`),
+> `can_manage_venue(v, perm)` → `private.can(v, perm)`,
+> `freeze_assignment_payroll` → il guard sulle assegnazioni + `record_attendance`,
+> e le scritture passano da una RPC come tutto il resto.
+
 ## Context
 Oggi le ore di un turno interno le decide solo il titolare a posteriori: `shift_assignments.worked_hours` (null = durata pianificata), scritta da `(manager)/shift/[id].tsx` → `PresenceRow` e `web/src/shifts/PresenceSection.tsx` via `setAssignmentPresence`. Il trigger `freeze_assignment_payroll` (20260913110000 / 20260915100000) impedisce al professionista di scriverla. Manca il dato reale: a che ora è arrivato e uscito.
 

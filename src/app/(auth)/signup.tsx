@@ -5,12 +5,13 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Display } from "@/components/ui/Display";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import type { Enums } from "@/types/database";
+import type { ViewMode } from "@/features/team/viewModeStorage";
 
-type Role = Enums<"user_role">;
+/** Come si vuole iniziare: un suggerimento per la prima schermata, non un ruolo. */
+type Intent = ViewMode;
 
 const ROLES: {
-  value: Role;
+  value: Intent;
   icon: IconName;
   title: string;
   sub: string;
@@ -36,8 +37,8 @@ export default function SignupRole() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const choose = (role: Role) =>
-    router.push({ pathname: "/(auth)/signup-account", params: { role } });
+  const choose = (intent: Intent) =>
+    router.push({ pathname: "/(auth)/signup-account", params: { intent } });
 
   return (
     <ScrollView

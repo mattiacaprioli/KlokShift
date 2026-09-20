@@ -3,7 +3,8 @@
 // Modulo **puro**, come `features/assignments/hoursSummary.ts`: lo importa anche
 // `src/lib/exportBuilders.ts`, che è condiviso con la dashboard web.
 
-/** Una riga di `get_owner_absence_summary`: le assenze approvate di una persona. */
+/** Una riga di `get_absence_summary`: le assenze approvate di una persona.
+ * `person_id` è il member id (`workspace_members.id`); i nomi restano quelli di prima per l'export. */
 export type AbsenceSummaryRow = {
   person_id: string;
   person_name: string;

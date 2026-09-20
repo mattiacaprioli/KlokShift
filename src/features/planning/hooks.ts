@@ -24,7 +24,7 @@ export function useStaffPlanning(from: string, to: string, enabled = true) {
  * che è quella query. Il planning dei professionisti sta su altri dispositivi:
  * lo rivedranno al prossimo caricamento, come il logo (`useUpdateVenueLogo`).
  */
-export function useSetVenueSeesPlanning(ownerId: string) {
+export function useSetVenueSeesPlanning() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { venueId: string; visible: boolean }) =>

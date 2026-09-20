@@ -243,7 +243,7 @@ function PersonPanel({
                 sconosciuto. */}
             {/* E con sé stessi non esiste. */}
             {person.waiter_id && isOwner && !isMe ? (
-              <MessageButton waiterId={person.waiter_id} />
+              <MessageButton memberId={person.id} />
             ) : null}
             <Button onClick={onClose}>Chiudi</Button>
           </div>
@@ -292,7 +292,7 @@ function PersonPanel({
           </TabPanel>
           {canAny("can_manage_staff") ? (
             <TabPanel active={tab === "assenze"}>
-              <AbsencesPanel personId={person.id} />
+              <AbsencesPanel memberId={person.id} />
             </TabPanel>
           ) : null}
           {canAny("can_manage_documents") ? (
@@ -315,10 +315,9 @@ function PersonPanel({
           {tabs.some((t) => t.id === "gestione") && person.waiter_id ? (
             <TabPanel active={tab === "gestione"}>
               <PromoteSection
-                ownerId={person.owner_id}
+                memberId={person.id}
                 waiterId={person.waiter_id}
                 personName={person.full_name}
-                venueIds={liveMemberships.map((m) => m.venue_id)}
               />
             </TabPanel>
           ) : null}
@@ -350,9 +349,8 @@ function TabPanel({
  * collegato: senza `waiter_id` non c'è nessuno dall'altra parte, e l'invito in
  * attesa è proprio il caso in cui scrivere due righe serve di più.
  */
-function MessageButton({ waiterId }: { waiterId: string }) {
+function MessageButton({ memberId }: { memberId: string }) {
   const navigate = useNavigate();
-  const { session } = useAuth();
   const toast = useToast();
   const startConversation = useStartConversation();
 
@@ -362,7 +360,7 @@ function MessageButton({ waiterId }: { waiterId: string }) {
       disabled={startConversation.isPending}
       onClick={() =>
         startConversation.mutate(
-          { waiterId, managerId: session!.user.id },
+          { memberId },
           {
             onSuccess: (conv) => navigate(`/chat/${conv.id}`),
             onError: (e) => toast.show(userErrorMessage(e), "error"),
@@ -735,7 +733,7 @@ function AddToVenue({
   function onAdd() {
     const name = venues.find((v) => v.id === venueId)?.name ?? "sede";
     add.mutate(
-      { venue_id: venueId, person_id: person.id, employment_type: empType },
+      { memberId: person.id, venueId, employmentType: empType },
       {
         onSuccess: () => {
           setVenueId("");
@@ -826,11 +824,14 @@ function WorkplaceCard({
 
   async function onSave() {
     try {
+      // Una sola scrittura (`set_member_venue`): tipo di impiego e mansioni
+      // insieme, o passano tutte e due o non passa nessuna.
       await update.mutateAsync({
-        id: membership.id,
-        fields: { employment_type: empType },
+        memberId: person.id,
+        venueId: membership.venue_id,
+        employmentType: empType,
+        roleIds,
       });
-      await setRoles.mutateAsync({ staffMemberId: membership.id, roleIds });
       toast.show(`${venueName} aggiornato`);
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
@@ -865,9 +866,9 @@ function WorkplaceCard({
               onClick={() =>
                 restore.mutate(
                   {
-                    venue_id: membership.venue_id,
-                    person_id: person.id,
-                    employment_type: membership.employment_type,
+                    memberId: person.id,
+                    venueId: membership.venue_id,
+                    employmentType: membership.employment_type,
                   },
                   {
                     onSuccess: () =>
@@ -932,10 +933,13 @@ function WorkplaceCard({
                 variant="danger"
                 disabled={busy}
                 onClick={() =>
-                  remove.mutate(membership.id, {
-                    onSuccess: () => toast.show(`Rimosso da ${venueName}`),
-                    onError: (e) => toast.show(userErrorMessage(e), "error"),
-                  })
+                  remove.mutate(
+                    { memberId: person.id, venueId: membership.venue_id },
+                    {
+                      onSuccess: () => toast.show(`Rimosso da ${venueName}`),
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
+                    }
+                  )
                 }
               >
                 {remove.isPending ? "Rimozione…" : "Conferma"}
@@ -1132,11 +1136,9 @@ function RemoveSection({
 
   async function doRemoveAll() {
     try {
-      // Solo le sedi ancora attive: `remove_staff_member` rifiuta una riga già
-      // 'left' e il ciclo si fermerebbe su un lavoro già fatto.
-      for (const m of person.memberships.filter((m) => m.link_status !== "left")) {
-        await remove.mutateAsync(m.id);
-      }
+      // Una sola chiamata: `remove_member` senza sede toglie la persona da
+      // tutta l'azienda, sede per sede, in una transazione.
+      await remove.mutateAsync({ memberId: person.id });
       onRemoved();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");

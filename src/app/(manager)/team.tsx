@@ -12,81 +12,118 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
+import { SelectChip } from "@/components/ui/SelectChip";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
-  useAddTeamVenue,
   useRevokeTeamAccess,
   useSendTeamInvite,
+  useSetTeamAccess,
   useTeam,
-  useUpdateTeamPermissions,
 } from "@/features/team/hooks";
+import { PermissionSwitches } from "@/features/team/PermissionSwitches";
 import {
-  DEFAULT_TEAM_PERMISSIONS,
-  PermissionSwitches,
-} from "@/features/team/PermissionSwitches";
-import {
-  permissionsForNewVenue,
-  permissionsOf,
   TEAM_PERMISSIONS,
   TEAM_PERMISSION_LABEL,
   type TeamMember,
   type TeamPermission,
   type TeamPermissions,
-  type VenueAccess,
 } from "@/features/team/api";
+import type { VenueScope } from "@/features/workspace/types";
 import { userErrorMessage } from "@/lib/errors";
 
-/** Le aree accese su una sede, in due parole. "Nessun permesso" se nessuna. */
-function permissionSummary(row: VenueAccess): string {
-  const on = TEAM_PERMISSIONS.filter((p) => row[p]).map(
-    (p) => TEAM_PERMISSION_LABEL[p]
+/** Le aree accese, in due parole. "Nessun permesso" se nessuna. */
+function permissionSummary(p: TeamPermissions): string {
+  const on = TEAM_PERMISSIONS.filter((k) => p[k]).map(
+    (k) => TEAM_PERMISSION_LABEL[k]
   );
   return on.length > 0 ? on.join(" · ") : "Nessun permesso";
 }
 
 /**
- * Una sede del collaboratore: riepilogo, e gli interruttori quando si apre.
+ * Su quali sedi vale l'accesso, in una riga.
  *
- * I permessi si cambiano **per sede** e non per persona: chi gestisce due sedi
- * può avere due mestieri diversi, e un unico interruttore "su tutte le sedi"
- * cancellerebbe la differenza senza dirlo.
+ * «Tutte le sedi» comprende anche quelle che l'azienda aprirà domani: è la
+ * differenza che conta rispetto a un elenco, ed è il motivo per cui l'ambito è
+ * una scelta e non una lista di spunte con tutte le caselle piene.
  */
-function VenueAccessRow({
-  row,
+function scopeSummary(member: TeamMember, venueName: (id: string) => string): string {
+  if (member.scope === "all") return "Tutte le sedi, anche quelle future";
+  if (member.venueIds.length === 0) return "Nessuna sede";
+  return member.venueIds.map(venueName).join(" · ");
+}
+
+/**
+ * Una persona che collabora alla gestione: permessi, ambito e revoca.
+ *
+ * ⚠️ I permessi stanno **sulla persona**, non sulla sede. Prima erano una riga
+ * per (persona, sede) e si potevano dare mestieri diversi in sedi diverse: in
+ * pratica non succedeva mai, e ogni regola del database doveva chiedersi «su
+ * quale sede?» anche quando la risposta era sempre la stessa. Adesso si sceglie
+ * cosa può fare, e poi dove.
+ */
+function MemberCard({
+  member,
   venueName,
   onRevoke,
 }: {
-  row: VenueAccess;
-  venueName: string;
+  member: TeamMember;
+  venueName: (id: string) => string;
   onRevoke: () => void;
 }) {
   const toast = useToast();
+  const { venues } = useOwnerVenues();
+  const invite = useSendTeamInvite();
+  const save = useSetTeamAccess();
   const [open, setOpen] = useState(false);
-  const update = useUpdateTeamPermissions();
 
-  function setPerm(perm: TeamPermission, next: boolean) {
-    update.mutate(
-      { accessId: row.id, permissions: { [perm]: next } },
+  const pending = member.status === "pending";
+  const title = member.fullName?.trim() || member.email || "Collaboratore";
+
+  /** Un cambio per volta: la RPC vuole permessi e ambito insieme. */
+  function apply(next: {
+    permissions?: TeamPermissions;
+    scope?: VenueScope;
+    venueIds?: string[];
+  }) {
+    save.mutate(
+      {
+        memberId: member.memberId,
+        permissions: next.permissions ?? member.permissions,
+        scope: next.scope ?? member.scope,
+        venueIds: next.venueIds ?? member.venueIds,
+      },
       { onError: (e) => toast.show(userErrorMessage(e), "error") }
     );
   }
 
+  function toggleVenue(venueId: string, on: boolean) {
+    const ids = on
+      ? [...member.venueIds, venueId]
+      : member.venueIds.filter((id) => id !== venueId);
+    apply({ scope: "selected", venueIds: ids });
+  }
+
   return (
-    <View className="border-t border-border-1 px-4 py-3">
+    <Card className="gap-0 p-0">
       <Pressable
         onPress={() => setOpen((v) => !v)}
-        className="flex-row items-center gap-3"
+        className="flex-row items-center gap-3 px-4 py-3.5"
       >
+        <Avatar uri={member.avatarUrl ?? undefined} name={title} size={38} />
         <View className="flex-1">
-          <Text className="text-[14px] font-sans-semibold text-t1">
-            {venueName}
+          <Text className="text-[15px] font-sans-semibold text-t1" numberOfLines={1}>
+            {title}
           </Text>
-          <Text className="mt-0.5 text-[12px] leading-4 text-t3">
-            {permissionSummary(row)}
+          <Text className="mt-0.5 text-[13px] text-t3" numberOfLines={1}>
+            {permissionSummary(member.permissions)}
+          </Text>
+          <Text className="mt-0.5 text-[12px] leading-4 text-t4" numberOfLines={1}>
+            {scopeSummary(member, venueName)}
           </Text>
         </View>
+        {pending ? <Pill label="Invito mandato" /> : null}
         {/* Niente "chevD" fra le icone: la chevron si ruota, ed è il caso per
             cui `Icon` accetta uno `style`. */}
         <Icon
@@ -97,160 +134,20 @@ function VenueAccessRow({
         />
       </Pressable>
 
-      {open ? (
-        <View className="mt-3 gap-3">
-          <PermissionSwitches
-            value={permissionsOf(row)}
-            onChange={setPerm}
-            disabled={update.isPending}
-          />
-          <GhostButton label={`Togli l'accesso a ${venueName}`} onPress={onRevoke} />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-/**
- * Una sede che il collaboratore non ha ancora: si apre con i permessi da
- * confermare, e solo "Aggiungi" dà l'accesso.
- *
- * Prima l'unica strada era rifare l'invito con la stessa email, che funzionava
- * ma non lo pensa nessuno per chi è già attivo. Con un invito in sospeso la riga
- * nuova resta in attesa come le altre, senza una seconda email.
- */
-function AddVenueRow({
-  ownerId,
-  member,
-  venueId,
-  venueName,
-}: {
-  ownerId: string;
-  member: TeamMember;
-  venueId: string;
-  venueName: string;
-}) {
-  const toast = useToast();
-  const add = useAddTeamVenue(ownerId);
-  const [open, setOpen] = useState(false);
-  const [permissions, setPermissions] = useState<TeamPermissions>(
-    DEFAULT_TEAM_PERMISSIONS
-  );
-
-  function submit() {
-    add.mutate(
-      { member, venueId, permissions },
-      {
-        onSuccess: () =>
-          toast.show(
-            member.status === "pending"
-              ? "Sede aggiunta: la vedrà quando accetta l'invito"
-              : `Accesso a ${venueName} aggiunto`
-          ),
-        onError: (e) => toast.show(userErrorMessage(e), "error"),
-      }
-    );
-  }
-
-  return (
-    <View className="border-t border-border-1 px-4 py-3">
-      <Pressable
-        onPress={() => {
-          if (!open) {
-            setPermissions(
-              permissionsForNewVenue(member, DEFAULT_TEAM_PERMISSIONS)
-            );
-          }
-          setOpen((v) => !v);
-        }}
-        className="flex-row items-center gap-3"
-      >
-        <View className="flex-1">
-          <Text className="text-[14px] font-sans-semibold text-t2">
-            + {venueName}
-          </Text>
-          <Text className="mt-0.5 text-[12px] leading-4 text-t4">
-            Non ha accesso a questa sede
-          </Text>
-        </View>
-        <Icon
-          name="chevR"
-          size={16}
-          color="#6A6358"
-          style={open ? { transform: [{ rotate: "90deg" }] } : undefined}
-        />
-      </Pressable>
-
-      {open ? (
-        <View className="mt-3 gap-3">
-          <PermissionSwitches
-            value={permissions}
-            onChange={(perm, next) =>
-              setPermissions((prev) => ({ ...prev, [perm]: next }))
-            }
-            disabled={add.isPending}
-          />
-          <GoldButton
-            label={add.isPending ? "Aggiungo…" : `Aggiungi ${venueName}`}
-            onPress={submit}
-            disabled={add.isPending}
-          />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function MemberCard({
-  ownerId,
-  member,
-  venueName,
-  onRevokeRow,
-  onRevokeAll,
-}: {
-  ownerId: string;
-  member: TeamMember;
-  venueName: (id: string) => string;
-  onRevokeRow: (row: VenueAccess) => void;
-  onRevokeAll: (member: TeamMember) => void;
-}) {
-  const toast = useToast();
-  const { venues } = useOwnerVenues();
-  const invite = useSendTeamInvite();
-  const pending = member.status === "pending";
-  const title = member.fullName?.trim() || member.email || "Collaboratore";
-  const missing = venues.filter((v) => !member.venueIds.includes(v.id));
-
-  return (
-    <Card className="gap-0 p-0">
-      <View className="flex-row items-center gap-3 px-4 py-3.5">
-        <Avatar uri={member.avatarUrl ?? undefined} name={title} size={38} />
-        <View className="flex-1">
-          <Text className="text-[15px] font-sans-semibold text-t1" numberOfLines={1}>
-            {title}
-          </Text>
-          <Text className="mt-0.5 text-[13px] text-t3" numberOfLines={1}>
-            {member.email ?? "Account collegato"}
-          </Text>
-        </View>
-        {pending ? <Pill label="Invito mandato" /> : null}
-      </View>
-
       {pending ? (
         <View className="gap-2 border-t border-border-1 px-4 py-3">
           {/* Due strade, e vanno dette tutt'e due: chi non aveva un account lo
-              crea aprendo il link, chi ce l'ha già entra al primo accesso dopo
-              l'invito (`claimInvites` in lib/auth.tsx). Nominarne una sola fa
-              sembrare l'invito rotto all'altra metà. */}
+              crea aprendo il link, chi ce l'ha già accetta l'invito dall'app.
+              Nominarne una sola fa sembrare l'invito rotto all'altra metà. */}
           <Text className="text-[12px] leading-4 text-t3">
-            Entra aprendo il link che gli abbiamo mandato e scegliendo una
-            password: l&apos;account nasce lì. Se ne aveva già uno, gli basta
-            rientrare.
+            Se non aveva un account, lo crea aprendo il link che gli abbiamo
+            mandato e scegliendo una password. Se ce l&apos;aveva già, trova
+            l&apos;invito da accettare quando entra.
           </Text>
           <GhostButton
             label={invite.isPending ? "Invio…" : "Reinvia l'invito"}
             onPress={() =>
-              invite.mutate(member.rows[0].id, {
+              invite.mutate(member.memberId, {
                 onSuccess: () => toast.show("Invito spedito"),
                 onError: (e) => toast.show(userErrorMessage(e), "error"),
               })
@@ -259,28 +156,53 @@ function MemberCard({
         </View>
       ) : null}
 
-      {member.rows.map((row) => (
-        <VenueAccessRow
-          key={row.id}
-          row={row}
-          venueName={venueName(row.venue_id)}
-          onRevoke={() => onRevokeRow(row)}
-        />
-      ))}
+      {open ? (
+        <View className="gap-4 border-t border-border-1 px-4 py-4">
+          <PermissionSwitches
+            value={member.permissions}
+            onChange={(perm: TeamPermission, next: boolean) =>
+              apply({ permissions: { ...member.permissions, [perm]: next } })
+            }
+            disabled={save.isPending}
+          />
 
-      {missing.map((v) => (
-        <AddVenueRow
-          key={v.id}
-          ownerId={ownerId}
-          member={member}
-          venueId={v.id}
-          venueName={v.name}
-        />
-      ))}
+          <View className="gap-2">
+            <Text className="text-[13px] font-sans-semibold text-t2">Dove</Text>
+            <View className="flex-row flex-wrap gap-2">
+              <SelectChip
+                label="Tutte le sedi"
+                active={member.scope === "all"}
+                onPress={() =>
+                  apply(
+                    member.scope === "all"
+                      ? { scope: "selected", venueIds: [] }
+                      : { scope: "all" }
+                  )
+                }
+              />
+              {member.scope === "selected"
+                ? venues.map((v) => (
+                    <SelectChip
+                      key={v.id}
+                      label={v.name}
+                      active={member.venueIds.includes(v.id)}
+                      onPress={() =>
+                        toggleVenue(v.id, !member.venueIds.includes(v.id))
+                      }
+                    />
+                  ))
+                : null}
+            </View>
+            {member.scope === "all" ? (
+              <Text className="text-[12px] leading-4 text-t4">
+                Comprende anche le sedi che aprirai in futuro.
+              </Text>
+            ) : null}
+          </View>
 
-      <View className="border-t border-border-1 px-4 py-3">
-        <GhostButton label="Revoca tutto" onPress={() => onRevokeAll(member)} />
-      </View>
+          <GhostButton label="Togli l'accesso" onPress={onRevoke} />
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -288,26 +210,24 @@ function MemberCard({
 /**
  * I collaboratori del titolare.
  *
- * Il caso che risolve: due persone che organizzano i turni dello stessa sede e
+ * Il caso che risolve: due persone che organizzano i turni della stessa sede e
  * finora si passavano le credenziali di un account solo. Da qui ognuna ha il suo
- * accesso, sulle sedi che il titolare sceglie e con i permessi che sceglie.
+ * accesso, con i permessi e sulle sedi che il titolare sceglie.
  *
  * ⚠️ Schermata del **titolare**: un collaboratore non la vede (né la rotta, né la
- * riga in Impostazioni). Non è una difesa — quella è la RLS su `venue_access`,
- * che gli lascia leggere solo le proprie righe.
+ * riga in Impostazioni). Non è una difesa — quella è il DB, che lascia a
+ * `set_member_access` il solo titolare e a ciascuno la propria riga.
  */
 export default function TeamScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
-  const { ownerId, venueById, isOwner } = useOwnerVenues();
-  const team = useTeam(isOwner ? (ownerId ?? "") : "");
+  const { workspaceId, venueById, isOwner } = useOwnerVenues();
+  const team = useTeam(isOwner ? (workspaceId ?? "") : "");
   const revoke = useRevokeTeamAccess();
 
-  /** Cosa si sta per revocare: una sede sola o tutte. */
-  const [confirm, setConfirm] = useState<
-    { ids: string[]; title: string; message: string } | null
-  >(null);
+  /** Chi si sta per revocare. */
+  const [confirm, setConfirm] = useState<TeamMember | null>(null);
 
   const members = team.data ?? [];
 
@@ -317,7 +237,7 @@ export default function TeamScreen() {
 
   function doRevoke() {
     if (!confirm) return;
-    revoke.mutate(confirm.ids, {
+    revoke.mutate(confirm.memberId, {
       onSuccess: () => {
         toast.show("Accesso revocato");
         setConfirm(null);
@@ -355,31 +275,15 @@ export default function TeamScreen() {
         ) : members.length === 0 && !team.isPending ? (
           <EmptyState
             title="Nessun collaboratore"
-            subtitle="Invita chi organizza i turni con te: sceglierai su quali sedi entra e cosa può fare."
+            subtitle="Invita chi organizza i turni con te: sceglierai cosa può fare e su quali sedi."
           />
         ) : (
           members.map((m) => (
             <MemberCard
-              key={m.userId ?? m.email ?? m.rows[0].id}
-              ownerId={ownerId ?? ""}
+              key={m.memberId}
               member={m}
               venueName={venueName}
-              onRevokeRow={(row) =>
-                setConfirm({
-                  ids: [row.id],
-                  title: `Togliere l'accesso a ${venueName(row.venue_id)}?`,
-                  message:
-                    "Non vedrà più i turni né l'organico di questa sede. Glielo diciamo con una notifica.",
-                })
-              }
-              onRevokeAll={(member) =>
-                setConfirm({
-                  ids: member.rows.map((r) => r.id),
-                  title: "Revocare tutto?",
-                  message:
-                    "Perderà l'accesso a tutte le sedi. Quello che ha già fatto — turni, presenze, ore — resta dov'è.",
-                })
-              }
+              onRevoke={() => setConfirm(m)}
             />
           ))
         )}
@@ -392,9 +296,9 @@ export default function TeamScreen() {
 
       <ConfirmModal
         visible={!!confirm}
-        title={confirm?.title ?? ""}
-        message={confirm?.message}
-        confirmLabel="Revoca"
+        title="Togliere l'accesso?"
+        message="Non gestirà più le tue sedi. Quello che ha già fatto — turni, presenze, ore — resta dov'è, e se lavora con voi resta in organico."
+        confirmLabel="Togli"
         destructive
         pending={revoke.isPending}
         onConfirm={doRevoke}

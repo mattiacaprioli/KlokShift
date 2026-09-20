@@ -2,23 +2,22 @@ import { useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
-  permissionsOf,
+  NO_PERMISSIONS,
   type TeamPermission,
   type TeamPermissions,
-  type VenueAccess,
 } from "@/features/team/api";
 import {
-  usePersonAccess,
-  usePromoteStaffPerson,
+  useMemberAccess,
   useRevokeTeamAccess,
-  useUpdateTeamPermissions,
+  useSetTeamAccess,
 } from "@/features/team/hooks";
+import type { VenueScope } from "@/features/workspace/types";
 import { DEFAULT_PERMISSIONS, PermissionChecks } from "../pages/Team";
 import { useToast } from "../ui/Toast";
 import { Button, Card, Pill } from "../ui/primitives";
 
 /**
- * «Fagli gestire la sede»: la promozione di un membro dell'organico.
+ * «Fagli gestire l'azienda»: la promozione di una persona dell'organico.
  *
  * Gemella di `src/features/team/PromoteSection.tsx`, che è l'app. Due file e non
  * uno perché la parte condivisa (api + hooks) è già condivisa: qui resta solo il
@@ -28,151 +27,198 @@ import { Button, Card, Pill } from "../ui/primitives";
  * Sta sulla scheda della persona e non nella lista dei collaboratori perché è lì
  * che la decisione nasce — il titolare sta guardando chi è il suo capo sala, non
  * cercando un indirizzo email. Nessun invito da mandare: quella persona un
- * account ce l'ha già, e ad autorizzarla è l'appartenenza all'organico di
- * **quella** sede (vedi `promoteStaffPerson`).
+ * account ce l'ha già.
+ *
+ * Dal 20/09/2026 permessi e ambito stanno **sul membro**, non per sede: una
+ * griglia sola, più la scelta fra «tutte le sedi» e «solo alcune».
  */
 export function PromoteSection({
-  ownerId,
+  memberId,
   waiterId,
   personName,
-  venueIds,
 }: {
-  ownerId: string;
+  memberId: string;
   waiterId: string;
   personName: string;
-  /** Le sedi in cui la persona è in organico **adesso**. */
-  venueIds: string[];
 }) {
-  const { venueById } = useOwnerVenues();
-  const accessQuery = usePersonAccess(ownerId, waiterId);
+  const toast = useToast();
+  const { venues } = useOwnerVenues();
+  const accessQuery = useMemberAccess(memberId);
+  const setAccess = useSetTeamAccess();
+  const revoke = useRevokeTeamAccess();
 
-  if (venueIds.length === 0) return null;
+  const [confirming, setConfirming] = useState(false);
+  // Permessi e ambito della **prima** promozione. Una volta attivo si legge e si
+  // scrive dal database, non da questo stato.
+  const [draft, setDraft] = useState<TeamPermissions>(DEFAULT_PERMISSIONS);
+  const [draftScope, setDraftScope] = useState<VenueScope>("all");
+  const [draftVenues, setDraftVenues] = useState<Set<string>>(new Set());
 
-  const rows = accessQuery.data ?? [];
+  const current = accessQuery.data;
+  const active = current?.authority === "collaborator";
+  const permissions = active && current ? current.permissions : draft;
+  const scope = active && current ? current.scope : draftScope;
+  const scopeVenues =
+    active && current ? new Set(current.venueIds) : draftVenues;
+
   const firstName = personName.trim().split(/\s+/)[0] || "Questa persona";
+
+  /** Un cambio per volta: la RPC vuole permessi e ambito insieme. */
+  function save(next: {
+    permissions?: TeamPermissions;
+    scope?: VenueScope;
+    venueIds?: string[];
+  }) {
+    setAccess.mutate(
+      {
+        memberId,
+        permissions: next.permissions ?? permissions,
+        scope: next.scope ?? scope,
+        venueIds: next.venueIds ?? [...scopeVenues],
+      },
+      { onError: (e) => toast.show(userErrorMessage(e), "error") }
+    );
+  }
+
+  function setPerm(perm: TeamPermission, on: boolean) {
+    if (active) return save({ permissions: { ...permissions, [perm]: on } });
+    setDraft((prev) => ({ ...prev, [perm]: on }));
+  }
+
+  function setScope(next: VenueScope) {
+    if (active) return save({ scope: next });
+    setDraftScope(next);
+  }
+
+  function toggleVenue(id: string) {
+    const next = new Set(scopeVenues);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    if (active) return save({ scope: "selected", venueIds: [...next] });
+    setDraftVenues(next);
+  }
+
+  // Senza un account non c'è nessuno a cui dare l'accesso, e
+  // `set_member_access` lo rifiuterebbe (`needs_account`).
+  if (!waiterId) return null;
 
   return (
     <section className="flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Gestione della sede
+        Gestione dell&apos;azienda
       </span>
       <p className="-mt-1 text-xs leading-5 text-t3">
         {firstName} continua a essere un professionista con i suoi turni: gli si
         aggiunge un secondo accesso, non gli si cambia l&apos;account. Può
         mettersi in turno da solo, ma le sue presenze e le sue ore le segna chi
-        gestisce la sede.
+        ha il permesso Ore.
       </p>
-      {venueIds.map((venueId) => (
-        <PromoteVenueCard
-          key={venueId}
-          ownerId={ownerId}
-          waiterId={waiterId}
-          venueId={venueId}
-          venueName={venueById(venueId)?.name ?? "Sede"}
-          row={rows.find((r) => r.venue_id === venueId) ?? null}
-        />
-      ))}
-    </section>
-  );
-}
 
-function PromoteVenueCard({
-  ownerId,
-  waiterId,
-  venueId,
-  venueName,
-  row,
-}: {
-  ownerId: string;
-  waiterId: string;
-  venueId: string;
-  venueName: string;
-  row: VenueAccess | null;
-}) {
-  const toast = useToast();
-  const promote = usePromoteStaffPerson();
-  const update = useUpdateTeamPermissions();
-  const revoke = useRevokeTeamAccess();
-
-  const active = row?.status === "active";
-  const [confirming, setConfirming] = useState(false);
-  // I permessi della prima promozione. Quando l'accesso esiste già si legge
-  // dalla riga: la fonte è il database, non questo stato.
-  const [draft, setDraft] = useState<TeamPermissions>(DEFAULT_PERMISSIONS);
-
-  const permissions = active && row ? permissionsOf(row) : draft;
-
-  function setPerm(perm: TeamPermission, next: boolean) {
-    if (active && row) {
-      update.mutate(
-        { accessId: row.id, permissions: { [perm]: next } },
-        { onError: (e) => toast.show(userErrorMessage(e), "error") }
-      );
-      return;
-    }
-    setDraft((prev) => ({ ...prev, [perm]: next }));
-  }
-
-  return (
-    <Card className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-t1">{venueName}</span>
-          {active ? <Pill tone="success">Gestisce</Pill> : null}
-        </span>
-
-        {active ? (
-          confirming ? (
-            <span className="flex items-center gap-2">
-              <Button variant="ghost" onClick={() => setConfirming(false)}>
-                Annulla
+      <Card className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {active ? <Pill>Collabora alla gestione</Pill> : null}
+          <span className="flex-1" />
+          {active ? (
+            confirming ? (
+              <span className="flex items-center gap-2">
+                <span className="text-xs text-t3">
+                  Torna a essere solo un professionista?
+                </span>
+                <Button onClick={() => setConfirming(false)}>Annulla</Button>
+                <Button
+                  variant="danger"
+                  disabled={revoke.isPending}
+                  onClick={() =>
+                    revoke.mutate(memberId, {
+                      onSuccess: () => {
+                        setConfirming(false);
+                        toast.show("Gestione revocata");
+                        setDraft(NO_PERMISSIONS);
+                        setDraftScope("all");
+                        setDraftVenues(new Set());
+                      },
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
+                    })
+                  }
+                >
+                  Conferma
+                </Button>
+              </span>
+            ) : (
+              <Button variant="ghost" onClick={() => setConfirming(true)}>
+                Togli la gestione
               </Button>
-              <Button
-                variant="danger"
-                disabled={revoke.isPending || !row}
-                onClick={() => {
-                  if (!row) return;
-                  revoke.mutate([row.id], {
-                    onSuccess: () => {
-                      setConfirming(false);
-                      toast.show("Gestione revocata");
-                    },
-                    onError: (e) => toast.show(userErrorMessage(e), "error"),
-                  });
-                }}
-              >
-                Conferma
-              </Button>
-            </span>
+            )
           ) : (
-            <Button variant="ghost" onClick={() => setConfirming(true)}>
-              Togli la gestione
+            <Button
+              variant="gold"
+              disabled={setAccess.isPending}
+              onClick={() =>
+                setAccess.mutate(
+                  {
+                    memberId,
+                    permissions: draft,
+                    scope: draftScope,
+                    venueIds: [...draftVenues],
+                  },
+                  {
+                    onSuccess: () =>
+                      toast.show(`${firstName} ora collabora alla gestione`),
+                    onError: (e) => toast.show(userErrorMessage(e), "error"),
+                  }
+                )
+              }
+            >
+              {setAccess.isPending
+                ? "Attivazione…"
+                : "Fagli gestire l'azienda"}
             </Button>
-          )
-        ) : (
-          <Button
-            variant="gold"
-            disabled={promote.isPending}
-            onClick={() =>
-              promote.mutate(
-                { ownerId, venueId, userId: waiterId, permissions: draft },
-                {
-                  onSuccess: () => toast.show(`Ora gestisce ${venueName}`),
-                  onError: (e) => toast.show(userErrorMessage(e), "error"),
-                }
-              )
-            }
-          >
-            {promote.isPending ? "Attivazione…" : "Fagli gestire la sede"}
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
 
-      <PermissionChecks
-        value={permissions}
-        disabled={update.isPending}
-        onChange={setPerm}
-      />
-    </Card>
+        <PermissionChecks
+          value={permissions}
+          disabled={setAccess.isPending}
+          onChange={setPerm}
+        />
+
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+            Su quali sedi
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={scope === "all" ? "gold" : undefined}
+              onClick={() => setScope("all")}
+            >
+              Tutte le sedi
+            </Button>
+            <Button
+              variant={scope === "selected" ? "gold" : undefined}
+              onClick={() => setScope("selected")}
+            >
+              Solo alcune
+            </Button>
+          </div>
+          {scope === "selected" ? (
+            <div className="flex flex-wrap gap-2">
+              {venues.map((v) => (
+                <Button
+                  key={v.id}
+                  variant={scopeVenues.has(v.id) ? "gold" : undefined}
+                  onClick={() => toggleVenue(v.id)}
+                >
+                  {v.name}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-t4">
+              Comprende anche le sedi che aprirai in futuro.
+            </span>
+          )}
+        </div>
+      </Card>
+    </section>
   );
 }

@@ -41,7 +41,6 @@ import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { PromoteSection } from "@/features/team/PromoteSection";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
-import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import {
   CONTRACT_PERIOD_SHORT,
   CONTRACT_PERIODS,
@@ -89,7 +88,6 @@ function WorkplaceCard({
 }) {
   const toast = useToast();
   const update = useUpdateStaffMember();
-  const setRoles = useSetStaffMemberRoles();
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
 
@@ -104,48 +102,48 @@ function WorkplaceCard({
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
-  const busy = update.isPending || setRoles.isPending || remove.isPending;
+  const busy = update.isPending || remove.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
 
+  // Una sola scrittura (`set_member_venue`): tipo di impiego e mansioni
+  // insieme, o passano tutte e due o non passa nessuna.
   async function onSave() {
     try {
       await update.mutateAsync({
-        id: membership.id,
-        fields: { employment_type: empType },
+        memberId: person.id,
+        venueId: membership.venue_id,
+        employmentType: empType,
+        roleIds,
       });
-    } catch {
-      toast.show("Tipo di impiego non salvato. Riprova.", "error");
-      return;
+      toast.show(`${venueName} aggiornato`);
+    } catch (e) {
+      toast.show(userErrorMessage(e), "error");
     }
-    try {
-      await setRoles.mutateAsync({ staffMemberId: membership.id, roleIds });
-    } catch {
-      toast.show("Ruoli non salvati. Riprova.", "error");
-      return;
-    }
-    toast.show(`${venueName} aggiornato`);
   }
 
   function doRemove() {
-    remove.mutate(membership.id, {
-      onSuccess: () => {
-        setConfirmVisible(false);
-        toast.show(`Rimosso da ${venueName}`);
-      },
-      onError: () => {
-        setConfirmVisible(false);
-        toast.show("Impossibile rimuovere. Riprova.", "error");
-      },
-    });
+    remove.mutate(
+      { memberId: person.id, venueId: membership.venue_id },
+      {
+        onSuccess: () => {
+          setConfirmVisible(false);
+          toast.show(`Rimosso da ${venueName}`);
+        },
+        onError: () => {
+          setConfirmVisible(false);
+          toast.show("Impossibile rimuovere. Riprova.", "error");
+        },
+      }
+    );
   }
 
   function doRestore() {
     restore.mutate(
       {
-        venue_id: membership.venue_id,
-        person_id: person.id,
-        employment_type: membership.employment_type,
+        memberId: person.id,
+        venueId: membership.venue_id,
+        employmentType: membership.employment_type,
       },
       {
         onSuccess: () => toast.show(`Di nuovo in organico a ${venueName}`),
@@ -282,7 +280,7 @@ function AddToVenueCard({
   function onAdd() {
     if (!venue) return;
     add.mutate(
-      { venue_id: venue.id, person_id: person.id, employment_type: empType },
+      { memberId: person.id, venueId: venue.id, employmentType: empType },
       {
         onSuccess: () => {
           setVenueId(null);
@@ -372,23 +370,15 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
           // L'email non si tocca più una volta che l'account è collegato:
           // l'indirizzo vero è quello di `auth.users`, e riscriverlo qui
           // cambierebbe solo la rubrica del titolare dando l'idea di poter
-          // spostare l'account di qualcun altro.
+          // spostare l'account di qualcun altro. `update_member` la rifiuta
+          // comunque (`email_locked`), scritto qui prima ancora di chiamarla.
           ...(person.waiter_id ? {} : { email: email.trim() || null }),
           note: note.trim() || null,
         },
       });
       toast.show("Anagrafica aggiornata");
     } catch (e) {
-      // L'unique (owner_id, email) è il vincolo che tiene l'aggancio non
-      // ambiguo: vale la pena dirlo meglio del generico «esiste già un
-      // elemento con questi dati» a cui lo mapperebbe `userErrorMessage`.
-      const msg = e instanceof Error ? e.message : "";
-      toast.show(
-        msg.includes("staff_people_owner_email_uq")
-          ? "Hai già una scheda con questa email."
-          : userErrorMessage(e),
-        "error"
-      );
+      toast.show(userErrorMessage(e), "error");
     }
   }
 
@@ -742,7 +732,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   function onMessage() {
     if (!waiterId) return;
     startConversation.mutate(
-      { waiterId, managerId },
+      { memberId: person.id },
       {
         onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
         onError: () =>
@@ -752,16 +742,12 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   }
 
   /**
-   * Rimozione totale: una scrittura per appartenenza. L'ultima fa scattare
-   * `staff_members_zz_orphan_person`, che cancella la persona e con lei i
-   * documenti.
+   * Rimozione totale (`remove_member`, senza `p_venue`): esce da tutta
+   * l'azienda in una sola chiamata.
    */
   async function doRemoveAll() {
     try {
-      // Solo le sedi in cui è ancora in organico: `remove_staff_member` rifiuta
-      // una riga già 'left' (`not allowed`), e il ciclo si fermerebbe lì
-      // mostrando un errore per un lavoro in realtà già fatto.
-      for (const m of liveMemberships) await remove.mutateAsync(m.id);
+      await remove.mutateAsync({ memberId: person.id });
       setConfirmVisible(false);
       toast.show("Rimosso dall'organico");
       router.back();
@@ -989,7 +975,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                 onRecord={() =>
                   router.push({
                     pathname: "/(manager)/staff/assenza/new",
-                    params: { personId: person.id },
+                    params: { memberId: person.id },
                   })
                 }
               />
@@ -999,7 +985,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           {canAny("can_manage_documents") ? (
             <TabPanel active={tab === "documenti"}>
               <DocumentsSection
-                personId={person.id}
+                memberId={person.id}
                 onAdd={() =>
                   router.push({
                     pathname: "/(manager)/staff/documento/new",
@@ -1013,10 +999,9 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           {tabs.some((t) => t.id === "gestione") && waiterId ? (
             <TabPanel active={tab === "gestione"}>
               <PromoteSection
-                ownerId={person.owner_id}
+                memberId={person.id}
                 waiterId={waiterId}
                 personName={person.full_name}
-                venueIds={liveMemberships.map((m) => m.venue_id)}
               />
             </TabPanel>
           ) : null}

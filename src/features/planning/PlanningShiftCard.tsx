@@ -106,7 +106,7 @@ export function PlanningShiftCard({
             expanded ? (
               <View className="mt-1.5">
                 {shift.people.map((p) => (
-                  <TeamRow key={p.staffMemberId} person={p} />
+                  <TeamRow key={p.venueMemberId} person={p} />
                 ))}
               </View>
             ) : (

@@ -14,7 +14,7 @@ import {
   getConversation,
   getConversations,
   getMessagesPage,
-  getOrCreateConversation,
+  openConversation,
   markConversationRead,
   sendMessage,
   type Message,
@@ -138,7 +138,7 @@ export function useMarkConversationRead(conversationId: string, userId: string) 
 export function useStartConversation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: getOrCreateConversation,
+    mutationFn: openConversation,
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: qk.chat.conversationsAll }),
   });

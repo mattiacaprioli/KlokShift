@@ -1,5 +1,12 @@
 # Ferie, permessi e malattia
 
+> ⚠️ **Documento di piano scritto prima del refactor del 2026-09-20.** La feature
+> è implementata e funziona, ma i riferimenti al database sono cambiati:
+> le assenze stanno sul **membro** (`staff_absences.member_id` →
+> `workspace_members`, niente `owner_id`), `request_absence` prende l'azienda
+> (`p_workspace`), `get_owner_absence_summary` è diventata `get_absence_summary`,
+> e `can_manage_person` è `private.can_person`. Vedi `supabase/README.md`.
+
 > **Stato (16/09/2026): F1, F2 e F3 fatte, migration applicate** (`20260918100000`–`100200`, `20260918110000`, `20260918120000`). Resta solo il blocco «Dopo».
 >
 > **17/09/2026 — pagina Assenze dell'azienda.** Non è una tab, perché le assenze arrivano poche volte al mese e la barra del titolare è piena: 7shifts e Homebase le mettono nel menu, Deputy e When I Work in una card della home.

@@ -44,8 +44,9 @@ export const LANGUAGE_OPTIONS = [
 ] as const;
 
 /**
- * Un cameriere (profilo + waiter_profile) per id. Il ristoratore può leggerlo se
- * il cameriere si è candidato a un suo turno (RLS "manager sees applicant profiles").
+ * Un professionista (profilo + waiter_profile) per id. `waiter_profile` è `null`
+ * per chi non ha (ancora) un profilo professionale: si crea dal wizard o dalla
+ * modifica del profilo. La lettura da parte di una sede la decide la RLS.
  */
 export async function getWaiterProfileById(
   waiterId: string

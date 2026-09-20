@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { userErrorMessage } from "@/lib/errors";
 import { useAuth } from "@/lib/auth";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { deleteAvatarByUrl, uploadAvatar } from "@/features/account/api";
 import { useSaveVenue, useUpdateVenueLogo } from "@/features/venues/hooks";
 import { venueSchema, type VenueForm } from "@/features/venues/schema";
@@ -24,12 +25,14 @@ export function VenueFormCard({
 }: {
   /** `null` = creazione. */
   venue: Venue | null;
-  onSaved?: (venue: Venue) => void;
+  /** Dopo il salvataggio. In creazione si conosce solo l'id della sede nuova. */
+  onSaved?: (venue: { id: string }) => void;
 }) {
-  const { session } = useAuth();
   const toast = useToast();
+  const { session } = useAuth();
   const userId = session!.user.id;
-  const save = useSaveVenue(userId);
+  const { workspaceId } = useOwnerVenues();
+  const save = useSaveVenue(workspaceId ?? "");
   const saveLogo = useUpdateVenueLogo();
   const [logoBusy, setLogoBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);

@@ -3,11 +3,7 @@ import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
-import type {
-  InternalShiftPlan,
-  RoleTargetInput,
-  StaffAssignmentInput,
-} from "./api";
+import type { InternalShiftPlan } from "./api";
 import {
   createInternalShift,
   createInternalShifts,
@@ -22,8 +18,8 @@ import {
   getOwnerTodayAssignments,
   getOwnerHoursSummary,
   reassignShiftAssignment,
+  respondToAssignment,
   setAssignmentPresence,
-  updateAssignmentStatus,
   updateInternalShift,
 } from "./api";
 
@@ -50,8 +46,10 @@ export function useMyAssignmentForShift(
 export function useRespondToAssignment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { id: string; status: Enums<"assignment_status"> }) =>
-      updateAssignmentStatus(vars.id, vars.status),
+    mutationFn: (vars: {
+      id: string;
+      status: Extract<Enums<"assignment_status">, "confirmed" | "declined">;
+    }) => respondToAssignment(vars.id, vars.status),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.assignments.all }),
   });
 }
@@ -96,17 +94,8 @@ function invalidateAfterShiftWrite(qc: ReturnType<typeof useQueryClient>) {
 export function useCreateInternalShift() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: {
-      venue_id: string;
-      title: string;
-      date: string;
-      start_time: string;
-      end_time: string;
-      description: string | null;
-      staff: StaffAssignmentInput[];
-      roleTargets?: RoleTargetInput[];
-      require_confirmation?: boolean;
-    }) => createInternalShift(input),
+    mutationFn: (input: Parameters<typeof createInternalShift>[0]) =>
+      createInternalShift(input),
     onSuccess: () => invalidateAfterShiftWrite(qc),
   });
 }
@@ -199,6 +188,7 @@ export function useReassignShiftAssignment() {
       assignmentId: string;
       shiftId: string;
       toStaffMember: {
+        /** `venue_members.id`: la riga di organico che riceve il turno. */
         id: string;
         /** La persona dietro l'appartenenza: serve al carico settimanale. */
         person_id: string;
@@ -220,7 +210,7 @@ export function useReassignShiftAssignment() {
                 ...s,
                 shift_assignments: s.shift_assignments.map((a) => {
                   if (a.id !== assignmentId) return a;
-                  // Stessa regola del server (`reassign_shift_assignment`): chi
+                  // Stessa regola del server (`reassign`): chi
                   // entra tiene il ruolo di chi esce se lo sa fare, altrimenti
                   // prende il suo unico ruolo, altrimenti resta da scegliere.
                   // Ricopiarla qui evita che la copertura sfarfalli fra il
@@ -279,21 +269,10 @@ export function useShiftRoleRequirements(shiftId: string, enabled = true) {
   });
 }
 
-export function useUpdateAssignmentStatus(shiftId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { id: string; status: Enums<"assignment_status"> }) =>
-      updateAssignmentStatus(vars.id, vars.status),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
-      qc.invalidateQueries({ queryKey: qk.assignments.all });
-    },
-  });
-}
-
 /**
- * Statistiche aggregate di una persona dell'organico, su **tutte** le sedi del
- * titolare (le calcola il database).
+ * Statistiche aggregate di una persona dell'organico, su **tutte** le sedi
+ * dell'azienda (le calcola il database). `personId` è l'id del **membro**
+ * (`StaffPerson.id`), non quello di una riga di organico.
  */
 export function usePersonPerformance(personId: string | undefined) {
   return useQuery({
@@ -318,18 +297,18 @@ export function usePersonWorkedShifts(
 /**
  * Le ore di tutta l'azienda in un mese.
  *
- * ⚠️ `ownerId` è **solo la chiave di cache**: la RPC non lo riceve, usa
+ * ⚠️ `workspaceId` è **solo la chiave di cache**: la RPC non lo riceve, usa
  * `auth.uid()`. Serve a non mescolare la cache di due account sullo stesso
- * dispositivo, e a spegnere la query per chi non è un titolare.
+ * dispositivo, e a spegnere la query per chi non gestisce niente.
  */
 export function useOwnerHoursSummary(
-  ownerId: string | undefined,
+  workspaceId: string | undefined,
   month: string
 ) {
   return useQuery({
-    queryKey: qk.staff.ownerHours(ownerId ?? "", month),
+    queryKey: qk.staff.ownerHours(workspaceId ?? "", month),
     queryFn: () => getOwnerHoursSummary(month),
-    enabled: !!ownerId,
+    enabled: !!workspaceId,
   });
 }
 

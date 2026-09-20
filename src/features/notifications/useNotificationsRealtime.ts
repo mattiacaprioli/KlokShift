@@ -14,7 +14,7 @@ export type IncomingNotification = {
  *
  * È il canale notifiche a tenere aggiornato il professionista: essendo
  * filtrato per `user_id`, riceve solo ciò che lo riguarda davvero. Prima
- * `RealtimeSync` sottoscriveva `shifts`, `shift_assignments` e `staff_members`
+ * `RealtimeSync` sottoscriveva `shifts`, `shift_assignments` e `venue_members`
  * senza filtro per ottenere lo stesso risultato, svegliando ogni client a ogni
  * modifica della piattaforma. La notifica c'è già: usarla come segnale costa
  * zero sottoscrizioni in più.

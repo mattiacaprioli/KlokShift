@@ -12,10 +12,11 @@ import {
   toDateString,
   toTimeString,
 } from "@/lib/format";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useVenueStaff } from "@/features/staff/hooks";
-import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import type { StaffMemberWithWaiter } from "@/features/staff/types";
 import { useVenueRoles } from "@/features/roles/hooks";
 import { RequireConfirmationField } from "@/features/assignments/RequireConfirmationField";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
@@ -142,7 +143,7 @@ function EditForm({
           count: targets[role.id] ?? 0,
         })),
         staff: selectedIds.map((id) => ({
-          staff_member_id: id,
+          venue_member_id: id,
           role_id: selected[id],
         })),
       },
@@ -151,8 +152,11 @@ function EditForm({
           toast.show("Turno aggiornato");
           router.back();
         },
-        onError: () =>
-          toast.show("Impossibile salvare le modifiche. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(
+            userErrorMessage(e, "Impossibile salvare le modifiche. Riprova."),
+            "error"
+          ),
       }
     );
   }
@@ -262,10 +266,14 @@ export function InternalShiftEditForm({ shift }: { shift: Shift }) {
     (reqsQuery.data ?? []).map((r) => [r.role_id, r.count])
   );
   const initialStatuses = Object.fromEntries(
-    (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.status])
+    (assignmentsQuery.data ?? [])
+      .filter((a) => !!a.staff_member)
+      .map((a) => [a.staff_member!.id, a.status])
   ) as Record<string, AssignmentStatus>;
   const initialRoles = Object.fromEntries(
-    (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.role_id])
+    (assignmentsQuery.data ?? [])
+      .filter((a) => !!a.staff_member)
+      .map((a) => [a.staff_member!.id, a.role_id])
   ) as Record<string, string | null>;
 
   return (
