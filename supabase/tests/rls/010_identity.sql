@@ -281,13 +281,17 @@ begin
     'confermata l''email la scheda si aggancia');
 
   -- Registrazione già confermata.
-  insert into auth.users (id, email, email_confirmed_at) values (v_new, 'lia@t.test', now());
+  insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data)
+    values (v_new, 'lia@t.test', now(), '{"full_name":"Liana"}');
   perform tests.eq((select user_id from public.workspace_members where lower(email) = 'lia@t.test'), v_new,
     'registrazione con email confermata: aggancio immediato');
   perform tests.ok(exists (select 1 from public.profiles where id = v_new), 'il trigger crea il profilo');
   perform tests.ok(exists (select 1 from public.notifications where type = 'staff_linked' and related_id =
     (select id from public.workspace_members where lower(email) = 'lia@t.test')),
     'il titolare riceve «Scheda collegata»');
+  perform tests.ok(exists (select 1 from public.notifications where type = 'staff_linked'
+                            and body = 'Lia ha creato l''account (sul profilo: Liana) ed è stato collegato alla sua scheda.'),
+    'e se il profilo porta un altro nome, la notifica lo dice');
 end $$;
 
 -- ---------------------------------------------------------------------------

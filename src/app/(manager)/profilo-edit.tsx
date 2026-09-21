@@ -84,7 +84,7 @@ export default function ManagerAccountEditScreen() {
             right={
               <GoldButton
                 size="sm"
-                label="Salva"
+                label={formState.isSubmitting ? "Salvo…" : "Salva"}
                 onPress={onSubmit}
                 disabled={formState.isSubmitting}
               />
@@ -133,12 +133,6 @@ export default function ManagerAccountEditScreen() {
               Profilo.
             </Text>
           </View>
-
-          <GoldButton
-            label={formState.isSubmitting ? "Salvataggio…" : "Salva modifiche"}
-            disabled={formState.isSubmitting}
-            onPress={onSubmit}
-          />
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

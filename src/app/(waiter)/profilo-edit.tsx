@@ -109,7 +109,7 @@ export default function WaiterProfileEditScreen() {
             right={
               <GoldButton
                 size="sm"
-                label="Salva"
+                label={save.isPending ? "Salvo…" : "Salva"}
                 onPress={onSubmit}
                 disabled={save.isPending || profileQuery.isLoading}
               />
@@ -174,12 +174,6 @@ export default function WaiterProfileEditScreen() {
                 options={LANGUAGE_OPTIONS}
               />
             </View>
-
-            <GoldButton
-              label={save.isPending ? "Salvataggio…" : "Salva modifiche"}
-              disabled={save.isPending}
-              onPress={onSubmit}
-            />
           </ScrollView>
         )}
       </View>

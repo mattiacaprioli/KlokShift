@@ -16,6 +16,11 @@ declare
 begin
   perform tests.login('Emp');
   ab := public.request_absence(tests.id('W1'), 'ferie', d1, d2, null, null, 'mare');
+  perform tests.logout();
+  perform tests.ok(exists (select 1 from public.notifications
+                            where user_id = tests.id('Ow') and type = 'absence_request' and body like 'Emma chiede le ferie %'),
+    'la notifica nomina la persona col nome della scheda');
+  perform tests.login('Emp');
   perform tests.eq((select status::text from public.staff_absences where id = ab), 'pending', 'le ferie nascono da approvare');
   perform tests.raises(format($f$select public.request_absence(%L, 'ferie', %L, %L)$f$, tests.id('W1'), d1 + 1, d2 + 1),
     'C''è già un''assenza', 'niente sovrapposizioni');
@@ -162,7 +167,9 @@ begin
   -- Il titolare vede il professionista per nome, senza sottotitolo; il
   -- professionista vede il titolare per nome, con sotto l'azienda (due sedi:
   -- l'azienda, non una sede).
-  perform tests.eq((select name from public.get_chat_counterparts(array[c1])), 'Emma Employee', 'il titolare vede il professionista');
+  -- Il nome è quello della scheda («Emma»), non quello del profilo («Emma
+  -- Employee»): dentro l'azienda vince chi l'ha messa in organico.
+  perform tests.eq((select name from public.get_chat_counterparts(array[c1])), 'Emma', 'il titolare vede il professionista col nome della scheda');
   perform tests.ok((select subtitle is null from public.get_chat_counterparts(array[c1])), 'il professionista non ha sottotitolo');
   insert into public.messages (conversation_id, sender_id, content) values (c1, tests.id('Ow'), 'tutto ok?');
   perform tests.login('Emp');
@@ -193,9 +200,9 @@ begin
   perform tests.eq((select count(*) from public.messages where conversation_id = c3), 1::bigint, 'e la legge');
   -- Un collega è una persona, con sotto l'azienda del thread: nessuno dei due
   -- parla a nome dell'azienda, quindi niente insegna al posto del nome.
-  perform tests.eq((select name from public.get_chat_counterparts(array[c3])), 'Emma Employee', 'il collega per nome');
+  perform tests.eq((select name from public.get_chat_counterparts(array[c3])), 'Emma', 'il collega per nome (della scheda)');
   perform tests.eq((select subtitle from public.get_chat_counterparts(array[c3])), 'W1', 'con l''azienda sotto');
-  perform tests.ok((select body like 'Emma Employee (W1): %' from public.notifications
+  perform tests.ok((select body like 'Emma (W1): %' from public.notifications
                      where user_id = tests.id('Emp2') and type = 'new_message' and related_id = c3),
     'e la notifica dice lo stesso');
 
@@ -215,6 +222,7 @@ begin
     'in W1: titolare, due collaboratori e un collega');
   perform tests.ok((select bool_and(user_id <> tests.id('Emp')) from public.get_workspace_contacts()), 'mai sé stessi');
   perform tests.eq((select venues from public.get_workspace_contacts() where user_id = tests.id('Emp2')), 'V2', 'con la sede in cui lavora');
+  perform tests.eq((select name from public.get_workspace_contacts() where user_id = tests.id('Emp2')), 'Enzo', 'e col nome della scheda');
 
   -- L'interruttore: spento, i dipendenti non si scrivono più fra loro, ma chi
   -- gestisce resta raggiungibile.

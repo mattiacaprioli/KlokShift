@@ -1,8 +1,14 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueFormCard } from "../venues/VenueFormCard";
 import { VenueInfoCard } from "../venues/VenueInfoCard";
-import { PageHeader, Placeholder, QueryError, Spinner } from "../ui/primitives";
+import {
+  Button,
+  PageHeader,
+  Placeholder,
+  QueryError,
+  Spinner,
+} from "../ui/primitives";
 
 /**
  * La scheda di **una** sede.
@@ -13,7 +19,12 @@ import { PageHeader, Placeholder, QueryError, Spinner } from "../ui/primitives";
 export function SedeDettaglioPage() {
   const { id } = useParams<{ id: string }>();
   const { venues, can, isPending, isError, error } = useOwnerVenues();
+  const navigate = useNavigate();
   const venue = venues.find((v) => v.id === id) ?? null;
+
+  // Il ritorno va all'elenco, non a `navigate(-1)`: la scheda si apre anche da
+  // un link diretto o dopo un refresh, e lì «indietro» uscirebbe dall'app.
+  const back = <Button onClick={() => navigate("/sede")}>← Sedi</Button>;
 
   if (isPending) return <Spinner />;
   if (isError) return <QueryError error={error} />;
@@ -21,7 +32,7 @@ export function SedeDettaglioPage() {
   if (!venue) {
     return (
       <>
-        <PageHeader title="Sede non trovata" />
+        <PageHeader title="Sede non trovata" actions={back} />
         <Placeholder
           title="Questa sede non esiste più"
           detail="Potrebbe essere stato chiuso da un altro dispositivo."
@@ -43,6 +54,7 @@ export function SedeDettaglioPage() {
             ? "Questi dati sono ciò che i professionisti vedono di te."
             : "Questi dati sono ciò che i professionisti vedono della sede."
         }
+        actions={back}
       />
       {editable ? (
         <VenueFormCard venue={venue} />

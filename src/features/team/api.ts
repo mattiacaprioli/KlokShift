@@ -84,7 +84,8 @@ function toTeamMember(row: RawTeamRow): TeamMember {
     memberId: row.id,
     userId: row.user_id,
     email: row.email,
-    fullName: row.waiter?.full_name ?? row.display_name,
+    // Dentro l'azienda vince la scheda, non il profilo (vedi AGENTS.md, «La chat»).
+    fullName: row.display_name,
     avatarUrl: row.waiter?.avatar_url ?? null,
     status: row.status === "active" ? "active" : "pending",
     permissions: toTeamPermissions({

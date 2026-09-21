@@ -46,6 +46,10 @@ dall'authority (`private.speaks_for_workspace`).
   lo vede solo chi **non** guida quell'azienda. Fonte unica `chat_counterpart`,
   usata anche dal trigger delle notifiche: la notifica non deve mai nominare un
   mittente diverso da quello del thread.
+- **Quale nome** (2026-09-21, `20260921000200`): dentro un'azienda una persona
+  si chiama come sulla **scheda** (`workspace_members.display_name`), non come
+  sul profilo — ovunque, chat e notifiche comprese (`private.member_name`). Il
+  profilo è solo il ripiego senza scheda; la foto resta quella del profilo.
 - **L'interruttore**: `workspaces.staff_can_chat` (acceso di default) spegne la
   chat **fra dipendenti**; verso chi gestisce si scrive sempre, e spegnerlo non
   cancella i thread aperti. Lo applicano `open_conversation` (`chat_disabled`) e
