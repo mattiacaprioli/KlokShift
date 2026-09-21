@@ -506,6 +506,19 @@ export async function getMyWorkHistoryTotals(): Promise<WorkHistoryTotals> {
   return data ?? { total_count: 0, total_hours: 0 };
 }
 
+/** Lo storico fra `from` e `to` (inclusi, max 62 giorni), dal più recente. */
+export async function getMyWorkHistoryRange(
+  from: string,
+  to: string
+): Promise<WorkHistoryRow[]> {
+  const { data, error } = await supabase.rpc("get_my_work_history_range", {
+    p_from: from,
+    p_to: to,
+  });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 /** Come `getMyWorkHistoryTotals`, ma solo sui turni fra `from` e `to` (inclusi). */
 export async function getMyWorkTotals(
   from: string,

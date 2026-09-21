@@ -67,13 +67,40 @@ export function periodRange(
 
 const MONTH_SHORT = MONTH_NAMES.map((m) => m.slice(0, 3));
 
-/** "Questa settimana · 14–20 set", "Questo mese · settembre". */
+/**
+ * Un giorno che cade `offset` settimane (o mesi) prima o dopo `now`: da passare
+ * come `now` a `periodRange`/`periodLabel` per scorrere i periodi. Il mese parte
+ * dal giorno 1, così il 31 marzo meno un mese non scivola al 3 marzo.
+ */
+export function shiftPeriod(
+  period: StatsPeriod,
+  offset: number,
+  now: Date = new Date()
+): Date {
+  if (period === "week") {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7 * offset);
+  }
+  return new Date(now.getFullYear(), now.getMonth() + offset, 1);
+}
+
+/**
+ * "Questa settimana · 14–20 set", "Questo mese · settembre". Con `offset`
+ * (quello passato a `shiftPeriod`): "Settimana scorsa · …", "Mese scorso · …",
+ * e più indietro solo l'intervallo ("1–7 set", "luglio 2025" se è un altro anno).
+ */
 export function periodLabel(
   period: StatsPeriod,
-  now: Date = new Date()
+  now: Date = new Date(),
+  offset = 0
 ): string {
   if (period === "month") {
-    return `Questo mese · ${MONTH_NAMES[now.getMonth()]}`;
+    const name =
+      now.getFullYear() === new Date().getFullYear()
+        ? MONTH_NAMES[now.getMonth()]
+        : `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+    if (offset === 0) return `Questo mese · ${name}`;
+    if (offset === -1) return `Mese scorso · ${name}`;
+    return name.charAt(0).toUpperCase() + name.slice(1);
   }
   const { from, to } = periodRange(period, now);
   const start = new Date(`${from}T00:00:00`);
@@ -82,7 +109,10 @@ export function periodLabel(
     start.getMonth() === end.getMonth()
       ? String(start.getDate())
       : `${start.getDate()} ${MONTH_SHORT[start.getMonth()]}`;
-  return `Questa settimana · ${startLabel}–${end.getDate()} ${MONTH_SHORT[end.getMonth()]}`;
+  const range = `${startLabel}–${end.getDate()} ${MONTH_SHORT[end.getMonth()]}`;
+  if (offset === 0) return `Questa settimana · ${range}`;
+  if (offset === -1) return `Settimana scorsa · ${range}`;
+  return range;
 }
 
 /**

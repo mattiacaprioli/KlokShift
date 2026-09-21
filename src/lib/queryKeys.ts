@@ -148,6 +148,8 @@ export const qk = {
       ["assignments", "workHistory", waiterId] as const,
     workHistoryTotals: (waiterId: string) =>
       ["assignments", "workHistoryTotals", waiterId] as const,
+    workHistoryRange: (waiterId: string, from: string, to: string) =>
+      ["assignments", "workHistoryRange", waiterId, from, to] as const,
     workTotals: (waiterId: string, from: string, to: string) =>
       ["assignments", "workTotals", waiterId, from, to] as const,
     /**

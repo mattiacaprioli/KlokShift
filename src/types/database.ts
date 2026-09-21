@@ -1264,6 +1264,19 @@ export type Database = {
           venue_name: string
         }[]
       }
+      get_my_work_history_range: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          date: string
+          end_time: string
+          hours: number
+          key: string
+          logo_url: string
+          start_time: string
+          title: string
+          venue_name: string
+        }[]
+      }
       get_my_work_history_totals: {
         Args: never
         Returns: {

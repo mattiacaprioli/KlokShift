@@ -4,8 +4,10 @@ import { qk } from "@/lib/queryKeys";
 import {
   WORK_HISTORY_PAGE_SIZE,
   getMyWorkHistoryPage,
+  getMyWorkHistoryRange,
   getMyWorkHistoryTotals,
   getMyWorkTotals,
+  type WorkHistoryRow,
 } from "./api";
 
 export type WorkHistoryItem = {
@@ -25,15 +27,54 @@ export type WorkHistoryItem = {
  * La schermata Profilo mostra solo questi, e prima per averli scaricava
  * l'intera storia dei turni con sede annidata, per poi contarla in memoria.
  */
-export function useMyWorkHistoryTotals(waiterId: string) {
+export function useMyWorkHistoryTotals(waiterId: string, enabled = true) {
   const query = useQuery({
     queryKey: qk.assignments.workHistoryTotals(waiterId),
     queryFn: getMyWorkHistoryTotals,
-    enabled: !!waiterId,
+    enabled: !!waiterId && enabled,
   });
   return {
     count: query.data?.total_count ?? 0,
     totalHours: query.data?.total_hours ?? 0,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  };
+}
+
+function toItem(r: WorkHistoryRow): WorkHistoryItem {
+  return {
+    key: r.key,
+    venueName: r.venue_name ?? "Sede",
+    logoUrl: r.logo_url,
+    title: r.title,
+    date: r.date,
+    start_time: r.start_time,
+    end_time: r.end_time,
+    hours: r.hours,
+  };
+}
+
+/**
+ * Lo storico di un periodo (settimana o mese), per intero: i totali sono la
+ * somma di quello che è a schermo, perché a schermo c'è tutto.
+ */
+export function useMyWorkHistoryRange(
+  waiterId: string,
+  from: string,
+  to: string,
+  enabled = true
+) {
+  const query = useQuery({
+    queryKey: qk.assignments.workHistoryRange(waiterId, from, to),
+    queryFn: () => getMyWorkHistoryRange(from, to),
+    enabled: !!waiterId && enabled,
+  });
+  const items = useMemo(() => (query.data ?? []).map(toItem), [query.data]);
+  return {
+    items,
+    count: items.length,
+    totalHours: items.reduce((sum, i) => sum + i.hours, 0),
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
@@ -67,30 +108,20 @@ export function useMyWorkTotals(waiterId: string, from: string, to: string) {
  * impossibili lato client senza scaricare tutto, perché si ordina per la data
  * del turno, che sta in una tabella collegata.
  */
-export function useMyWorkHistory(waiterId: string) {
+export function useMyWorkHistory(waiterId: string, enabled = true) {
   const list = useInfiniteQuery({
     queryKey: qk.assignments.workHistory(waiterId),
     queryFn: ({ pageParam }) => getMyWorkHistoryPage(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length < WORK_HISTORY_PAGE_SIZE ? undefined : allPages.length,
-    enabled: !!waiterId,
+    enabled: !!waiterId && enabled,
   });
 
-  const totals = useMyWorkHistoryTotals(waiterId);
+  const totals = useMyWorkHistoryTotals(waiterId, enabled);
 
   const items = useMemo<WorkHistoryItem[]>(
-    () =>
-      (list.data?.pages ?? []).flat().map((r) => ({
-        key: r.key,
-        venueName: r.venue_name ?? "Sede",
-        logoUrl: r.logo_url,
-        title: r.title,
-        date: r.date,
-        start_time: r.start_time,
-        end_time: r.end_time,
-        hours: r.hours,
-      })),
+    () => (list.data?.pages ?? []).flat().map(toItem),
     [list.data]
   );
 

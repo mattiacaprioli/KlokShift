@@ -1,27 +1,62 @@
 import { ActivityIndicator, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, View } from "@/tw";
+import { useMemo, useState } from "react";
+import { Pressable, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { Icon } from "@/components/ui/Icon";
+import { Mono } from "@/components/ui/Mono";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
-import { useMyWorkHistory } from "@/features/assignments/history";
+import {
+  useMyWorkHistory,
+  useMyWorkHistoryRange,
+} from "@/features/assignments/history";
+import {
+  periodLabel,
+  periodRange,
+  shiftPeriod,
+  STATS_PERIODS,
+  type StatsPeriod,
+} from "@/features/shifts/homeStats";
+
+type Filter = StatsPeriod | "all";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  ...STATS_PERIODS,
+  { value: "all", label: "Tutto" },
+];
 
 export default function WaiterHistoryScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const waiterId = session!.user.id;
-  const history = useMyWorkHistory(waiterId);
+  // Il mese è il periodo che finisce in busta paga; «Tutto» è lo storico di
+  // sempre, a pagine. Le frecce scorrono all'indietro, mai oltre il presente.
+  const [filter, setFilter] = useState<Filter>("month");
+  const [offset, setOffset] = useState(0);
+  const period: StatsPeriod = filter === "all" ? "month" : filter;
+  const anchor = useMemo(() => shiftPeriod(period, offset), [period, offset]);
+  const { from, to } = useMemo(() => periodRange(period, anchor), [period, anchor]);
 
-  // Da sempre, fra tutte le aziende: il periodo (settimana/mese) sta nel Profilo.
+  const all = useMyWorkHistory(waiterId, filter === "all");
+  const range = useMyWorkHistoryRange(waiterId, from, to, filter !== "all");
+  const history = filter === "all" ? all : range;
+
+  const selectFilter = (f: Filter) => {
+    setFilter(f);
+    setOffset(0);
+  };
+
   const stats = (
     <View className="flex-row gap-2.5">
       <StatCard value={String(history.count)} label="Turni svolti" />
-      <StatCard value={formatHours(history.totalHours)} label="Ore totali" />
+      <StatCard value={formatHours(history.totalHours)} label="Ore lavorate" />
     </View>
   );
 
@@ -29,6 +64,47 @@ export default function WaiterHistoryScreen() {
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
       <View className="px-5 pb-2">
         <ScreenHeader eyebrow="Il tuo lavoro" title="Le mie ore" />
+      </View>
+
+      <View className="gap-3 px-5 pb-2">
+        <View className="flex-row gap-1.5">
+          {FILTERS.map((f) => (
+            <Chip
+              key={f.value}
+              label={f.label}
+              gold
+              active={filter === f.value}
+              onPress={() => selectFilter(f.value)}
+            />
+          ))}
+        </View>
+        <View className="flex-row items-center justify-between gap-3">
+          {filter === "all" ? (
+            <Mono className="flex-1">Da sempre · tutte le aziende</Mono>
+          ) : (
+            <>
+              <Pressable
+                hitSlop={12}
+                accessibilityLabel="Periodo precedente"
+                onPress={() => setOffset((o) => o - 1)}
+              >
+                <Icon name="chevL" size={20} color="#F8F4ED" />
+              </Pressable>
+              <Mono className="flex-1 text-center">
+                {periodLabel(period, anchor, offset)}
+              </Mono>
+              <Pressable
+                hitSlop={12}
+                accessibilityLabel="Periodo successivo"
+                disabled={offset === 0}
+                onPress={() => setOffset((o) => Math.min(o + 1, 0))}
+                className={offset === 0 ? "opacity-30" : undefined}
+              >
+                <Icon name="chevR" size={20} color="#F8F4ED" />
+              </Pressable>
+            </>
+          )}
+        </View>
       </View>
 
       {history.isLoading ? (
@@ -74,8 +150,16 @@ export default function WaiterHistoryScreen() {
             <View style={{ gap: 16 }}>
               {stats}
               <EmptyState
-                title="Ancora nessun turno svolto"
-                subtitle="Qui vedrai lo storico dei tuoi turni e le ore totali."
+                title={
+                  filter === "all"
+                    ? "Ancora nessun turno svolto"
+                    : "Nessun turno svolto in questo periodo"
+                }
+                subtitle={
+                  filter === "all"
+                    ? "Qui vedrai lo storico dei tuoi turni e le ore totali."
+                    : "Cambia periodo con le frecce, o guarda tutto lo storico."
+                }
               />
             </View>
           }
@@ -83,12 +167,12 @@ export default function WaiterHistoryScreen() {
           // al fondo, invece di scaricare tutto all'apertura.
           onEndReachedThreshold={0.5}
           onEndReached={() => {
-            if (history.hasNextPage && !history.isFetchingNextPage) {
-              history.fetchNextPage();
+            if (filter === "all" && all.hasNextPage && !all.isFetchingNextPage) {
+              all.fetchNextPage();
             }
           }}
           ListFooterComponent={
-            history.isFetchingNextPage ? (
+            filter === "all" && all.isFetchingNextPage ? (
               <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
             ) : null
           }
