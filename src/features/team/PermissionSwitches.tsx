@@ -60,12 +60,3 @@ export function PermissionSwitches({
     </Card>
   );
 }
-
-/** I permessi di partenza di un nuovo collaboratore: i turni e basta. */
-export const DEFAULT_TEAM_PERMISSIONS: TeamPermissions = {
-  can_manage_shifts: true,
-  can_manage_staff: false,
-  can_view_hours: false,
-  can_manage_documents: false,
-  can_manage_venue: false,
-};

@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { EditActions } from "@/components/ui/EditSection";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
@@ -31,6 +32,7 @@ import {
   type TeamPermissions,
 } from "@/features/team/api";
 import type { VenueScope } from "@/features/workspace/types";
+import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
 
 /** Le aree accese, in due parole. "Nessun permesso" se nessuna. */
@@ -77,32 +79,59 @@ function MemberCard({
   const invite = useSendTeamInvite();
   const save = useSetTeamAccess();
   const [open, setOpen] = useState(false);
+  // Aperta, la card si legge; si cambia solo dopo «Modifica». Prima ogni
+  // interruttore salvava al tocco, e un tocco di troppo dava o toglieva un
+  // permesso a qualcuno.
+  const [editing, setEditing] = useState(false);
+  const [permissions, setPermissions] = useState(member.permissions);
+  const [scope, setScope] = useState<VenueScope>(member.scope);
+  const [venueIds, setVenueIds] = useState<string[]>(member.venueIds);
 
   const pending = member.status === "pending";
   const title = member.fullName?.trim() || member.email || "Collaboratore";
 
-  /** Un cambio per volta: la RPC vuole permessi e ambito insieme. */
-  function apply(next: {
-    permissions?: TeamPermissions;
-    scope?: VenueScope;
-    venueIds?: string[];
-  }) {
+  const noPermissions = !Object.values(permissions).some(Boolean);
+  const scopeIncomplete = scope === "selected" && venueIds.length === 0;
+  const dirty =
+    (Object.keys(permissions) as TeamPermission[]).some(
+      (p) => permissions[p] !== member.permissions[p]
+    ) ||
+    scope !== member.scope ||
+    (scope === "selected" &&
+      (venueIds.length !== member.venueIds.length ||
+        venueIds.some((id) => !member.venueIds.includes(id))));
+
+  function startEditing() {
+    setPermissions(member.permissions);
+    setScope(member.scope);
+    setVenueIds(member.venueIds);
+    setEditing(true);
+  }
+
+  function submit() {
     save.mutate(
       {
         memberId: member.memberId,
-        permissions: next.permissions ?? member.permissions,
-        scope: next.scope ?? member.scope,
-        venueIds: next.venueIds ?? member.venueIds,
+        permissions,
+        scope,
+        venueIds: scope === "selected" ? venueIds : [],
       },
-      { onError: (e) => toast.show(userErrorMessage(e), "error") }
+      {
+        onSuccess: () => {
+          toast.show("Permessi aggiornati");
+          setEditing(false);
+        },
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
     );
   }
 
-  function toggleVenue(venueId: string, on: boolean) {
-    const ids = on
-      ? [...member.venueIds, venueId]
-      : member.venueIds.filter((id) => id !== venueId);
-    apply({ scope: "selected", venueIds: ids });
+  function toggleVenue(venueId: string) {
+    setVenueIds((prev) =>
+      prev.includes(venueId)
+        ? prev.filter((id) => id !== venueId)
+        : [...prev, venueId]
+    );
   }
 
   return (
@@ -157,50 +186,85 @@ function MemberCard({
       ) : null}
 
       {open ? (
-        <View className="gap-4 border-t border-border-1 px-4 py-4">
+        <View
+          className={cn(
+            "gap-4 border-t border-border-1 px-4 py-4",
+            editing && "border-gold/40"
+          )}
+        >
           <PermissionSwitches
-            value={member.permissions}
+            value={editing ? permissions : member.permissions}
             onChange={(perm: TeamPermission, next: boolean) =>
-              apply({ permissions: { ...member.permissions, [perm]: next } })
+              setPermissions((prev) => ({ ...prev, [perm]: next }))
             }
-            disabled={save.isPending}
+            disabled={!editing || save.isPending}
           />
 
           <View className="gap-2">
             <Text className="text-[13px] font-sans-semibold text-t2">Dove</Text>
-            <View className="flex-row flex-wrap gap-2">
-              <SelectChip
-                label="Tutte le sedi"
-                active={member.scope === "all"}
-                onPress={() =>
-                  apply(
-                    member.scope === "all"
-                      ? { scope: "selected", venueIds: [] }
-                      : { scope: "all" }
-                  )
-                }
-              />
-              {member.scope === "selected"
-                ? venues.map((v) => (
-                    <SelectChip
-                      key={v.id}
-                      label={v.name}
-                      active={member.venueIds.includes(v.id)}
-                      onPress={() =>
-                        toggleVenue(v.id, !member.venueIds.includes(v.id))
-                      }
-                    />
-                  ))
-                : null}
-            </View>
-            {member.scope === "all" ? (
-              <Text className="text-[12px] leading-4 text-t4">
-                Comprende anche le sedi che aprirai in futuro.
+            {editing ? (
+              <>
+                <View className="flex-row flex-wrap gap-2">
+                  <SelectChip
+                    label="Tutte le sedi"
+                    active={scope === "all"}
+                    onPress={() =>
+                      setScope(scope === "all" ? "selected" : "all")
+                    }
+                  />
+                  {scope === "selected"
+                    ? venues.map((v) => (
+                        <SelectChip
+                          key={v.id}
+                          label={v.name}
+                          active={venueIds.includes(v.id)}
+                          onPress={() => toggleVenue(v.id)}
+                        />
+                      ))
+                    : null}
+                </View>
+                {scope === "all" ? (
+                  <Text className="text-[12px] leading-4 text-t4">
+                    Comprende anche le sedi che aprirai in futuro.
+                  </Text>
+                ) : scopeIncomplete ? (
+                  <Text className="text-[12px] leading-4 text-warning">
+                    Scegli almeno una sede.
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Text className="text-[14px] leading-5 text-t1">
+                {scopeSummary(member, venueName)}
               </Text>
-            ) : null}
+            )}
           </View>
 
-          <GhostButton label="Togli l'accesso" onPress={onRevoke} />
+          {editing ? (
+            <View className="gap-2">
+              <EditActions
+                pending={save.isPending}
+                canSave={dirty && !noPermissions && !scopeIncomplete}
+                onSave={submit}
+                onCancel={() => setEditing(false)}
+              />
+              {noPermissions ? (
+                <Text className="px-1 text-[12px] leading-4 text-t4">
+                  Senza permessi non collabora più: per quello c&apos;è «Togli
+                  l&apos;accesso».
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <View className="gap-3">
+              <GhostButton label="Modifica" onPress={startEditing} />
+              <Pressable onPress={onRevoke} className="items-center py-1">
+                <Text className="text-sm font-sans-semibold text-error">
+                  Togli l&apos;accesso
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       ) : null}
     </Card>

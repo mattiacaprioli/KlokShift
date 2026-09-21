@@ -1,5 +1,10 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  useNavigation,
+  usePreventRemove,
+  type NavigationAction,
+} from "expo-router/react-navigation";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -8,6 +13,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
+import {
+  EditActions,
+  EditPanel,
+  EditSectionHeader,
+  ReadCard,
+  ReadField,
+} from "@/components/ui/EditSection";
+import { UnsavedEdits, useUnsavedEdit } from "@/lib/unsavedEdits";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GhostButton } from "@/components/ui/GhostButton";
@@ -44,6 +57,7 @@ import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import {
   CONTRACT_PERIOD_SHORT,
   CONTRACT_PERIODS,
+  formatContract,
   personContract,
   type ContractPeriod,
 } from "@/features/staff/contract";
@@ -91,11 +105,12 @@ function WorkplaceCard({
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
 
-  const [roleIds, setRoleIds] = useState<string[]>(
-    membership.staff_member_roles
-      .map((r) => r.role?.id)
-      .filter((id): id is string => !!id)
-  );
+  const savedRoles = membership.staff_member_roles
+    .map((r) => r.role)
+    .filter((r): r is NonNullable<typeof r> => !!r)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const [editing, setEditing] = useState(false);
+  const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>(
     membership.employment_type
   );
@@ -105,6 +120,20 @@ function WorkplaceCard({
   const busy = update.isPending || remove.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
+  const dirty =
+    editing &&
+    (empType !== membership.employment_type ||
+      roleIds.length !== savedRoles.length ||
+      roleIds.some((id) => !savedRoles.some((r) => r.id === id)));
+  useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
+
+  // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
+  // lasciare in giro la scelta di prima.
+  function startEditing() {
+    setRoleIds(savedRoles.map((r) => r.id));
+    setEmpType(membership.employment_type);
+    setEditing(true);
+  }
 
   // Una sola scrittura (`set_member_venue`): tipo di impiego e mansioni
   // insieme, o passano tutte e due o non passa nessuna.
@@ -116,7 +145,8 @@ function WorkplaceCard({
         employmentType: empType,
         roleIds,
       });
-      toast.show(`${venueName} aggiornato`);
+      toast.show(`Modifiche salvate · ${venueName}`);
+      setEditing(false);
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
     }
@@ -198,37 +228,59 @@ function WorkplaceCard({
         ) : null}
       </View>
 
-      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa le sedi. */}
-      <RoleMultiSelect
-        venueId={membership.venue_id}
-        value={roleIds}
-        onChange={setRoleIds}
-      />
-
-      <View className="gap-2">
-        <Mono>Tipo in questa sede</Mono>
-        <View className="flex-row gap-2">
-          <Chip
-            label="Fisso"
-            active={empType === "fisso"}
-            gold={empType === "fisso"}
-            onPress={() => setEmpType("fisso")}
+      {editing ? (
+        <EditPanel className="p-4">
+          {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa le sedi. */}
+          <RoleMultiSelect
+            venueId={membership.venue_id}
+            value={roleIds}
+            onChange={setRoleIds}
           />
-          <Chip
-            label="A chiamata"
-            active={empType === "a_chiamata"}
-            onPress={() => setEmpType("a_chiamata")}
+
+          <View className="gap-2">
+            <Mono>Tipo in questa sede</Mono>
+            <View className="flex-row gap-2">
+              <Chip
+                label="Fisso"
+                active={empType === "fisso"}
+                gold={empType === "fisso"}
+                onPress={() => setEmpType("fisso")}
+              />
+              <Chip
+                label="A chiamata"
+                active={empType === "a_chiamata"}
+                onPress={() => setEmpType("a_chiamata")}
+              />
+            </View>
+          </View>
+
+          <EditActions
+            pending={busy}
+            canSave={dirty}
+            onSave={() => void onSave()}
+            onCancel={() => setEditing(false)}
           />
-        </View>
-      </View>
+        </EditPanel>
+      ) : (
+        <>
+          <View>
+            <ReadField
+              first
+              label="Ruoli in questa sede"
+              value={savedRoles.map((r) => r.name).join(" · ")}
+            />
+            <ReadField
+              label="Tipo in questa sede"
+              value={
+                membership.employment_type === "fisso" ? "Fisso" : "A chiamata"
+              }
+            />
+          </View>
+          <GhostButton label="Modifica" onPress={startEditing} />
+        </>
+      )}
 
-      <GoldButton
-        label={busy ? "Salvataggio…" : "Salva"}
-        disabled={busy}
-        onPress={() => void onSave()}
-      />
-
-      {!isOnly && canRemove ? (
+      {!isOnly && canRemove && !editing ? (
         <Pressable
           disabled={busy}
           onPress={() => setConfirmVisible(true)}
@@ -350,14 +402,65 @@ function AddToVenueCard({
   );
 }
 
-/** Anagrafica della persona: vale in tutte le sedi, quindi una sola scrittura. */
-function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
+/**
+ * Anagrafica della persona: vale in tutte le sedi, quindi una sola scrittura.
+ * Si legge, e si cambia solo dopo «Modifica».
+ */
+function PersonIdentitySection({ person }: { person: StaffPersonDetail }) {
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <View className="gap-4">
+      <EditSectionHeader
+        title="Anagrafica"
+        onEdit={editing ? undefined : () => setEditing(true)}
+      />
+      {editing ? (
+        <PersonIdentityForm person={person} onDone={() => setEditing(false)} />
+      ) : (
+        <ReadCard>
+          <ReadField first label="Nome" value={person.full_name} />
+          <ReadField label="Telefono" value={person.phone} />
+          {/* Con un account l'email è quella dell'account: non è un dato
+              della scheda, e qui non si cambia. */}
+          {person.waiter_id ? null : (
+            <ReadField label="Email" value={person.email} />
+          )}
+          <ReadField label="Note · visibili solo a te" value={person.note} />
+        </ReadCard>
+      )}
+
+      <PersonInviteRow person={person} />
+      <PersonBirthdayRow person={person} />
+      <PersonLanguagesRow person={person} />
+    </View>
+  );
+}
+
+/**
+ * Il form dell'anagrafica, montato solo in modifica: nasce dai dati **di
+ * adesso**, e «Annulla» lo butta via intero.
+ */
+function PersonIdentityForm({
+  person,
+  onDone,
+}: {
+  person: StaffPersonDetail;
+  onDone: () => void;
+}) {
   const toast = useToast();
   const update = useUpdateStaffPerson();
   const [name, setName] = useState(person.full_name);
   const [phone, setPhone] = useState(person.phone ?? "");
   const [email, setEmail] = useState(person.email ?? "");
   const [note, setNote] = useState(person.note ?? "");
+
+  const dirty =
+    name.trim() !== person.full_name ||
+    (phone.trim() || null) !== (person.phone ?? null) ||
+    (!person.waiter_id && (email.trim() || null) !== (person.email ?? null)) ||
+    (note.trim() || null) !== (person.note ?? null);
+  useUnsavedEdit("anagrafica", dirty);
 
   async function onSave() {
     if (!name.trim()) return;
@@ -377,14 +480,14 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
         },
       });
       toast.show("Anagrafica aggiornata");
+      onDone();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
     }
   }
 
   return (
-    <View className="gap-5">
-      <Mono>Anagrafica</Mono>
+    <EditPanel>
       <Input
         label="Nome"
         value={name}
@@ -419,16 +522,13 @@ function PersonIdentityForm({ person }: { person: StaffPersonDetail }) {
         className="h-20"
         textAlignVertical="top"
       />
-      <GoldButton
-        label={update.isPending ? "Salvataggio…" : "Salva anagrafica"}
-        disabled={update.isPending || !name.trim()}
-        onPress={() => void onSave()}
+      <EditActions
+        pending={update.isPending}
+        canSave={dirty && !!name.trim()}
+        onSave={() => void onSave()}
+        onCancel={onDone}
       />
-
-      <PersonInviteRow person={person} />
-      <PersonBirthdayRow person={person} />
-      <PersonLanguagesRow person={person} />
-    </View>
+    </EditPanel>
   );
 }
 
@@ -585,7 +685,38 @@ function PersonLanguagesRow({ person }: { person: StaffPersonDetail }) {
  * colonna ore della vista "persone" del planning web; nessun turno viene
  * bloccato, né qui né lì.
  */
-function PersonContractForm({ person }: { person: StaffPersonDetail }) {
+function PersonContractSection({ person }: { person: StaffPersonDetail }) {
+  const [editing, setEditing] = useState(false);
+  const contract = personContract(person);
+
+  return (
+    <View className="gap-4">
+      <EditSectionHeader
+        title="Contratto"
+        onEdit={editing ? undefined : () => setEditing(true)}
+      />
+      {editing ? (
+        <PersonContractForm person={person} onDone={() => setEditing(false)} />
+      ) : (
+        <ReadCard>
+          <ReadField
+            first
+            label="Ore da contratto"
+            value={contract ? formatContract(contract) : null}
+          />
+        </ReadCard>
+      )}
+    </View>
+  );
+}
+
+function PersonContractForm({
+  person,
+  onDone,
+}: {
+  person: StaffPersonDetail;
+  onDone: () => void;
+}) {
   const toast = useToast();
   const update = useUpdateStaffPerson();
   const contract = personContract(person);
@@ -602,6 +733,11 @@ function PersonContractForm({ person }: { person: StaffPersonDetail }) {
   const parsed = hours.trim() ? Number(hours.trim().replace(",", ".")) : null;
   const invalid =
     parsed != null && (!Number.isFinite(parsed) || parsed <= 0 || parsed > 400);
+  // Senza ore il periodo non si salva: cambiarlo da solo non è una modifica.
+  const dirty =
+    parsed !== (contract?.hours ?? null) ||
+    (parsed != null && period !== contract?.period);
+  useUnsavedEdit("contratto", dirty);
 
   async function onSave() {
     if (invalid) return;
@@ -616,14 +752,14 @@ function PersonContractForm({ person }: { person: StaffPersonDetail }) {
             : { contract_hours: parsed, contract_period: period },
       });
       toast.show(parsed == null ? "Contratto rimosso" : "Contratto aggiornato");
+      onDone();
     } catch {
       toast.show("Impossibile salvare. Riprova.", "error");
     }
   }
 
   return (
-    <View className="gap-5">
-      <Mono>Contratto</Mono>
+    <EditPanel>
       <View className="gap-2">
         <Input
           label="Ore da contratto (facoltative)"
@@ -654,12 +790,13 @@ function PersonContractForm({ person }: { person: StaffPersonDetail }) {
         Quante ore deve fare. Servono a confrontarle con i turni che programmi:
         non bloccano niente. Lascia vuoto se non vuoi il confronto.
       </Text>
-      <GoldButton
-        label={update.isPending ? "Salvataggio…" : "Salva contratto"}
-        disabled={update.isPending || invalid}
-        onPress={() => void onSave()}
+      <EditActions
+        pending={update.isPending}
+        canSave={dirty && !invalid}
+        onSave={() => void onSave()}
+        onCancel={onDone}
       />
-    </View>
+    </EditPanel>
   );
 }
 
@@ -779,6 +916,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
       await remove.mutateAsync({ memberId: person.id });
       setConfirmVisible(false);
       toast.show("Rimosso dall'organico");
+      leavingRef.current = true;
       router.back();
     } catch {
       setConfirmVisible(false);
@@ -812,6 +950,29 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   // «Gestione» non ha più senso): si torna ai dati.
   const tab = tabs.some((t) => t.id === selectedTab) ? selectedTab : "dati";
 
+  // Uscire dalla scheda (indietro, swipe, tasto Android) con una sezione in
+  // modifica chiede prima di buttare via il lavoro.
+  const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<string>>(new Set());
+  const reportUnsaved = useCallback((key: string, dirty: boolean) => {
+    setDirtyKeys((prev) => {
+      if (prev.has(key) === dirty) return prev;
+      const next = new Set(prev);
+      if (dirty) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+  const navigation = useNavigation();
+  const [pendingLeave, setPendingLeave] = useState<NavigationAction | null>(
+    null
+  );
+  // Dopo una rimozione dall'organico si esce comunque: la scheda non c'è più.
+  const leavingRef = useRef(false);
+  usePreventRemove(dirtyKeys.size > 0, ({ data }) => {
+    if (leavingRef.current) navigation.dispatch(data.action);
+    else setPendingLeave(data.action);
+  });
+
   function onTabChange(id: PersonTab) {
     setSelectedTab(id);
     // Ogni sezione riparte dall'alto: restare a metà delle ore e trovarsi a
@@ -820,6 +981,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   }
 
   return (
+    <UnsavedEdits.Provider value={reportUnsaved}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <View className="flex-1 bg-bg-0">
         {/* Header e tab restano fermi: a scorrere è solo la sezione. */}
@@ -927,10 +1089,10 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                 </View>
               </View>
             ) : null}
-            <PersonIdentityForm person={person} />
+            <PersonIdentitySection person={person} />
             {/* Le ore da contratto sono un accordo fra la persona e l'azienda,
                 non un dato della sede: le vede e le cambia solo il titolare. */}
-            {isOwner ? <PersonContractForm person={person} /> : null}
+            {isOwner ? <PersonContractSection person={person} /> : null}
           </TabPanel>
 
           <TabPanel active={tab === "sedi"}>
@@ -1042,7 +1204,23 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
         onConfirm={() => void doRemoveAll()}
         onCancel={() => setConfirmVisible(false)}
       />
+
+      <ConfirmModal
+        visible={pendingLeave != null}
+        title="Modifiche non salvate"
+        message="Hai cambiato dei dati senza salvarli. Se esci dalla scheda, le modifiche vanno perse."
+        confirmLabel="Esci senza salvare"
+        cancelLabel="Continua a modificare"
+        destructive
+        onConfirm={() => {
+          const action = pendingLeave;
+          setPendingLeave(null);
+          if (action) navigation.dispatch(action);
+        }}
+        onCancel={() => setPendingLeave(null)}
+      />
     </KeyboardAvoidingView>
+    </UnsavedEdits.Provider>
   );
 }
 

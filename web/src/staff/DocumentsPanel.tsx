@@ -162,7 +162,7 @@ export function DocumentsPanel({ personId }: { personId: string }) {
         </div>
       )}
 
-      <Card className="flex flex-wrap items-end gap-3 p-3">
+      <Card className="flex flex-wrap items-center gap-3 p-3">
         <input
           ref={fileRef}
           type="file"

@@ -16,6 +16,10 @@ import { Button, Card } from "../ui/primitives";
  * Non c'è più una sede "attiva" da scegliere: la riga apre la scheda, e basta.
  * Il pallino colorato è lo stesso con cui quella sede si riconosce nel planning —
  * questo è l'unico posto in cui quella legenda si può imparare.
+ *
+ * Con una sede sola la sua scheda è già la pagina (`SedePage`): ripeterla qui
+ * sotto come riga era un doppione, quindi resta solo l'invito ad aggiungerne
+ * un'altra.
  */
 export function VenuesCard() {
   const { session } = useAuth();
@@ -38,12 +42,26 @@ export function VenuesCard() {
     );
   }
 
+  const single = venues.length === 1;
+
   return (
     <Card>
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-          {venues.length === 1 ? "La tua sede" : `Le tue sedi · ${venues.length}`}
-        </span>
+      <div className="flex items-center justify-between gap-4">
+        {single ? (
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-t3">
+              Altre sedi
+            </span>
+            <span className="mt-1 block text-xs text-t4">
+              Hai più di una sede? Aggiungila: organico e turni restano in
+              un’unica azienda.
+            </span>
+          </span>
+        ) : (
+          <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+            Le tue sedi · {venues.length}
+          </span>
+        )}
         {isOwner ? (
           <Button onClick={() => navigate("/sede/nuovo")}>
             + Aggiungi sede
@@ -51,39 +69,41 @@ export function VenuesCard() {
         ) : null}
       </div>
 
-      <ul className="mt-3 flex flex-col gap-2">
-        {venues.map((v, i) => (
-          <li key={v.id}>
-            <button
-              type="button"
-              onClick={() => navigate(`/sede/${v.id}`)}
-              className="focus-gold flex w-full items-center gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2.5 text-left transition hover:bg-bg-2"
-            >
-              <Avatar url={v.logo_url} name={v.name} size={36} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-t1">
-                  {v.name}
-                </span>
-                {v.city ? (
-                  <span className="block truncate text-xs text-t4">
-                    {v.city}
+      {single ? null : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {venues.map((v, i) => (
+            <li key={v.id}>
+              <button
+                type="button"
+                onClick={() => navigate(`/sede/${v.id}`)}
+                className="focus-gold flex w-full items-center gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2.5 text-left transition hover:bg-bg-2"
+              >
+                <Avatar url={v.logo_url} name={v.name} size={36} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-t1">
+                    {v.name}
                   </span>
+                  {v.city ? (
+                    <span className="block truncate text-xs text-t4">
+                      {v.city}
+                    </span>
+                  ) : null}
+                </span>
+                {venues.length > 1 ? (
+                  <span
+                    aria-hidden
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: venueAccent(i) }}
+                  />
                 ) : null}
-              </span>
-              {venues.length > 1 ? (
-                <span
-                  aria-hidden
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: venueAccent(i) }}
-                />
-              ) : null}
-              <span aria-hidden className="shrink-0 text-t3">
-                ›
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+                <span aria-hidden className="shrink-0 text-t3">
+                  ›
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {closed.length > 0 ? (
         <details className="mt-4">

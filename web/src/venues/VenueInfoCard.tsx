@@ -1,6 +1,7 @@
+import { cn } from "@/lib/cn";
 import type { Venue } from "@/features/venues/api";
 import { Avatar } from "../ui/Avatar";
-import { Card } from "../ui/primitives";
+import { Button, Card } from "../ui/primitives";
 
 /**
  * La scheda di una sede **in sola lettura**.
@@ -15,8 +16,20 @@ import { Card } from "../ui/primitives";
  * darebbe un errore illeggibile — o, peggio, il logo: quell'update non passa da
  * `.select()`, quindi senza permessi non scrive niente e non fallisce nemmeno,
  * e la dashboard diceva «Logo aggiornato» su una sede rimasta com'era.
+ *
+ * Dal 21/09/2026 è anche la lettura di chi **può** scriverla (`onEdit`): la
+ * scheda si apre chiusa e si cambia con «Modifica», come la scheda di una
+ * persona. Con i campi sempre aperti bastava un tasto nel punto sbagliato per
+ * riscrivere il nome che i professionisti vedono sui turni.
  */
-export function VenueInfoCard({ venue }: { venue: Venue }) {
+export function VenueInfoCard({
+  venue,
+  onEdit,
+}: {
+  venue: Venue;
+  /** Chi può scrivere la sede: mostra «Modifica» e anche i campi vuoti. */
+  onEdit?: () => void;
+}) {
   const rows: [string, string | null][] = [
     ["Città", venue.city],
     ["Indirizzo", venue.address],
@@ -27,29 +40,44 @@ export function VenueInfoCard({ venue }: { venue: Venue }) {
     <Card className="max-w-2xl">
       <div className="flex items-center gap-4">
         <Avatar url={venue.logo_url} name={venue.name} size={72} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate font-serif text-xl text-t1">{venue.name}</p>
-          <p className="mt-0.5 text-xs text-t4">
-            I dati della sede li cambia il titolare.
-          </p>
+          {onEdit ? null : (
+            <p className="mt-0.5 text-xs text-t4">
+              I dati della sede li cambia il titolare.
+            </p>
+          )}
         </div>
+        {onEdit ? <Button onClick={onEdit}>Modifica</Button> : null}
       </div>
 
       <dl className="mt-4 flex flex-col gap-2 border-t border-border-2 pt-4">
+        {/* A chi la scrive i campi vuoti servono: dicono cosa manca. */}
         {rows
-          .filter(([, value]) => !!value)
+          .filter(([, value]) => !!value || !!onEdit)
           .map(([label, value]) => (
             <div key={label} className="flex items-baseline justify-between gap-4">
               <dt className="text-xs uppercase tracking-wider text-t4">
                 {label}
               </dt>
-              <dd className="min-w-0 truncate text-sm text-t2">{value}</dd>
+              <dd
+                className={cn(
+                  "min-w-0 truncate text-sm",
+                  value ? "text-t2" : "text-t4"
+                )}
+              >
+                {value || "—"}
+              </dd>
             </div>
           ))}
       </dl>
 
       {venue.description ? (
-        <p className="mt-3 text-sm leading-5 text-t2">{venue.description}</p>
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-5 text-t2">
+          {venue.description}
+        </p>
+      ) : onEdit ? (
+        <p className="mt-3 text-sm text-t4">Nessuna descrizione.</p>
       ) : null}
     </Card>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
@@ -23,6 +23,7 @@ import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
   CONTRACT_PERIOD_SHORT,
   CONTRACT_PERIODS,
+  formatContract,
   personContract,
   type ContractPeriod,
 } from "@/features/staff/contract";
@@ -54,6 +55,8 @@ import {
   Textarea,
 } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { UnsavedEdits, useUnsavedEdit } from "@/lib/unsavedEdits";
 
 /**
  * La scheda di un dipendente: **una per persona**, non una per sede.
@@ -213,8 +216,25 @@ function PersonPanel({
   // l'ultima sede e «Gestione» non ha più senso): si torna all'anagrafica.
   const tab = tabs.some((t) => t.id === selected) ? selected : "anagrafica";
 
+  const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<string>>(new Set());
+  const reportUnsaved = useCallback((key: string, dirty: boolean) => {
+    setDirtyKeys((prev) => {
+      if (prev.has(key) === dirty) return prev;
+      const next = new Set(prev);
+      if (dirty) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+  const [confirmClose, setConfirmClose] = useState(false);
+  function requestClose() {
+    if (dirtyKeys.size > 0) setConfirmClose(true);
+    else onClose();
+  }
+
   return (
-    <PersonModalShell label={person.full_name} onClose={onClose}>
+    <UnsavedEdits.Provider value={reportUnsaved}>
+    <PersonModalShell label={person.full_name} onClose={requestClose}>
         <header className="flex items-start justify-between gap-4 px-6 pt-6">
           <div className="min-w-0">
             <h2 className="truncate font-serif text-xl text-t1">
@@ -244,7 +264,7 @@ function PersonPanel({
             {person.waiter_id && !isMe ? (
               <MessageButton memberId={person.id} />
             ) : null}
-            <Button onClick={onClose}>Chiudi</Button>
+            <Button onClick={requestClose}>Chiudi</Button>
           </div>
         </header>
 
@@ -322,6 +342,18 @@ function PersonPanel({
           ) : null}
         </div>
     </PersonModalShell>
+    {confirmClose ? (
+      <ConfirmDialog
+        title="Modifiche non salvate"
+        message="Hai cambiato dei dati senza salvarli. Se chiudi la scheda, le modifiche vanno perse."
+        confirmLabel="Chiudi senza salvare"
+        cancelLabel="Continua a modificare"
+        destructive
+        onConfirm={onClose}
+        onCancel={() => setConfirmClose(false)}
+      />
+    ) : null}
+    </UnsavedEdits.Provider>
   );
 }
 
@@ -379,12 +411,66 @@ function MessageButton({ memberId }: { memberId: string }) {
  * rimasto indietro» una lotteria. Ruoli e impiego stanno in "Dove lavora".
  */
 function Anagrafica({ person }: { person: StaffPersonDetail }) {
+  const [editing, setEditing] = useState(false);
+  // Email modificabile solo senza account: vedi `onSave` in `AnagraficaForm`.
+  const showEmail = !person.waiter_id;
+
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionHeading
+        title="Anagrafica"
+        onEdit={editing ? undefined : () => setEditing(true)}
+      />
+
+      {editing ? (
+        <AnagraficaForm person={person} onDone={() => setEditing(false)} />
+      ) : (
+        <ReadGrid>
+          <ReadItem label="Nome">{person.full_name}</ReadItem>
+          <ReadItem label="Telefono">{person.phone}</ReadItem>
+          {showEmail ? (
+            <ReadItem label="Email" wide>
+              {person.email}
+            </ReadItem>
+          ) : null}
+          <ReadItem label="Note · private, visibili solo a te" wide>
+            {person.note}
+          </ReadItem>
+        </ReadGrid>
+      )}
+
+      <InviteRow person={person} />
+      <BirthdayRow person={person} />
+      <LanguagesRow person={person} />
+    </section>
+  );
+}
+
+/**
+ * Il form dell'anagrafica, montato solo in modifica: nasce dai dati **di
+ * adesso**, non da quelli di quando la scheda è stata aperta, e «Annulla» lo
+ * butta via intero.
+ */
+function AnagraficaForm({
+  person,
+  onDone,
+}: {
+  person: StaffPersonDetail;
+  onDone: () => void;
+}) {
   const update = useUpdateStaffPerson();
   const toast = useToast();
   const [name, setName] = useState(person.full_name);
   const [phone, setPhone] = useState(person.phone ?? "");
   const [email, setEmail] = useState(person.email ?? "");
   const [notes, setNotes] = useState(person.note ?? "");
+
+  const dirty =
+    name.trim() !== person.full_name ||
+    (phone.trim() || null) !== (person.phone ?? null) ||
+    (!person.waiter_id && (email.trim() || null) !== (person.email ?? null)) ||
+    (notes.trim() || null) !== (person.note ?? null);
+  useUnsavedEdit("anagrafica", dirty);
 
   async function onSave() {
     try {
@@ -401,6 +487,7 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
         },
       });
       toast.show("Anagrafica aggiornata");
+      onDone();
     } catch (e) {
       // L'unique (owner_id, email) tiene l'aggancio non ambiguo: detto in
       // chiaro, altrimenti arriva un 23505 grezzo.
@@ -415,11 +502,7 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Anagrafica
-      </span>
-
+    <EditPanel>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Nome">
           <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -444,20 +527,112 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
 
-      <div>
-        <Button
-          variant="gold"
-          disabled={update.isPending || !name.trim()}
-          onClick={() => void onSave()}
-        >
-          {update.isPending ? "Salvataggio…" : "Salva anagrafica"}
-        </Button>
-      </div>
+      <EditActions
+        pending={update.isPending}
+        canSave={dirty && !!name.trim()}
+        onSave={() => void onSave()}
+        onCancel={onDone}
+      />
+    </EditPanel>
+  );
+}
 
-      <InviteRow person={person} />
-      <BirthdayRow person={person} />
-      <LanguagesRow person={person} />
-    </section>
+/** Titolo di sezione, con «Modifica» a destra quando la sezione è in lettura. */
+function SectionHeading({
+  title,
+  onEdit,
+}: {
+  title: string;
+  onEdit?: () => void;
+}) {
+  return (
+    <div className="flex min-h-9 items-center justify-between gap-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+        {title}
+      </span>
+      {onEdit ? (
+        <Button onClick={onEdit} className="px-3 py-1.5">
+          Modifica
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** I dati in lettura: etichetta sopra, valore sotto, «—» se manca. */
+function ReadGrid({ children }: { children: ReactNode }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-border bg-bg-card px-4 py-4">
+      {children}
+    </dl>
+  );
+}
+
+function ReadItem({
+  label,
+  wide,
+  children,
+}: {
+  label: string;
+  /** Occupa tutta la riga (email, note). */
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  const empty = children == null || children === "";
+  return (
+    <div className={cn("min-w-0", wide && "col-span-2")}>
+      <dt className="text-xs font-semibold uppercase tracking-wider text-t3">
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          "mt-1 whitespace-pre-wrap wrap-break-word text-sm",
+          empty ? "text-t4" : "font-semibold text-t1"
+        )}
+      >
+        {empty ? "—" : children}
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * La cornice di un form aperto: il bordo oro dice «qui stai cambiando
+ * qualcosa», che coi campi sempre aperti non si distingueva dal leggere.
+ */
+function EditPanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-gold/40 bg-bg-card p-4">
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Salva e Annulla. Salva resta spento finché non è cambiato niente: un
+ * salvataggio a vuoto non fa danni, ma un bottone acceso che non fa niente
+ * insegna a premerlo senza guardare.
+ */
+function EditActions({
+  pending,
+  canSave,
+  onSave,
+  onCancel,
+}: {
+  pending: boolean;
+  canSave: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="gold" disabled={pending || !canSave} onClick={onSave}>
+        {pending ? "Salvataggio…" : "Salva"}
+      </Button>
+      <Button disabled={pending} onClick={onCancel}>
+        Annulla
+      </Button>
+    </div>
   );
 }
 
@@ -593,6 +768,35 @@ function LanguagesRow({ person }: { person: StaffPersonDetail }) {
  * colonna ore della vista "persone"; qui non si blocca niente.
  */
 function ContractSection({ person }: { person: StaffPersonDetail }) {
+  const [editing, setEditing] = useState(false);
+  const contract = personContract(person);
+
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionHeading
+        title="Contratto"
+        onEdit={editing ? undefined : () => setEditing(true)}
+      />
+      {editing ? (
+        <ContractForm person={person} onDone={() => setEditing(false)} />
+      ) : (
+        <ReadGrid>
+          <ReadItem label="Ore da contratto" wide>
+            {contract ? formatContract(contract) : null}
+          </ReadItem>
+        </ReadGrid>
+      )}
+    </section>
+  );
+}
+
+function ContractForm({
+  person,
+  onDone,
+}: {
+  person: StaffPersonDetail;
+  onDone: () => void;
+}) {
   const update = useUpdateStaffPerson();
   const toast = useToast();
   const contract = personContract(person);
@@ -609,6 +813,11 @@ function ContractSection({ person }: { person: StaffPersonDetail }) {
   const parsed = hours.trim() ? Number(hours.trim().replace(",", ".")) : null;
   const invalid =
     parsed != null && (!Number.isFinite(parsed) || parsed <= 0 || parsed > 400);
+  // Senza ore il periodo non si salva: cambiarlo da solo non è una modifica.
+  const dirty =
+    parsed !== (contract?.hours ?? null) ||
+    (parsed != null && period !== contract?.period);
+  useUnsavedEdit("contratto", dirty);
 
   async function onSave() {
     if (invalid) return;
@@ -623,17 +832,14 @@ function ContractSection({ person }: { person: StaffPersonDetail }) {
             : { contract_hours: parsed, contract_period: period },
       });
       toast.show(parsed == null ? "Contratto rimosso" : "Contratto aggiornato");
+      onDone();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
     }
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Contratto
-      </span>
-
+    <EditPanel>
       <div className="grid grid-cols-2 gap-3">
         <Field
           label="Ore da contratto"
@@ -670,16 +876,13 @@ function ContractSection({ person }: { person: StaffPersonDetail }) {
         Lascia vuoto se non vuoi il confronto.
       </p>
 
-      <div>
-        <Button
-          variant="gold"
-          disabled={update.isPending || invalid}
-          onClick={() => void onSave()}
-        >
-          {update.isPending ? "Salvataggio…" : "Salva contratto"}
-        </Button>
-      </div>
-    </section>
+      <EditActions
+        pending={update.isPending}
+        canSave={dirty && !invalid}
+        onSave={() => void onSave()}
+        onCancel={onDone}
+      />
+    </EditPanel>
   );
 }
 
@@ -834,11 +1037,12 @@ function WorkplaceCard({
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
   const toast = useToast();
-  const [roleIds, setRoleIds] = useState<string[]>(
-    membership.staff_member_roles
-      .map((r) => r.role?.id)
-      .filter((id): id is string => !!id)
-  );
+  const savedRoles = membership.staff_member_roles
+    .map((r) => r.role)
+    .filter((r): r is NonNullable<typeof r> => !!r)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const [editing, setEditing] = useState(false);
+  const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>(
     membership.employment_type
   );
@@ -846,6 +1050,21 @@ function WorkplaceCard({
 
   const venueName = membership.venue?.name ?? "Sede";
   const busy = update.isPending || setRoles.isPending || remove.isPending;
+  const dirty =
+    editing &&
+    (empType !== membership.employment_type ||
+      roleIds.length !== savedRoles.length ||
+      roleIds.some((id) => !savedRoles.some((r) => r.id === id)));
+  useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
+
+  // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
+  // lasciare in giro la scelta di prima.
+  function startEditing() {
+    setRoleIds(savedRoles.map((r) => r.id));
+    setEmpType(membership.employment_type);
+    setConfirming(false);
+    setEditing(true);
+  }
 
   async function onSave() {
     try {
@@ -857,7 +1076,8 @@ function WorkplaceCard({
         employmentType: empType,
         roleIds,
       });
-      toast.show(`${venueName} aggiornato`);
+      toast.show(`Modifiche salvate · ${venueName}`);
+      setEditing(false);
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
     }
@@ -925,32 +1145,51 @@ function WorkplaceCard({
         ) : null}
       </div>
 
-      <Field label="Impiego in questa sede">
-        <Select
-          value={empType}
-          onChange={(e) =>
-            setEmpType(e.target.value as Enums<"employment_type">)
-          }
-          className="w-40"
-        >
-          <option value="fisso">Fisso</option>
-          <option value="a_chiamata">A chiamata</option>
-        </Select>
-      </Field>
+      {editing ? (
+        <EditPanel>
+          <Field label="Impiego in questa sede">
+            <Select
+              value={empType}
+              onChange={(e) =>
+                setEmpType(e.target.value as Enums<"employment_type">)
+              }
+              className="w-40"
+            >
+              <option value="fisso">Fisso</option>
+              <option value="a_chiamata">A chiamata</option>
+            </Select>
+          </Field>
 
-      {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa le sedi. */}
-      <Field label="Ruoli in questa sede">
-        <RoleCheckboxes
-          venueId={membership.venue_id}
-          value={roleIds}
-          onChange={setRoleIds}
-        />
-      </Field>
+          {/* I ruoli sono di QUESTA sede: `venue_roles` non attraversa le sedi. */}
+          <Field label="Ruoli in questa sede">
+            <RoleCheckboxes
+              venueId={membership.venue_id}
+              value={roleIds}
+              onChange={setRoleIds}
+            />
+          </Field>
 
+          <EditActions
+            pending={busy}
+            canSave={dirty}
+            onSave={() => void onSave()}
+            onCancel={() => setEditing(false)}
+          />
+        </EditPanel>
+      ) : (
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <ReadItem label="Impiego in questa sede">
+            {membership.employment_type === "fisso" ? "Fisso" : "A chiamata"}
+          </ReadItem>
+          <ReadItem label="Ruoli in questa sede">
+            {savedRoles.map((r) => r.name).join(" · ")}
+          </ReadItem>
+        </dl>
+      )}
+
+      {editing ? null : (
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="gold" disabled={busy} onClick={() => void onSave()}>
-          {busy ? "Salvataggio…" : "Salva"}
-        </Button>
+        <Button onClick={startEditing}>Modifica</Button>
         {!isOnly && canRemove ? (
           confirming ? (
             <>
@@ -978,8 +1217,9 @@ function WorkplaceCard({
           )
         ) : null}
       </div>
+      )}
 
-      {confirming && !isOnly ? (
+      {confirming && !isOnly && !editing ? (
         // Da 20260914102811 non è una cancellazione: l'appartenenza passa a
         // `link_status = 'left'` e lo storico resta. Spariscono solo i turni
         // futuri, che nessuno coprirebbe.

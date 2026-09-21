@@ -11,6 +11,7 @@ import type { Venue } from "@/features/venues/api";
 import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
+import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, Textarea } from "../ui/primitives";
 
 /**
@@ -22,11 +23,14 @@ import { Button, Card, Field, Input, Textarea } from "../ui/primitives";
 export function VenueFormCard({
   venue,
   onSaved,
+  onCancel,
 }: {
   /** `null` = creazione. */
   venue: Venue | null;
   /** Dopo il salvataggio. In creazione si conosce solo l'id della sede nuova. */
   onSaved?: (venue: { id: string }) => void;
+  /** Aperto da una lettura (`VenueCard`): «Annulla» ci torna senza salvare. */
+  onCancel?: () => void;
 }) {
   const toast = useToast();
   const { session } = useAuth();
@@ -101,7 +105,7 @@ export function VenueFormCard({
           dal modulo avrebbe voluto dire o salvare campi a metà, o perdere la
           foto uscendo senza salvare. */}
       {venue ? (
-        <Card className="mb-4 max-w-2xl">
+        <Card className={cn("mb-4 max-w-2xl", onCancel && "border-gold/40")}>
           <div className="flex items-center gap-4">
             <Avatar url={venue.logo_url} name={venue.name} size={72} />
             <div className="flex min-w-0 flex-col items-start gap-2">
@@ -141,7 +145,7 @@ export function VenueFormCard({
         </Card>
       ) : null}
 
-      <Card className="max-w-2xl">
+      <Card className={cn("max-w-2xl", onCancel && "border-gold/40")}>
         <form
           onSubmit={handleSubmit((values) =>
             save.mutate(
@@ -185,8 +189,21 @@ export function VenueFormCard({
             <p className="text-xs text-success">Salvato.</p>
           ) : null}
 
-          <div>
-            <Button type="submit" variant="gold" disabled={save.isPending}>
+          <div className="flex gap-2">
+            {onCancel ? (
+              <Button
+                type="button"
+                disabled={save.isPending}
+                onClick={onCancel}
+              >
+                Annulla
+              </Button>
+            ) : null}
+            <Button
+              type="submit"
+              variant="gold"
+              disabled={save.isPending || (!!venue && !isDirty)}
+            >
               {save.isPending
                 ? "Salvataggio…"
                 : venue

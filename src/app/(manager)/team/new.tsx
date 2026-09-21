@@ -12,11 +12,12 @@ import { useToast } from "@/providers/Toast";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useAddTeamMember } from "@/features/team/hooks";
+import { PermissionSwitches } from "@/features/team/PermissionSwitches";
 import {
-  DEFAULT_TEAM_PERMISSIONS,
-  PermissionSwitches,
-} from "@/features/team/PermissionSwitches";
-import type { TeamPermission, TeamPermissions } from "@/features/team/api";
+  NO_PERMISSIONS,
+  type TeamPermission,
+  type TeamPermissions,
+} from "@/features/team/api";
 import { userErrorMessage } from "@/lib/errors";
 
 /**
@@ -39,9 +40,11 @@ export default function TeamNewScreen() {
   const [email, setEmail] = useState("");
   /** Vuoto = tutte le sedi, anche quelle future. */
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [permissions, setPermissions] = useState<TeamPermissions>(
-    DEFAULT_TEAM_PERMISSIONS
-  );
+  // Si parte tutto spento: un permesso già acceso è una scelta fatta al posto
+  // del titolare, e passa inosservata proprio perché non l'ha fatta lui.
+  const [permissions, setPermissions] =
+    useState<TeamPermissions>(NO_PERMISSIONS);
+  const noPermissions = !Object.values(permissions).some(Boolean);
 
   // Con una sede sola la domanda non si pone: è quella, e l'ambito resta
   // «tutte» — così una sede aperta domani non lo lascia fuori.
@@ -61,7 +64,8 @@ export default function TeamNewScreen() {
   }
 
   function submit() {
-    if (!workspaceId || !fullName.trim() || !email.trim()) return;
+    if (!workspaceId || !fullName.trim() || !email.trim() || noPermissions)
+      return;
     add.mutate(
       {
         workspaceId,
@@ -179,9 +183,19 @@ export default function TeamNewScreen() {
           <GoldButton
             className="mt-1"
             label={add.isPending ? "Invio…" : "Invita"}
-            disabled={add.isPending || !fullName.trim() || !email.trim()}
+            disabled={
+              add.isPending ||
+              !fullName.trim() ||
+              !email.trim() ||
+              noPermissions
+            }
             onPress={submit}
           />
+          {noPermissions ? (
+            <Text className="text-center text-[12px] text-t4">
+              Scegli almeno un permesso.
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

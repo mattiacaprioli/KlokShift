@@ -7,6 +7,7 @@ import {
   TEAM_PERMISSIONS,
   TEAM_PERMISSION_HINT,
   TEAM_PERMISSION_LABEL,
+  NO_PERMISSIONS,
   type TeamMember,
   type TeamPermission,
   type TeamPermissions,
@@ -33,14 +34,6 @@ import {
   QueryError,
   Spinner,
 } from "../ui/primitives";
-
-export const DEFAULT_PERMISSIONS: TeamPermissions = {
-  can_manage_shifts: true,
-  can_manage_staff: false,
-  can_view_hours: false,
-  can_manage_documents: false,
-  can_manage_venue: false,
-};
 
 /** Etichetta di gruppo con lo stile di `Field`, ma senza `<label>`: dentro ci
  *  sono altri controlli, e un'etichetta che ne avvolge più d'uno attiva il
@@ -116,11 +109,34 @@ function PermissionToggles({
   value,
   onChange,
   disabled,
+  readOnly,
 }: {
   value: TeamPermissions;
   onChange: (perm: TeamPermission, next: boolean) => void;
   disabled?: boolean;
+  /** In lettura: solo le aree concesse, e nessuna si tocca. */
+  readOnly?: boolean;
 }) {
+  if (readOnly) {
+    const granted = TEAM_PERMISSIONS.filter((perm) => value[perm]);
+    if (granted.length === 0) {
+      return <span className="text-xs text-t4">Nessun permesso</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-2">
+        {granted.map((perm) => (
+          <span
+            key={perm}
+            title={TEAM_PERMISSION_HINT[perm]}
+            className="inline-flex items-center rounded-full border border-gold/40 bg-gold/15 px-3 py-1.5 text-xs font-medium text-gold"
+          >
+            {TEAM_PERMISSION_LABEL[perm]}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       {TEAM_PERMISSIONS.map((perm) => {
@@ -175,32 +191,126 @@ function AccessBlock({ member }: { member: TeamMember }) {
   const save = useSetTeamAccess();
   const revoke = useRevokeTeamAccess();
   const [confirming, setConfirming] = useState(false);
+  // Si guarda in lettura e si cambia solo dopo «Modifica»: prima ogni tocco su
+  // una pastiglia salvava subito, e un clic di troppo dava o toglieva un
+  // permesso a qualcuno.
+  const [editing, setEditing] = useState(false);
+  const [permissions, setPermissions] = useState(member.permissions);
+  const [scope, setScope] = useState<VenueScope>(member.scope);
+  const [venueIds, setVenueIds] = useState<string[]>(member.venueIds);
 
-  /** Un cambio per volta: la RPC vuole permessi e ambito insieme. */
-  function apply(next: {
-    permissions?: TeamPermissions;
-    scope?: VenueScope;
-    venueIds?: string[];
-  }) {
+  const noPermissions = !Object.values(permissions).some(Boolean);
+  const scopeIncomplete = scope === "selected" && venueIds.length === 0;
+  const dirty =
+    TEAM_PERMISSIONS.some((p) => permissions[p] !== member.permissions[p]) ||
+    scope !== member.scope ||
+    (scope === "selected" &&
+      (venueIds.length !== member.venueIds.length ||
+        venueIds.some((id) => !member.venueIds.includes(id))));
+
+  function startEditing() {
+    setPermissions(member.permissions);
+    setScope(member.scope);
+    setVenueIds(member.venueIds);
+    setConfirming(false);
+    setEditing(true);
+  }
+
+  function submit() {
     save.mutate(
       {
         memberId: member.memberId,
-        permissions: next.permissions ?? member.permissions,
-        scope: next.scope ?? member.scope,
-        venueIds: next.venueIds ?? member.venueIds,
+        permissions,
+        scope,
+        venueIds: scope === "selected" ? venueIds : [],
       },
-      { onError: (e) => toast.show(userErrorMessage(e), "error") }
+      {
+        onSuccess: () => {
+          toast.show("Permessi aggiornati");
+          setEditing(false);
+        },
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
+
+  if (!editing) {
+    const scopeLabel =
+      member.scope === "all"
+        ? "Tutte le sedi, anche quelle che aprirai"
+        : venues
+            .filter((v) => member.venueIds.includes(v.id))
+            .map((v) => v.name)
+            .join(" · ") || "Nessuna sede";
+
+    return (
+      <div className="flex flex-col gap-4 border-t border-border px-5 py-4">
+        <Group label="Cosa può fare">
+          <PermissionToggles
+            value={member.permissions}
+            onChange={() => {}}
+            readOnly
+          />
+        </Group>
+
+        <Group label="Dove">
+          <span className="text-sm text-t2">{scopeLabel}</span>
+        </Group>
+
+        <div className="flex justify-end gap-2">
+          {confirming ? (
+            <span className="flex items-center gap-2">
+              <span className="text-xs text-t3">Togliere l&apos;accesso?</span>
+              <Button
+                className="px-3 py-1.5 text-xs"
+                onClick={() => setConfirming(false)}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="danger"
+                className="px-3 py-1.5 text-xs"
+                disabled={revoke.isPending}
+                onClick={() =>
+                  revoke.mutate(member.memberId, {
+                    onSuccess: () => {
+                      setConfirming(false);
+                      toast.show("Accesso revocato");
+                    },
+                    onError: (e) => toast.show(userErrorMessage(e), "error"),
+                  })
+                }
+              >
+                Conferma
+              </Button>
+            </span>
+          ) : (
+            <>
+              <Button className="px-3 py-1.5 text-xs" onClick={startEditing}>
+                Modifica
+              </Button>
+              <Button
+                variant="ghost"
+                className="px-3 py-1.5 text-xs"
+                onClick={() => setConfirming(true)}
+              >
+                Togli l&apos;accesso
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 border-t border-border px-5 py-4">
+    <div className="mx-5 mb-4 flex flex-col gap-4 rounded-xl border border-gold/40 px-4 py-4">
       <Group label="Cosa può fare">
         <PermissionToggles
-          value={member.permissions}
+          value={permissions}
           disabled={save.isPending}
           onChange={(perm, on) =>
-            apply({ permissions: { ...member.permissions, [perm]: on } })
+            setPermissions((prev) => ({ ...prev, [perm]: on }))
           }
         />
       </Group>
@@ -209,38 +319,29 @@ function AccessBlock({ member }: { member: TeamMember }) {
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
-            aria-pressed={member.scope === "all"}
-            onClick={() =>
-              apply(
-                member.scope === "all"
-                  ? { scope: "selected", venueIds: [] }
-                  : { scope: "all" }
-              )
-            }
+            aria-pressed={scope === "all"}
+            onClick={() => setScope(scope === "all" ? "selected" : "all")}
             className={cn(
               "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
-              member.scope === "all"
+              scope === "all"
                 ? "bg-gold text-gold-ink"
                 : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
             )}
           >
             Tutte le sedi
           </button>
-          {member.scope === "selected"
+          {scope === "selected"
             ? venues.map((v) => {
-                const on = member.venueIds.includes(v.id);
+                const on = venueIds.includes(v.id);
                 return (
                   <button
                     key={v.id}
                     type="button"
                     aria-pressed={on}
                     onClick={() =>
-                      apply({
-                        scope: "selected",
-                        venueIds: on
-                          ? member.venueIds.filter((id) => id !== v.id)
-                          : [...member.venueIds, v.id],
-                      })
+                      setVenueIds((prev) =>
+                        on ? prev.filter((id) => id !== v.id) : [...prev, v.id]
+                      )
                     }
                     className={cn(
                       "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
@@ -255,46 +356,39 @@ function AccessBlock({ member }: { member: TeamMember }) {
               })
             : null}
         </div>
-        {member.scope === "all" ? (
+        {scope === "all" ? (
           <span className="text-[11px] text-t4">
             Comprende anche le sedi che aprirai in futuro.
+          </span>
+        ) : scopeIncomplete ? (
+          <span className="text-[11px] text-warning">
+            Scegli almeno una sede.
           </span>
         ) : null}
       </Group>
 
-      <div className="flex justify-end">
-        {confirming ? (
-          <span className="flex items-center gap-2">
-            <span className="text-xs text-t3">Togliere l&apos;accesso?</span>
-            <Button className="px-3 py-1.5 text-xs" onClick={() => setConfirming(false)}>
-              Annulla
-            </Button>
-            <Button
-              variant="danger"
-              className="px-3 py-1.5 text-xs"
-              disabled={revoke.isPending}
-              onClick={() =>
-                revoke.mutate(member.memberId, {
-                  onSuccess: () => {
-                    setConfirming(false);
-                    toast.show("Accesso revocato");
-                  },
-                  onError: (e) => toast.show(userErrorMessage(e), "error"),
-                })
-              }
-            >
-              Conferma
-            </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="gold"
+          className="px-3 py-1.5 text-xs"
+          disabled={save.isPending || !dirty || noPermissions || scopeIncomplete}
+          onClick={submit}
+        >
+          {save.isPending ? "Salvataggio…" : "Salva"}
+        </Button>
+        <Button
+          className="px-3 py-1.5 text-xs"
+          disabled={save.isPending}
+          onClick={() => setEditing(false)}
+        >
+          Annulla
+        </Button>
+        {noPermissions ? (
+          <span className="text-[11px] text-t4">
+            Senza permessi non collabora più: per quello c&apos;è «Togli
+            l&apos;accesso».
           </span>
-        ) : (
-          <Button
-            variant="ghost"
-            className="px-3 py-1.5 text-xs"
-            onClick={() => setConfirming(true)}
-          >
-            Togli l&apos;accesso
-          </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -369,15 +463,18 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
   const [email, setEmail] = useState("");
   /** Vuoto = tutte le sedi, anche quelle future. */
   const [picked, setPicked] = useState<string[]>([]);
+  // Si parte tutto spento: un permesso già acceso è una scelta fatta al posto
+  // del titolare, e passa inosservata proprio perché non l'ha fatta lui.
   const [permissions, setPermissions] =
-    useState<TeamPermissions>(DEFAULT_PERMISSIONS);
+    useState<TeamPermissions>(NO_PERMISSIONS);
+  const noPermissions = !Object.values(permissions).some(Boolean);
 
   // Con una sede sola la domanda non si pone, e l'ambito resta «tutte»: così
   // una sede aperta domani non lo lascia fuori.
   const allVenues = !isMultiVenue || picked.length === 0;
 
   function submit() {
-    if (!fullName.trim() || !email.trim()) return;
+    if (!fullName.trim() || !email.trim() || noPermissions) return;
     add.mutate(
       {
         workspaceId,
@@ -405,7 +502,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
           setFullName("");
           setEmail("");
           setPicked([]);
-          setPermissions(DEFAULT_PERMISSIONS);
+          setPermissions(NO_PERMISSIONS);
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
@@ -491,10 +588,17 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
           variant="gold"
           className="w-full py-2.5"
           onClick={submit}
-          disabled={add.isPending || !fullName.trim() || !email.trim()}
+          disabled={
+            add.isPending || !fullName.trim() || !email.trim() || noPermissions
+          }
         >
           {add.isPending ? "Invio…" : "Invita"}
         </Button>
+        {noPermissions ? (
+          <p className="text-center text-[11px] text-t4">
+            Scegli almeno un permesso.
+          </p>
+        ) : null}
         <p className="text-center text-[11px] leading-relaxed text-t4">
           Restano tuoi: aprire e chiudere sedi, invitare altri collaboratori e
           l&apos;account.

@@ -1,7 +1,6 @@
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
-import { VenueFormCard } from "../venues/VenueFormCard";
-import { VenueInfoCard } from "../venues/VenueInfoCard";
+import { VenueCard } from "../venues/VenueCard";
 import { VenuesCard } from "../venues/VenuesCard";
 import { PageHeader } from "../ui/primitives";
 
@@ -43,16 +42,11 @@ export function SedePage() {
               : "Questi dati sono ciò che i professionisti vedono della sede."
           }
         />
-        {editable ? (
-          <VenueFormCard venue={venues[0]} />
-        ) : (
-          <VenueInfoCard venue={venues[0]} />
-        )}
-        {/* Con una sede sola l'elenco ripete la scheda che sta già sopra: al
-            titolare serve lo stesso, perché è da lì che se ne apre una seconda
-            (e che si riaprono quelle chiuse). A un collaboratore no — e la riga
-            era pure tappabile, quindi portava a una pagina identica senza più
-            l'elenco: sembrava che la scheda sparisse. */}
+        <VenueCard venue={venues[0]} editable={editable} />
+        {/* Con una sede sola l'elenco ripeterebbe la scheda che sta già sopra:
+            `VenuesCard` allora non la elenca e resta solo «Aggiungi sede» (e le
+            sedi chiuse da riaprire). Al titolare serve, a un collaboratore no:
+            aprire una sede non si delega. */}
         {isOwner ? (
           <div className="mt-6 max-w-2xl">
             <VenuesCard />

@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { VenueFormCard } from "../venues/VenueFormCard";
-import { VenueInfoCard } from "../venues/VenueInfoCard";
+import { VenueCard } from "../venues/VenueCard";
 import {
   Button,
   PageHeader,
@@ -56,11 +55,7 @@ export function SedeDettaglioPage() {
         }
         actions={back}
       />
-      {editable ? (
-        <VenueFormCard venue={venue} />
-      ) : (
-        <VenueInfoCard venue={venue} />
-      )}
+      <VenueCard key={venue.id} venue={venue} editable={editable} />
     </>
   );
 }
