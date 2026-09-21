@@ -210,9 +210,10 @@ export function PeopleWeekList({
           <Text className="mt-4 text-xs leading-5 text-t3">
             Sono ore <Text className="font-sans-semibold">programmate</Text>,
             calcolate dagli orari dei turni: chi ha rifiutato o è stato segnato
-            assente non le somma. Le ore effettivamente lavorate stanno nella
-            pagina Ore. Il confronto con le ore da contratto compare per chi le
-            ha sulla scheda.
+            assente non le somma e gli intervalli sovrapposti si contano una
+            volta sola. Le ore effettivamente lavorate stanno nella pagina Ore.
+            Il confronto con le ore da contratto compare per chi le ha sulla
+            scheda.
           </Text>
         ) : null
       }
@@ -259,7 +260,7 @@ function PersonWeekCard({
         disabled={shifts.length === 0}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${person.name}, ${formatHours(person.hours)} in ${person.daysWorked} giorni`}
+        accessibilityLabel={`${person.name}, ${formatHours(person.hours)} in ${person.daysWorked} giorni${person.overlapHours > 0 ? `, ${formatHours(person.overlapHours)} sovrapposte e contate una volta` : ""}`}
         className="gap-3 px-4 py-3.5"
       >
         <View className="flex-row items-start justify-between gap-3">
@@ -273,6 +274,11 @@ function PersonWeekCard({
             {person.contract ? (
               <Text className="mt-0.5 font-mono text-[10px] text-t4">
                 {formatContract(person.contract)}
+              </Text>
+            ) : null}
+            {person.overlapHours > 0 ? (
+              <Text className="mt-1 text-[11px] font-sans-semibold text-warning">
+                Orari sovrapposti · le ore comuni sono contate una volta
               </Text>
             ) : null}
             {absences.map((a) => (
@@ -297,6 +303,11 @@ function PersonWeekCard({
               {person.daysWorked}{" "}
               {person.daysWorked === 1 ? "giorno" : "giorni"}
             </Text>
+            {person.overlapHours > 0 ? (
+              <Text className="text-[10px] text-warning">
+                {formatHours(person.overlapHours)} sovrapposte
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -364,6 +375,7 @@ function PersonWeekCard({
                       ps.role,
                       active ? null : ASSIGNMENT_STATUS_LABEL[ps.status],
                       conflict ? "in conflitto con un'assenza" : null,
+                      ps.overlaps ? "orario sovrapposto" : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -392,7 +404,7 @@ function DayDot({
   absent,
 }: {
   label: string;
-  shifts: { status: string }[];
+  shifts: { status: string; overlaps: boolean }[];
   /** Assenza quel giorno: il pallino diventa arancione tratteggiato. */
   absent: AbsenceAvailability["status"] | null;
 }) {
@@ -400,6 +412,11 @@ function DayDot({
     isActiveAssignment(s.status as Parameters<typeof isActiveAssignment>[0])
   );
   const inactive = !active && shifts.length > 0;
+  const overlap = shifts.some(
+    (s) =>
+      s.overlaps &&
+      isActiveAssignment(s.status as Parameters<typeof isActiveAssignment>[0])
+  );
 
   return (
     <View className="w-5 items-center gap-1">
@@ -414,7 +431,7 @@ function DayDot({
       <View
         className={cn(
           "h-2 w-2 rounded-full border",
-          active && absent === "approved"
+          active && (absent === "approved" || overlap)
             ? "border-warning bg-warning"
             : active
               ? "border-gold bg-gold"

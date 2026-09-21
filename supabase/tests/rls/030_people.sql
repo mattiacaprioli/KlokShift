@@ -285,12 +285,30 @@ begin
   select id into a from public.shift_assignments where shift_id = ids[1];
   perform public.record_attendance(a, '{"worked_hours": 3.5}'::jsonb);
 
+  -- Due incarichi distinti possono essere svolti insieme, ma il tempo della
+  -- persona non raddoppia: 14–22 + 18–23 = 9 ore. Il turno che inizia dopo si
+  -- prende il tratto comune, quindi nello storico risultano 4 h + 5 h.
+  ids := public.create_shifts(jsonb_build_array(
+    jsonb_build_object(
+      'venue_id', tests.id('V1'), 'title', 'Copertura', 'date', (current_date - 2)::text,
+      'start_time', '14:00', 'end_time', '22:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp))),
+    jsonb_build_object(
+      'venue_id', tests.id('V1'), 'title', 'Supervisione', 'date', (current_date - 2)::text,
+      'start_time', '18:00', 'end_time', '23:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp)))
+  ));
+
   perform tests.login('Co2');  -- solo «ore», tutte le sedi
   select member_name, hours, shifts_count into r from public.get_hours_summary(current_date - 5, current_date + 1);
-  perform tests.eq(r.hours, 3.5::numeric, 'le ore effettive vincono su quelle pianificate');
-  perform tests.eq(r.shifts_count, 1, 'un turno');
-  perform tests.eq((select worked_count from public.get_member_performance(tests.id('M_Emp'))), 1, 'performance visibile a chi ha «Ore»');
-  perform tests.eq((select count(*) from public.get_member_worked_shifts(tests.id('M_Emp'))), 1::bigint, 'ultimi turni');
+  perform tests.eq(r.hours, 12.5::numeric, 'ore manuali più unione dei turni sovrapposti');
+  perform tests.eq(r.shifts_count, 3, 'i turni restano tre anche se le ore non raddoppiano');
+  perform tests.eq((select worked_count from public.get_member_performance(tests.id('M_Emp'))), 3, 'performance visibile a chi ha «Ore»');
+  perform tests.eq((select total_hours from public.get_member_performance(tests.id('M_Emp'))), 12.5::numeric, 'performance senza doppio conteggio');
+  perform tests.eq((select count(*) from public.get_member_worked_shifts(tests.id('M_Emp'))), 3::bigint, 'ultimi turni');
+  perform tests.eq((select sum(hours) from public.get_member_worked_shifts(tests.id('M_Emp'))), 12.5::numeric, 'dettaglio ore coerente col riepilogo');
+  perform tests.eq((select hours from public.get_member_worked_shifts(tests.id('M_Emp')) where title = 'Copertura'), 4::numeric, 'il primo turno cede le ore comuni');
+  perform tests.eq((select hours from public.get_member_worked_shifts(tests.id('M_Emp')) where title = 'Supervisione'), 5::numeric, 'il turno che inizia dopo conserva la sua durata');
 
   perform tests.login('Co');   -- ha «Turni» ma non «Ore»
   perform tests.eq((select count(*) from public.get_hours_summary(current_date - 5, current_date + 1)), 0::bigint, 'Co senza «Ore» non vede le ore');
@@ -300,11 +318,12 @@ begin
 
   -- Il professionista vede il proprio storico e il planning dei colleghi.
   perform tests.login('Emp');
-  perform tests.eq((select total_count from public.get_my_work_history_totals()), 1, 'storico: un turno lavorato');
-  perform tests.eq((select total_hours from public.get_my_work_history_totals()), 3.5::numeric, 'con le ore vere');
-  perform tests.eq((select total_hours from public.get_my_work_totals(current_date - 30, current_date)), 3.5::numeric, 'le ore del periodo');
+  perform tests.eq((select total_count from public.get_my_work_history_totals()), 3, 'storico: tre turni lavorati');
+  perform tests.eq((select total_hours from public.get_my_work_history_totals()), 12.5::numeric, 'storico senza doppio conteggio');
+  perform tests.eq((select total_hours from public.get_my_work_totals(current_date - 30, current_date)), 12.5::numeric, 'le ore del periodo');
   perform tests.eq((select total_count from public.get_my_work_totals(current_date + 1, current_date + 7)), 0, 'e niente fuori periodo');
-  perform tests.eq((select count(*) from public.get_my_work_history_range(current_date - 30, current_date)), 1::bigint, 'lo storico del periodo');
+  perform tests.eq((select count(*) from public.get_my_work_history_range(current_date - 30, current_date)), 3::bigint, 'lo storico del periodo');
+  perform tests.eq((select sum(hours) from public.get_my_work_history_range(current_date - 30, current_date)), 12.5::numeric, 'righe dello storico coerenti col totale');
   perform tests.ok(exists (select 1 from public.get_staff_planning(current_date - 5, current_date + 30) where is_me and venue_id = tests.id('V1')),
     'il planning della sede mi include');
   perform tests.ok(not exists (select 1 from public.get_staff_planning(current_date - 5, current_date + 30) where venue_id = tests.id('V2')),

@@ -31,6 +31,25 @@ type LoadAssignment = {
   } | null;
 };
 
+/**
+ * Un turno su una linea temporale in minuti di calendario. Usiamo UTC solo per
+ * numerare i giorni, non per convertire l'orario: le ore programmate sono ore
+ * di parete e non devono diventare 3 o 5 durante il cambio dell'ora legale.
+ */
+function shiftIntervalMinutes(shift: PersonShift): {
+  start: number;
+  end: number;
+} {
+  const [year, month, day] = shift.date.split("-").map(Number);
+  const dayStart = Date.UTC(year, month - 1, day) / 60_000;
+  const [startHour, startMinute] = shift.start_time.split(":").map(Number);
+  const [endHour, endMinute] = shift.end_time.split(":").map(Number);
+  const start = dayStart + startHour * 60 + startMinute;
+  let end = dayStart + endHour * 60 + endMinute;
+  if (end <= start) end += 24 * 60;
+  return { start, end };
+}
+
 /** Il minimo che serve al calcolo: un turno con i suoi assegnati. */
 export type LoadShift = {
   id: string;
@@ -67,6 +86,8 @@ export type PersonShift = {
   role: string | null;
   /** Ore che questo turno aggiunge al carico: 0 se la persona non viene. */
   hours: number;
+  /** Questo turno si sovrappone a un altro turno attivo della stessa persona. */
+  overlaps: boolean;
 };
 
 export type PersonLoad = {
@@ -92,6 +113,8 @@ export type PersonLoad = {
   byDay: Map<string, PersonShift[]>;
   /** Ore programmate nel periodo: è su queste che si giudica il contratto. */
   hours: number;
+  /** Ore duplicate eliminate unendo gli intervalli sovrapposti. */
+  overlapHours: number;
   /**
    * Giorni distinti con lavoro. Sono uno per persona, non uno per sede — e
    * servono anche al target dei contratti giornalieri, che senza il numero di
@@ -124,6 +147,7 @@ export function computeWeekLoad(
 ): PersonLoad[] {
   const rows = new Map<string, PersonLoad>();
   const activeDays = new Map<string, Set<string>>();
+  const activeShifts = new Map<string, PersonShift[]>();
 
   function row(member: {
     person_id: string;
@@ -143,6 +167,7 @@ export function computeWeekLoad(
       contract: member.contract ?? null,
       byDay: new Map(),
       hours: 0,
+      overlapHours: 0,
       daysWorked: 0,
     };
     rows.set(member.person_id, created);
@@ -165,7 +190,7 @@ export function computeWeekLoad(
         : 0;
 
       const list = person.byDay.get(shift.date) ?? [];
-      list.push({
+      const personShift: PersonShift = {
         shiftId: shift.id,
         assignmentId: assignment.id,
         // L'appartenenza a cui il turno è agganciato: serve al drag & drop, che
@@ -179,16 +204,67 @@ export function computeWeekLoad(
         status: assignment.status,
         role: assignment.role?.name ?? null,
         hours,
-      });
+        overlaps: false,
+      };
+      list.push(personShift);
       person.byDay.set(shift.date, list);
-      person.hours += hours;
-      if (active) activeDays.get(member.person_id)?.add(shift.date);
+      if (active) {
+        activeDays.get(member.person_id)?.add(shift.date);
+        const activeForPerson = activeShifts.get(member.person_id) ?? [];
+        activeForPerson.push(personShift);
+        activeShifts.set(member.person_id, activeForPerson);
+      }
     }
   }
 
   for (const [id, days] of activeDays) {
     const person = rows.get(id);
-    if (person) person.daysWorked = days.size;
+    if (!person) continue;
+    person.daysWorked = days.size;
+
+    const shifts = activeShifts.get(id) ?? [];
+    const intervals = shifts
+      .map((shift) => ({ shift, ...shiftIntervalMinutes(shift) }))
+      .sort((a, b) => a.start - b.start || a.end - b.end);
+
+    // L'avviso appartiene ai singoli turni: una sovrapposizione è legittima,
+    // ma deve essere visibile. Due turni consecutivi (fine = inizio) non si
+    // sovrappongono.
+    for (let i = 0; i < intervals.length; i += 1) {
+      for (let j = i + 1; j < intervals.length; j += 1) {
+        if (intervals[j].start >= intervals[i].end) break;
+        intervals[i].shift.overlaps = true;
+        intervals[j].shift.overlaps = true;
+      }
+    }
+
+    // Le ore sono tempo della persona, non posti coperti: 14–22 più 18–23
+    // valgono 14–23, cioè 9 ore. I due turni restano distinti per responsabilità
+    // e copertura, ma il tratto comune entra nel carico una volta sola.
+    let unionMinutes = 0;
+    let mergedStart: number | null = null;
+    let mergedEnd: number | null = null;
+    for (const interval of intervals) {
+      if (mergedStart == null || mergedEnd == null) {
+        mergedStart = interval.start;
+        mergedEnd = interval.end;
+      } else if (interval.start <= mergedEnd) {
+        mergedEnd = Math.max(mergedEnd, interval.end);
+      } else {
+        unionMinutes += mergedEnd - mergedStart;
+        mergedStart = interval.start;
+        mergedEnd = interval.end;
+      }
+    }
+    if (mergedStart != null && mergedEnd != null) {
+      unionMinutes += mergedEnd - mergedStart;
+    }
+
+    person.hours = unionMinutes / 60;
+    person.overlapHours = Math.max(
+      0,
+      shifts.reduce((sum, shift) => sum + shift.hours, 0) - person.hours
+    );
   }
 
   return [...rows.values()].sort(

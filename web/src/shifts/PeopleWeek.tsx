@@ -263,6 +263,7 @@ export function PeopleWeek({
 
                 {days.map((day) => {
                   const dayShifts = person.byDay.get(day) ?? [];
+                  const hasOverlap = dayShifts.some((shift) => shift.overlaps);
                   const personAbsences =
                     absencesByPerson.get(person.personId) ?? [];
                   const absence = absenceOnDay(day, personAbsences);
@@ -362,10 +363,17 @@ export function PeopleWeek({
                         "group flex min-h-14 flex-col gap-1 rounded-xl border p-1",
                         absence
                           ? "border-dashed border-warning/50"
+                          : hasOverlap
+                            ? "border-warning/60 bg-warning/5"
                           : "border-border-2 bg-bg-card",
                         dropClass(state)
                       )}
                     >
+                      {hasOverlap ? (
+                        <span className="px-1 text-[10px] font-semibold leading-tight text-warning">
+                          Orari sovrapposti · contati una volta
+                        </span>
+                      ) : null}
                       {absence ? (
                         <span className="px-1 text-[10px] leading-tight text-warning">
                           {absenceCellLabel(absence)}
@@ -426,6 +434,7 @@ export function PeopleWeek({
 
                 <HoursCell
                   hours={person.hours}
+                  overlapHours={person.overlapHours}
                   daysWorked={person.daysWorked}
                   contract={person.contract}
                   partial={filtered}
@@ -451,6 +460,10 @@ export function PeopleWeek({
           contratto
         </span>
         <span className="flex items-center gap-1.5">
+          <span className="h-3 w-4 rounded border border-warning/60 bg-warning/5" />
+          orari sovrapposti (contati una volta)
+        </span>
+        <span className="flex items-center gap-1.5">
           <span
             className="h-3 w-4 rounded border border-dashed border-warning/50"
             style={absenceCellStyle({ status: "approved" })}
@@ -461,8 +474,9 @@ export function PeopleWeek({
 
       <p className="mt-2 text-xs leading-5 text-t4">
         Sono ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
-        rifiutato o è stato segnato assente non le somma. Le ore effettivamente
-        lavorate — quelle che vanno al commercialista — stanno nella pagina Ore.
+        rifiutato o è stato segnato assente non le somma e gli intervalli
+        sovrapposti si contano una volta sola. Le ore effettivamente lavorate —
+        quelle che vanno al commercialista — stanno nella pagina Ore.
         {isMultiVenue && !filtered ? (
           <>
             {" "}
@@ -573,6 +587,9 @@ function PersonShiftChip({
               formatShiftRange(personShift.start_time, personShift.end_time),
               active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
               conflict ? "In conflitto con un'assenza" : null,
+              personShift.overlaps
+                ? "Orario sovrapposto a un altro turno: le ore comuni sono contate una volta"
+                : null,
             ]
               .filter(Boolean)
               .join(" · ")
@@ -580,7 +597,7 @@ function PersonShiftChip({
       className={cn(
         "focus-gold rounded-lg border px-1.5 py-1 text-left transition",
         cancelled ? "opacity-50" : "cursor-grab active:cursor-grabbing",
-        active && conflict
+        active && (conflict || personShift.overlaps)
           ? "border-warning bg-warning/15 hover:bg-warning/25"
           : active
           ? "border-border-gold bg-gold/10 hover:bg-gold/20"
@@ -634,11 +651,13 @@ function PersonShiftChip({
  */
 function HoursCell({
   hours,
+  overlapHours,
   daysWorked,
   contract,
   partial,
 }: {
   hours: number;
+  overlapHours: number;
   daysWorked: number;
   /** Le ore che la persona deve fare, se il titolare le ha registrate. */
   contract: Contract | null;
@@ -695,6 +714,11 @@ function HoursCell({
       <span className="text-[10px] text-t4">
         {daysWorked} {daysWorked === 1 ? "giorno" : "giorni"}
       </span>
+      {overlapHours > 0 ? (
+        <span className="text-right text-[10px] text-warning">
+          {formatHours(overlapHours)} sovrapposte
+        </span>
+      ) : null}
     </div>
   );
 }
