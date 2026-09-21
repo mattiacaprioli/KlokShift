@@ -30,11 +30,9 @@ export function useCreateStaffDocument(memberId: string) {
   const invalidate = useDocumentsInvalidation(memberId);
   return useMutation({
     mutationFn: (vars: {
-      uploadedBy: string;
       meta: DocumentMeta;
       file: DocumentFile;
-    }) =>
-      createStaffDocument(memberId, vars.uploadedBy, vars.meta, vars.file),
+    }) => createStaffDocument(memberId, vars.meta, vars.file),
     onSuccess: invalidate,
   });
 }

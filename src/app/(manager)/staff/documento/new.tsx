@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { DocumentFormView } from "@/features/documents/DocumentFormView";
 import { useCreateStaffDocument } from "@/features/documents/hooks";
@@ -20,7 +19,6 @@ export default function NewStaffDocumentScreen() {
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
   const create = useCreateStaffDocument(personId);
 
   return (
@@ -35,7 +33,7 @@ export default function NewStaffDocumentScreen() {
         onSubmit={({ name, expires_at, file }) => {
           if (!file) return;
           create.mutate(
-            { uploadedBy: session!.user.id, meta: { name, expires_at }, file },
+            { meta: { name, expires_at }, file },
             {
               onSuccess: () => {
                 toast.show("Documento aggiunto");

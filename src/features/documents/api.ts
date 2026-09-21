@@ -94,7 +94,6 @@ async function uploadFile(path: string, file: DocumentFile): Promise<void> {
  */
 export async function createStaffDocument(
   memberId: string,
-  uploadedBy: string,
   meta: DocumentMeta,
   file: DocumentFile
 ): Promise<StaffDocument> {
@@ -105,7 +104,6 @@ export async function createStaffDocument(
     .from("staff_documents")
     .insert({
       member_id: memberId,
-      uploaded_by: uploadedBy,
       name: meta.name.trim(),
       expires_at: meta.expires_at,
       storage_path: path,

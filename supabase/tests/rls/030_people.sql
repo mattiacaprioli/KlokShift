@@ -250,6 +250,8 @@ declare
 begin
   perform tests.login('Ow');
   insert into public.staff_documents (member_id, name, storage_path) values (tests.id('M_Emp'), 'HACCP', m_emp || '/haccp.pdf');
+  perform tests.raises(format($f$insert into public.staff_documents (member_id, uploaded_by, name, storage_path) values (%L, %L, 'x', '%s/forged.pdf')$f$,
+    tests.id('M_Emp'), tests.id('Ow'), m_emp), 'permission denied', 'uploaded_by lo decide il trigger, non il client');
   perform tests.raises(format($f$insert into public.staff_documents (member_id, name, storage_path) values (%L, 'x', 'altro/x.pdf')$f$, tests.id('M_Emp')),
     'staff_documents_path_owner_ck', 'il file sta nella cartella della persona');
   perform tests.eq((select uploaded_by from public.staff_documents), tests.id('Ow'), 'chi carica è registrato dal server');

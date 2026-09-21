@@ -12,7 +12,6 @@ import {
   useStaffDocuments,
 } from "@/features/documents/hooks";
 import { documentStatus, documentStatusLabel } from "@/features/documents/status";
-import { useAuth } from "@/lib/auth";
 import { useToast } from "../ui/Toast";
 import { Button, Card, Input, Pill, Spinner } from "../ui/primitives";
 
@@ -29,7 +28,6 @@ function canPreview(mime: string | null): boolean {
  * su un telefono.
  */
 export function DocumentsPanel({ personId }: { personId: string }) {
-  const { session } = useAuth();
   const toast = useToast();
   const { data, isPending } = useStaffDocuments(personId);
   const docs = data ?? [];
@@ -75,10 +73,9 @@ export function DocumentsPanel({ personId }: { personId: string }) {
   }
 
   function onUpload() {
-    if (!file || !name.trim() || !session) return;
+    if (!file || !name.trim()) return;
     create.mutate(
       {
-        uploadedBy: session.user.id,
         meta: { name, expires_at: expiresAt || null },
         file: {
           bytes: file,
