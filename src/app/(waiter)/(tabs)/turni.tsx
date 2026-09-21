@@ -13,7 +13,6 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Mono } from "@/components/ui/Mono";
-import { NavRow } from "@/components/ui/NavRow";
 import { QueryError } from "@/components/ui/QueryError";
 import { Segmented } from "@/components/ui/Segmented";
 import { WeekCalendar } from "@/components/ui/WeekCalendar";
@@ -32,7 +31,6 @@ import {
   useMyAssignedUpcoming,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
-import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { useStaffPlanning } from "@/features/planning/hooks";
 import { VenuePlanningList } from "@/features/planning/VenuePlanningList";
@@ -44,7 +42,6 @@ import { userErrorMessage } from "@/lib/errors";
 import {
   addDaysToDate,
   formatDayLabel,
-  formatHours,
   todayString,
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
@@ -116,7 +113,6 @@ export default function WaiterShiftsScreen() {
   const waiterId = session!.user.id;
 
   const assignedQuery = useMyAssignedUpcoming(waiterId);
-  const totals = useMyWorkHistoryTotals(waiterId);
   const respond = useRespondToAssignment();
 
   const today = todayString();
@@ -197,7 +193,7 @@ export default function WaiterShiftsScreen() {
     Promise.all(
       mode === "venue"
         ? [planning.refetch()]
-        : [assignedQuery.refetch(), totals.refetch()]
+        : [assignedQuery.refetch()]
     )
   );
 
@@ -395,24 +391,8 @@ export default function WaiterShiftsScreen() {
                   subtitle={
                     away
                       ? `Dal ${formatDayLabel(anchorDay).toLowerCase()} non hai turni assegnati. Tocca «Oggi» per tornare ai prossimi.`
-                      : "Quando una sede ti assegna un turno lo trovi qui. In «Le mie ore» c'è lo storico."
+                      : "Quando una sede ti assegna un turno lo trovi qui. Lo storico delle ore è nel Profilo."
                   }
-                />
-              </View>
-            }
-            ListFooterComponent={
-              <View className="mt-4 gap-2.5">
-                <NavRow
-                  icon="clock"
-                  title="Le mie ore"
-                  subtitle={`${totals.count} turni svolti · ${formatHours(totals.totalHours)}`}
-                  onPress={() => router.push("/(waiter)/storico")}
-                />
-                <NavRow
-                  icon="calendar"
-                  title="Ferie e permessi"
-                  subtitle="Chiedi un'assenza o comunica una malattia"
-                  onPress={() => router.push("/(waiter)/assenze")}
                 />
               </View>
             }
