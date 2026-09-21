@@ -289,6 +289,7 @@ function InternalForm({
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<InternalShiftForm>({
@@ -637,7 +638,16 @@ function InternalForm({
                 cosa che il database accetterebbe senza dire niente. */}
             {isMultiVenue ? (
               <Field label="Sede" error={errors.venue_id?.message}>
-                <Select {...register("venue_id")} disabled={!!shift}>
+                <Select
+                  value={formVenueId}
+                  onChange={(event) =>
+                    setValue("venue_id", event.target.value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={!!shift}
+                >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.name}
