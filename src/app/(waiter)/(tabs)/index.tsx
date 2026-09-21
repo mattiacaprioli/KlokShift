@@ -11,19 +11,16 @@ import { Mono } from "@/components/ui/Mono";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { QueryError } from "@/components/ui/QueryError";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { withShift } from "@/features/assignments/agenda";
 import {
   useMyAssignedUpcoming,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
-import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useMyPendingInvites } from "@/features/staff/hooks";
 import { useAuth } from "@/lib/auth";
-import { formatHours } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
 
@@ -39,11 +36,10 @@ export default function WaiterHomeScreen() {
 
   const assignedQuery = useMyAssignedUpcoming(waiterId);
   const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
-  const totals = useMyWorkHistoryTotals(waiterId);
   const unread = useUnreadCount(waiterId).data ?? 0;
   const respond = useRespondToAssignment();
   const pull = usePullToRefresh(() =>
-    Promise.all([assignedQuery.refetch(), totals.refetch()])
+    assignedQuery.refetch()
   );
 
   const [declining, setDeclining] = useState<string | null>(null);
@@ -186,21 +182,6 @@ export default function WaiterHomeScreen() {
           )}
         </View>
 
-        {/* Il lavoro, non la vetrina: i numeri che il professionista guarda ogni
-            giorno sono i suoi turni e le sue ore. Rating e recensioni restano nel
-            profilo, dove si va quando si ha qualcosa da mostrare. */}
-        <View className="flex-row gap-2.5">
-          <StatCard
-            value={String(totals.count)}
-            label="Turni svolti"
-            onPress={() => router.push("/(waiter)/storico")}
-          />
-          <StatCard
-            value={formatHours(totals.totalHours)}
-            label="Ore totali"
-            onPress={() => router.push("/(waiter)/storico")}
-          />
-        </View>
       </ScrollView>
 
       <ConfirmModal

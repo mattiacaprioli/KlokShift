@@ -5,6 +5,7 @@ import {
   WORK_HISTORY_PAGE_SIZE,
   getMyWorkHistoryPage,
   getMyWorkHistoryTotals,
+  getMyWorkTotals,
 } from "./api";
 
 export type WorkHistoryItem = {
@@ -36,6 +37,24 @@ export function useMyWorkHistoryTotals(waiterId: string) {
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
+  };
+}
+
+/**
+ * Turni svolti e ore su un periodo, fra tutte le aziende: i numeri del Profilo.
+ * Il periodo lo sceglie chi guarda (settimana o mese, `periodRange`), come
+ * nella home del titolare.
+ */
+export function useMyWorkTotals(waiterId: string, from: string, to: string) {
+  const query = useQuery({
+    queryKey: qk.assignments.workTotals(waiterId, from, to),
+    queryFn: () => getMyWorkTotals(from, to),
+    enabled: !!waiterId,
+  });
+  return {
+    count: query.data?.total_count ?? 0,
+    totalHours: query.data?.total_hours ?? 0,
+    isLoading: query.isLoading,
   };
 }
 

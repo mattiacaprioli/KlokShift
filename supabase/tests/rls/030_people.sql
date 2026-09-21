@@ -294,6 +294,8 @@ begin
   perform tests.login('Emp');
   perform tests.eq((select total_count from public.get_my_work_history_totals()), 1, 'storico: un turno lavorato');
   perform tests.eq((select total_hours from public.get_my_work_history_totals()), 3.5::numeric, 'con le ore vere');
+  perform tests.eq((select total_hours from public.get_my_work_totals(current_date - 30, current_date)), 3.5::numeric, 'le ore del periodo');
+  perform tests.eq((select total_count from public.get_my_work_totals(current_date + 1, current_date + 7)), 0, 'e niente fuori periodo');
   perform tests.ok(exists (select 1 from public.get_staff_planning(current_date - 5, current_date + 30) where is_me and venue_id = tests.id('V1')),
     'il planning della sede mi include');
   perform tests.ok(not exists (select 1 from public.get_staff_planning(current_date - 5, current_date + 30) where venue_id = tests.id('V2')),

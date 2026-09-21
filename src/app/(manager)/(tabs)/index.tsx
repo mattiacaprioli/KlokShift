@@ -25,8 +25,8 @@ import {
 } from "@/features/shifts/homeStats";
 import { useOwnerShifts, useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
-import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useSelfStaff } from "@/features/staff/self";
+import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
@@ -285,7 +285,9 @@ export default function ManagerHome() {
           {/* Ferie e permessi da decidere, malattie appena comunicate. */}
           <AbsencesToHandle
             enabled={canAny("can_manage_staff")}
-            onOpenPerson={(personId) => router.push(`/(manager)/staff/${personId}`)}
+            onOpenPerson={(personId) =>
+              router.push(`/(manager)/staff/${personId}`)
+            }
           />
 
           {/* Chi non ha ancora una sede vede i KPI a zero e questo invito, non
@@ -312,10 +314,7 @@ export default function ManagerHome() {
                 className="mt-2 text-2xl font-sans-bold text-t1"
                 style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
               >
-                {formatShiftRange(
-                  myNextShift.start_time,
-                  myNextShift.end_time,
-                )}
+                {formatShiftRange(myNextShift.start_time, myNextShift.end_time)}
               </Text>
               <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
                 {[
@@ -333,7 +332,7 @@ export default function ManagerHome() {
           {workers.length > 0 ? (
             <View className="gap-3">
               <View>
-                <Mono gold>Oggi in sala · {workers.length}</Mono>
+                <Mono gold>Oggi in sede · {workers.length}</Mono>
                 <Display className="mt-0.5 text-2xl">Chi lavora oggi</Display>
               </View>
               <View className="gap-3">

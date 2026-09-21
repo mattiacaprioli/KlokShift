@@ -1271,6 +1271,13 @@ export type Database = {
           total_hours: number
         }[]
       }
+      get_my_work_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          total_count: number
+          total_hours: number
+        }[]
+      }
       get_rating_breakdown: {
         Args: { p_waiter: string }
         Returns: {

@@ -148,6 +148,8 @@ export const qk = {
       ["assignments", "workHistory", waiterId] as const,
     workHistoryTotals: (waiterId: string) =>
       ["assignments", "workHistoryTotals", waiterId] as const,
+    workTotals: (waiterId: string, from: string, to: string) =>
+      ["assignments", "workTotals", waiterId, from, to] as const,
     /**
      * Statistiche e turni recenti della **persona**, su tutte le sedi del
      * titolare: sono i numeri della sua busta paga, non di un suo indirizzo.

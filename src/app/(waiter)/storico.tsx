@@ -17,6 +17,7 @@ export default function WaiterHistoryScreen() {
   const waiterId = session!.user.id;
   const history = useMyWorkHistory(waiterId);
 
+  // Da sempre, fra tutte le aziende: il periodo (settimana/mese) sta nel Profilo.
   const stats = (
     <View className="flex-row gap-2.5">
       <StatCard value={String(history.count)} label="Turni svolti" />

@@ -15,7 +15,13 @@ import { useStartConversation } from "@/features/chat/hooks";
 import { useViewMode } from "@/features/team/ViewMode";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLeaveVenue } from "@/features/account/hooks";
-import { useMyWorkHistoryTotals } from "@/features/assignments/history";
+import { useMyWorkTotals } from "@/features/assignments/history";
+import {
+  periodLabel,
+  periodRange,
+  STATS_PERIODS,
+  type StatsPeriod,
+} from "@/features/shifts/homeStats";
 import type { Membership } from "@/features/workspace/types";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
@@ -23,7 +29,7 @@ import { cn } from "@/lib/cn";
 import { formatHours } from "@/lib/format";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /** Una sede in cui lavoro: la riga di organico, con l'azienda a cui appartiene. */
@@ -256,8 +262,11 @@ export default function WaiterProfiloScreen() {
 
   const { memberships } = useOwnerVenues();
   const employers = employersOf(memberships);
-  // Solo i due totali: il Profilo non mostra la lista dei turni.
-  const history = useMyWorkHistoryTotals(userId);
+  // Le mie ore sul periodo scelto, come le legge il titolare nella sua home:
+  // un totale «da sempre» non dice quanto ho lavorato (quello sta nello Storico).
+  const [period, setPeriod] = useState<StatsPeriod>("week");
+  const { from, to } = useMemo(() => periodRange(period), [period]);
+  const work = useMyWorkTotals(userId, from, to);
   const subtitle = [role, city].filter(Boolean).join(" · ");
 
   return (
@@ -368,12 +377,34 @@ export default function WaiterProfiloScreen() {
         onPress={() => router.push("/(waiter)/assenze")}
       />
 
-      {/* Il lavoro fatto, in due numeri. Era un tab su due, in coppia con le
-          esperienze: senza il CV non c'è più niente con cui alternarsi. */}
+      {/* Il lavoro fatto nel periodo, fra tutte le aziende. Il periodo sta sopra
+          i numeri che qualifica, come nella home del titolare. */}
       <View className="gap-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <Mono className="flex-1">{periodLabel(period)}</Mono>
+          <View className="flex-row gap-1.5">
+            {STATS_PERIODS.map((p) => (
+              <Chip
+                key={p.value}
+                label={p.label}
+                gold
+                active={period === p.value}
+                onPress={() => setPeriod(p.value)}
+              />
+            ))}
+          </View>
+        </View>
         <View className="flex-row gap-2.5">
-          <StatCard value={String(history.count)} label="Turni svolti" />
-          <StatCard value={formatHours(history.totalHours)} label="Ore totali" />
+          <StatCard
+            loading={work.isLoading}
+            value={String(work.count)}
+            label="Turni svolti"
+          />
+          <StatCard
+            loading={work.isLoading}
+            value={formatHours(work.totalHours)}
+            label="Ore lavorate"
+          />
         </View>
         <GhostButton
           label="Vedi storico turni"

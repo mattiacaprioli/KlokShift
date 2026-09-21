@@ -506,6 +506,18 @@ export async function getMyWorkHistoryTotals(): Promise<WorkHistoryTotals> {
   return data ?? { total_count: 0, total_hours: 0 };
 }
 
+/** Come `getMyWorkHistoryTotals`, ma solo sui turni fra `from` e `to` (inclusi). */
+export async function getMyWorkTotals(
+  from: string,
+  to: string
+): Promise<WorkHistoryTotals> {
+  const { data, error } = await supabase
+    .rpc("get_my_work_totals", { p_from: from, p_to: to })
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? { total_count: 0, total_hours: 0 };
+}
+
 export function monthBounds(month: string): { start: string; end: string } {
   const [y, m] = month.split("-").map(Number);
   const nextY = m === 12 ? y + 1 : y;
