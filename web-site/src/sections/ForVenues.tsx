@@ -8,7 +8,7 @@ import { HoursMock } from "../mock/HoursMock";
 import { t } from "../content";
 
 /*
- * La sezione più lunga del sito: è il lato che paga (o pagherà) e che decide.
+ * La sezione più lunga del sito: è il lato che paga e che decide.
  * Sei card in griglia — una colonna sul telefono, due dal tablet, tre dal
  * laptop — e sotto i due mockup della dashboard, che sono la prova che le due
  * card più importanti (planning e ore) esistono davvero.
@@ -28,7 +28,8 @@ const ICONS: IconName[] = [
 export function ForVenues() {
   return (
     <Section
-      id="sedi"
+      id="funzioni"
+      tone="raised"
       eyebrow={t.venue.eyebrow}
       title={t.venue.title}
       lead={t.venue.lead}

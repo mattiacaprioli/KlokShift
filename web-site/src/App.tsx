@@ -15,9 +15,9 @@ import { MobileCta } from "./sections/MobileCta";
 import { t } from "./content";
 
 /*
- * L'ordine delle sezioni è l'argomentazione: problema → cosa fa per chi decide
- * → cosa fa per chi lavora → come si comincia → per chi → dove si usa → piani
- * → obiezioni → invito.
+ * L'ordine delle sezioni è l'argomentazione: prima e dopo → quanto è semplice
+ * cominciare → cosa fa per chi decide → cosa fa per chi lavora → per chi →
+ * dove si usa → prezzi → obiezioni → invito. Prima la semplicità, poi l'elenco.
  */
 export function App() {
   // La lingua la dichiara il contenuto, non il markup: quando arriveranno `en`
@@ -38,9 +38,9 @@ export function App() {
       <main id="contenuto">
         <Hero />
         <Problem />
+        <HowItWorks />
         <ForVenues />
         <ForPros />
-        <HowItWorks />
         <Sectors />
         <Platforms />
         <Plans />

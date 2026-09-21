@@ -37,9 +37,18 @@ Il sito deve raccontare il prodotto che esiste oggi:
 
 - **niente recensioni, reputazione o QR** — sospesi (`src/features/reviews/config.ts`);
 - **niente annunci o candidature** — il marketplace è stato rimosso il 2026-09-12;
-- **niente paghe, compensi o pagamenti** — KlokShift conta ore, non soldi;
-- **nessun prezzo** — il modello non è definito (`TASKS.md`), quindi la sezione
-  "Piani" dice cosa resta gratis e cosa andrà nel Pro, senza cifre.
+- **niente paghe o buste paga** — KlokShift conta ore, non soldi;
+- **niente referral** («un mese gratis a chi porti») — non esiste ancora nel prodotto;
+- **niente numeri di tempo risparmiato né testimonianze** finché non sono veri.
+
+I **prezzi** invece ci sono (sezione `#prezzi`: 29 €/mese annuale, 39 € mensile,
++19 € per sede in più, 30 giorni di prova senza carta) e stanno **solo qui e
+nella dashboard web**: l'app non mostra prezzi né link al sito (App Store
+3.1.3, vedi la memoria sui vincoli di monetizzazione). Se cambiano, vanno
+aggiornati insieme `src/content/it.ts` e l'`offers` del JSON-LD in `index.html`.
+
+Il pubblico è **qualunque azienda con personale a turni**, non solo
+l'ospitalità: sul sito le persone sono «team» / «dipendenti», il luogo «sede».
 
 L'elenco è ripetuto in testa a `src/content/it.ts`: se una feature entra o esce
 dal prodotto, quel file va aggiornato come `src/features/onboarding/introContent.ts`.

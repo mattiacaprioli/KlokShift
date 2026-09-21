@@ -7,6 +7,14 @@
 export type Link = { href: string; label: string };
 export type Feature = { title: string; body: string };
 export type Faq = { q: string; a: string };
+/** Una riga del «prima e dopo»: il problema di oggi e come lo risolve KlokShift. */
+export type BeforeAfter = Feature & { after: string };
+export type Price = {
+  name: string;
+  price: string;
+  period: string;
+  billed: string;
+};
 
 export type Content = {
   lang: string;
@@ -34,7 +42,7 @@ export type Content = {
     eyebrow: string;
     title: string;
     lead: string;
-    items: Feature[];
+    items: BeforeAfter[];
   };
 
   venue: {
@@ -77,11 +85,13 @@ export type Content = {
     eyebrow: string;
     title: string;
     lead: string;
-    freeTitle: string;
-    freeItems: string[];
-    proTitle: string;
-    proItems: string[];
+    yearly: Price & { badge: string };
+    monthly: Price;
+    includedTitle: string;
+    included: string[];
+    extraVenue: string;
     note: string;
+    cta: string;
   };
 
   faq: {

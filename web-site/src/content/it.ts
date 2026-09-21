@@ -5,15 +5,21 @@ import type { Content } from "./types";
  * condizione perché inglese e spagnolo siano solo un secondo file accanto a
  * questo (vedi README.md).
  *
- * Registro: **asciutto**. Una riga per idea, verbi diretti, nessuna frase che
- * spieghi due volte la stessa cosa. Se un `body` supera le due righe sul
+ * Registro: **semplice e concreto**. Una riga per idea, verbi diretti, il
+ * tempo risparmiato come argomento. Se un `body` supera le due righe sul
  * telefono, è troppo lungo: il titolo della card fa già metà del lavoro.
+ *
+ * Pubblico: **qualunque azienda con personale a turni**, non solo
+ * l'ospitalità. Per le persone si dice «team» / «dipendenti» (non
+ * «professionista»); il luogo resta «sede».
  *
  * ⚠️ Cosa NON si può scrivere qui, e perché:
  *   - recensioni / reputazione / QR → sospesi (`src/features/reviews/config.ts`)
  *   - annunci / candidature / marketplace → rimossi dal codice il 2026-09-12
- *   - paghe, compensi, pagamenti, commissioni → fuori scope MVP
- *   - prezzi o piani con cifre → il modello non è ancora definito
+ *   - paghe, buste paga, compensi → KlokShift conta ore, non soldi
+ *   - referral / mese regalato → non esiste ancora nel prodotto
+ *   - numeri di tempo risparmiato o testimonianze → solo se veri e verificabili
+ * I prezzi stanno qui e nella dashboard web, **mai nell'app** (App Store 3.1.3).
  * Se una feature entra o esce dal prodotto, questo file va aggiornato, come
  * `src/features/onboarding/introContent.ts`.
  */
@@ -22,60 +28,62 @@ export const it: Content = {
 
   brand: {
     name: "KlokShift",
-    tagline: "Gestione turni per l'ospitalità",
+    tagline: "Turni, presenze e ore del tuo team",
   },
 
   nav: {
     menuLabel: "Apri il menu",
     closeLabel: "Chiudi il menu",
     links: [
-      { href: "#sedi", label: "Per le sedi" },
-      { href: "#professionisti", label: "Per i professionisti" },
       { href: "#come-funziona", label: "Come funziona" },
+      { href: "#funzioni", label: "Funzioni" },
+      { href: "#prezzi", label: "Prezzi" },
       { href: "#faq", label: "Domande" },
     ],
-    cta: "Crea la tua sede",
+    cta: "Prova gratis 30 giorni",
   },
 
   hero: {
-    eyebrow: "Gestione turni per l'ospitalità",
-    title: "I turni della tua sede, in un posto solo.",
-    // I settori non stanno qui: hanno una sezione tutta loro più sotto.
-    lead: "Organico, turni, ore e messaggi in un'unica app.",
-    ctaPrimary: "Crea la tua sede",
+    eyebrow: "Turni e ore del personale",
+    title: "I turni della settimana in dieci minuti, non in una serata.",
+    lead: "Pianifichi, il team conferma dal telefono, le ore si contano da sole. Addio a fogli Excel e gruppi WhatsApp.",
+    ctaPrimary: "Prova gratis 30 giorni",
     ctaSecondary: "Guarda come funziona",
-    note: "Gratis per iniziare. Nessuna carta richiesta.",
+    note: "30 giorni gratis, senza carta. Poi da 29 € al mese, per tutto il team.",
     shotAlt: "L'agenda dei turni della settimana",
   },
 
   problem: {
-    eyebrow: "Il punto",
+    eyebrow: "Prima e dopo",
     title: "Il turno è deciso. Chi lo copre, no.",
-    lead: "Il piano vive in tre posti. Nessuno dice se sabato è coperto.",
+    lead: "Oggi il piano vive in tre posti. Con KlokShift, in uno.",
     items: [
       {
         title: "Il gruppo su WhatsApp",
-        body: "Hai scritto il turno. Chi ha risposto, no.",
+        body: "Scrivi il turno e aspetti le risposte.",
+        after: "Ognuno conferma con un tocco. Vedi subito chi manca.",
       },
       {
-        title: "Il foglio in cucina",
-        body: "Cambia un turno e va rifatto. E riletto da tutti.",
+        title: "Il foglio Excel",
+        body: "Cambi un turno e rifai tutto. Poi lo rimandi a tutti.",
+        after: "Sposti il turno. Chi è coinvolto riceve la notifica.",
       },
       {
         title: "Le ore a fine mese",
-        body: "Contate a memoria, la sera prima del commercialista.",
+        body: "Contate a memoria, la sera prima del consulente.",
+        after: "Già contate. Esporti PDF o CSV in un clic.",
       },
     ],
   },
 
   venue: {
-    eyebrow: "Per le sedi",
-    title: "Pianifica con il tuo organico, non con i post-it.",
-    lead: "Inserisci lo staff una volta. Turni, copertura e ore si tengono da sé.",
+    eyebrow: "Funzioni",
+    title: "Tutto quello che serve per organizzare il personale. Niente di più.",
+    lead: "Inserisci il team una volta. Turni, copertura e ore si tengono da sé.",
     features: [
       {
-        title: "Il tuo organico, su più sedi",
-        body: "Ruoli, tipo di rapporto e ore da contratto. Una scheda per persona, anche con due sedi.",
+        title: "Il tuo team, su più sedi",
+        body: "Ruoli, tipo di contratto e ore previste. Una scheda per persona, anche su due sedi.",
       },
       {
         title: "Copertura sotto controllo",
@@ -83,19 +91,19 @@ export const it: Content = {
       },
       {
         title: "Planning da scrivania",
-        body: "Trascini i turni, duplichi la settimana, stampi il piano.",
+        body: "Trascini i turni, duplichi la settimana, stampi il piano. Chi è coinvolto viene avvisato.",
       },
       {
         title: "Presenze e ore, già contate",
-        body: "Segni chi c'era. A fine mese esporti PDF o CSV.",
+        body: "Segni chi c'era. A fine mese esporti PDF o CSV per il consulente.",
       },
       {
         title: "Documenti con le scadenze",
-        body: "HACCP, contratti, visite mediche. Sai cosa scade prima che scada.",
+        body: "Contratti, certificati, visite mediche. Sai cosa scade prima che scada.",
       },
       {
         title: "I ruoli che usi davvero",
-        body: "Sala, cucina, bar, reception, runner: li crei tu.",
+        body: "Sala, cassa, magazzino, reception, turno notte: li crei tu.",
       },
     ],
     shotPlanningAlt: "Il planning settimanale con i turni per persona",
@@ -103,45 +111,45 @@ export const it: Content = {
   },
 
   pro: {
-    eyebrow: "Per i professionisti",
-    title: "Sai quando lavori. E quanto hai lavorato.",
-    lead: "Il turno arriva, lo confermi, le ore si contano da sole.",
+    eyebrow: "Per il tuo team",
+    title: "Il team sa quando lavora. Senza chiederlo a te.",
+    lead: "Il turno arriva sul telefono, si conferma, le ore si contano da sole. L'app per i dipendenti è gratuita.",
     features: [
       {
         title: "Conferma con un tocco",
-        body: "La sede assegna, tu rispondi dall'app.",
+        body: "Tu assegni, loro rispondono dall'app.",
       },
       {
-        title: "Le tue ore, sempre aggiornate",
+        title: "Le proprie ore, sempre aggiornate",
         body: "Ogni turno svolto entra nel monte ore del mese.",
       },
       {
-        title: "Chiedi un cambio",
-        body: "Se non ce la fai, chiedi una sostituzione. La sede la vede subito.",
+        title: "Cambi e assenze in chat",
+        body: "Una sostituzione o un giorno di ferie si chiedono dall'app. Tu li vedi subito.",
       },
       {
-        title: "Vedi i turni dei colleghi",
-        body: "Se la sede lo consente, sai con chi sei in servizio.",
+        title: "I turni dei colleghi",
+        body: "Se lo consenti, ognuno sa con chi è in servizio.",
       },
     ],
-    shotAlt: "Una conversazione tra sede e professionista",
+    shotAlt: "Una conversazione tra la sede e un dipendente",
   },
 
   how: {
     eyebrow: "Come funziona",
-    title: "Quattro passi, poi va da sé.",
+    title: "Si parte in un pomeriggio.",
     steps: [
       {
         title: "Crea la tua sede",
-        body: "Nome, città, logo. Più sedi sullo stesso account.",
+        body: "Nome e città. Le altre sedi le aggiungi quando servono.",
       },
       {
-        title: "Aggiungi l'organico",
+        title: "Aggiungi il team",
         body: "Inviti via email, o crei tu la scheda.",
       },
       {
         title: "Pianifica la settimana",
-        body: "Crei i turni e assegni le persone. Telefono o browser.",
+        body: "Crei i turni e assegni le persone. Dal telefono o dal browser.",
       },
       {
         title: "Il team conferma",
@@ -152,25 +160,29 @@ export const it: Content = {
 
   sectors: {
     eyebrow: "Per chi",
-    title: "Se si lavora su turni, KlokShift serve.",
-    lead: "Nato in sala, non solo per la sala.",
+    title: "Se il tuo personale lavora su turni, KlokShift fa per te.",
+    lead: "Stesso metodo, qualunque settore.",
     items: [
-      "Ristoranti",
+      "Ristoranti e bar",
       "Hotel",
-      "Catering",
-      "Discoteche",
-      "Pub e cocktail bar",
-      "Agenzie di eventi",
+      "Negozi e retail",
+      "Imprese di pulizia",
+      "Sicurezza e vigilanza",
+      "Assistenza e cura",
+      "Palestre e centri sportivi",
+      "Logistica e magazzini",
+      "Eventi",
+      "Stabilimenti balneari",
     ],
   },
 
   platforms: {
-    eyebrow: "App e scrivania",
-    title: "Il telefono per tutti, il browser per chi pianifica.",
+    eyebrow: "App e browser",
+    title: "Il telefono per il team, il browser per chi pianifica.",
     items: [
       {
         title: "L'app",
-        body: "Agenda, conferme, ore, documenti e messaggi. Notifiche quando qualcosa cambia.",
+        body: "Turni, conferme, ore, documenti e messaggi. Una notifica quando qualcosa cambia.",
       },
       {
         title: "La dashboard",
@@ -180,23 +192,34 @@ export const it: Content = {
   },
 
   plans: {
-    eyebrow: "Piani",
-    title: "Coprire i turni resta gratis.",
-    lead: "La gestione del personale andrà nel Pro. I piani li stiamo definendo: oggi lo usi tutto.",
-    freeTitle: "Sempre gratis",
-    freeItems: [
-      "Organico e ruoli",
-      "Turni, assegnazioni e conferme",
-      "Agenda e copertura",
+    eyebrow: "Prezzi",
+    title: "Un prezzo per sede. Il team è incluso.",
+    lead: "Nessun costo per dipendente: che siate in cinque o in cinquanta, il prezzo è lo stesso.",
+    yearly: {
+      name: "Annuale",
+      price: "29 €",
+      period: "al mese",
+      billed: "348 € fatturati una volta l'anno",
+      badge: "Risparmi 120 €",
+    },
+    monthly: {
+      name: "Mensile",
+      price: "39 €",
+      period: "al mese",
+      billed: "Disdici quando vuoi",
+    },
+    includedTitle: "Incluso in entrambi",
+    included: [
+      "Dipendenti illimitati",
+      "App per il team, gratuita",
+      "Planning, conferme e copertura",
+      "Presenze, ore ed export PDF e CSV",
+      "Documenti e scadenze",
       "Messaggi e notifiche",
     ],
-    proTitle: "Andrà nel piano Pro",
-    proItems: [
-      "Ore e presenze del mese",
-      "Export PDF e CSV",
-      "Statistiche del personale",
-    ],
-    note: "Nessun prezzo da annunciare, nessuna carta da inserire.",
+    extraVenue: "Ogni sede in più: +19 € al mese. Un solo accesso, tutte le sedi sotto controllo.",
+    note: "Prezzi IVA esclusa. 30 giorni gratis, senza carta.",
+    cta: "Inizia la prova gratuita",
   },
 
   faq: {
@@ -204,42 +227,46 @@ export const it: Content = {
     title: "Prima di iniziare.",
     items: [
       {
-        q: "Serve una carta di credito?",
-        a: "No. Crei la sede, aggiungi lo staff e inizi.",
+        q: "Serve una carta di credito per provare?",
+        a: "No. Hai 30 giorni con tutte le funzioni. Decidi dopo.",
       },
       {
-        q: "Chi lavora con me deve pagare?",
-        a: "No. L'app del professionista è gratuita.",
+        q: "I dipendenti devono pagare?",
+        a: "No. L'app per il team è gratuita e non c'è un limite di persone.",
       },
       {
-        q: "Funziona con più sedi?",
-        a: "Sì. Le sedi stanno sullo stesso account e chi lavora in due sedi resta una persona sola, con un unico conteggio delle ore.",
+        q: "E se chiudo per la stagione, o non rinnovo?",
+        a: "I dati restano tuoi. La dashboard passa in sola lettura: consulti lo storico e scarichi ore ed export per il consulente. Quando riapri, riattivi e riparti da dove eri.",
+      },
+      {
+        q: "Ho più sedi. Come funziona?",
+        a: "Il piano include una sede, ogni sede in più costa 19 € al mese. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.",
       },
       {
         q: "Devo installare qualcosa?",
-        a: "Chi lavora usa l'app. Tu puoi fare tutto dal browser.",
+        a: "Il team usa l'app. Tu puoi fare tutto dal browser.",
       },
       {
         q: "Dove finiscono i dati del personale?",
-        a: "Su server nell'Unione Europea. Ogni sede vede solo i propri, e ognuno può chiedere la cancellazione del proprio account.",
+        a: "Su server nell'Unione Europea. Ogni azienda vede solo i propri, e ognuno può chiedere la cancellazione del proprio account.",
       },
       {
-        q: "Gestisce anche le paghe?",
+        q: "Fa anche le buste paga?",
         a: "No. KlokShift conta le ore e le esporta. Le buste paga restano al tuo consulente.",
       },
     ],
   },
 
   finalCta: {
-    title: "Il prossimo servizio, organizzato bene.",
-    lead: "Crea la tua sede e pianifica la prossima settimana.",
-    cta: "Crea la tua sede",
+    title: "La prossima settimana, pianificata in dieci minuti.",
+    lead: "Crea la tua sede e prova KlokShift per 30 giorni.",
+    cta: "Prova gratis 30 giorni",
     secondary: "Ho già un account",
-    note: "Sei un professionista? Scarica l'app e fatti invitare dalla tua sede.",
+    note: "Lavori in un'azienda che usa KlokShift? Scarica l'app e fatti invitare.",
   },
 
   footer: {
-    tagline: "Gestione dei turni per il settore dell'ospitalità.",
+    tagline: "Turni, presenze e ore per chi lavora su turni.",
     // ⚠️ Da confermare: stesso indirizzo va messo in `public/privacy.html`,
     // dove oggi c'è il placeholder `[EMAIL DI CONTATTO]`.
     email: "info@klokshift.com",

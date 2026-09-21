@@ -16,8 +16,7 @@ const ICONS: IconName[] = ["check", "clock", "swap", "eye"];
 export function ForPros() {
   return (
     <Section
-      id="professionisti"
-      tone="raised"
+      id="team"
       eyebrow={t.pro.eyebrow}
       title={t.pro.title}
       lead={t.pro.lead}

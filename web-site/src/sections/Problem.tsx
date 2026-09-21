@@ -1,10 +1,12 @@
 import { Section } from "../ui/Section";
 import { Reveal } from "../ui/Reveal";
+import { Icon } from "../ui/Icon";
 import { t } from "../content";
 
 /*
  * Il riconoscimento del problema, prima delle feature: tre righe numerate,
- * niente icone. Chi si riconosce qui legge il resto con un'altra attenzione.
+ * ognuna col suo «dopo» in oro. Chi si riconosce qui legge il resto con
+ * un'altra attenzione, e vede subito il tempo che si riprende.
  */
 export function Problem() {
   return (
@@ -29,7 +31,11 @@ export function Problem() {
             <h3 className="mt-3 text-[length:var(--text-fluid-h3)] font-semibold">
               {item.title}
             </h3>
-            <p className="mt-2 text-t2">{item.body}</p>
+            <p className="mt-2 text-t3">{item.body}</p>
+            <p className="mt-4 flex items-start gap-2.5 border-t border-border pt-4 text-t1">
+              <Icon name="check" className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+              <span>{item.after}</span>
+            </p>
           </Reveal>
         ))}
       </ul>
