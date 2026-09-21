@@ -303,29 +303,40 @@ export default function ManagerHome() {
           {/* Il proprio turno prima di quelli degli altri: chi organizza i
               turni e ci lavora apre l'app anche per sapere quando attacca. */}
           {myNextShift ? (
-            <Card
-              className="rounded-3xl border-border-gold p-5"
-              onPress={() => router.push(`/(manager)/shift/${myNextShift.id}`)}
-            >
-              <Mono gold>
-                {formatRelativeStart(myNextShift.date, myNextShift.start_time)}
-              </Mono>
-              <Text
-                className="mt-2 text-2xl font-sans-bold text-t1"
-                style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
+            <View className="gap-2.5">
+              <Mono>I tuoi turni</Mono>
+              <Card
+                className="rounded-3xl border-border-gold p-5"
+                onPress={() =>
+                  router.push(`/(manager)/shift/${myNextShift.id}`)
+                }
               >
-                {formatShiftRange(myNextShift.start_time, myNextShift.end_time)}
-              </Text>
-              <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
-                {[
-                  "Il tuo turno",
-                  myNextShift.title,
-                  venueBadge(myNextShift.venue_id)?.name,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </Text>
-            </Card>
+                <Mono gold>
+                  {formatRelativeStart(
+                    myNextShift.date,
+                    myNextShift.start_time,
+                  )}
+                </Mono>
+                <Text
+                  className="mt-2 text-2xl font-sans-bold text-t1"
+                  style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
+                >
+                  {formatShiftRange(
+                    myNextShift.start_time,
+                    myNextShift.end_time,
+                  )}
+                </Text>
+                <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
+                  {[
+                    "Il tuo turno",
+                    myNextShift.title,
+                    venueBadge(myNextShift.venue_id)?.name,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </Text>
+              </Card>
+            </View>
           ) : null}
 
           {/* Chi lavora oggi */}
@@ -394,7 +405,6 @@ export default function ManagerHome() {
           <View className="gap-3">
             <View className="flex-row items-end justify-between gap-3">
               <View className="flex-1">
-                <Mono>I tuoi turni</Mono>
                 <Display className="mt-0.5 text-2xl">Prossimi turni</Display>
               </View>
               {shifts.length > 0 ? (
