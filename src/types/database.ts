@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_message_at: string | null
           shift_id: string | null
           user_a: string
           user_b: string
@@ -21,6 +22,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_message_at?: string | null
           shift_id?: string | null
           user_a: string
           user_b: string
@@ -29,6 +31,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_message_at?: string | null
           shift_id?: string | null
           user_a?: string
           user_b?: string
@@ -1253,6 +1256,23 @@ export type Database = {
       get_my_context: { Args: never; Returns: Json }
       get_my_work_history: {
         Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          date: string
+          end_time: string
+          hours: number
+          key: string
+          logo_url: string
+          start_time: string
+          title: string
+          venue_name: string
+        }[]
+      }
+      get_my_work_history_page: {
+        Args: {
+          p_before_date?: string
+          p_before_key?: string
+          p_limit?: number
+        }
         Returns: {
           date: string
           end_time: string

@@ -4,6 +4,7 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useUnreadCount,
 } from "@/features/notifications/hooks";
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -20,15 +21,16 @@ export function NotifichePage() {
   const { session } = useAuth();
   const userId = session!.user.id;
   const navigate = useNavigate();
-  const { data, isPending, isError, error } = useNotifications(userId);
+  const query = useNotifications(userId);
+  const unreadQuery = useUnreadCount(userId);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead(userId);
 
-  if (isPending) return <Spinner />;
-  if (isError) return <QueryError error={error} />;
+  if (query.isPending) return <Spinner />;
+  if (query.isError) return <QueryError error={query.error} />;
 
-  const items = data ?? [];
-  const unread = items.filter((n) => !n.read_at).length;
+  const items = query.data ?? [];
+  const unread = unreadQuery.data ?? 0;
 
   return (
     <>
@@ -89,6 +91,15 @@ export function NotifichePage() {
               </button>
             );
           })}
+          {query.hasNextPage ? (
+            <Button
+              onClick={() => query.fetchNextPage()}
+              disabled={query.isFetchingNextPage}
+              className="self-center"
+            >
+              {query.isFetchingNextPage ? "Caricamento…" : "Carica altre"}
+            </Button>
+          ) : null}
         </div>
       )}
     </>

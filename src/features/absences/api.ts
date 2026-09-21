@@ -10,6 +10,11 @@ export type Absence = Tables<"staff_absences">;
 export type AbsenceKind = Enums<"absence_kind">;
 export type AbsenceStatus = Enums<"absence_status">;
 
+export const ABSENCES_PAGE_SIZE = 20;
+
+/** Cursore stabile: più vecchio = (start_date, id) minore. */
+export type AbsenceCursor = { start_date: string; id: string };
+
 /**
  * Un'assenza con il nome della persona: le liste di chi gestisce l'organico.
  * `person.id` è il member id (`workspace_members.id`), come `Absence.member_id`.
@@ -171,25 +176,66 @@ export async function getAbsence(absenceId: string): Promise<Absence | null> {
  * Professionista: le sue assenze presso tutte le aziende. La RLS restituisce
  * già solo quelle delle sue appartenenze; il filtro rende esplicita la richiesta.
  */
-export async function getMyAbsences(waiterId: string): Promise<Absence[]> {
-  const { data, error } = await supabase
+export async function getMyAbsencesPage(
+  waiterId: string,
+  cursor: AbsenceCursor | null
+): Promise<Absence[]> {
+  let query = supabase
     .from("staff_absences")
     .select("*, member:workspace_members!inner(user_id)")
     .eq("member.user_id", waiterId)
-    .order("start_date", { ascending: false });
+    .order("start_date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(ABSENCES_PAGE_SIZE);
+  if (cursor) {
+    query = query.or(
+      `start_date.lt.${cursor.start_date},and(start_date.eq.${cursor.start_date},id.lt.${cursor.id})`
+    );
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []).map(({ member: _member, ...absence }) => absence);
 }
 
 /** Chi gestisce l'organico: le assenze di una persona, dalla più recente. */
-export async function getPersonAbsences(memberId: string): Promise<Absence[]> {
-  const { data, error } = await supabase
+export async function getPersonAbsencesPage(
+  memberId: string,
+  cursor: AbsenceCursor | null
+): Promise<Absence[]> {
+  let query = supabase
     .from("staff_absences")
     .select("*")
     .eq("member_id", memberId)
-    .order("start_date", { ascending: false });
+    .order("start_date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(ABSENCES_PAGE_SIZE);
+  if (cursor) {
+    query = query.or(
+      `start_date.lt.${cursor.start_date},and(start_date.eq.${cursor.start_date},id.lt.${cursor.id})`
+    );
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+/**
+ * Assenze approvate ancora rilevanti per l'agenda del professionista.
+ * È volutamente una query diversa dallo storico paginato: la schermata Turni
+ * non deve scaricare anni di richieste per mostrare «Sei in ferie».
+ */
+export async function getMyCurrentAbsences(
+  waiterId: string
+): Promise<Absence[]> {
+  const { data, error } = await supabase
+    .from("staff_absences")
+    .select("*, member:workspace_members!inner(user_id)")
+    .eq("member.user_id", waiterId)
+    .eq("status", "approved")
+    .gte("end_date", addDaysToDate(todayString(), -1))
+    .order("start_date", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(({ member: _member, ...absence }) => absence);
 }
 
 /** Quanto resta «da vedere» una malattia comunicata, nella home. */

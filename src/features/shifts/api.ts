@@ -134,8 +134,14 @@ export async function getOwnerShiftsRange(
 /** Una pagina di storico, con l'indicazione che ce ne sono altre. */
 export type PastShiftsPage = {
   rows: ShiftWithCount[];
-  /** Il server aveva altre righe oltre questa pagina. */
-  hasMore: boolean;
+  /** Ultima riga DB ricevuta: cursore della pagina successiva. */
+  nextCursor: PastShiftsCursor | null;
+};
+
+export type PastShiftsCursor = {
+  date: string;
+  start_time: string;
+  id: string;
 };
 
 /** Le relazioni della copertura: le stesse di `getOwnerShifts`. */
@@ -200,22 +206,20 @@ function withPastFilters<
 /**
  * Storico paginato: turni passati dell'azienda, più recenti prima.
  *
- * ⚠️ `hasMore` guarda le righe **ricevute dal server**, non quelle che
+ * ⚠️ Il cursore guarda l'ultima riga **ricevuta dal server**, non quelle che
  * sopravvivono al filtro: un turno notturno di ieri ancora in corso va tolto
- * dallo storico, ma se ciò rendesse la pagina più corta di `SHIFTS_PAGE_SIZE`
- * lo scroll infinito la scambierebbe per l'ultima e troncherebbe la lista.
+ * dallo storico, ma non deve cambiare il punto da cui riparte la pagina dopo.
  * Essendo l'ordine per data decrescente, quei turni stanno sempre in testa alla
  * prima pagina: il filtro costa nulla.
  */
 export async function getOwnerPastShiftsPage(
   venueIds: string[],
-  page: number,
+  cursor: PastShiftsCursor | null,
   filters: PastShiftsFilters = NO_PAST_FILTERS
 ): Promise<PastShiftsPage> {
   const scope = pastScope(venueIds, filters);
-  if (scope.length === 0) return { rows: [], hasMore: false };
-  const from = page * SHIFTS_PAGE_SIZE;
-  const { data, error } = await withPastFilters(
+  if (scope.length === 0) return { rows: [], nextCursor: null };
+  let query = withPastFilters(
     // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
     // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
     // ragiona per ruolo e ignora chi ha rifiutato.
@@ -227,15 +231,27 @@ export async function getOwnerPastShiftsPage(
   )
     .order("date", { ascending: false })
     .order("start_time", { ascending: false })
-    // Tiebreak deterministico: `.range()` su un ordine ambiguo può ripetere o
-    // saltare una riga fra una pagina e l'altra.
-    .order("venue_id", { ascending: false })
-    .range(from, from + SHIFTS_PAGE_SIZE - 1);
+    // `id` rende totale l'ordine anche con due turni identici per data e ora.
+    .order("id", { ascending: false })
+    .limit(SHIFTS_PAGE_SIZE);
+  if (cursor) {
+    query = query.or(
+      `date.lt.${cursor.date},and(date.eq.${cursor.date},start_time.lt.${cursor.start_time}),and(date.eq.${cursor.date},start_time.eq.${cursor.start_time},id.lt.${cursor.id})`
+    );
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   const received = (data as unknown as ShiftWithCount[] | null) ?? [];
   return {
     rows: received.filter((s) => isShiftOver(s)),
-    hasMore: received.length === SHIFTS_PAGE_SIZE,
+    nextCursor:
+      received.length === SHIFTS_PAGE_SIZE
+        ? {
+            date: received[received.length - 1].date,
+            start_time: received[received.length - 1].start_time,
+            id: received[received.length - 1].id,
+          }
+        : null,
   };
 }
 

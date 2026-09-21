@@ -17,7 +17,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { Segmented } from "@/components/ui/Segmented";
 import { WeekCalendar } from "@/components/ui/WeekCalendar";
 import { absenceForShift } from "@/features/absences/conflicts";
-import { useMyAbsences } from "@/features/absences/hooks";
+import { useMyCurrentAbsences } from "@/features/absences/hooks";
 import { MY_ABSENCE_NOTE } from "@/features/absences/labels";
 import {
   type AgendaItem,
@@ -158,7 +158,7 @@ export default function WaiterShiftsScreen() {
   // Le proprie assenze approvate: un turno che ci cade dentro dice «Sei in
   // ferie». Solo quelle dello **stesso** titolare del turno — le ferie chieste a
   // un'altra azienda non riguardano questa sede.
-  const myAbsences = useMyAbsences(waiterId);
+  const myAbsences = useMyCurrentAbsences(waiterId);
   const approvedAbsences = useMemo(
     () => (myAbsences.data ?? []).filter((a) => a.status === "approved"),
     [myAbsences.data]

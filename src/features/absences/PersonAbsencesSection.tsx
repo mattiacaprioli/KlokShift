@@ -1,6 +1,7 @@
 import { ActivityIndicator } from "react-native";
 import { Text, View } from "@/tw";
 import { QueryError } from "@/components/ui/QueryError";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AbsenceList } from "./AbsenceList";
 import { usePersonAbsences } from "./hooks";
@@ -39,7 +40,18 @@ export function PersonAbsencesSection({
           una malattia comunicata a voce la registri da qui.
         </Text>
       ) : (
-        <AbsenceList absences={absences} mode="manager" />
+        <View className="gap-3">
+          <AbsenceList absences={absences} mode="manager" />
+          {query.hasNextPage ? (
+            <GhostButton
+              label={query.isFetchingNextPage ? "Caricamento…" : "Carica altre"}
+              disabled={query.isFetchingNextPage}
+              onPress={() => query.fetchNextPage()}
+              size="sm"
+              className="self-center"
+            />
+          ) : null}
+        </View>
       )}
     </View>
   );

@@ -463,7 +463,7 @@ export async function getPersonWorkedShifts(
 /**
  * Storico lavoro del professionista ("Le mie ore"): i turni svolti.
  *
- * La lista la fa il database (`get_my_work_history`). Il client non può
+ * La lista la fa il database (`get_my_work_history_page`). Il client non può
  * paginare da solo: l'ordinamento è per `shifts.date`, che sta in una tabella
  * collegata, e PostgREST non sa ordinare le righe padre per una colonna
  * dell'embed.
@@ -481,12 +481,15 @@ export type WorkHistoryRow = {
   hours: number;
 };
 
+export type WorkHistoryCursor = { date: string; key: string };
+
 export async function getMyWorkHistoryPage(
-  page: number
+  cursor: WorkHistoryCursor | null
 ): Promise<WorkHistoryRow[]> {
-  const { data, error } = await supabase.rpc("get_my_work_history", {
+  const { data, error } = await supabase.rpc("get_my_work_history_page", {
     p_limit: WORK_HISTORY_PAGE_SIZE,
-    p_offset: page * WORK_HISTORY_PAGE_SIZE,
+    p_before_date: cursor?.date,
+    p_before_key: cursor?.key,
   });
   if (error) throw new Error(error.message);
   return data ?? [];

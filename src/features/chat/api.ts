@@ -35,6 +35,8 @@ export type ConversationListItem = Conversation & {
 };
 
 export type ConversationDetail = Conversation & { other: ChatCounterpart };
+export const CONVERSATIONS_PAGE_SIZE = 30;
+export type ConversationCursor = { last_message_at: string; id: string };
 
 /**
  * Controparte per OGNI conversazione (chiave = id conversazione). La stessa
@@ -69,10 +71,11 @@ const FALLBACK_COUNTERPART: ChatCounterpart = {
 };
 
 /** Le conversazioni dell'utente con controparte, ultimo messaggio e non letti. */
-export async function getConversations(
-  userId: string
+export async function getConversationsPage(
+  userId: string,
+  cursor: ConversationCursor | null
 ): Promise<ConversationListItem[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("conversations")
     // !inner: escludi le conversazioni senza messaggi (create al tap di
     // "Contatta" ma mai iniziate) — non devono comparire nella lista.
@@ -83,23 +86,27 @@ export async function getConversations(
     .order("created_at", { ascending: false, referencedTable: "last" })
     .limit(1, { referencedTable: "last" })
     .is("unread.read_at", null)
-    .neq("unread.sender_id", userId);
+    .neq("unread.sender_id", userId)
+    .not("last_message_at", "is", null)
+    .order("last_message_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(CONVERSATIONS_PAGE_SIZE);
+  if (cursor) {
+    query = query.or(
+      `last_message_at.lt."${cursor.last_message_at}",and(last_message_at.eq."${cursor.last_message_at}",id.lt.${cursor.id})`
+    );
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
   const others = await getCounterparts(rows);
-  return rows
-    .map(({ last, unread, ...conversation }) => ({
-      ...conversation,
-      other: others.get(conversation.id) ?? FALLBACK_COUNTERPART,
-      lastMessage: last[0] ?? null,
-      unreadCount: unread[0]?.count ?? 0,
-    }))
-    .sort((a, b) =>
-      (b.lastMessage?.created_at ?? b.created_at).localeCompare(
-        a.lastMessage?.created_at ?? a.created_at
-      )
-    );
+  return rows.map(({ last, unread, ...conversation }) => ({
+    ...conversation,
+    other: others.get(conversation.id) ?? FALLBACK_COUNTERPART,
+    lastMessage: last[0] ?? null,
+    unreadCount: unread[0]?.count ?? 0,
+  }));
 }
 
 /** Singola conversazione con controparte (header del thread). */

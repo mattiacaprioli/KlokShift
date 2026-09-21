@@ -20,7 +20,7 @@ import { useStartConversation, useWorkspaceContacts } from "./hooks";
  *
  * Aprire una conversazione non manda niente: la RPC la crea (o la ritrova) e si
  * naviga al thread. Una conversazione senza messaggi non compare nella lista —
- * `getConversations` usa `messages!inner` — quindi tornare indietro senza
+ * `getConversationsPage` usa `messages!inner` — quindi tornare indietro senza
  * scrivere non lascia thread vuoti in giro.
  */
 export function ContactPicker({

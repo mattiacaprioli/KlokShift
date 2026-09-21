@@ -9,10 +9,11 @@ import {
 import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import {
+  CONVERSATIONS_PAGE_SIZE,
   MESSAGES_PAGE_SIZE,
   getChatUnreadCount,
   getConversation,
-  getConversations,
+  getConversationsPage,
   getMessagesPage,
   getWorkspaceContacts,
   openConversation,
@@ -20,14 +21,23 @@ import {
   sendMessage,
   type Message,
   type MessageCursor,
+  type ConversationCursor,
 } from "./api";
 
 export function useConversations(userId: string | undefined) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: qk.chat.conversations(userId ?? ""),
-    queryFn: () => getConversations(userId as string),
+    queryFn: ({ pageParam }) =>
+      getConversationsPage(userId as string, pageParam),
+    initialPageParam: null as ConversationCursor | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < CONVERSATIONS_PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { last_message_at: last.last_message_at!, id: last.id };
+    },
     enabled: !!userId,
   });
+  return { ...query, data: query.data?.pages.flat() };
 }
 
 /** Conversazione con controparte, per l'header del thread. */

@@ -27,7 +27,13 @@ import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
  * ⚠️ Gemello app in `src/features/absences/PersonAbsencesSection.tsx`.
  */
 export function AbsencesPanel({ memberId }: { memberId: string }) {
-  const { data, isPending } = usePersonAbsences(memberId);
+  const {
+    data,
+    isPending,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = usePersonAbsences(memberId);
   const absences = data ?? [];
 
   return (
@@ -44,7 +50,18 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
             Nessuna assenza. Le richieste di ferie e permessi arrivano in chat.
           </p>
         ) : (
-          absences.map((a) => <AbsenceRow key={a.id} absence={a} />)
+          <>
+            {absences.map((a) => <AbsenceRow key={a.id} absence={a} />)}
+            {hasNextPage ? (
+              <Button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="self-center"
+              >
+                {isFetchingNextPage ? "Caricamento…" : "Carica altre"}
+              </Button>
+            ) : null}
+          </>
         )}
       </section>
     </div>

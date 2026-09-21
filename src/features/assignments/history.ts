@@ -8,6 +8,7 @@ import {
   getMyWorkHistoryTotals,
   getMyWorkTotals,
   type WorkHistoryRow,
+  type WorkHistoryCursor,
 } from "./api";
 
 export type WorkHistoryItem = {
@@ -112,9 +113,12 @@ export function useMyWorkHistory(waiterId: string, enabled = true) {
   const list = useInfiniteQuery({
     queryKey: qk.assignments.workHistory(waiterId),
     queryFn: ({ pageParam }) => getMyWorkHistoryPage(pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < WORK_HISTORY_PAGE_SIZE ? undefined : allPages.length,
+    initialPageParam: null as WorkHistoryCursor | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < WORK_HISTORY_PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { date: last.date, key: last.key };
+    },
     enabled: !!waiterId && enabled,
   });
 

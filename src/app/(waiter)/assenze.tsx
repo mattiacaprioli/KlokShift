@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
@@ -92,11 +93,22 @@ export default function WaiterAbsencesScreen() {
               subtitle="Qui trovi le richieste inviate e la risposta del titolare."
             />
           ) : (
-            <AbsenceList
-              absences={absences}
-              mode="mine"
-              subtitleFor={subtitleFor}
-            />
+            <>
+              <AbsenceList
+                absences={absences}
+                mode="mine"
+                subtitleFor={subtitleFor}
+              />
+              {query.hasNextPage ? (
+                <GhostButton
+                  label={query.isFetchingNextPage ? "Caricamento…" : "Carica altre"}
+                  disabled={query.isFetchingNextPage}
+                  onPress={() => query.fetchNextPage()}
+                  size="sm"
+                  className="self-center"
+                />
+              ) : null}
+            </>
           )}
         </>
       )}

@@ -1,5 +1,10 @@
 import { useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { absenceConflicts, type AbsenceWindow } from "./conflicts";
@@ -11,9 +16,11 @@ import {
   getAbsencesToHandle,
   getCompanyAbsences,
   absenceEmployersOf,
-  getMyAbsences,
+  ABSENCES_PAGE_SIZE,
+  getMyAbsencesPage,
+  getMyCurrentAbsences,
   getOwnerAbsenceSummary,
-  getPersonAbsences,
+  getPersonAbsencesPage,
   recordAbsence,
   requestAbsence,
   resolveAbsence,
@@ -36,9 +43,26 @@ export function useAbsence(absenceId: string | null | undefined) {
 }
 
 export function useMyAbsences(waiterId: string | undefined) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: qk.absences.mine(waiterId ?? ""),
-    queryFn: () => getMyAbsences(waiterId as string),
+    queryFn: ({ pageParam }) =>
+      getMyAbsencesPage(waiterId as string, pageParam),
+    initialPageParam: null as import("./api").AbsenceCursor | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < ABSENCES_PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { start_date: last.start_date, id: last.id };
+    },
+    enabled: !!waiterId,
+  });
+  return { ...query, data: query.data?.pages.flat() };
+}
+
+/** Solo le assenze che possono ancora sovrapporsi ai turni in agenda. */
+export function useMyCurrentAbsences(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.absences.current(waiterId ?? ""),
+    queryFn: () => getMyCurrentAbsences(waiterId as string),
     enabled: !!waiterId,
   });
 }
@@ -54,11 +78,19 @@ export function useMyAbsenceEmployers() {
 }
 
 export function usePersonAbsences(memberId: string | undefined, enabled = true) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: qk.absences.byPerson(memberId ?? ""),
-    queryFn: () => getPersonAbsences(memberId as string),
+    queryFn: ({ pageParam }) =>
+      getPersonAbsencesPage(memberId as string, pageParam),
+    initialPageParam: null as import("./api").AbsenceCursor | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < ABSENCES_PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { start_date: last.start_date, id: last.id };
+    },
     enabled: enabled && !!memberId,
   });
+  return { ...query, data: query.data?.pages.flat() };
 }
 
 export function useAbsencesToHandle(enabled = true) {

@@ -229,6 +229,8 @@ export const qk = {
     all: ["absences"] as const,
     byId: (absenceId: string) => ["absences", "byId", absenceId] as const,
     mine: (waiterId: string) => ["absences", "mine", waiterId] as const,
+    current: (waiterId: string) =>
+      ["absences", "current", waiterId] as const,
     employers: (waiterId: string) =>
       ["absences", "employers", waiterId] as const,
     byPerson: (personId: string) =>

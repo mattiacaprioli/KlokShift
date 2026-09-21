@@ -21,6 +21,7 @@ import {
   updateShiftStatus,
   type ShiftFieldsPatch,
   type ShiftWithAssignees,
+  type PastShiftsCursor,
 } from "./api";
 import {
   NO_PAST_FILTERS,
@@ -91,12 +92,10 @@ export function useOwnerPastShifts(
     queryKey: qk.shifts.past(venuesKey, pastFiltersKey(filters)),
     queryFn: ({ pageParam }) =>
       getOwnerPastShiftsPage(venueIds, pageParam, filters),
-    initialPageParam: 0,
-    // `hasMore` e non `rows.length`: la pagina può essere più corta di
-    // SHIFTS_PAGE_SIZE perché il turno notturno ancora in corso è stato tolto
-    // dallo storico, e fermarsi lì troncherebbe la lista.
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.hasMore ? allPages.length : undefined,
+    initialPageParam: null as PastShiftsCursor | null,
+    // Il cursore viene dalle righe DB, prima del filtro sul turno notturno:
+    // una pagina visibile più corta non deve troncare la lista.
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: venueIds.length > 0,
   });
 }

@@ -7,6 +7,7 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useUnreadCount,
 } from "@/features/notifications/hooks";
 import type { Notification } from "@/features/notifications/api";
 import { routeForNotification } from "@/features/notifications/routing";
@@ -24,7 +25,8 @@ export default function WaiterNotificationsScreen() {
   const pull = usePullToRefresh(query.refetch);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead(userId);
-  const hasUnread = items.some((n) => n.read_at == null);
+  const unread = useUnreadCount(userId).data ?? 0;
+  const hasUnread = unread > 0;
 
   const onOpen = (n: Notification) => {
     if (n.read_at == null) markRead.mutate(n.id);
@@ -45,6 +47,9 @@ export default function WaiterNotificationsScreen() {
         onMarkAll={() => markAll.mutate()}
         hasUnread={hasUnread}
         contentPaddingBottom={insets.bottom + 24}
+        hasNextPage={query.hasNextPage}
+        isFetchingNextPage={query.isFetchingNextPage}
+        onLoadMore={() => query.fetchNextPage()}
       />
     </View>
   );

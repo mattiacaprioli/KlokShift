@@ -120,6 +120,17 @@ export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
           onRefresh={onRefresh}
         />
       }
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (query.hasNextPage && !query.isFetchingNextPage) {
+          query.fetchNextPage();
+        }
+      }}
+      ListFooterComponent={
+        query.isFetchingNextPage ? (
+          <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
+        ) : null
+      }
     />
   );
 }

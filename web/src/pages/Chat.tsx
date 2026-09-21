@@ -36,12 +36,12 @@ export function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [picking, setPicking] = useState(false);
-  const { data, isPending, isError, error } = useConversations(userId);
+  const query = useConversations(userId);
 
-  if (isPending) return <Spinner />;
-  if (isError) return <QueryError error={error} />;
+  if (query.isPending) return <Spinner />;
+  if (query.isError) return <QueryError error={query.error} />;
 
-  const conversations = data ?? [];
+  const conversations = query.data ?? [];
 
   return (
     <>
@@ -128,6 +128,14 @@ export function ChatPage() {
                 </button>
               );
             })}
+            {query.hasNextPage ? (
+              <Button
+                onClick={() => query.fetchNextPage()}
+                disabled={query.isFetchingNextPage}
+              >
+                {query.isFetchingNextPage ? "Caricamento…" : "Carica altre"}
+              </Button>
+            ) : null}
           </div>
 
           {id ? (
