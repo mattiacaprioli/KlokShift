@@ -112,8 +112,8 @@ export function AbsenceCard({
         {absence && sick && !isResponse ? (
           <Text className="mt-1.5 text-xs text-t3">
             {absence.inps_protocol
-              ? `Protocollo INPS ${absence.inps_protocol}`
-              : "Protocollo INPS non ancora indicato"}
+              ? `Certificato medico · ${absence.inps_protocol}`
+              : "Riferimento del certificato non ancora indicato"}
           </Text>
         ) : null}
 

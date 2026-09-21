@@ -52,7 +52,8 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
 }
 
 /**
- * Una riga d'assenza con i comandi di chi gestisce: rispondere, il protocollo,
+ * Una riga d'assenza con i comandi di chi gestisce: rispondere, il riferimento
+ * del certificato,
  * i turni da liberare. La usano la scheda persona e la pagina Assenze.
  */
 export function AbsenceRow({
@@ -105,7 +106,7 @@ export function AbsenceRow({
   );
 }
 
-/** Il protocollo del certificato arriva spesso dopo: si aggiunge dalla riga. */
+/** Il riferimento del certificato arriva spesso dopo: si aggiunge dalla riga. */
 function ProtocolField({ absence }: { absence: Absence }) {
   const toast = useToast();
   const save = useSetAbsenceInpsProtocol();
@@ -120,7 +121,7 @@ function ProtocolField({ absence }: { absence: Absence }) {
         save.mutate(
           { absenceId: absence.id, protocol: value },
           {
-            onSuccess: () => toast.show("Protocollo salvato"),
+            onSuccess: () => toast.show("Riferimento salvato"),
             onError: (err) =>
               toast.show(userErrorMessage(err, "Salvataggio non riuscito"), "error"),
           }
@@ -130,7 +131,7 @@ function ProtocolField({ absence }: { absence: Absence }) {
       <Input
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Protocollo INPS"
+        placeholder="Riferimento certificato medico"
         maxLength={40}
         className="max-w-60"
       />
@@ -259,7 +260,7 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
       </div>
       {sick ? (
         <Field
-          label="Protocollo INPS · facoltativo"
+          label="Riferimento certificato medico · facoltativo"
           hint="Mai diagnosi o informazioni sulla salute: servono solo le date."
         >
           <Input

@@ -15,7 +15,7 @@ export type AbsenceSummaryRow = {
   /** Permessi a ore, in ore. */
   permesso_hours: number;
   malattia_days: number;
-  /** I protocolli INPS delle malattie, già uniti ("123, 456"). */
+  /** I riferimenti dei certificati medici, già uniti ("123, 456"). */
   inps_protocols: string | null;
 };
 

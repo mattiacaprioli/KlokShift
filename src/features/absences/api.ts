@@ -72,7 +72,8 @@ function withPerson<T extends { person: PersonEmbed }>(
  * `UserFacingError`.
  *
  * ⚠️ Malattia = dato sanitario. Per la malattia si mandano solo le date e il
- * protocollo INPS: la nota non si manda nemmeno se il form ne avesse una.
+ * riferimento del certificato medico: la nota non si manda nemmeno se il form
+ * ne avesse una.
  */
 export type AbsenceInput = {
   kind: AbsenceKind;

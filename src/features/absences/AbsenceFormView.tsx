@@ -34,7 +34,7 @@ type Props = {
 
 /**
  * Form di un'assenza: tipo, date, orario per il permesso a ore, nota o
- * protocollo INPS.
+ * riferimento del certificato medico.
  *
  * ⚠️ Per la malattia la nota **non esiste**: al suo posto il testo che ricorda di
  * non scrivere informazioni sulla salute (GDPR art. 9). Non è un campo nascosto,
@@ -180,7 +180,7 @@ export function AbsenceFormView({
         {sick ? (
           <View className="gap-3">
             <Input
-              label="Numero di protocollo INPS · facoltativo"
+              label="Riferimento certificato medico · facoltativo"
               value={protocol}
               onChangeText={setProtocol}
               placeholder="Es. 123456789"

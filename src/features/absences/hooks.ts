@@ -94,7 +94,7 @@ export function useCompanyAbsences(enabled = true) {
 
 /**
  * Ogni scrittura cambia lo stato dell'assenza (tutte le liste sotto
- * `absences.all`) e, tranne `record` e il protocollo, aggiunge una card al
+ * `absences.all`) e, tranne `record` e il riferimento del certificato, aggiunge una card al
  * thread.
  */
 function invalidateAfterAbsenceWrite(qc: ReturnType<typeof useQueryClient>) {

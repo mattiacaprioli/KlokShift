@@ -312,7 +312,7 @@ begin
     if p_end_time <= p_start_time then raise exception 'L''ora di fine deve venire dopo quella di inizio'; end if;
   end if;
   if p_kind <> 'malattia' and nullif(btrim(coalesce(p_inps, '')), '') is not null then
-    raise exception 'Il protocollo INPS vale solo per la malattia';
+    raise exception 'Il riferimento del certificato medico vale solo per la malattia';
   end if;
 end;
 $$;
@@ -563,7 +563,7 @@ begin
 end;
 $$;
 
--- Il protocollo INPS lo aggiunge chi ha comunicato la malattia o chi gestisce.
+-- Il riferimento del certificato lo aggiunge chi ha comunicato la malattia o chi gestisce.
 create function public.set_absence_inps_protocol(p_absence uuid, p_protocol text)
 returns void language plpgsql security definer set search_path = '' as $$
 declare
@@ -575,7 +575,7 @@ begin
     raise exception 'Assenza non trovata';
   end if;
   if a.kind <> 'malattia' then
-    raise exception 'Il protocollo INPS vale solo per la malattia';
+    raise exception 'Il riferimento del certificato medico vale solo per la malattia';
   end if;
   if a.status <> 'approved' then
     raise exception 'Questa malattia è stata annullata';

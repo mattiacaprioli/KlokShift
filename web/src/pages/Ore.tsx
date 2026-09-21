@@ -247,7 +247,9 @@ export function OrePage() {
                   <th className="px-5 py-3 text-right font-semibold">Permessi (gg)</th>
                   <th className="px-5 py-3 text-right font-semibold">Permessi (h)</th>
                   <th className="px-5 py-3 text-right font-semibold">Malattia (gg)</th>
-                  <th className="px-5 py-3 font-semibold">Protocolli INPS</th>
+                  <th className="px-5 py-3 font-semibold">
+                    Riferimenti certificati medici
+                  </th>
                 </tr>
               </thead>
               <tbody>

@@ -111,7 +111,7 @@ function absencesHtmlSection(rows: AbsenceSummaryRow[]): string {
     <h2>Assenze</h2>
     <div class="note">${escapeHtml(ABSENCE_SUMMARY_NOTE)}</div>
     <table>
-      <thead><tr><th>Nome</th><th class="n">Ferie (gg)</th><th class="n">Permessi (gg)</th><th class="n">Permessi (h)</th><th class="n">Malattia (gg)</th><th>Protocolli INPS</th></tr></thead>
+      <thead><tr><th>Nome</th><th class="n">Ferie (gg)</th><th class="n">Permessi (gg)</th><th class="n">Permessi (h)</th><th class="n">Malattia (gg)</th><th>Riferimenti certificati medici</th></tr></thead>
       <tbody>${body}</tbody>
     </table>`;
 }
@@ -160,7 +160,7 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
     "Permessi (giorni)",
     "Permessi (ore)",
     "Malattia (giorni di calendario)",
-    "Protocolli INPS",
+    "Riferimenti certificati medici",
   ].join(";");
   const num = (n: number) => (n > 0 ? hoursNumber(n) : "0");
   const lines = rows.map((r) =>

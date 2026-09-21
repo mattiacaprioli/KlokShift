@@ -28,7 +28,7 @@ export const ABSENCE_KINDS: readonly { id: AbsenceKind; label: string }[] = [
  * le date (GDPR art. 9). Lo mostrano sia l'app sia la dashboard.
  */
 export const SICK_PRIVACY_HINT =
-  "Non scrivere qui informazioni sulla tua salute: al titolare servono solo le date. Il numero di protocollo del certificato INPS puoi aggiungerlo anche dopo.";
+  "Non scrivere qui informazioni sulla tua salute: al titolare servono solo le date. Il riferimento del certificato medico puoi aggiungerlo anche dopo.";
 
 type AbsenceRange = Pick<
   Absence,

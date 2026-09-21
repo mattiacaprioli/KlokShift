@@ -234,7 +234,7 @@ export default function VenueHoursScreen() {
                   </Text>
                   {a.inps_protocols ? (
                     <Text className="text-xs text-t3">
-                      Protocolli INPS: {a.inps_protocols}
+                      Certificati medici: {a.inps_protocols}
                     </Text>
                   ) : null}
                 </Card>

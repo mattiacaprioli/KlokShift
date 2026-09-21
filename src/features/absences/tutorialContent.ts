@@ -29,8 +29,8 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       points: [
         "Non si approva: il professionista la comunica e tu la vedi subito, in chat e nella Home.",
         "Se in quei giorni la persona è in turno, sulla card trovi «Togli dai turni»: il turno resta, scoperto, e puoi cercare chi copre.",
-        "Si salvano solo le date e, se c'è, il numero di protocollo del certificato INPS. Mai diagnosi o altre informazioni sulla salute.",
-        "Il protocollo arriva spesso dopo la visita: lo aggiunge il professionista o lo aggiungi tu dalla scheda della persona.",
+        "Si salvano solo le date e, se c'è, il riferimento del certificato medico. Mai diagnosi o altre informazioni sulla salute.",
+        "Il riferimento del certificato arriva spesso dopo la visita: lo aggiunge il professionista o lo aggiungi tu dalla scheda della persona.",
       ],
     },
     {
@@ -52,7 +52,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
     {
       title: "A fine mese",
       points: [
-        "Nella pagina Ore trovi «Assenze del mese»: giorni di ferie, giorni e ore di permesso, giorni di malattia con i protocolli INPS.",
+        "Nella pagina Ore trovi «Assenze del mese»: giorni di ferie, giorni e ore di permesso, giorni di malattia con i riferimenti dei certificati medici.",
         "Il PDF delle ore contiene anche la tabella delle assenze; il CSV delle assenze è un file a parte, così quello delle ore resta com'è.",
         "Si contano solo le assenze approvate, in giorni di calendario compresi i festivi: il conteggio dei giorni lavorativi lo fa il consulente del lavoro.",
       ],
@@ -87,7 +87,7 @@ export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
       title: "Comunicare la malattia",
       steps: [
         "Nuova richiesta, poi Malattia, e le date. Puoi indicare anche giorni già passati.",
-        "Se ce l'hai, scrivi il numero di protocollo del certificato INPS. Puoi aggiungerlo anche dopo, dalla lista delle tue assenze.",
+        "Se ce l'hai, scrivi il riferimento del certificato medico. Puoi aggiungerlo anche dopo, dalla lista delle tue assenze.",
         "Invia: il titolare la vede subito, non c'è niente da approvare.",
       ],
     },

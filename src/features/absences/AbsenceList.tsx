@@ -23,8 +23,8 @@ import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
 type Props = {
   absences: Absence[];
   /**
-   * `mine`: il professionista (ritira, aggiunge il protocollo).
-   * `manager`: chi gestisce l'organico (decide, aggiunge il protocollo).
+   * `mine`: il professionista (ritira, aggiunge il riferimento del certificato).
+   * `manager`: chi gestisce l'organico (decide, aggiunge il riferimento).
    */
   mode: "mine" | "manager";
   /** Riga secondaria per assenza, es. l'azienda per chi lavora in più posti. */
@@ -76,7 +76,7 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
             sick && a.status === "approved" ? (
               <RowAction
                 key="protocol"
-                label={a.inps_protocol ? "Modifica protocollo" : "Aggiungi protocollo"}
+                label={a.inps_protocol ? "Modifica riferimento" : "Aggiungi riferimento"}
                 onPress={() => setProtocolFor(a)}
               />
             ) : null,
@@ -122,8 +122,8 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
               {sick && a.status === "approved" ? (
                 <Text className="mt-2 text-xs text-t3">
                   {a.inps_protocol
-                    ? `Protocollo INPS ${a.inps_protocol}`
-                    : "Protocollo INPS non ancora indicato"}
+                    ? `Certificato medico · ${a.inps_protocol}`
+                    : "Riferimento del certificato non ancora indicato"}
                 </Text>
               ) : null}
               {a.resolution_note ? (
@@ -196,7 +196,7 @@ function RowAction({
   );
 }
 
-/** Il protocollo del certificato arriva spesso dopo la visita: si aggiunge qui. */
+/** Il riferimento del certificato arriva spesso dopo la visita: si aggiunge qui. */
 function ProtocolModal({
   absence,
   onClose,
@@ -214,7 +214,7 @@ function ProtocolModal({
       {
         onSuccess: () => {
           onClose();
-          toast.show("Protocollo salvato");
+          toast.show("Riferimento salvato");
         },
         onError: (e) =>
           toast.show(userErrorMessage(e, "Salvataggio non riuscito."), "error"),
@@ -240,7 +240,7 @@ function ProtocolModal({
           className="w-full rounded-3xl border border-border-2 bg-bg-card p-6"
         >
           <Text className="text-lg font-sans-bold text-t1">
-            Protocollo INPS
+            Riferimento certificato medico
           </Text>
           <Text className="mt-1 text-sm text-t2">
             Malattia · {formatAbsenceRange(absence)}
@@ -249,7 +249,7 @@ function ProtocolModal({
             <Input
               value={protocol}
               onChangeText={setProtocol}
-              placeholder="Numero di protocollo del certificato"
+              placeholder="Codice o numero del certificato"
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={40}

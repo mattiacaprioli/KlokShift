@@ -32,11 +32,11 @@ begin
   perform tests.login('Emp');
 
   -- Malattia: approvata d'ufficio, ammessa anche a cose fatte, mai con nota.
-  sick := public.request_absence(tests.id('W1'), 'malattia', current_date - 2, current_date - 1, null, null, 'febbre', 'INPS123');
+  sick := public.request_absence(tests.id('W1'), 'malattia', current_date - 2, current_date - 1, null, null, 'febbre', 'CERT123');
   select status, note, inps_protocol into r from public.staff_absences where id = sick;
   perform tests.eq(r.status::text, 'approved', 'la malattia è approvata d''ufficio');
   perform tests.ok(r.note is null, 'e non porta la nota (dato sanitario)');
-  perform tests.eq(r.inps_protocol, 'INPS123', 'ma il protocollo sì');
+  perform tests.eq(r.inps_protocol, 'CERT123', 'ma il riferimento del certificato sì');
   perform tests.raises('update public.staff_absences set note = ''x''', 'permission denied', 'nessuna scrittura diretta');
 
   -- Card in chat + notifica al titolare (con il riferimento alla conversazione).
