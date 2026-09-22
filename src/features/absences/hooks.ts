@@ -94,10 +94,11 @@ export function usePersonAbsences(memberId: string | undefined, enabled = true) 
 }
 
 export function useAbsencesToHandle(enabled = true) {
+  const { workspaceId } = useOwnerVenues();
   return useQuery({
-    queryKey: qk.absences.toHandle,
-    queryFn: getAbsencesToHandle,
-    enabled,
+    queryKey: qk.absences.toHandle(workspaceId ?? ""),
+    queryFn: () => getAbsencesToHandle(workspaceId as string),
+    enabled: enabled && !!workspaceId,
   });
 }
 
@@ -107,20 +108,22 @@ export function useAbsencesToHandle(enabled = true) {
  * richiesta in più; `select` conta senza toccare la cache.
  */
 export function usePendingAbsenceCount(enabled = true): number {
+  const { workspaceId } = useOwnerVenues();
   const query = useQuery({
-    queryKey: qk.absences.toHandle,
-    queryFn: getAbsencesToHandle,
-    enabled,
+    queryKey: qk.absences.toHandle(workspaceId ?? ""),
+    queryFn: () => getAbsencesToHandle(workspaceId as string),
+    enabled: enabled && !!workspaceId,
     select: (rows) => rows.filter((a) => a.status === "pending").length,
   });
   return enabled ? (query.data ?? 0) : 0;
 }
 
 export function useCompanyAbsences(enabled = true) {
+  const { workspaceId } = useOwnerVenues();
   return useQuery({
-    queryKey: qk.absences.company,
-    queryFn: getCompanyAbsences,
-    enabled,
+    queryKey: qk.absences.company(workspaceId ?? ""),
+    queryFn: () => getCompanyAbsences(workspaceId as string),
+    enabled: enabled && !!workspaceId,
   });
 }
 
@@ -232,8 +235,8 @@ export function useRemoveFromShifts() {
 }
 
 /**
- * Il riepilogo assenze del mese. Come `useOwnerHoursSummary`, `workspaceId` è solo
- * la chiave di cache: la RPC usa `auth.uid()`.
+ * Il riepilogo assenze del mese, confinato all'azienda sia nella cache sia
+ * nella RPC.
  */
 export function useOwnerAbsenceSummary(
   workspaceId: string | undefined,
@@ -241,7 +244,7 @@ export function useOwnerAbsenceSummary(
 ) {
   return useQuery({
     queryKey: qk.absences.summary(workspaceId ?? "", month),
-    queryFn: () => getOwnerAbsenceSummary(month),
+    queryFn: () => getOwnerAbsenceSummary(workspaceId as string, month),
     enabled: !!workspaceId,
   });
 }

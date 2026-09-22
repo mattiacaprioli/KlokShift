@@ -375,9 +375,8 @@ export function usePersonWorkedShifts(
 /**
  * Le ore di tutta l'azienda in un mese.
  *
- * ⚠️ `workspaceId` è **solo la chiave di cache**: la RPC non lo riceve, usa
- * `auth.uid()`. Serve a non mescolare la cache di due account sullo stesso
- * dispositivo, e a spegnere la query per chi non gestisce niente.
+ * `workspaceId` delimita sia la cache sia il risultato della RPC, così il
+ * cambio di azienda non può mescolare righe gestibili dallo stesso account.
  */
 export function useOwnerHoursSummary(
   workspaceId: string | undefined,
@@ -385,7 +384,7 @@ export function useOwnerHoursSummary(
 ) {
   return useQuery({
     queryKey: qk.staff.ownerHours(workspaceId ?? "", month),
-    queryFn: () => getOwnerHoursSummary(month),
+    queryFn: () => getOwnerHoursSummary(workspaceId as string, month),
     enabled: !!workspaceId,
   });
 }

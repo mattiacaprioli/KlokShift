@@ -556,14 +556,16 @@ export function monthBounds(month: string): { start: string; end: string } {
  * due join e sommava qui — e la pagina Ore offre dodici mesi a portata di click,
  * cioè dodici dataset completi.
  *
- * ⚠️ Nessun parametro per l'azienda: la RPC usa `auth.uid()`. Il perimetro è
- * «le sedi su cui HO il permesso Ore» e non è negoziabile dal client.
+ * Il perimetro è l'intersezione fra l'azienda corrente e le sedi su cui chi
+ * legge ha il permesso Ore. Le sedi chiuse restano incluse nello storico.
  */
 export async function getOwnerHoursSummary(
+  workspaceId: string,
   month: string
 ): Promise<OwnerHoursRow[]> {
   const { start, end } = monthBounds(month);
-  const { data, error } = await supabase.rpc("get_hours_summary", {
+  const { data, error } = await supabase.rpc("get_workspace_hours_summary", {
+    p_workspace: workspaceId,
     p_from: start,
     p_to: end,
   });

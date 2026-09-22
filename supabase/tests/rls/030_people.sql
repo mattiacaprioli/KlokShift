@@ -405,6 +405,94 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- Report e assenze: perimetro esplicito dell'azienda corrente
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  ids uuid[];
+  r jsonb;
+  v_emp_w2 uuid;
+begin
+  -- Emp è titolare di W2 e dipendente di W1. Mette sé stesso in organico su
+  -- V3, poi invita Ow a gestire anche W2: Ow diventa il gestore di due aziende.
+  perform tests.login('Emp');
+  r := public.add_member(
+    tests.id('W2'), '{}'::jsonb, 'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V3'))), true
+  );
+  v_emp_w2 := (r -> 'venue_member_ids' ->> 0)::uuid;
+  r := public.add_member(
+    tests.id('W2'), '{"full_name":"Olivia","email":"ow@t.test"}'::jsonb,
+    'collaborator', '{"hours":true,"staff":true}'::jsonb, 'all', '[]'::jsonb
+  );
+  perform tests.login('Ow');
+  perform public.respond_to_invite((r ->> 'member_id')::uuid, true);
+
+  -- Ore storiche in W2, separate da quelle già preparate in W1.
+  perform tests.login('Emp');
+  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V3'), 'title', 'W2 storico', 'date', (current_date - 1)::text,
+    'start_time', '10:00', 'end_time', '12:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp_w2))
+  )));
+  perform public.record_absence(
+    tests.id('M_Emp_W2'), 'ferie', current_date + 60, current_date + 60
+  );
+
+  perform tests.login('Ow');
+  perform tests.eq(
+    (select count(*) from public.get_workspace_hours_summary(tests.id('W1'), current_date - 10, current_date + 1)
+      where venue_id = tests.id('V3')),
+    0::bigint, 'le ore W1 non contengono sedi di W2');
+  perform tests.eq(
+    (select sum(hours) from public.get_workspace_hours_summary(tests.id('W2'), current_date - 10, current_date + 1)),
+    2::numeric, 'le ore W2 contengono soltanto il turno di W2');
+
+  -- Le sedi archiviate restano nello storico dell'azienda corretta.
+  perform public.set_venue_closed(tests.id('V1'), true);
+  perform tests.ok(
+    exists (select 1 from public.get_workspace_hours_summary(tests.id('W1'), current_date - 10, current_date + 1)
+             where venue_id = tests.id('V1') and venue_closed),
+    'W1 mantiene nello storico la propria sede archiviata');
+  perform public.set_venue_closed(tests.id('V1'), false);
+
+  perform tests.ok(
+    not exists (select 1 from public.get_workspace_absence_summary(tests.id('W1'), current_date, current_date + 90)
+                 where member_id = tests.id('M_Emp_W2')),
+    'il riepilogo assenze W1 non contiene il membro W2 della stessa persona');
+  perform tests.eq(
+    (select ferie_days from public.get_workspace_absence_summary(tests.id('W2'), current_date, current_date + 90)
+      where member_id = tests.id('M_Emp_W2')),
+    1, 'il riepilogo assenze W2 contiene soltanto la propria assenza');
+
+  -- Emp gestisce W2 ma lavora in W1: la vista personale continua a vedere
+  -- entrambe le aziende, mentre il report manager di W2 non assorbe W1.
+  perform tests.login('Emp');
+  perform tests.eq(
+    (select count(distinct m.workspace_id)
+       from public.staff_absences a
+       join public.workspace_members m on m.id = a.member_id
+      where m.user_id = tests.id('Emp')),
+    2::bigint, 'la persona conserva le proprie assenze di entrambe le aziende');
+  perform tests.ok(
+    not exists (select 1 from public.get_workspace_absence_summary(tests.id('W2'), current_date - 10, current_date + 90)
+                 where member_id = tests.id('M_Emp')),
+    'gestire W2 non attribuisce a W2 la propria assenza di W1');
+  perform tests.eq(
+    (select count(*) from public.get_workspace_hours_summary(tests.id('W1'), current_date - 10, current_date + 1)),
+    0::bigint, 'un workspace non autorizzato non allarga le ore visibili');
+
+  perform tests.login('Str');
+  perform tests.eq(
+    (select count(*) from public.get_workspace_hours_summary(tests.id('W1'), current_date - 10, current_date + 1)),
+    0::bigint, 'un estraneo non ottiene ore indicando un workspace');
+  perform tests.eq(
+    (select count(*) from public.get_workspace_absence_summary(tests.id('W1'), current_date, current_date + 90)),
+    0::bigint, 'un estraneo non ottiene assenze indicando un workspace');
+  perform tests.logout();
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- Profilo professionale
 -- ---------------------------------------------------------------------------
 do $$

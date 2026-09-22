@@ -1348,6 +1348,18 @@ export type Database = {
           rating_count: number
         }[]
       }
+      get_workspace_absence_summary: {
+        Args: { p_from: string; p_to: string; p_workspace: string }
+        Returns: {
+          ferie_days: number
+          inps_protocols: string
+          malattia_days: number
+          member_id: string
+          member_name: string
+          permesso_days: number
+          permesso_hours: number
+        }[]
+      }
       get_workspace_contacts: {
         Args: never
         Returns: {
@@ -1359,6 +1371,19 @@ export type Database = {
           venues: string
           workspace_id: string
           workspace_name: string
+        }[]
+      }
+      get_workspace_hours_summary: {
+        Args: { p_from: string; p_to: string; p_workspace: string }
+        Returns: {
+          hours: number
+          member_id: string
+          member_name: string
+          roles: string
+          shifts_count: number
+          venue_closed: boolean
+          venue_id: string
+          venue_name: string
         }[]
       }
       leave: {

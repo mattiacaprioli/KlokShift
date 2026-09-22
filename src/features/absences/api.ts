@@ -53,7 +53,8 @@ export function absenceEmployersOf(memberships: Membership[]): AbsenceEmployer[]
 }
 
 /** Le colonne della persona che accompagnano un'assenza, con la forma di `AbsenceWithPerson`. */
-const PERSON_EMBED = "person:workspace_members(id, display_name, user_id)";
+const PERSON_EMBED =
+  "person:workspace_members!inner(id, display_name, user_id)";
 
 type PersonEmbed = { id: string; display_name: string; user_id: string | null } | null;
 
@@ -249,11 +250,14 @@ const RECENT_SICK_DAYS = 7;
  * permesso Organico. Le malattie registrate dal titolare stesso restano fuori
  * (`requested_by` null): le sa già.
  */
-export async function getAbsencesToHandle(): Promise<AbsenceWithPerson[]> {
+export async function getAbsencesToHandle(
+  workspaceId: string
+): Promise<AbsenceWithPerson[]> {
   const since = addDaysToDate(todayString(), -RECENT_SICK_DAYS);
   const { data, error } = await supabase
     .from("staff_absences")
     .select(`*, ${PERSON_EMBED}`)
+    .eq("person.workspace_id", workspaceId)
     .or(
       `status.eq.pending,and(kind.eq.malattia,status.eq.approved,requested_by.not.is.null,created_at.gte.${since})`
     )
@@ -274,11 +278,14 @@ export const COMPANY_ABSENCES_DAYS_BACK = 60;
  * questi giorni», e lo storico di ogni persona sta nella sua scheda. La RLS
  * (`manager read`) limita alle persone gestite con il permesso Organico.
  */
-export async function getCompanyAbsences(): Promise<AbsenceWithPerson[]> {
+export async function getCompanyAbsences(
+  workspaceId: string
+): Promise<AbsenceWithPerson[]> {
   const since = addDaysToDate(todayString(), -COMPANY_ABSENCES_DAYS_BACK);
   const { data, error } = await supabase
     .from("staff_absences")
     .select(`*, ${PERSON_EMBED}`)
+    .eq("person.workspace_id", workspaceId)
     .or(`status.eq.pending,end_date.gte.${since}`)
     .order("start_date", { ascending: true });
   if (error) throw new Error(error.message);
@@ -392,14 +399,16 @@ export async function removeFromShifts(assignmentIds: string[]): Promise<void> {
 
 /**
  * Le assenze approvate del mese per persona, per la pagina Ore e l'export.
- * Stesso intervallo di `get_hours_summary` (fine esclusa). Il perimetro è il
- * permesso Ore, e lo decide la RPC (`auth.uid()`).
+ * Stesso intervallo del riepilogo ore (fine esclusa). Il perimetro è
+ * l'intersezione fra l'azienda corrente e il permesso Ore.
  */
 export async function getOwnerAbsenceSummary(
+  workspaceId: string,
   month: string
 ): Promise<AbsenceSummaryRow[]> {
   const { start, end } = monthBounds(month);
-  const { data, error } = await supabase.rpc("get_absence_summary", {
+  const { data, error } = await supabase.rpc("get_workspace_absence_summary", {
+    p_workspace: workspaceId,
     p_from: start,
     p_to: end,
   });

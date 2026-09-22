@@ -45,13 +45,13 @@ function recentMonths(): string[] {
  */
 export function OrePage() {
   const { profile } = useAuth();
-  const { ownerId, venues } = useOwnerVenues();
+  const { workspaceId, venues } = useOwnerVenues();
   const months = useMemo(() => recentMonths(), []);
   const [month, setMonth] = useState(months[0]);
   // `months` va dal più recente: +1 è il mese prima.
   const monthIndex = months.indexOf(month);
   const { data, isPending, isError, error } = useOwnerHoursSummary(
-    ownerId,
+    workspaceId,
     month
   );
 
@@ -65,7 +65,7 @@ export function OrePage() {
   const label = monthLabel(month);
   const company = companyName(venues, profile?.full_name);
   // Ferie, permessi e malattia del mese: tabella e CSV a parte.
-  const absenceQuery = useOwnerAbsenceSummary(ownerId, month);
+  const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
   const absences = absenceQuery.data ?? [];
 
   function download(content: string, fileName: string) {

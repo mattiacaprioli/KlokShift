@@ -163,7 +163,7 @@ export function invalidateShiftViews(qc: QueryClient, shiftId?: string) {
   qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
   qc.invalidateQueries({ queryKey: qk.shifts.pastCountAll });
   qc.invalidateQueries({ queryKey: qk.assignments.todayAll });
-  // Prefisso di `qk.staff.ownerHours(ownerId, mese)`: un turno che cambia mese
+  // Prefisso di `qk.staff.ownerHours(workspaceId, mese)`: un turno che cambia mese
   // cambia due totali nella pagina Ore.
   qc.invalidateQueries({ queryKey: qk.staff.all });
 }

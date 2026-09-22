@@ -132,12 +132,12 @@ export const qk = {
      * Le ore di un mese, per **azienda** e non per sede: chi lavora in due sedi
      * dello stesso titolare ha una sola busta paga (20260913110100).
      *
-     * `ownerId` è solo la chiave — la RPC usa `auth.uid()`. Sotto `staff.all`,
-     * quindi già invalidata da `invalidateAfterShiftWrite` e da
+     * `workspaceId` è sia il confine della RPC sia quello della cache. Sotto
+     * `staff.all`, quindi già invalidata da `invalidateAfterShiftWrite` e da
      * `useSetAssignmentPresence`.
      */
-    ownerHours: (ownerId: string, month: string) =>
-      ["staff", "ownerHours", ownerId, month] as const,
+    ownerHours: (workspaceId: string, month: string) =>
+      ["staff", "ownerHours", workspaceId, month] as const,
   },
   assignments: {
     all: ["assignments"] as const,
@@ -235,12 +235,14 @@ export const qk = {
       ["absences", "employers", waiterId] as const,
     byPerson: (personId: string) =>
       ["absences", "byPerson", personId] as const,
-    toHandle: ["absences", "toHandle"] as const,
+    toHandle: (workspaceId: string) =>
+      ["absences", "toHandle", workspaceId] as const,
     /** Tutta l'azienda, per la pagina Assenze. */
-    company: ["absences", "company"] as const,
+    company: (workspaceId: string) =>
+      ["absences", "company", workspaceId] as const,
     /** Il riepilogo del mese per il commercialista (pagina Ore). */
-    summary: (ownerId: string, month: string) =>
-      ["absences", "summary", ownerId, month] as const,
+    summary: (workspaceId: string, month: string) =>
+      ["absences", "summary", workspaceId, month] as const,
     /** Chi non c'è, senza il perché: la fonte del planning. */
     availability: (from: string, to: string) =>
       ["absences", "availability", from, to] as const,

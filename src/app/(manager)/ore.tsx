@@ -68,12 +68,12 @@ export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { profile } = useAuth();
-  const { ownerId, venues } = useOwnerVenues();
+  const { workspaceId, venues } = useOwnerVenues();
 
   const [month, setMonth] = useState(currentMonth());
   const atCurrentMonth = month >= currentMonth();
 
-  const query = useOwnerHoursSummary(ownerId, month);
+  const query = useOwnerHoursSummary(workspaceId, month);
   const rows = query.data ?? [];
   // La RPC torna righe (persona × sede); `groupHoursByPerson` le somma per
   // persona, ed è quello che si mostra. **Lo split per sede non si espone più**:
@@ -81,7 +81,7 @@ export default function VenueHoursScreen() {
   // invece che a Milano non è una domanda che questa pagina deve rispondere.
   const people = groupHoursByPerson(rows);
   // Ferie, permessi e malattia del mese: una sezione e un CSV a parte.
-  const absenceQuery = useOwnerAbsenceSummary(ownerId, month);
+  const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
   const absences = absenceQuery.data ?? [];
 
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
