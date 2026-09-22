@@ -8,6 +8,7 @@ import {
 import { qk } from "@/lib/queryKeys";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { absenceConflicts, type AbsenceWindow } from "./conflicts";
+import { invalidateAfterShiftRemoval } from "./removal";
 import {
   getAbsence,
   getAbsenceAvailability,
@@ -226,11 +227,10 @@ export function useRemoveFromShifts() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: removeFromShifts,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assignments.all });
-      qc.invalidateQueries({ queryKey: qk.shifts.all });
-      qc.invalidateQueries({ queryKey: qk.planning.all });
-    },
+    // Anche un errore può arrivare dopo una o più rimozioni già committate, o
+    // dopo il commit della richiesta corrente: la cache si rilegge sempre. La
+    // Promise mantiene il bottone disabilitato finché il refetch attivo finisce.
+    onSettled: () => invalidateAfterShiftRemoval(qc),
   });
 }
 

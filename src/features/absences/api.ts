@@ -12,6 +12,53 @@ export type AbsenceStatus = Enums<"absence_status">;
 
 export const ABSENCES_PAGE_SIZE = 20;
 
+export type RemoveFromShiftsResult = {
+  /** RPC concluse con una risposta di successo. */
+  removedAssignmentIds: string[];
+};
+
+/**
+ * Una sequenza interrotta. La RPC corrente è deliberatamente `uncertain`: un
+ * timeout può arrivare dopo il commit e il client non deve dichiararla fallita
+ * né ritentarla prima del refetch.
+ */
+export class RemoveFromShiftsError extends UserFacingError {
+  readonly removedAssignmentIds: string[];
+  readonly uncertainAssignmentId: string;
+  readonly notAttemptedAssignmentIds: string[];
+  readonly causeMessage: string;
+
+  constructor(input: {
+    removedAssignmentIds: string[];
+    uncertainAssignmentId: string;
+    notAttemptedAssignmentIds: string[];
+    causeMessage: string;
+  }) {
+    const removed = input.removedAssignmentIds.length;
+    const untouched = input.notAttemptedAssignmentIds.length;
+    const confirmed =
+      removed === 0
+        ? "0 turni risultano confermati come liberati. "
+        : removed === 1
+          ? "1 turno è stato liberato. "
+          : `${removed} turni sono stati liberati. `;
+    const remaining =
+      untouched === 0
+        ? ""
+        : untouched === 1
+          ? "L’altro turno non è stato ancora elaborato. "
+          : `Gli altri ${untouched} turni non sono stati ancora elaborati. `;
+    super(
+      `${confirmed}Non sappiamo se il turno su cui l’operazione si è interrotta sia stato liberato. ${remaining}Controlla l’elenco aggiornato prima di riprovare.`
+    );
+    this.name = "RemoveFromShiftsError";
+    this.removedAssignmentIds = [...input.removedAssignmentIds];
+    this.uncertainAssignmentId = input.uncertainAssignmentId;
+    this.notAttemptedAssignmentIds = [...input.notAttemptedAssignmentIds];
+    this.causeMessage = input.causeMessage;
+  }
+}
+
 /** Cursore stabile: più vecchio = (start_date, id) minore. */
 export type AbsenceCursor = { start_date: string; id: string };
 
@@ -388,13 +435,26 @@ export async function getPersonShiftsInRange(
  * Una `unassign` per assegnazione, come fa già la modifica di un turno: chi
  * esce riceve l'avviso («Turno revocato») e il posto si riapre. Il turno
  * resta, scoperto: il sostituto lo sceglie il titolare. Si ferma al primo
- * errore, senza ingoiarlo.
+ * errore. Le rimozioni già confermate restano nell'esito; quella corrente è
+ * incerta (la rete può cadere dopo il commit) e le successive non sono tentate.
  */
-export async function removeFromShifts(assignmentIds: string[]): Promise<void> {
-  for (const id of assignmentIds) {
+export async function removeFromShifts(
+  assignmentIds: string[]
+): Promise<RemoveFromShiftsResult> {
+  const removedAssignmentIds: string[] = [];
+  for (const [index, id] of assignmentIds.entries()) {
     const { error } = await supabase.rpc("unassign", { p_assignment: id });
-    if (error) throw new UserFacingError(error.message);
+    if (error) {
+      throw new RemoveFromShiftsError({
+        removedAssignmentIds,
+        uncertainAssignmentId: id,
+        notAttemptedAssignmentIds: assignmentIds.slice(index + 1),
+        causeMessage: error.message,
+      });
+    }
+    removedAssignmentIds.push(id);
   }
+  return { removedAssignmentIds };
 }
 
 /**

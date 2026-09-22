@@ -52,7 +52,7 @@ export function ResolveAbsenceModal({
             } catch (e) {
               onClose();
               toast.show(
-                userErrorMessage(e, "Approvata, ma i turni non sono stati tolti."),
+                `Richiesta approvata. ${userErrorMessage(e, "Non siamo riusciti a verificare la rimozione dai turni. Controlla l’elenco aggiornato.")}`,
                 "error"
               );
               return;

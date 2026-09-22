@@ -59,11 +59,11 @@ export function AbsenceConflictsBlock({
     remove.mutate(
       conflicts.map((c) => c.assignmentId),
       {
-        onSuccess: () =>
+        onSuccess: (result) =>
           toast.show(
-            conflicts.length === 1
+            result.removedAssignmentIds.length === 1
               ? "Tolto dal turno: ora è scoperto"
-              : `Tolto da ${conflicts.length} turni: ora sono scoperti`
+              : `Tolto da ${result.removedAssignmentIds.length} turni: ora sono scoperti`
           ),
         onError: (e) =>
           toast.show(userErrorMessage(e, "Operazione non riuscita."), "error"),
