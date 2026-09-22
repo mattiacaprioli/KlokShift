@@ -17,7 +17,10 @@ import {
 } from "@/features/shifts/hooks";
 import {
   hasMoveImpact,
+  MOVE_IMPACT_LOADING,
+  MOVE_IMPACT_UNAVAILABLE,
   moveHeadline,
+  moveImpactWindow,
   moveImpactLines,
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
@@ -256,6 +259,7 @@ function InternalForm({
   initialPersonIds?: string[];
   onClose: () => void;
 }) {
+  const toast = useToast();
   // Solo le sedi su cui si possono fare i turni: il selettore non deve offrire
   // una sede su cui l'insert verrebbe poi rifiutato dalla RLS.
   const { venuesWith, can } = useOwnerVenues();
@@ -317,11 +321,18 @@ function InternalForm({
   const formDate = watch("date");
   const formStart = watch("start_time");
   const formEnd = watch("end_time");
-  const absencesQuery = useAbsenceAvailability(formDate, formDate, !!formDate);
-  // I turni del giorno d'arrivo: servono a dire, prima di salvare, se qualcuno
-  // ci finirebbe sopra un turno che ha già. Stessa query del planning, quindi
-  // di norma è già in cache.
-  const targetDayQuery = useOwnerShiftsRange(formDate, formDate);
+  const impactWindow = moveImpactWindow(formDate);
+  const absencesQuery = useAbsenceAvailability(
+    impactWindow.from,
+    impactWindow.to,
+    !!formDate
+  );
+  // La finestra adiacente trova anche i turni notturni iniziati il giorno prima
+  // o quelli che cominciano dopo mezzanotte. Senza scope include tutte le sedi.
+  const targetDayQuery = useOwnerShiftsRange(
+    impactWindow.from,
+    impactWindow.to
+  );
   const staffQuery = useVenueStaff(formVenueId || undefined);
   const rolesQuery = useVenueRoles(formVenueId || undefined);
 
@@ -563,6 +574,22 @@ function InternalForm({
         values.end_time !== shift.end_time.slice(0, 5));
     if (!moved || !shift) {
       save(values);
+      return;
+    }
+    if (
+      assignmentsQuery.isPending ||
+      absencesQuery.isPending ||
+      targetDayQuery.isPending
+    ) {
+      toast.show(MOVE_IMPACT_LOADING);
+      return;
+    }
+    if (
+      assignmentsQuery.isError ||
+      absencesQuery.isError ||
+      targetDayQuery.isError
+    ) {
+      toast.show(MOVE_IMPACT_UNAVAILABLE, "error");
       return;
     }
     const impact = shiftMoveImpact({

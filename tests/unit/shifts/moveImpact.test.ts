@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  moveImpactCandidates,
+  moveImpactWindow,
   moveAssignmentImpact,
   shiftMoveImpact,
   type MoveAssignee,
@@ -189,6 +191,132 @@ describe("shiftMoveImpact", () => {
     });
 
     expect(impact.overlaps).toEqual([]);
+  });
+
+  it("vede un notturno iniziato il giorno prima, anche in un'altra sede", () => {
+    const impact = shiftMoveImpact({
+      shiftId: "moving",
+      assignees: [
+        {
+          status: "assigned",
+          personId: "anna",
+          displayName: "Anna",
+          waiterId: "user-anna",
+        },
+      ],
+      to: { date: "2026-09-22", start_time: "01:00", end_time: "03:00" },
+      absences: [],
+      dayShifts: [
+        shift({
+          id: "previous-night",
+          venue_id: "venue-2",
+          date: "2026-09-21",
+          start_time: "22:00",
+          end_time: "04:00",
+          shift_assignments: [assignment("a-night", "anna")],
+        }),
+      ],
+    });
+
+    expect(impact.overlaps).toEqual([
+      { name: "Anna", title: "previous-night", range: "22:00–04:00 +1" },
+    ]);
+  });
+
+  it("non sovrappone un notturno che finisce quando il nuovo turno inizia", () => {
+    const impact = shiftMoveImpact({
+      shiftId: "moving",
+      assignees: [
+        {
+          status: "assigned",
+          personId: "anna",
+          displayName: "Anna",
+          waiterId: "user-anna",
+        },
+      ],
+      to: { date: "2026-09-22", start_time: "01:00", end_time: "03:00" },
+      absences: [],
+      dayShifts: [
+        shift({
+          id: "previous-night",
+          date: "2026-09-21",
+          start_time: "22:00",
+          end_time: "01:00",
+          shift_assignments: [assignment("a-night", "anna")],
+        }),
+      ],
+    });
+
+    expect(impact.overlaps).toEqual([]);
+  });
+
+  it("vede turno e assenze del giorno successivo a un arrivo notturno", () => {
+    const impact = shiftMoveImpact({
+      shiftId: "moving",
+      assignees: [
+        {
+          status: "assigned",
+          personId: "anna",
+          displayName: "Anna",
+          waiterId: "user-anna",
+        },
+      ],
+      to: { date: "2026-09-22", start_time: "22:00", end_time: "04:00" },
+      absences: [
+        {
+          member_id: "anna",
+          status: "pending",
+          start_date: "2026-09-23",
+          end_date: "2026-09-23",
+          start_time: null,
+          end_time: null,
+        },
+        {
+          member_id: "anna",
+          status: "approved",
+          start_date: "2026-09-23",
+          end_date: "2026-09-23",
+          start_time: null,
+          end_time: null,
+        },
+      ],
+      dayShifts: [
+        shift({
+          id: "next-morning",
+          date: "2026-09-23",
+          start_time: "03:00",
+          end_time: "08:00",
+          shift_assignments: [assignment("a-morning", "anna")],
+        }),
+      ],
+    });
+
+    expect(impact.absent).toEqual([{ name: "Anna", status: "approved" }]);
+    expect(impact.overlaps).toEqual([
+      { name: "Anna", title: "next-morning", range: "03:00–08:00" },
+    ]);
+  });
+});
+
+describe("moveImpactWindow", () => {
+  it("attraversa insieme il bordo settimana e il bordo mese", () => {
+    expect(moveImpactWindow("2026-03-01")).toEqual({
+      from: "2026-02-28",
+      to: "2026-03-02",
+    });
+  });
+
+  it("lascia visibili al calcolo soltanto D-1, D e D+1", () => {
+    const candidates = [
+      { id: "too-early", date: "2026-02-27" },
+      { id: "saturday", date: "2026-02-28" },
+      { id: "sunday", date: "2026-03-01" },
+      { id: "monday", date: "2026-03-02" },
+      { id: "too-late", date: "2026-03-03" },
+    ];
+
+    expect(moveImpactCandidates(candidates, "2026-03-01").map((x) => x.id))
+      .toEqual(["saturday", "sunday", "monday"]);
   });
 });
 

@@ -40,7 +40,10 @@ import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import {
   hasMoveImpact,
+  MOVE_IMPACT_LOADING,
+  MOVE_IMPACT_UNAVAILABLE,
   moveHeadline,
+  moveImpactWindow,
   moveImpactLines,
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
@@ -141,8 +144,15 @@ function EditForm({
   const [pendingMove, setPendingMove] = useState<string | null>(null);
   const assignmentsQuery = useShiftAssignments(shift.id);
   const targetDate = toDateString(date);
-  const absencesQuery = useAbsenceAvailability(targetDate, targetDate);
-  const targetDayQuery = useOwnerShiftsRange(targetDate, targetDate);
+  const impactWindow = moveImpactWindow(targetDate);
+  const absencesQuery = useAbsenceAvailability(
+    impactWindow.from,
+    impactWindow.to
+  );
+  const targetDayQuery = useOwnerShiftsRange(
+    impactWindow.from,
+    impactWindow.to
+  );
 
   function onSubmit() {
     if (selectedIds.length === 0) {
@@ -164,6 +174,22 @@ function EditForm({
       to.end_time !== shift.end_time.slice(0, 5);
     if (!moved) {
       save();
+      return;
+    }
+    if (
+      assignmentsQuery.isPending ||
+      absencesQuery.isPending ||
+      targetDayQuery.isPending
+    ) {
+      toast.show(MOVE_IMPACT_LOADING, "info");
+      return;
+    }
+    if (
+      assignmentsQuery.isError ||
+      absencesQuery.isError ||
+      targetDayQuery.isError
+    ) {
+      toast.show(MOVE_IMPACT_UNAVAILABLE, "error");
       return;
     }
     const impact = shiftMoveImpact({

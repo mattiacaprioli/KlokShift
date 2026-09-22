@@ -22,7 +22,11 @@ import {
 import {
   assigneesOf,
   hasMoveImpact,
+  MOVE_IMPACT_LOADING,
+  MOVE_IMPACT_UNAVAILABLE,
   moveHeadline,
+  moveImpactCandidates,
+  moveImpactWindow,
   moveImpactLines,
   shiftMoveImpact,
   type MoveImpact,
@@ -196,6 +200,18 @@ export function PlanningPage() {
     scopedIds
   );
 
+  // Il calendario continua a mostrare soltanto `days` e lo scope selezionato.
+  // Questa seconda lettura è invisibile: allarga di un giorno entrambi i bordi
+  // e include tutte le sedi gestite, così gli avvisi vedono anche i notturni.
+  const impactRange = {
+    from: moveImpactWindow(days[0]).from,
+    to: moveImpactWindow(days[days.length - 1]).to,
+  };
+  const impactShiftsQuery = useOwnerShiftsRange(
+    impactRange.from,
+    impactRange.to
+  );
+
   const byDay = useMemo(() => {
     const map = new Map<string, ShiftWithAssignees[]>();
     for (const day of days) map.set(day, []);
@@ -239,8 +255,11 @@ export function PlanningPage() {
 
   // Chi non c'è nel periodo visibile, senza il perché. Serve alla vista per
   // persona e all'avviso quando si passa un turno a qualcuno assente.
-  const absences =
-    useAbsenceAvailability(days[0], days[days.length - 1]).data ?? [];
+  const impactAbsencesQuery = useAbsenceAvailability(
+    impactRange.from,
+    impactRange.to
+  );
+  const absences = impactAbsencesQuery.data ?? [];
 
   const toast = useToast();
   const move = useMoveShiftToDate();
@@ -265,6 +284,14 @@ export function PlanningPage() {
 
   function requestMove(payload: MoveDragPayload, toDate: string) {
     if (busy) return;
+    if (impactShiftsQuery.isPending || impactAbsencesQuery.isPending) {
+      toast.show(MOVE_IMPACT_LOADING);
+      return;
+    }
+    if (impactShiftsQuery.isError || impactAbsencesQuery.isError) {
+      toast.show(MOVE_IMPACT_UNAVAILABLE, "error");
+      return;
+    }
     const shift = byId.get(payload.shiftId);
     if (!shift) return;
     // Le conseguenze si dicono prima e per intero: chi lo saprà, chi dovrà
@@ -281,7 +308,10 @@ export function PlanningPage() {
       },
       myWaiterId: session?.user.id,
       absences,
-      dayShifts: byDay.get(toDate) ?? [],
+      dayShifts: moveImpactCandidates(
+        impactShiftsQuery.data ?? [],
+        toDate
+      ),
     });
     if (!hasMoveImpact(impact)) {
       runMove(payload, toDate);
@@ -499,7 +529,13 @@ export function PlanningPage() {
         }
       />
 
-      {isError ? <QueryError error={error} /> : null}
+      {isError || impactShiftsQuery.isError || impactAbsencesQuery.isError ? (
+        <QueryError
+          error={
+            error ?? impactShiftsQuery.error ?? impactAbsencesQuery.error
+          }
+        />
+      ) : null}
       {isPending ? <Spinner /> : null}
 
       {/* La regola in una riga: un turno si sposta nel tempo, una persona si

@@ -4,6 +4,7 @@ import {
   type AssignmentStatus,
 } from "@/features/assignments/status";
 import {
+  addDaysToDate,
   formatDate,
   formatShiftRange,
   shiftEndsAt,
@@ -55,6 +56,33 @@ export const NO_IMPACT: MoveImpact = {
 };
 
 /**
+ * Dati minimi da caricare attorno al giorno d'arrivo. Il giorno precedente
+ * contiene i turni notturni ancora in corso; quello successivo contiene sia
+ * le assenze toccate dopo mezzanotte sia i turni che iniziano prima della fine
+ * di un turno notturno.
+ */
+export function moveImpactWindow(date: string): { from: string; to: string } {
+  return {
+    from: addDaysToDate(date, -1),
+    to: addDaysToDate(date, 1),
+  };
+}
+
+/** Limita un range più largo (per esempio il mese visibile) al bersaglio. */
+export function moveImpactCandidates<T extends { date: string }>(
+  shifts: T[],
+  date: string
+): T[] {
+  const { from, to } = moveImpactWindow(date);
+  return shifts.filter((shift) => shift.date >= from && shift.date <= to);
+}
+
+export const MOVE_IMPACT_LOADING =
+  "Attendi: stiamo verificando assenze e sovrapposizioni.";
+export const MOVE_IMPACT_UNAVAILABLE =
+  "Non riusciamo a verificare assenze e sovrapposizioni. Riprova.";
+
+/**
  * Un'assenza già collocata sulla persona. `AbsenceAvailability` la soddisfa
  * (`member_id` è la persona, e il tipo non c'è: lo nasconde la RPC, GDPR).
  */
@@ -102,12 +130,11 @@ export function shiftMoveImpact(input: {
   to: ShiftTimes;
   /** Chi sta spostando, se è anche in organico: il trigger lo salta. */
   myWaiterId?: string;
-  /** Le assenze del periodo, di chiunque: si filtrano qui per persona. */
+  /** Le assenze della finestra adiacente, di chiunque: filtrate per persona. */
   absences: PersonAbsence[];
   /**
-   * I turni del giorno d'arrivo, per le sovrapposizioni. Chi non li ha a
-   * portata di mano passa una lista vuota: meglio un avviso in meno che uno
-   * sbagliato.
+   * I turni della finestra adiacente, di tutte le sedi gestite. Il confronto
+   * sugli istanti decide poi quali si sovrappongono davvero.
    */
   dayShifts?: ShiftWithAssignees[];
   now?: Date;
