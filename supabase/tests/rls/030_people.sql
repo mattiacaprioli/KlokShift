@@ -279,6 +279,7 @@ do $$
 declare
   ids uuid[]; a uuid; r record;
   v_emp uuid := pg_temp.vm('M_Emp', 'V1');
+  v_emp2 uuid := pg_temp.vm('M_Emp2', 'V2');
 begin
   perform tests.login('Ow');
   ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
@@ -311,6 +312,71 @@ begin
   perform tests.eq((select sum(hours) from public.get_member_worked_shifts(tests.id('M_Emp'))), 12.5::numeric, 'dettaglio ore coerente col riepilogo');
   perform tests.eq((select hours from public.get_member_worked_shifts(tests.id('M_Emp')) where title = 'Copertura'), 4::numeric, 'il primo turno cede le ore comuni');
   perform tests.eq((select hours from public.get_member_worked_shifts(tests.id('M_Emp')) where title = 'Supervisione'), 5::numeric, 'il turno che inizia dopo conserva la sua durata');
+
+  -- Gli annullati non sono lavoro: non contano neppure con una rettifica
+  -- manuale e non sottraggono il tratto comune a un turno valido.
+  perform tests.login('Ow');
+  ids := public.create_shifts(jsonb_build_array(
+    jsonb_build_object(
+      'venue_id', tests.id('V2'), 'title', 'Valido Emp2', 'date', (current_date - 3)::text,
+      'start_time', '14:00', 'end_time', '22:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp2))),
+    jsonb_build_object(
+      'venue_id', tests.id('V2'), 'title', 'Annullato sovrapposto', 'date', (current_date - 3)::text,
+      'start_time', '18:00', 'end_time', '23:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp2))),
+    jsonb_build_object(
+      'venue_id', tests.id('V2'), 'title', 'Annullato rettificato', 'date', (current_date - 4)::text,
+      'start_time', '10:00', 'end_time', '14:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp2))),
+    jsonb_build_object(
+      'venue_id', tests.id('V2'), 'title', 'Assente Emp2', 'date', (current_date - 5)::text,
+      'start_time', '10:00', 'end_time', '12:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp2))),
+    jsonb_build_object(
+      'venue_id', tests.id('V2'), 'title', 'Rifiutato Emp2', 'date', (current_date - 6)::text,
+      'start_time', '10:00', 'end_time', '12:00',
+      'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp2)))
+  ));
+  select id into a from public.shift_assignments where shift_id = ids[3];
+  perform public.record_attendance(a, '{"worked_hours":4}'::jsonb);
+  perform public.set_shift_status(ids[2], 'cancelled');
+  perform public.set_shift_status(ids[3], 'cancelled');
+  perform tests.logout();
+  select id into a from public.shift_assignments where shift_id = ids[2];
+  perform tests.eq(
+    private.effective_assignment_hours(a, array[tests.id('V2')]),
+    0::numeric, 'un annullato pianificato vale zero anche nel calcolo di base');
+  select id into a from public.shift_assignments where shift_id = ids[3];
+  perform tests.eq(
+    private.effective_assignment_hours(a, array[tests.id('V2')]),
+    0::numeric, 'un annullato con rettifica manuale vale comunque zero');
+  perform tests.login('Ow');
+  select id into a from public.shift_assignments where shift_id = ids[4];
+  perform public.record_attendance(a, '{"status":"no_show"}'::jsonb);
+  select id into a from public.shift_assignments where shift_id = ids[5];
+  perform public.record_attendance(a, '{"status":"declined"}'::jsonb);
+  perform public.set_venue_closed(tests.id('V2'), true);
+
+  perform tests.login('Co2');
+  select * into r from public.get_hours_summary(current_date - 10, current_date + 1)
+   where member_id = tests.id('M_Emp2');
+  perform tests.eq(r.shifts_count, 1, 'nel riepilogo resta soltanto il turno valido');
+  perform tests.eq(r.hours, 8::numeric, 'l''annullato sovrapposto non sottrae ore al turno valido');
+  perform tests.ok(r.venue_closed, 'lo storico mantiene anche una sede archiviata');
+  perform tests.eq((select past_total from public.get_member_performance(tests.id('M_Emp2'))), 3, 'performance: annullati esclusi dal totale');
+  perform tests.eq((select worked_count from public.get_member_performance(tests.id('M_Emp2'))), 1, 'performance: un solo turno lavorato');
+  perform tests.eq((select no_show_count from public.get_member_performance(tests.id('M_Emp2'))), 1, 'performance: assenza conservata');
+  perform tests.eq((select declined_count from public.get_member_performance(tests.id('M_Emp2'))), 1, 'performance: rifiuto conservato');
+  perform tests.eq((select total_hours from public.get_member_performance(tests.id('M_Emp2'))), 8::numeric, 'performance: annullato rettificato a zero ore');
+  perform tests.eq((select count(*) from public.get_member_worked_shifts(tests.id('M_Emp2'))), 1::bigint, 'dettaglio: annullati esclusi');
+  perform tests.eq((select hours from public.get_member_worked_shifts(tests.id('M_Emp2'))), 8::numeric, 'dettaglio: durata valida intera');
+
+  perform tests.login('Emp2');
+  perform tests.eq((select total_count from public.get_my_work_history_totals()), 1, 'storico personale: annullati esclusi');
+  perform tests.eq((select total_hours from public.get_my_work_history_totals()), 8::numeric, 'storico personale: solo ore valide');
+  perform tests.login('Ow');
+  perform public.set_venue_closed(tests.id('V2'), false);
 
   perform tests.login('Co');   -- ha «Turni» ma non «Ore»
   perform tests.eq((select count(*) from public.get_hours_summary(current_date - 5, current_date + 1)), 0::bigint, 'Co senza «Ore» non vede le ore');
