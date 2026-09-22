@@ -99,6 +99,15 @@ begin
   select id into a_emp from public.shift_assignments where shift_id = past and venue_member_id = v_emp;
   select id into a_co  from public.shift_assignments where shift_id = past and venue_member_id = v_co;
 
+  -- Una patch deve descrivere una modifica reale e non deve diventare un
+  -- percorso di lettura alternativo attraverso la SECURITY DEFINER.
+  perform tests.login('Str');
+  perform tests.raises(format('select public.record_attendance(%L, null)', a_emp), 'invalid_patch', 'patch SQL NULL negata');
+  perform tests.raises(format('select public.record_attendance(%L, ''[]'')', a_emp), 'invalid_patch', 'patch non-oggetto negata');
+  perform tests.raises(format('select public.record_attendance(%L, ''{}'')', a_emp), 'invalid_patch', 'patch vuota negata');
+  perform tests.raises(format('select public.record_attendance(%L, ''{"ignored": true}'')', a_emp), 'invalid_patch', 'chiavi sconosciute negate');
+  perform tests.raises(format('select public.record_attendance(%L, ''{"status": "confirmed"}'')', a_emp), 'not_allowed', 'patch valida fuori perimetro negata');
+
   perform tests.login('Co');
   perform tests.raises(format('select public.unassign(%L)', a_co), 'finished_shift_locked', 'Co non si toglie da un turno finito');
   perform tests.raises(format('select public.record_attendance(%L, ''{"worked_hours": 5}'')', a_co), 'not_allowed', 'Co non scrive le proprie ore');
@@ -107,10 +116,12 @@ begin
   r := public.record_attendance(a_emp, '{"status": "no_show"}'::jsonb);
   perform tests.eq(r.status::text, 'no_show', 'Co segna la presenza di Emp');
   perform tests.raises(format('select public.record_attendance(%L, ''{"worked_hours": 5}'')', a_emp), 'not_allowed', 'Co non ha «Ore»');
+  perform tests.raises(format('select public.record_attendance(%L, ''{"status": "confirmed", "worked_hours": 5}'')', a_emp), 'not_allowed', 'la patch mista richiede «Turni» e «Ore»');
   perform tests.raises(format('select public.assign(%L, %L)', past, pg_temp.vm('M_Co', 'V1')), 'finished_shift_locked', 'né si mette su un turno finito (già presente: blocco prima del conflitto)');
 
   perform tests.login('Co2');  -- solo «ore»
   perform tests.raises(format('select public.record_attendance(%L, ''{"status": "confirmed"}'')', a_emp), 'not_allowed', 'Co2 non ha «Turni»');
+  perform tests.raises(format('select public.record_attendance(%L, ''{"status": "confirmed", "worked_hours": 5}'')', a_emp), 'not_allowed', 'anche chi ha solo «Ore» non può inviare la patch mista');
   r := public.record_attendance(a_emp, '{"worked_hours": 4.5}'::jsonb);
   perform tests.eq(r.worked_hours, 4.5::numeric, 'Co2 scrive le ore');
 
