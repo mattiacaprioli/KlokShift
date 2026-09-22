@@ -22,6 +22,7 @@
   ],
   "exclude": [
     "supabase/functions",
+    "tests",
     "web",
     "web-site"
   ]
