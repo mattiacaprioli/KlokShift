@@ -3,7 +3,6 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  type QueryClient,
 } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
@@ -28,6 +27,7 @@ import {
   pastFiltersKey,
   type PastShiftsFilters,
 } from "./pastFilters";
+import { invalidateShiftViews } from "./invalidation";
 
 /**
  * Gli hook dei turni **non prendono una sede**: leggono le sedi dell'azienda dal
@@ -142,30 +142,6 @@ export function useUpdateShiftStatus(shiftId: string) {
     // lavora oggi»: le stesse viste di qualunque altra scrittura.
     onSuccess: () => invalidateShiftViews(qc, shiftId),
   });
-}
-
-/**
- * Tutto ciò che la modifica di un turno può spostare. Cambiare la data non
- * tocca solo il calendario: il turno può attraversare "oggi" (storico, home,
- * copertura) e il confine del mese (riepilogo ore).
- *
- * Si invalidano i **prefissi** e non le chiavi complete: lo scope è `venuesKey`,
- * che qui non si ha a portata di mano, e in una sessione ce n'è uno solo vivo.
- *
- * ⚠️ È **l'unica**: `features/assignments/hooks.ts` la richiama invece di
- * tenerne una propria più corta. Due liste diverse volevano dire che la stessa
- * scrittura rinfrescava viste diverse a seconda di chi la faceva partire.
- */
-export function invalidateShiftViews(qc: QueryClient, shiftId?: string) {
-  if (shiftId) qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
-  qc.invalidateQueries({ queryKey: qk.shifts.byOwnerAll });
-  qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
-  qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
-  qc.invalidateQueries({ queryKey: qk.shifts.pastCountAll });
-  qc.invalidateQueries({ queryKey: qk.assignments.todayAll });
-  // Prefisso di `qk.staff.ownerHours(workspaceId, mese)`: un turno che cambia mese
-  // cambia due totali nella pagina Ore.
-  qc.invalidateQueries({ queryKey: qk.staff.all });
 }
 
 export function useUpdateShift(shiftId: string) {

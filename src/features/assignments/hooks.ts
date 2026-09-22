@@ -3,7 +3,7 @@ import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
-import { invalidateShiftViews } from "@/features/shifts/hooks";
+import { invalidateShiftViews } from "@/features/shifts/invalidation";
 import type { InternalShiftPlan } from "./api";
 import {
   createInternalShift,
@@ -169,7 +169,7 @@ export function useUpdateInternalShift(shiftId: string) {
     mutationFn: (input: Parameters<typeof updateInternalShift>[1]) =>
       updateInternalShift(shiftId, input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.shifts.all });
+      invalidateShiftViews(qc, shiftId);
       qc.invalidateQueries({ queryKey: qk.assignments.all });
     },
   });

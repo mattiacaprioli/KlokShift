@@ -4,6 +4,7 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { qk } from "@/lib/queryKeys";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { shiftViewQueryKeys } from "@/features/shifts/invalidation";
 
 type Row = Record<string, unknown>;
 type Payload = RealtimePostgresChangesPayload<Row>;
@@ -158,11 +159,9 @@ export function RealtimeSync({
         { event: "*", schema: "public", table: "shifts", filter },
         (payload) => {
           const shiftId = idOf(rowOf(payload), "id");
-          if (shiftId) invalidate(qk.shifts.detail(shiftId));
-          invalidate(qk.shifts.byOwnerAll);
-          invalidate(qk.shifts.rangeAny);
-          invalidate(qk.shifts.pastAll);
-          invalidate(qk.shifts.pastCountAll);
+          for (const queryKey of shiftViewQueryKeys(shiftId)) {
+            invalidate(queryKey);
+          }
         }
       );
       // Organico: chi è in sede, con quali mansioni, e le mansioni stesse.
