@@ -168,11 +168,11 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
   );
   const managedIds = useMemo(() => managed.map((v) => v.id), [managed]);
 
-  // ⚠️ Le sedi partono solo dopo il contesto: da lì arrivano gli id. Gli id non
-  // stanno nella query key (vedi `useMyVenues`), quindi accenderla prima vorrebbe
-  // dire chiederle con un elenco vuoto e non rifarla più.
+  // Le sedi partono solo dopo il contesto: da lì arrivano gli id. Anche lo scope
+  // vuoto ha una propria chiave e restituisce `[]`; così chiudere l'ultima sede
+  // non può lasciare visibile il risultato dello scope precedente.
   const venuesQuery = useMyVenues(
-    !!myId && !contextQuery.isPending && managedIds.length > 0,
+    !!myId && !contextQuery.isPending,
     managedIds
   );
   // Memoizzato e non `query.data ?? []` inline: quel fallback crea un array nuovo
@@ -217,9 +217,8 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
       isOwner ? venues : venues.filter((v) => can(v.id, perm));
     // Finché non si sa chi sono e cosa posso fare, la UI non è pronta: senza il
     // contesto un collaboratore vedrebbe per un istante ogni sezione nascosta, e
-    // poi sparire. Le sedi si aspettano solo se ce n'è da caricare.
-    const pending =
-      contextQuery.isPending || (managedIds.length > 0 && venuesQuery.isPending);
+    // poi sparire. Anche lo scope vuoto deve risolversi esplicitamente in `[]`.
+    const pending = contextQuery.isPending || venuesQuery.isPending;
     return {
       workspaceId: current?.workspace_id,
       ownerId: current?.workspace_id,
@@ -256,7 +255,6 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
     venueById,
     isOwner,
     can,
-    managedIds.length,
     contextQuery.isPending,
     contextQuery.isError,
     contextQuery.error,

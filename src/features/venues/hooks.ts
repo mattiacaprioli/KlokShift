@@ -18,15 +18,15 @@ import {
  * espone anche `venueIds` e `venuesKey` — le due forme che servono a interrogare
  * e a mettere in cache i turni di tutte le sedi insieme.
  *
- * ⚠️ Gli id non entrano nella query key: l'identità di questa lista è la
- * sessione (la cache si svuota al cambio di persona). Per questo il provider la
- * accende solo quando gli id sono noti, e chi cambia i permessi di un
- * collaboratore invalida `qk.context.mine` e `qk.venues.mine` insieme.
+ * Gli id canonici entrano nella query key: quando contesto o permessi cambiano,
+ * React Query non può mostrare la lista dello scope precedente. `mine` resta il
+ * prefisso comune usato dalle invalidazioni.
  */
 export function useMyVenues(enabled: boolean, venueIds: readonly string[]) {
+  const scope = [...new Set(venueIds)].sort();
   return useQuery({
-    queryKey: qk.venues.mine,
-    queryFn: () => getMyVenues(venueIds),
+    queryKey: qk.venues.mineByIds(scope),
+    queryFn: () => (scope.length > 0 ? getMyVenues(scope) : Promise.resolve([])),
     enabled,
   });
 }

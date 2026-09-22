@@ -20,13 +20,17 @@ export const qk = {
      * delegate se si è un collaboratore (`venue_access`). Una lista: un account
      * può averne più di una.
      *
-     * Nessun id nella chiave, da quando la lista non è più "le sedi di X" ma
-     * "le sedi che vedo io": l'identità è la sessione, e l'uscita svuota la
-     * cache (`queryClient.clear()` su `SIGNED_OUT` in `auth.tsx`). Con l'id del
-     * titolare dentro, un collaboratore avrebbe invalidato la chiave sbagliata —
-     * quella del titolare, che non è la sua.
+     * Prefisso di tutte le liste per ambito. Le invalidazioni restano larghe,
+     * mentre ogni lettura usa `mineByIds`: cambiare insieme di sedi deve creare
+     * una cache nuova, non riusare il risultato della query precedente.
      */
     mine: ["venues", "mine"] as const,
+    mineByIds: (venueIds: readonly string[]) =>
+      [
+        "venues",
+        "mine",
+        [...new Set(venueIds)].sort().join(","),
+      ] as const,
     /** Le sedi archiviate. Solo il titolare le vede: le sue, per definizione. */
     closed: (ownerId: string) => ["venues", "closed", ownerId] as const,
   },
