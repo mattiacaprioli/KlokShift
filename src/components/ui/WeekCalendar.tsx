@@ -172,6 +172,11 @@ export function WeekCalendar({
   className?: string;
 }) {
   const scrollRef = useRef<RNScrollView>(null);
+  // iOS può consegnare più `onMomentumScrollEnd` mentre, dopo uno swipe, le
+  // tre pagine vengono ricostruite e ricentrate. Un tocco fisico apre un solo
+  // ciclo: la prima fine-scorrimento lo consuma, le successive appartengono
+  // ancora allo stesso gesto (o al ricentraggio interno) e vanno ignorate.
+  const swipeHandled = useRef(true);
   const [width, setWidth] = useState(0);
   const today = todayString();
 
@@ -207,7 +212,8 @@ export function WeekCalendar({
   const gridStyle = useAnimatedStyle(() => ({ height: height.value }));
 
   function onMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    if (width === 0) return;
+    if (width === 0 || swipeHandled.current) return;
+    swipeHandled.current = true;
     const page = Math.round(e.nativeEvent.contentOffset.x / width);
     if (page === 1) return;
     const delta = page - 1;
@@ -254,6 +260,9 @@ export function WeekCalendar({
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            onTouchStart={() => {
+              swipeHandled.current = false;
+            }}
             onMomentumScrollEnd={onMomentumEnd}
           >
             {pages.map((page) => (

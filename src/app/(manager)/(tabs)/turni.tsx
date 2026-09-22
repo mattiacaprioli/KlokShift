@@ -230,6 +230,32 @@ export default function ManagerShiftsScreen() {
     }, SYNC_SETTLE_MS);
   }
 
+  function toggleMine() {
+    if (filteringMine) {
+      setOnlyMine(false);
+      return;
+    }
+
+    setOnlyMine(true);
+
+    // Il conto del chip copre tutti i turni ancora in programma, mentre
+    // l'agenda parte dal giorno scelto. Se si è sfogliato oltre l'ultimo turno
+    // proprio, accendere il filtro non deve lasciare davanti una pagina vuota:
+    // porta al primo risultato che il filtro può davvero mostrare.
+    const mineFromHere = upcoming.some(
+      (s) =>
+        s.date >= anchorDay &&
+        isMine(s) &&
+        (!filtering || isShort(s))
+    );
+    if (mineFromHere) return;
+
+    const firstMine = upcoming.find(
+      (s) => isMine(s) && (!filtering || isShort(s))
+    );
+    if (firstMine) goToDay(firstMine.date);
+  }
+
   // Identità stabile: `VirtualizedList` rifiuta un `onViewableItemsChanged`
   // che cambia fra un render e l'altro.
   const onViewableItemsChanged = useCallback(
@@ -504,7 +530,7 @@ export default function ManagerShiftsScreen() {
                 cercarsi in mezzo all'agenda della sede. Compare solo se ne ha. */}
             {mineCount > 0 ? (
               <Pressable
-                onPress={() => setOnlyMine((v) => !v)}
+                onPress={toggleMine}
                 style={
                   filteringMine
                     ? { backgroundColor: "rgba(234,181,76,0.15)" }

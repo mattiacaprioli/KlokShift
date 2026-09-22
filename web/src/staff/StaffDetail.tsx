@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
@@ -18,7 +18,10 @@ import {
   usePersonWorkedShifts,
 } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
-import { useSetStaffMemberRoles } from "@/features/roles/hooks";
+import {
+  useSetStaffMemberRoles,
+  useVenueRoles,
+} from "@/features/roles/hooks";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
   CONTRACT_PERIOD_SHORT,
@@ -28,6 +31,7 @@ import {
   type ContractPeriod,
 } from "@/features/staff/contract";
 import { RoleCheckboxes } from "./RoleCheckboxes";
+import { suggestedRoleIds } from "@/features/roles/suggestions";
 import { AbsencesPanel } from "../absences/AbsencesPanel";
 import { DocumentsPanel } from "./DocumentsPanel";
 import {
@@ -942,8 +946,9 @@ function Workplaces({
 
 /**
  * Un'altra delle sedi del titolare per una persona che ha già. Nessun invito:
- * l'accordo c'è, e l'account, se c'è, è già sulla persona. I ruoli si scelgono
- * dopo, sulla card che compare, perché sono di quella sede.
+ * l'accordo c'è, e l'account, se c'è, è già sulla persona. I ruoli della
+ * destinazione con lo stesso nome di quelli che ricopre altrove partono
+ * selezionati, ma restano una proposta modificabile.
  */
 function AddToVenue({
   person,
@@ -957,15 +962,34 @@ function AddToVenue({
   const [venueId, setVenueId] = useState("");
   const [empType, setEmpType] =
     useState<Enums<"employment_type">>("a_chiamata");
+  const rolesQuery = useVenueRoles(venueId || undefined);
+  const suggestions = useMemo(
+    () => suggestedRoleIds(rolesQuery.data ?? [], person.memberships),
+    [rolesQuery.data, person.memberships]
+  );
+  // La selezione esplicita è legata alla sede: cambiando destinazione non si
+  // possono riusare gli id, perché ogni sede ha le proprie righe `venue_roles`.
+  const [pickedRoles, setPickedRoles] = useState<{
+    venueId: string;
+    ids: string[];
+  } | null>(null);
+  const roleIds =
+    pickedRoles?.venueId === venueId ? pickedRoles.ids : suggestions;
 
   function onAdd() {
     const name = venues.find((v) => v.id === venueId)?.name ?? "sede";
     add.mutate(
-      { memberId: person.id, venueId, employmentType: empType },
+      {
+        memberId: person.id,
+        venueId,
+        employmentType: empType,
+        roleIds,
+      },
       {
         onSuccess: () => {
           setVenueId("");
-          toast.show(`Aggiunto a ${name} · scegli i ruoli nella sua card`);
+          setPickedRoles(null);
+          toast.show(`Aggiunto a ${name}`);
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
@@ -1004,9 +1028,23 @@ function AddToVenue({
             <option value="a_chiamata">A chiamata</option>
           </Select>
         </Field>
+        {venueId ? (
+          <Field label="Ruoli in questa sede">
+            <RoleCheckboxes
+              venueId={venueId}
+              value={roleIds}
+              onChange={(ids) => setPickedRoles({ venueId, ids })}
+            />
+            {suggestions.length > 0 ? (
+              <p className="mt-2 text-xs text-t4">
+                Preselezionati in base ai ruoli che ricopre nelle altre sedi.
+              </p>
+            ) : null}
+          </Field>
+        ) : null}
         <Button
           variant="gold"
-          disabled={!venueId || add.isPending}
+          disabled={!venueId || rolesQuery.isPending || add.isPending}
           onClick={onAdd}
         >
           {add.isPending ? "Aggiunta…" : "Aggiungi"}

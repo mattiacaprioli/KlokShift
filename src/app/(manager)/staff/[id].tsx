@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   useNavigation,
@@ -54,6 +54,8 @@ import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { PromoteSection } from "@/features/team/PromoteSection";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
+import { useVenueRoles } from "@/features/roles/hooks";
+import { suggestedRoleIds } from "@/features/roles/suggestions";
 import {
   CONTRACT_PERIOD_SHORT,
   CONTRACT_PERIODS,
@@ -312,8 +314,9 @@ function WorkplaceCard({
 
 /**
  * Un'altra delle sedi del titolare per una persona che ha già. Nessun invito:
- * l'accordo c'è, e l'account, se c'è, è già sulla persona. I ruoli si scelgono
- * dopo, sulla card che compare, perché sono di quella sede.
+ * l'accordo c'è, e l'account, se c'è, è già sulla persona. I ruoli della
+ * destinazione con lo stesso nome di quelli che ricopre altrove partono
+ * selezionati, ma restano una proposta modificabile.
  */
 function AddToVenueCard({
   person,
@@ -328,15 +331,35 @@ function AddToVenueCard({
   const [empType, setEmpType] =
     useState<Enums<"employment_type">>("a_chiamata");
   const venue = venues.find((v) => v.id === venueId);
+  const rolesQuery = useVenueRoles(venueId ?? undefined);
+  const suggestions = useMemo(
+    () => suggestedRoleIds(rolesQuery.data ?? [], person.memberships),
+    [rolesQuery.data, person.memberships]
+  );
+  // Gli id dei ruoli valgono solo nella sede scelta. Conserviamo l'eventuale
+  // modifica manuale insieme al suo venue id, così un cambio sede riparte dai
+  // suggerimenti corretti senza un effect che possa sovrascrivere l'utente.
+  const [pickedRoles, setPickedRoles] = useState<{
+    venueId: string;
+    ids: string[];
+  } | null>(null);
+  const roleIds =
+    pickedRoles?.venueId === venueId ? pickedRoles.ids : suggestions;
 
   function onAdd() {
     if (!venue) return;
     add.mutate(
-      { memberId: person.id, venueId: venue.id, employmentType: empType },
+      {
+        memberId: person.id,
+        venueId: venue.id,
+        employmentType: empType,
+        roleIds,
+      },
       {
         onSuccess: () => {
           setVenueId(null);
-          toast.show(`Aggiunto a ${venue.name} · scegli i ruoli nella sua card`);
+          setPickedRoles(null);
+          toast.show(`Aggiunto a ${venue.name}`);
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
@@ -387,6 +410,22 @@ function AddToVenueCard({
         </View>
       </View>
 
+      {venue ? (
+        <View className="gap-2">
+          <RoleMultiSelect
+            venueId={venue.id}
+            value={roleIds}
+            onChange={(ids) => setPickedRoles({ venueId: venue.id, ids })}
+            label="Ruoli in questa sede"
+          />
+          {suggestions.length > 0 ? (
+            <Text className="text-xs leading-5 text-t3">
+              Preselezionati in base ai ruoli che ricopre nelle altre sedi.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <GoldButton
         label={
           add.isPending
@@ -395,7 +434,7 @@ function AddToVenueCard({
               ? `Aggiungi a ${venue.name}`
               : "Scegli una sede"
         }
-        disabled={!venue || add.isPending}
+        disabled={!venue || rolesQuery.isPending || add.isPending}
         onPress={onAdd}
       />
     </View>
