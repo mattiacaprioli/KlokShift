@@ -49,7 +49,7 @@ export const it: Content = {
     lead: "Pianifichi, il team conferma dal telefono e le ore dei turni si sommano automaticamente. Addio a fogli Excel e gruppi WhatsApp.",
     ctaPrimary: "Prova gratis 30 giorni",
     ctaSecondary: "Guarda come funziona",
-    note: "30 giorni gratis, senza carta. Poi da 29 € al mese, IVA esclusa.",
+    note: "30 giorni gratis, senza carta. Poi da 29 € al mese o 290 € all'anno, IVA esclusa.",
     shotAlt: "L'agenda dei turni della settimana",
   },
 
@@ -194,19 +194,41 @@ export const it: Content = {
   plans: {
     eyebrow: "Prezzi",
     title: "Due piani semplici. Una sede inclusa.",
-    lead: "Scegli in base alla dimensione del team. Se apri un'altra sede, la aggiungi allo stesso account.",
+    lead: "Scegli in base alla dimensione del team. Con l'annuale paghi 10 mesi invece di 12.",
+    billing: {
+      label: "Periodo di fatturazione",
+      monthly: "Mensile",
+      annual: "Annuale",
+      annualBadge: "2 mesi gratis",
+    },
     options: [
       {
         name: "Fino a 30 dipendenti",
-        price: "29 €",
-        period: "al mese",
+        monthly: {
+          amount: "29 €",
+          period: "al mese",
+        },
+        annual: {
+          amount: "290 €",
+          period: "all'anno",
+          equivalent: "Equivale a 24,17 € al mese, con fatturazione annuale.",
+          saving: "Risparmi 58 € all'anno",
+        },
         details: ["1 sede inclusa", "Prezzo IVA esclusa"],
         badge: "Per iniziare",
       },
       {
         name: "Dipendenti illimitati",
-        price: "49 €",
-        period: "al mese",
+        monthly: {
+          amount: "49 €",
+          period: "al mese",
+        },
+        annual: {
+          amount: "490 €",
+          period: "all'anno",
+          equivalent: "Equivale a 40,83 € al mese, con fatturazione annuale.",
+          saving: "Risparmi 98 € all'anno",
+        },
         details: ["1 sede inclusa", "Prezzo IVA esclusa"],
       },
     ],
@@ -218,8 +240,12 @@ export const it: Content = {
       "Documenti e scadenze",
       "Messaggi e notifiche",
     ],
-    extraVenue: "Ogni sede aggiuntiva costa 15 € al mese, su entrambi i piani. Un solo accesso, tutte le sedi sotto controllo.",
-    note: "30 giorni gratis, senza carta. Disdici quando vuoi.",
+    extraVenue: {
+      monthly: "Sede aggiuntiva: 15 € al mese.",
+      annual: "Sede aggiuntiva: 150 € all'anno — risparmi 30 €.",
+      detail: "Una sede operativa completa, con il proprio planning e organico, nello stesso account.",
+    },
+    note: "30 giorni gratis, senza carta. Poi scegli la fatturazione mensile o annuale.",
     cta: "Inizia la prova gratuita",
   },
 
@@ -236,12 +262,16 @@ export const it: Content = {
         a: "No. L'app per il team è gratuita. Il piano da 29 € include fino a 30 dipendenti; quello da 49 € non prevede limiti.",
       },
       {
+        q: "Quanto risparmio con il pagamento annuale?",
+        a: "Paghi 10 mesi invece di 12: 290 € all'anno per il piano fino a 30 dipendenti e 490 € per quello senza limiti. Anche una sede aggiuntiva costa 150 € all'anno invece di 180 €.",
+      },
+      {
         q: "E se chiudo per la stagione, o non rinnovo?",
         a: "I dati restano tuoi. La dashboard passa in sola lettura: consulti lo storico e scarichi ore ed export per il consulente. Quando riapri, riattivi e riparti da dove eri.",
       },
       {
         q: "Ho più sedi. Come funziona?",
-        a: "Ogni piano include una sede; ogni sede aggiuntiva costa 15 € al mese. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.",
+        a: "Ogni piano include una sede; ogni sede aggiuntiva costa 15 € al mese oppure 150 € all'anno. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.",
       },
       {
         q: "Devo installare qualcosa?",

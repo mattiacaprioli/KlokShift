@@ -9,10 +9,17 @@ export type Feature = { title: string; body: string };
 export type Faq = { q: string; a: string };
 /** Una riga del «prima e dopo»: il problema di oggi e come lo risolve KlokShift. */
 export type BeforeAfter = Feature & { after: string };
+export type BillingCycle = "monthly" | "annual";
+export type BillingPrice = {
+  amount: string;
+  period: string;
+  equivalent?: string;
+  saving?: string;
+};
 export type Price = {
   name: string;
-  price: string;
-  period: string;
+  monthly: BillingPrice;
+  annual: BillingPrice;
   details: string[];
   badge?: string;
 };
@@ -86,10 +93,16 @@ export type Content = {
     eyebrow: string;
     title: string;
     lead: string;
+    billing: {
+      label: string;
+      monthly: string;
+      annual: string;
+      annualBadge: string;
+    };
     options: Price[];
     includedTitle: string;
     included: string[];
-    extraVenue: string;
+    extraVenue: Record<BillingCycle, string> & { detail: string };
     note: string;
     cta: string;
   };
