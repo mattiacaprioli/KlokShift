@@ -8,24 +8,21 @@ import { SIGNUP_URL } from "../config";
 import type { Price } from "../content/types";
 
 /*
- * Prezzi: due card (annuale e mensile) e sotto quello che includono entrambe.
+ * Prezzi: due card per dimensione del team e sotto quello che includono entrambe.
  *
- * L'annuale è quella evidenziata, con il risparmio nel badge: la differenza
- * col mensile è l'argomento, e deve leggersi prima delle cifre. Il prezzo è
- * per sede e mai per persona, quindi la lista dell'incluso apre con i
- * dipendenti illimitati.
+ * Il limite di persone e la sede inclusa devono leggersi dentro ogni card:
+ * sono le due informazioni che distinguono i piani e non possono dipendere
+ * dal testo introduttivo o dalle FAQ.
  *
  * ⚠️ Solo qui e nella dashboard web: l'app non mostra prezzi né link al sito
  * (App Store 3.1.3, vedi `(manager)/pro.tsx`).
  */
 function PriceCard({
   plan,
-  badge,
   highlighted,
   delay,
 }: {
   plan: Price;
-  badge?: string;
   highlighted?: boolean;
   delay?: number;
 }) {
@@ -46,9 +43,9 @@ function PriceCard({
         >
           {plan.name}
         </h3>
-        {badge ? (
+        {plan.badge ? (
           <span className="rounded-full bg-gold px-3 py-1 text-xs font-semibold text-gold-ink">
-            {badge}
+            {plan.badge}
           </span>
         ) : null}
       </div>
@@ -58,7 +55,14 @@ function PriceCard({
         </span>
         <span className="text-t2">{plan.period}</span>
       </p>
-      <p className="mt-2 text-sm text-t3">{plan.billed}</p>
+      <ul className="mt-4 space-y-2 text-sm text-t2">
+        {plan.details.map((detail) => (
+          <li key={detail} className="flex items-start gap-2">
+            <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+            <span>{detail}</span>
+          </li>
+        ))}
+      </ul>
     </Reveal>
   );
 }
@@ -73,8 +77,14 @@ export function Plans() {
       lead={t.plans.lead}
     >
       <div className="mt-10 grid gap-4 sm:mt-14 sm:grid-cols-2">
-        <PriceCard plan={t.plans.yearly} badge={t.plans.yearly.badge} highlighted />
-        <PriceCard plan={t.plans.monthly} delay={80} />
+        {t.plans.options.map((plan, index) => (
+          <PriceCard
+            key={plan.name}
+            plan={plan}
+            highlighted={index === 0}
+            delay={index * 80}
+          />
+        ))}
       </div>
 
       <Reveal className="mt-4 rounded-2xl border border-border bg-bg-0/40 p-6 sm:p-8">

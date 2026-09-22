@@ -13,7 +13,8 @@ export type Price = {
   name: string;
   price: string;
   period: string;
-  billed: string;
+  details: string[];
+  badge?: string;
 };
 
 export type Content = {
@@ -85,8 +86,7 @@ export type Content = {
     eyebrow: string;
     title: string;
     lead: string;
-    yearly: Price & { badge: string };
-    monthly: Price;
+    options: Price[];
     includedTitle: string;
     included: string[];
     extraVenue: string;

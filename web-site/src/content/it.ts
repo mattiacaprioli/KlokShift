@@ -46,10 +46,10 @@ export const it: Content = {
   hero: {
     eyebrow: "Turni e ore del personale",
     title: "I turni della settimana in dieci minuti, non in una serata.",
-    lead: "Pianifichi, il team conferma dal telefono, le ore si contano da sole. Addio a fogli Excel e gruppi WhatsApp.",
+    lead: "Pianifichi, il team conferma dal telefono e le ore dei turni si sommano automaticamente. Addio a fogli Excel e gruppi WhatsApp.",
     ctaPrimary: "Prova gratis 30 giorni",
     ctaSecondary: "Guarda come funziona",
-    note: "30 giorni gratis, senza carta. Poi da 29 € al mese, per tutto il team.",
+    note: "30 giorni gratis, senza carta. Poi da 29 € al mese, IVA esclusa.",
     shotAlt: "L'agenda dei turni della settimana",
   },
 
@@ -71,7 +71,7 @@ export const it: Content = {
       {
         title: "Le ore a fine mese",
         body: "Contate a memoria, la sera prima del consulente.",
-        after: "Già contate. Esporti PDF o CSV in un clic.",
+        after: "Turni e presenze sono già raccolti. Esporti PDF o CSV in un clic.",
       },
     ],
   },
@@ -79,7 +79,7 @@ export const it: Content = {
   venue: {
     eyebrow: "Funzioni",
     title: "Tutto quello che serve per organizzare il personale. Niente di più.",
-    lead: "Inserisci il team una volta. Turni, copertura e ore si tengono da sé.",
+    lead: "Inserisci il team una volta. Turni, copertura e ore restano nello stesso posto.",
     features: [
       {
         title: "Il tuo team, su più sedi",
@@ -94,8 +94,8 @@ export const it: Content = {
         body: "Trascini i turni, duplichi la settimana, stampi il piano. Chi è coinvolto viene avvisato.",
       },
       {
-        title: "Presenze e ore, già contate",
-        body: "Segni chi c'era. A fine mese esporti PDF o CSV per il consulente.",
+        title: "Presenze e ore, in un solo posto",
+        body: "Segni chi c'era e correggi le ore effettive. A fine mese esporti PDF o CSV per il consulente.",
       },
       {
         title: "Documenti con le scadenze",
@@ -113,7 +113,7 @@ export const it: Content = {
   pro: {
     eyebrow: "Per il tuo team",
     title: "Il team sa quando lavora. Senza chiederlo a te.",
-    lead: "Il turno arriva sul telefono, si conferma, le ore si contano da sole. L'app per i dipendenti è gratuita.",
+    lead: "Il turno arriva sul telefono e si conferma. Dopo il turno, le ore svolte restano aggiornate. L'app per i dipendenti è gratuita.",
     features: [
       {
         title: "Conferma con un tocco",
@@ -121,7 +121,7 @@ export const it: Content = {
       },
       {
         title: "Le proprie ore, sempre aggiornate",
-        body: "Ogni turno svolto entra nel monte ore del mese.",
+        body: "Ogni turno concluso entra nel riepilogo del mese.",
       },
       {
         title: "Cambi e assenze in chat",
@@ -153,7 +153,7 @@ export const it: Content = {
       },
       {
         title: "Il team conferma",
-        body: "Arriva la notifica. Tu vedi la copertura, le ore si contano.",
+        body: "Arriva la notifica. Tu vedi la copertura e, dopo il turno, registri presenze e ore effettive.",
       },
     ],
   },
@@ -193,32 +193,33 @@ export const it: Content = {
 
   plans: {
     eyebrow: "Prezzi",
-    title: "Un prezzo per sede. Il team è incluso.",
-    lead: "Nessun costo per dipendente: che siate in cinque o in cinquanta, il prezzo è lo stesso.",
-    yearly: {
-      name: "Annuale",
-      price: "29 €",
-      period: "al mese",
-      billed: "348 € fatturati una volta l'anno",
-      badge: "Risparmi 120 €",
-    },
-    monthly: {
-      name: "Mensile",
-      price: "39 €",
-      period: "al mese",
-      billed: "Disdici quando vuoi",
-    },
+    title: "Due piani semplici. Una sede inclusa.",
+    lead: "Scegli in base alla dimensione del team. Se apri un'altra sede, la aggiungi allo stesso account.",
+    options: [
+      {
+        name: "Fino a 30 dipendenti",
+        price: "29 €",
+        period: "al mese",
+        details: ["1 sede inclusa", "Prezzo IVA esclusa"],
+        badge: "Per iniziare",
+      },
+      {
+        name: "Dipendenti illimitati",
+        price: "49 €",
+        period: "al mese",
+        details: ["1 sede inclusa", "Prezzo IVA esclusa"],
+      },
+    ],
     includedTitle: "Incluso in entrambi",
     included: [
-      "Dipendenti illimitati",
       "App per il team, gratuita",
       "Planning, conferme e copertura",
       "Presenze, ore ed export PDF e CSV",
       "Documenti e scadenze",
       "Messaggi e notifiche",
     ],
-    extraVenue: "Ogni sede in più: +19 € al mese. Un solo accesso, tutte le sedi sotto controllo.",
-    note: "Prezzi IVA esclusa. 30 giorni gratis, senza carta.",
+    extraVenue: "Ogni sede aggiuntiva costa 15 € al mese, su entrambi i piani. Un solo accesso, tutte le sedi sotto controllo.",
+    note: "30 giorni gratis, senza carta. Disdici quando vuoi.",
     cta: "Inizia la prova gratuita",
   },
 
@@ -232,7 +233,7 @@ export const it: Content = {
       },
       {
         q: "I dipendenti devono pagare?",
-        a: "No. L'app per il team è gratuita e non c'è un limite di persone.",
+        a: "No. L'app per il team è gratuita. Il piano da 29 € include fino a 30 dipendenti; quello da 49 € non prevede limiti.",
       },
       {
         q: "E se chiudo per la stagione, o non rinnovo?",
@@ -240,7 +241,7 @@ export const it: Content = {
       },
       {
         q: "Ho più sedi. Come funziona?",
-        a: "Il piano include una sede, ogni sede in più costa 19 € al mese. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.",
+        a: "Ogni piano include una sede; ogni sede aggiuntiva costa 15 € al mese. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.",
       },
       {
         q: "Devo installare qualcosa?",
@@ -252,7 +253,7 @@ export const it: Content = {
       },
       {
         q: "Fa anche le buste paga?",
-        a: "No. KlokShift conta le ore e le esporta. Le buste paga restano al tuo consulente.",
+        a: "No. KlokShift organizza turni, presenze e ore ed esporta i dati per il consulente del lavoro. Non sostituisce il software paghe.",
       },
     ],
   },

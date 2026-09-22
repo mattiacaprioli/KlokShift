@@ -41,8 +41,9 @@ Il sito deve raccontare il prodotto che esiste oggi:
 - **niente referral** («un mese gratis a chi porti») — non esiste ancora nel prodotto;
 - **niente numeri di tempo risparmiato né testimonianze** finché non sono veri.
 
-I **prezzi** invece ci sono (sezione `#prezzi`: 29 €/mese annuale, 39 € mensile,
-+19 € per sede in più, 30 giorni di prova senza carta) e stanno **solo qui e
+I **prezzi** invece ci sono (sezione `#prezzi`: 29 €/mese fino a 30 dipendenti,
+49 €/mese con dipendenti illimitati, +15 € per sede in più, 30 giorni di prova
+senza carta) e stanno **solo qui e
 nella dashboard web**: l'app non mostra prezzi né link al sito (App Store
 3.1.3, vedi la memoria sui vincoli di monetizzazione). Se cambiano, vanno
 aggiornati insieme `src/content/it.ts` e l'`offers` del JSON-LD in `index.html`.
