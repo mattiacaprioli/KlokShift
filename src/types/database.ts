@@ -1311,6 +1311,51 @@ export type Database = {
           total_hours: number
         }[]
       }
+      get_owner_past_shifts_count: {
+        Args: {
+          p_from?: string
+          p_query?: string
+          p_role_ids?: string[]
+          p_status?: string
+          p_to?: string
+          p_venue_ids: string[]
+        }
+        Returns: number
+      }
+      get_owner_past_shifts_page: {
+        Args: {
+          p_before_date?: string
+          p_before_id?: string
+          p_before_start?: string
+          p_from?: string
+          p_limit?: number
+          p_query?: string
+          p_role_ids?: string[]
+          p_status?: string
+          p_to?: string
+          p_venue_ids: string[]
+        }
+        Returns: {
+          created_at: string
+          date: string
+          description: string | null
+          end_time: string
+          id: string
+          positions_filled: number
+          positions_total: number
+          require_confirmation: boolean
+          start_time: string
+          status: Database["public"]["Enums"]["shift_status"]
+          title: string
+          venue_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "shifts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_rating_breakdown: {
         Args: { p_waiter: string }
         Returns: {
