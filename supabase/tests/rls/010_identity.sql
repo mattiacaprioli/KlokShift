@@ -188,6 +188,8 @@ end $$;
 -- Regole «su me stesso» e «solo il titolare»
 -- ---------------------------------------------------------------------------
 do $$
+declare
+  r jsonb;
 begin
   perform tests.login('Ow');
   perform tests.ok(not private.is_restricted_self(tests.id('M_Ow')), 'il titolare non è limitato su sé stesso');
@@ -212,6 +214,92 @@ begin
     'owner_cannot_be_removed', 'il titolare non viene rimosso dall''azienda');
   perform tests.raises(format('select public.leave(%L)', tests.id('M_Ow')),
     'owner_cannot_leave', 'il titolare non esce dall''azienda');
+
+  -- Dati HR: il collaboratore con «Staff» non decide su sé stesso nemmeno
+  -- passando da add_member con la propria email. Sugli altri può intervenire
+  -- soltanto nel proprio ambito, senza azzerare le chiavi HR assenti.
+  perform public.set_member_access(
+    tests.id('M_Co'), 'collaborator', '{"staff":true}'::jsonb, 'selected', array[tests.id('V1')]
+  );
+  perform public.update_member(
+    tests.id('M_Co'), '{"note":"iniziale","contract_hours":30,"contract_period":"week"}'::jsonb
+  );
+  perform public.update_member(
+    tests.id('M_Emp'), '{"note":"prima","contract_hours":36,"contract_period":"week"}'::jsonb
+  );
+
+  perform tests.login('Co');
+  perform tests.raises(
+    format($f$select public.update_member(%L, '{"note":"bypass"}')$f$, tests.id('M_Co')),
+    'not_allowed', 'Co non cambia i propri dati HR tramite update_member');
+  perform tests.raises(
+    format($f$select public.add_member(%L, '{"full_name":"Carlo","email":"co@t.test","note":"bypass","contract_hours":99,"contract_period":"month"}', 'none', '{}', 'all', %L)$f$,
+      tests.id('W1'), jsonb_build_array(jsonb_build_object('venue_id', tests.id('V1')))::text),
+    'not_allowed', 'Co non cambia i propri dati HR tramite add_member');
+  perform tests.raises(
+    format($f$select public.add_member(%L, '{"full_name":"Carlo","email":"co@t.test","contract_period":"month"}', 'none', '{}', 'all', %L)$f$,
+      tests.id('W1'), jsonb_build_array(jsonb_build_object('venue_id', tests.id('V1')))::text),
+    'not_allowed', 'anche il solo periodo contrattuale è un dato HR proprio');
+  perform tests.eq(
+    (select note from public.member_hr where member_id = tests.id('M_Co')),
+    'iniziale', 'il tentativo non modifica le proprie note');
+
+  r := public.add_member(
+    tests.id('W1'),
+    '{"full_name":"Emma","email":"emp@t.test","note":"gestita"}'::jsonb,
+    'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V1')))
+  );
+  perform tests.eq(r ->> 'outcome', 'already_member', 'Co può gestire un altro membro nel proprio ambito');
+  perform tests.eq(
+    (select contract_hours from public.member_hr where member_id = tests.id('M_Emp')),
+    36::numeric, 'una chiave HR assente non azzera le ore contrattuali');
+  perform tests.eq(
+    (select contract_period from public.member_hr where member_id = tests.id('M_Emp')),
+    'week', 'una chiave HR assente non azzera il periodo contrattuale');
+
+  perform tests.raises(
+    format($f$select public.add_member(%L, '{"full_name":"Enzo","email":"emp2@t.test","note":"fuori ambito"}', 'none', '{}', 'all', %L)$f$,
+      tests.id('W1'), jsonb_build_array(jsonb_build_object('venue_id', tests.id('V2')))::text),
+    'not_allowed', 'Co non gestisce dati HR fuori dal proprio ambito');
+  perform tests.ok(
+    not exists (select 1 from public.member_hr where member_id = tests.id('M_Emp2')),
+    'il fallimento fuori ambito non lascia dati HR');
+
+  perform tests.login('Ow');
+  r := public.add_member(
+    tests.id('W1'),
+    '{"full_name":"Emma","email":"emp@t.test","contract_period":"month"}'::jsonb,
+    'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V2')))
+  );
+  perform tests.ok(
+    exists (select 1 from public.venue_members where member_id = tests.id('M_Emp') and venue_id = tests.id('V2') and left_at is null),
+    'il titolare aggiunge il membro già presente a una seconda sede');
+  perform tests.eq(
+    (select note from public.member_hr where member_id = tests.id('M_Emp')),
+    'gestita', 'aggiungere la seconda sede conserva la nota assente dal payload');
+  perform tests.eq(
+    (select contract_hours from public.member_hr where member_id = tests.id('M_Emp')),
+    36::numeric, 'aggiungere la seconda sede conserva le ore assenti dal payload');
+  perform tests.eq(
+    (select contract_period from public.member_hr where member_id = tests.id('M_Emp')),
+    'month', 'il solo periodo contrattuale presente viene aggiornato');
+  perform public.remove_member(tests.id('M_Emp'), tests.id('V2'));
+
+  r := public.add_member(
+    tests.id('W1'),
+    '{"full_name":"Olivia Owner","email":"ow@t.test","contract_hours":40,"contract_period":"week"}'::jsonb
+  );
+  perform tests.eq(r ->> 'outcome', 'already_member', 'il titolare può gestire i propri dati HR');
+  perform tests.eq(
+    (select contract_hours from public.member_hr where member_id = tests.id('M_Ow')),
+    40::numeric, 'le ore proprie del titolare vengono salvate');
+
+  -- Ripristina il profilo permessi della fixture per i blocchi successivi.
+  perform public.set_member_access(
+    tests.id('M_Co'), 'collaborator', '{"shifts":true}'::jsonb, 'selected', array[tests.id('V1')]
+  );
 
   -- Un dipendente senza account non può ricevere poteri di gestione.
   perform public.add_member(tests.id('W1'), '{"full_name":"Nuovo","email":"nuovo@t.test"}'::jsonb);
