@@ -1,7 +1,9 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type PropsWithChildren,
 } from "react";
@@ -10,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { unregisterCurrentPushToken } from "@/features/push/api";
 import type { Tables } from "@/types/database";
+import { createAuthRequestGate, type AuthRequestTicket } from "@/lib/authRequestGate";
 
 type Profile = Tables<"profiles">;
 
@@ -39,6 +42,7 @@ type AuthState = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  error: Error | null;
   /**
    * `needsConfirmation`: l'account esiste ma l'email non è mai stata
    * confermata. È un flag e non un confronto sulla stringa tradotta, perché la
@@ -82,6 +86,8 @@ type AuthState = {
   signOut: () => Promise<void>;
   /** Re-fetch the profile row after an edit, without blanking the UI. */
   refreshProfile: () => Promise<void>;
+  /** Riprova il bootstrap o il caricamento profilo fallito. */
+  retryProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -95,11 +101,12 @@ export function useAuth() {
 }
 
 async function ensureProfile(user: User): Promise<Profile | null> {
-  const { data: existing } = await supabase
+  const { data: existing, error: readError } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
+  if (readError) throw new Error(readError.message);
   if (existing) return existing;
 
   // Di norma il profilo lo ha già creato il trigger su `auth.users` alla
@@ -107,11 +114,12 @@ async function ensureProfile(user: User): Promise<Profile | null> {
   // bloccare una registrazione, quindi in caso di errore ripiega su un warning e
   // qui lo si ricrea.
   const meta = (user.user_metadata ?? {}) as { full_name?: string };
-  const { data: created } = await supabase
+  const { data: created, error: createError } = await supabase
     .from("profiles")
     .insert({ id: user.id, full_name: meta.full_name ?? null })
     .select("*")
     .single();
+  if (createError) throw new Error(createError.message);
 
   return created ?? null;
 }
@@ -158,97 +166,157 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * with a session but no profile (which renders no matching route → black screen).
  */
 async function resolveProfile(user: User): Promise<Profile | null> {
+  let lastError: unknown;
   for (let attempt = 0; attempt < 3; attempt++) {
-    const profile = await ensureProfile(user);
-    if (profile) return profile;
-    await sleep(500);
+    try {
+      const profile = await ensureProfile(user);
+      if (profile) return profile;
+      lastError = new Error("Profilo non disponibile");
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < 2) await sleep(500);
   }
-  return null;
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Non siamo riusciti a caricare il profilo");
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const mountedRef = useRef(true);
+  const sessionRef = useRef<Session | null | undefined>(undefined);
+  const requestGateRef = useRef(createAuthRequestGate());
+
+  const syncSession = useCallback((next: Session | null) => {
+    const previous = sessionRef.current;
+    const previousId = previous?.user.id ?? null;
+    const nextId = next?.user.id ?? null;
+    if (previous !== undefined && previousId !== nextId) queryClient.clear();
+    if (previousId !== nextId) {
+      setProfile(null);
+      setError(null);
+    }
+    sessionRef.current = next;
+    setSession(next);
+  }, []);
+
+  const beginProfileLoad = useCallback((next: Session | null) => {
+    const ticket = requestGateRef.current.begin(next?.user.id ?? null);
+    setLoading(true);
+    setError(null);
+    return ticket;
+  }, []);
+
+  const finishProfileLoad = useCallback(
+    async (
+      next: Session | null,
+      ticket: AuthRequestTicket,
+      claim = false
+    ) => {
+      try {
+        const nextProfile = next?.user ? await resolveProfile(next.user) : null;
+        if (!mountedRef.current || !requestGateRef.current.isCurrent(ticket)) {
+          return;
+        }
+        setProfile(nextProfile);
+        setError(null);
+        setLoading(false);
+        if (claim && nextProfile) void claimInvites();
+      } catch (cause) {
+        if (!mountedRef.current || !requestGateRef.current.isCurrent(ticket)) {
+          return;
+        }
+        setProfile(null);
+        setError(
+          cause instanceof Error
+            ? cause
+            : new Error("Non siamo riusciti a caricare il profilo")
+        );
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    let active = true;
-
-    /**
-     * Chi era loggato un attimo fa. `undefined` = non lo sappiamo ancora.
-     *
-     * ⚠️ Serve perché diverse query key **non portano l'id dell'utente**
-     * (`qk.venues.mine`, `qk.team.mine`): la loro identità è la sessione, e
-     * l'unica cosa che le separa fra due account è lo svuotamento della cache.
-     */
-    let currentUserId: string | null | undefined;
-
-    /**
-     * Svuota la cache quando cambia la persona dietro la sessione.
-     *
-     * ⚠️ Non basta `SIGNED_OUT`, ed è il bug che questo sostituisce:
-     * registrarsi — o fare login — mentre un altro account è ancora aperto
-     * nello stesso browser emette **`SIGNED_IN` e basta**. Senza uscire prima,
-     * la cache restava quella di chi c'era prima, e il nuovo account apriva
-     * l'app trovandosi in lista le sedi di un altro. Nessun dato nuovo
-     * arrivava dal server — la RLS regge — ma quello vecchio era già lì, e a
-     * schermo non c'è differenza.
-     */
-    function syncAccount(next: Session | null) {
-      const nextId = next?.user.id ?? null;
-      if (currentUserId !== undefined && currentUserId !== nextId) {
-        queryClient.clear();
-      }
-      currentUserId = nextId;
-    }
-
-    async function loadProfile(next: Session | null, claim = false) {
-      if (!active) return;
-      const nextProfile = next?.user ? await resolveProfile(next.user) : null;
-      if (!active) return;
-      setProfile(nextProfile);
-      setLoading(false);
-      // Dopo il profilo, non prima: l'aggancio notifica il titolare, e su una
-      // registrazione appena fatta la riga potrebbe non esserci ancora. Non
-      // attesa: la UI è già pronta e l'invalidazione arriva da sé quando la RPC
-      // risponde.
-      if (claim && nextProfile) void claimInvites();
-    }
+    mountedRef.current = true;
+    const requestGate = requestGateRef.current;
+    const bootstrapSnapshot = requestGate.snapshot();
 
     // Initial load runs outside the auth lock, so DB reads are safe to await.
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      syncAccount(data.session);
-      setSession(data.session);
-      loadProfile(data.session);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data, error: sessionError }) => {
+        if (
+          !mountedRef.current ||
+          !requestGate.isSnapshotCurrent(bootstrapSnapshot)
+        ) {
+          return;
+        }
+        if (sessionError) throw sessionError;
+        syncSession(data.session);
+        const ticket = beginProfileLoad(data.session);
+        void finishProfileLoad(data.session, ticket);
+      })
+      .catch((cause: unknown) => {
+        if (
+          !mountedRef.current ||
+          !requestGate.isSnapshotCurrent(bootstrapSnapshot)
+        ) {
+          return;
+        }
+        setError(
+          cause instanceof Error
+            ? cause
+            : new Error("Non siamo riusciti a verificare la sessione")
+        );
+        setLoading(false);
+      });
 
     // Subsequent changes arrive inside the auth lock: setting state is fine, but
     // Supabase queries (resolveProfile) MUST be deferred out of the callback or
-    // they deadlock against the same lock. INITIAL_SESSION is handled above.
+    // they deadlock against the same lock. Anche INITIAL_SESSION passa qui: il
+    // gate rende innocuo il doppio ingresso con getSession().
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
-      if (!active) return;
-      // Prima di `setSession`: chi legge la cache al render successivo deve
-      // trovarla già vuota, non i dati di chi c'era prima.
-      syncAccount(next);
-      setSession(next);
-      // INITIAL_SESSION → handled by getSession(); TOKEN_REFRESHED → just refresh
-      // the session token, no need to re-fetch the profile or blank the UI.
-      if (
+      if (!mountedRef.current) return;
+      const hadInitialSession = sessionRef.current !== undefined;
+      const previousId = sessionRef.current?.user.id ?? null;
+      const nextId = next?.user.id ?? null;
+      const shouldLoadProfile =
+        !hadInitialSession ||
+        previousId !== nextId ||
+        event === "INITIAL_SESSION" ||
         event === "SIGNED_IN" ||
         event === "SIGNED_OUT" ||
-        event === "USER_UPDATED"
-      ) {
-        setLoading(true);
-        setTimeout(() => loadProfile(next, event === "SIGNED_IN"), 0);
+        event === "USER_UPDATED";
+      // Invalida subito bootstrap e letture in volo, prima del setTimeout. Un
+      // semplice TOKEN_REFRESHED della stessa persona non deve interrompere il
+      // profilo che si sta già caricando.
+      if (shouldLoadProfile) requestGate.invalidate(nextId);
+      // Prima di `setSession`: chi legge la cache al render successivo deve
+      // trovarla già vuota, non i dati di chi c'era prima.
+      syncSession(next);
+      // TOKEN_REFRESHED aggiorna soltanto il token se il bootstrap era già
+      // concluso. Se è il primo evento osservato, vale come INITIAL_SESSION.
+      if (shouldLoadProfile) {
+        const ticket = beginProfileLoad(next);
+        setTimeout(
+          () => void finishProfileLoad(next, ticket, event === "SIGNED_IN"),
+          0
+        );
       }
     });
 
     return () => {
-      active = false;
+      mountedRef.current = false;
+      requestGate.invalidate(null);
       sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [beginProfileLoad, finishProfileLoad, syncSession]);
 
   // ⚠️ Le quattro funzioni qui sotto restituiscono l'errore **già tradotto**.
   // Prima tornava il messaggio grezzo di Supabase e la traduzione la faceva chi
@@ -340,8 +408,50 @@ export function AuthProvider({ children }: PropsWithChildren) {
   // Re-read the profile after the user edits it. Deliberately does NOT touch `loading`
   // (that would make RootNavigator blank the app); just swaps in the fresh row.
   async function refreshProfile() {
-    if (!session?.user) return;
-    setProfile(await resolveProfile(session.user));
+    const next = sessionRef.current;
+    if (!next?.user) return;
+    const ticket = requestGateRef.current.begin(next.user.id);
+    try {
+      const nextProfile = await resolveProfile(next.user);
+      if (
+        mountedRef.current &&
+        requestGateRef.current.isCurrent(ticket)
+      ) {
+        setProfile(nextProfile);
+      }
+    } catch (cause) {
+      // Se nel frattempo è cambiata la sessione, questo errore appartiene alla
+      // richiesta vecchia quanto il suo risultato e non va propagato.
+      if (!requestGateRef.current.isCurrent(ticket)) return;
+      throw cause;
+    }
+  }
+
+  async function retryProfile() {
+    let next = sessionRef.current;
+    if (next === undefined) {
+      const snapshot = requestGateRef.current.snapshot();
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (!requestGateRef.current.isSnapshotCurrent(snapshot)) return;
+        if (sessionError) throw sessionError;
+        next = data.session;
+        syncSession(next);
+      } catch (cause) {
+        if (!requestGateRef.current.isSnapshotCurrent(snapshot)) return;
+        setError(
+          cause instanceof Error
+            ? cause
+            : new Error("Non siamo riusciti a verificare la sessione")
+        );
+        setLoading(false);
+        return;
+      }
+    }
+    const ticket = beginProfileLoad(next);
+    await finishProfileLoad(next, ticket);
   }
 
   return (
@@ -350,6 +460,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         session,
         profile,
         loading,
+        error,
         signIn,
         signUp,
         resetPassword,
@@ -357,6 +468,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         updatePassword,
         signOut,
         refreshProfile,
+        retryProfile,
       }}
     >
       {children}

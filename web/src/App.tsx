@@ -5,7 +5,7 @@ import {
   OwnerVenuesProvider,
   useOwnerVenues,
 } from "@/features/venues/OwnerVenues";
-import { Spinner } from "./ui/primitives";
+import { Button, Placeholder, Spinner } from "./ui/primitives";
 import { AppLayout } from "./AppLayout";
 import { NotificationsWatcher } from "./NotificationsWatcher";
 import { LoginPage } from "./pages/Login";
@@ -29,10 +29,27 @@ import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 
 export function App() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, error, retryProfile, signOut } = useAuth();
   const { pathname } = useLocation();
 
   if (loading) return <Spinner label="Verifica sessione…" />;
+
+  if (error) {
+    return (
+      <main className="mx-auto max-w-xl px-6 py-20">
+        <Placeholder
+          title="Non siamo riusciti a caricare il profilo"
+          detail="Controlla la connessione e riprova. Se il problema continua, puoi uscire e accedere di nuovo."
+          action={
+            <div className="flex gap-2">
+              <Button onClick={() => void retryProfile()}>Riprova</Button>
+              <Button onClick={() => void signOut()}>Esci</Button>
+            </div>
+          }
+        />
+      </main>
+    );
+  }
 
   // Davanti a ogni gate: chi arriva da un link ricevuto per email deve poter
   // fare una cosa sola, e se il link è scaduto la pagina lo spiega da sé. Un
@@ -58,7 +75,22 @@ export function App() {
     );
   }
 
-  if (!profile) return <Spinner label="Caricamento profilo…" />;
+  if (!profile) {
+    return (
+      <main className="mx-auto max-w-xl px-6 py-20">
+        <Placeholder
+          title="Profilo non disponibile"
+          detail="Riprova il caricamento oppure esci e accedi di nuovo."
+          action={
+            <div className="flex gap-2">
+              <Button onClick={() => void retryProfile()}>Riprova</Button>
+              <Button onClick={() => void signOut()}>Esci</Button>
+            </div>
+          }
+        />
+      </main>
+    );
+  }
 
   return (
     // Sopra tutto il resto: `RealtimeSync` deve sapere quali sedi ascoltare,
@@ -78,12 +110,30 @@ export function App() {
  * un'appartenenza con `authority` in un'azienda (`get_my_context`).
  */
 function Dashboard({ userId }: { userId: string }) {
-  const { canManage, isPending } = useOwnerVenues();
+  const { signOut } = useAuth();
+  const { canManage, isPending, isError, refetch } = useOwnerVenues();
 
   // Prima di sapere se gestisce qualcosa non si può rispondere: mostrargli
   // `NotForWaitersPage` e poi sostituirla con la dashboard sarebbe peggio di
   // un attimo di attesa.
   if (isPending) return <Spinner label="Caricamento…" />;
+
+  if (isError) {
+    return (
+      <main className="mx-auto max-w-xl px-6 py-20">
+        <Placeholder
+          title="Non siamo riusciti a verificare le tue aziende"
+          detail="Controlla la connessione e riprova: i tuoi permessi non sono stati modificati."
+          action={
+            <div className="flex gap-2">
+              <Button onClick={() => void refetch()}>Riprova</Button>
+              <Button onClick={() => void signOut()}>Esci</Button>
+            </div>
+          }
+        />
+      </main>
+    );
+  }
 
   // La dashboard è uno strumento da scrivania per chi gestisce una sede. Il
   // professionista non ha nulla da farci: schermata esplicita, non un redirect

@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/react-native";
 import * as SystemUI from "expo-system-ui";
 import { Text, View } from "@/tw";
 import { GhostButton } from "@/components/ui/GhostButton";
+import { GoldButton } from "@/components/ui/GoldButton";
 import { useFonts } from "expo-font";
 import { Fraunces_400Regular } from "@expo-google-fonts/fraunces/400Regular";
 import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces/600SemiBold";
@@ -43,20 +44,21 @@ const screenOptions = {
 } as const;
 
 function ProfileError() {
-  const { signOut } = useAuth();
+  const { retryProfile, signOut } = useAuth();
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-bg-0 px-8">
       <Text className="text-center font-sans text-base text-t2">
         Non siamo riusciti a caricare il tuo profilo. Controlla la connessione e
         riprova.
       </Text>
+      <GoldButton label="Riprova" onPress={() => void retryProfile()} />
       <GhostButton label="Esci" onPress={signOut} />
     </View>
   );
 }
 
 function RootNavigator() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, error } = useAuth();
   // Il cappello con cui si usa l'app (gestione / lavoro): si ricava dalle
   // appartenenze, non da un ruolo sul profilo. Vedi `features/team/ViewMode.tsx`.
   const view = useViewMode();
@@ -78,7 +80,7 @@ function RootNavigator() {
   // `view.ready` entra nel gate dello splash solo quando c'è una sessione: senza
   // login non c'è nessuna vista da risolvere, e aspettarla terrebbe lo splash su
   // per una lettura da disco che riguarda un altro utente.
-  const ready = !loading && fontsReady && (!session || view.ready);
+  const ready = !loading && fontsReady && (!session || !!error || view.ready);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -88,7 +90,7 @@ function RootNavigator() {
 
   // Session restored but the profile couldn't be resolved (after retries):
   // render a recoverable screen instead of a blank Stack with no matching guard.
-  if (session && !profile) return <ProfileError />;
+  if (error || (session && !profile)) return <ProfileError />;
 
   const isManagerView = !!session && view.effective === "manager";
   const isWaiterView = !!session && view.effective === "waiter";

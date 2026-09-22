@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { loadViewMode, saveViewMode, type ViewMode } from "./viewModeStorage";
+import { resolvedViewMode } from "./viewModeLogic";
 
 /**
  * Il cappello con cui si sta usando l'app: **gestione** (`manager`) o **lavoro**
@@ -83,9 +84,6 @@ export function ViewModeProvider({ children }: PropsWithChildren) {
    * l'interruttore: dall'altra parte non ha niente, e ci troverebbe solo il
    * wizard di un profilo che non gli serve.
    */
-  const canSwitch =
-    canManage && (canWork || !!profile?.onboarding_complete);
-
   // L'ultima vista, letta dal disco **insieme all'account a cui appartiene**:
   // derivarla invece di azzerarla in un effect evita un render in più al cambio
   // account. Stessa forma di `useLastVenue`.
@@ -115,13 +113,21 @@ export function ViewModeProvider({ children }: PropsWithChildren) {
   );
 
   // A contesto caricato: il calcolo. Prima: l'ultima vista nota, o l'intento.
-  const computed: ViewMode = useMemo(() => {
-    if (canManage && canWork) return savedMode === "waiter" ? "waiter" : "manager";
-    if (canManage) return "manager";
-    if (canWork) return "waiter";
-    return intent;
-  }, [canManage, canWork, savedMode, intent]);
-  const effective: ViewMode = resolved ? computed : (savedMode ?? intent);
+  const computed = useMemo(
+    () =>
+      resolvedViewMode({
+        canManage,
+        canWork,
+        onboardingComplete: !!profile?.onboarding_complete,
+        savedMode,
+        intent,
+      }),
+    [canManage, canWork, profile?.onboarding_complete, savedMode, intent]
+  );
+  const canSwitch = computed.canSwitch;
+  const effective: ViewMode = resolved
+    ? computed.effective
+    : (savedMode ?? intent);
 
   // Si ricorda l'ultima vista **risolta**, così il prossimo avvio parte subito
   // senza aspettare la rete (vedi `ready`).
