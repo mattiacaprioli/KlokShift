@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useToast } from "@/providers/Toast";
+import { userErrorMessage } from "@/lib/errors";
 import { deleteMyAccount } from "./api";
 
 /**
@@ -38,9 +39,12 @@ export function DeleteAccountSection() {
       // L'utente di autenticazione non esiste più: il signOut serve a ripulire
       // la sessione locale, così il RootNavigator torna al gruppo (auth).
       await signOut();
-    } catch {
+    } catch (e) {
       setPending(false);
-      toast.show("Impossibile eliminare l'account. Riprova.", "error");
+      toast.show(
+        userErrorMessage(e, "Impossibile eliminare l'account. Riprova."),
+        "error"
+      );
     }
   }
 

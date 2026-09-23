@@ -5,18 +5,24 @@
 //
 // Flusso: si verifica il JWT del chiamante (nessun parametro con l'id, così
 // nessuno può cancellare l'account di un altro), poi con la service_role si
-// esegue `public.delete_account(uuid)` — che anonimizza il profilo e ripulisce i
-// dati personali conservando lo storico altrui — e infine si rimuove l'utente da
-// auth.users, che porta via email e credenziali.
+// accodano gli avatar e si esegue `public.delete_account(uuid)`. La RPC accoda
+// atomicamente i documenti prima di eliminarne i metadati e anonimizza il
+// profilo conservando lo storico altrui. La coda viene svuotata tramite le API
+// Storage e soltanto alla fine si rimuove l'utente da auth.users.
 //
-// L'ordine conta: prima i dati, poi l'identità. Se si cancellasse prima
-// l'utente, il JWT resterebbe valido ma `delete_account` girerebbe su un profilo
-// che l'app non sa più a chi appartiene.
+// L'ordine conta: i riferimenti persistono finché Storage non conferma la
+// rimozione. Se un passo fallisce, Auth resta attivo e la stessa richiesta può
+// riprendere la coda in modo idempotente senza perdere i path.
 //
 // Deploy (richiede JWT, quindi NIENTE --no-verify-jwt):
 //   supabase functions deploy delete-account --project-ref rmlobxjlqlpixkvrzmfg
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  runDeleteAccount,
+  type FileRef,
+  type StepResult,
+} from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -40,6 +46,14 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function ok<T>(value: T): StepResult<T> {
+  return { ok: true, value };
+}
+
+function failed<T>(code: string): StepResult<T> {
+  return { ok: false, code };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -57,32 +71,99 @@ Deno.serve(async (req) => {
   const userId = userData.user.id;
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // 1) I path dei file che ha caricato, PRIMA di cancellarne le righe: dopo la
-  //    RPC non c'è più modo di sapere quali blob erano suoi, e resterebbero nel
-  //    bucket documenti d'identità di un account che non esiste più.
-  const { data: myDocs } = await admin
-    .from("staff_documents")
-    .select("storage_path")
-    .eq("uploaded_by", userId);
+  const result = await runDeleteAccount(userId, {
+    async listAvatarPage(id, offset, limit) {
+      const { data, error } = await admin.storage.from("avatars").list(id, {
+        limit,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      });
+      if (error) return failed("avatar_list_failed");
+      // Le cartelle virtuali non hanno `id`; sotto `<userId>/` interessano solo
+      // gli oggetti veri. Il path completo viene composto dalla logica comune.
+      return ok((data ?? []).filter((item) => !!item.id).map((item) => item.name));
+    },
 
-  // 2) Dati: anonimizza il profilo, rimuove i dati personali, conserva lo
-  //    storico che appartiene ad altri (ore dello staff, turni passati, thread).
-  const { error: rpcErr } = await admin.rpc("delete_account", {
-    p_user: userId,
+    async enqueueFiles(id, files) {
+      const { error } = await admin.from("account_file_cleanup").upsert(
+        files.map((file: FileRef) => ({
+          user_id: id,
+          bucket_id: file.bucketId,
+          object_name: file.objectName,
+        })),
+        {
+          onConflict: "user_id,bucket_id,object_name",
+          ignoreDuplicates: true,
+        }
+      );
+      return error ? failed("queue_write_failed") : ok(undefined);
+    },
+
+    async deleteAccountData(id) {
+      const { error } = await admin.rpc("delete_account", { p_user: id });
+      return error ? failed("delete_account_failed") : ok(undefined);
+    },
+
+    async listCleanupBatch(id, limit) {
+      const { data, error } = await admin
+        .from("account_file_cleanup")
+        .select("id,bucket_id,object_name,attempts")
+        .eq("user_id", id)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .limit(limit);
+      if (error) return failed("queue_read_failed");
+      return ok(
+        (data ?? []).map((file) => ({
+          id: file.id,
+          bucketId: file.bucket_id as FileRef["bucketId"],
+          objectName: file.object_name,
+          attempts: file.attempts,
+        }))
+      );
+    },
+
+    async removeObjects(bucketId, objectNames) {
+      const { error } = await admin.storage.from(bucketId).remove(objectNames);
+      return error ? failed("storage_remove_failed") : ok(undefined);
+    },
+
+    async markCleanupFailed(files, code) {
+      const results = await Promise.all(
+        files.map((file) =>
+          admin
+            .from("account_file_cleanup")
+            .update({
+              attempts: file.attempts + 1,
+              // Codice nostro e privo di path/dati documento; non salviamo il
+              // messaggio grezzo perché può contenere nomi sensibili.
+              last_error_code: code,
+            })
+            .eq("id", file.id)
+        )
+      );
+      return results.some((result) => result.error)
+        ? failed("queue_mark_failed")
+        : ok(undefined);
+    },
+
+    async clearCleanup(ids) {
+      const { error } = await admin
+        .from("account_file_cleanup")
+        .delete()
+        .in("id", ids);
+      return error ? failed("queue_clear_failed") : ok(undefined);
+    },
+
+    async deleteAuthUser(id) {
+      const { error } = await admin.auth.admin.deleteUser(id);
+      return error ? failed("auth_delete_failed") : ok(undefined);
+    },
   });
-  if (rpcErr) return json({ error: rpcErr.message }, 500);
 
-  // 3) I blob. Dopo la RPC di proposito: se fallisse a metà, meglio un file
-  //    orfano che delle righe che puntano a file già spariti. Non blocca la
-  //    cancellazione — l'account va comunque chiuso.
-  const paths = (myDocs ?? []).map((d) => d.storage_path);
-  if (paths.length > 0) {
-    await admin.storage.from("staff-documents").remove(paths);
-  }
-
-  // 4) Identità: email e credenziali.
-  const { error: delErr } = await admin.auth.admin.deleteUser(userId);
-  if (delErr) return json({ error: delErr.message }, 500);
-
-  return json({ deleted: true });
+  // `deleted: false` significa che Auth esiste ancora e la stessa richiesta è
+  // sicura da ritentare. Nessun token, path o messaggio Storage viene esposto.
+  // È una risposta applicativa, anche quando chiede retry: così il client può
+  // distinguere «account ancora presente» da un errore di trasporto opaco.
+  return json(result);
 });

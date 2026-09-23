@@ -531,7 +531,18 @@ end $$;
 do $$
 declare
   ids uuid[]; sh uuid;
+  doc_path text := tests.id('M_Emp')::text || '/delete-account.pdf';
 begin
+  perform tests.login('Emp');
+  perform tests.raises(
+    'select * from public.account_file_cleanup',
+    'permission denied', 'la coda cleanup è solo service role');
+  insert into public.staff_documents (
+    member_id, name, storage_path, mime_type, size_bytes
+  ) values (
+    tests.id('M_Emp'), 'Da eliminare', doc_path, 'application/pdf', 10
+  );
+
   perform tests.login('Ow');
   perform tests.raises(format('select public.delete_account(%L)', tests.id('Emp')), 'permission denied', 'non è una RPC per gli utenti');
   ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
@@ -542,6 +553,19 @@ begin
 
   -- Emp: professionista in W1, unico titolare di W2.
   perform public.delete_account(tests.id('Emp'));
+  perform tests.ok(
+    not exists (select 1 from public.staff_documents where storage_path = doc_path),
+    'la riga documento viene eliminata');
+  perform tests.eq(
+    (select count(*) from public.account_file_cleanup
+      where user_id = tests.id('Emp') and bucket_id = 'staff-documents'
+        and object_name = doc_path),
+    1::bigint, 'il path documento sopravvive nella coda service-only');
+  perform public.delete_account(tests.id('Emp'));
+  perform tests.eq(
+    (select count(*) from public.account_file_cleanup
+      where user_id = tests.id('Emp') and object_name = doc_path),
+    1::bigint, 'il retry della RPC non duplica il cleanup');
   perform tests.ok((select deleted_at is not null from public.workspaces where id = tests.id('W2')), 'W2 (unico titolare) si chiude');
   perform tests.ok((select closed_at is not null from public.venues where id = tests.id('V3')), 'con le sue sedi');
   perform tests.ok((select user_id is null and status = 'left' from public.workspace_members where id = tests.id('M_Emp')),

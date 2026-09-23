@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      account_file_cleanup: {
+        Row: {
+          attempts: number
+          bucket_id: string
+          created_at: string
+          id: string
+          last_error_code: string | null
+          object_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          bucket_id: string
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          object_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          object_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { UserFacingError } from "@/lib/errors";
 
 /** Bucket pubblico delle foto profilo (migration 20260911130000). */
 export const AVATARS_BUCKET = "avatars";
@@ -102,10 +103,16 @@ export async function deleteAvatarByUrl(
  * cancellare l'account di qualcun altro.
  */
 export async function deleteMyAccount(): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ deleted: boolean }>(
-    "delete-account",
-    { method: "POST" }
-  );
+  const { data, error } = await supabase.functions.invoke<
+    | { deleted: true; retryable: false }
+    | { deleted: false; retryable: true; error: string }
+  >("delete-account", { method: "POST" });
   if (error) throw new Error(error.message);
-  if (!data?.deleted) throw new Error("Cancellazione non riuscita");
+  if (data?.deleted) return;
+  if (data?.retryable) {
+    throw new UserFacingError(
+      "La cancellazione non è ancora completa. Riprova: i file rimasti verranno controllati senza duplicare l’operazione."
+    );
+  }
+  throw new Error("Cancellazione non riuscita");
 }
