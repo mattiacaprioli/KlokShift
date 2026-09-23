@@ -63,11 +63,13 @@ hook di feature. Le funzioni grezze stanno in `features/*/api.ts`.
 
 ## Ops
 
-- **Supabase as code**: `supabase/` + script `yarn db:pull` / `yarn db:types`
-  (vedi [supabase/README.md](supabase/README.md)). I tipi in `src/types/database.ts`
-  sono **generati**, non più a mano.
-- **CI**: [.github/workflows/ci.yml](.github/workflows/ci.yml) — `tsc --noEmit`
-  (+ lint quando ESLint sarà configurato).
+- **Supabase as code**: le migration additive sono in `supabase/migrations/`;
+  replay, test e generazione tipi locali usano gli script descritti in
+  [supabase/README.md](supabase/README.md). I tipi in `src/types/database.ts`
+  sono **generati**, non si modificano a mano.
+- **CI**: [.github/workflows/ci.yml](.github/workflows/ci.yml) esegue test client,
+  tre type-check, lint, build web, export iOS, replay/test SQL e check delle Edge
+  Function prima degli eventuali deploy.
 - **Build**: [eas.json](eas.json) — profili development/preview/production.
 - **Crash reporting**: Sentry, no-op finché non viene impostato
   `EXPO_PUBLIC_SENTRY_DSN`.
@@ -86,8 +88,8 @@ Pianifica per **slice verticali** (una funzione utente end-to-end), non orizzont
 ### Definition of Done (per ogni slice)
 
 - [ ] `yarn typecheck` pulito
-- [ ] `npx expo export --platform ios` builda senza errori
+- [ ] `CI=1 EXPO_OFFLINE=1 yarn expo export --platform ios --output-dir /tmp/klokshift-ios` builda senza errori
 - [ ] Stati **loading / error / empty** gestiti via TanStack Query
 - [ ] Mutation con feedback toast e invalidazione delle query giuste
-- [ ] RLS verificata sul DB (l'azione funziona con `auth.uid()` del ruolo giusto)
+- [ ] RLS verificata sul DB con un attore autenticato e authority/permessi corretti
 - [ ] Provato a schermo sul simulatore/dispositivo

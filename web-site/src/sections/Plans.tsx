@@ -17,7 +17,7 @@ import type { BillingCycle, Price } from "../content/types";
  * L'annuale mostra prima l'importo realmente fatturato; l'equivalente mensile
  * è solo un aiuto al confronto, mai il prezzo principale.
  *
- * ⚠️ Solo qui e nella dashboard web: l'app non mostra prezzi né link al sito
+ * ⚠️ Solo sul sito: app e dashboard non mostrano prezzi né checkout
  * (App Store 3.1.3, vedi `(manager)/pro.tsx`).
  */
 function PriceCard({

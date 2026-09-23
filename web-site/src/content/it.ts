@@ -19,7 +19,8 @@ import type { Content } from "./types";
  *   - paghe, buste paga, compensi → KlokShift conta ore, non soldi
  *   - referral / mese regalato → non esiste ancora nel prodotto
  *   - numeri di tempo risparmiato o testimonianze → solo se veri e verificabili
- * I prezzi stanno qui e nella dashboard web, **mai nell'app** (App Store 3.1.3).
+ * Il listino definitivo sta sul sito, **mai nell'app** (App Store 3.1.3): con
+ * l'annuale si pagano 10 mensilità invece di 12, quindi 2 mesi sono gratuiti.
  * Se una feature entra o esce dal prodotto, questo file va aggiornato, come
  * `src/features/onboarding/introContent.ts`.
  */

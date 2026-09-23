@@ -41,13 +41,16 @@ Il sito deve raccontare il prodotto che esiste oggi:
 - **niente referral** («un mese gratis a chi porti») — non esiste ancora nel prodotto;
 - **niente numeri di tempo risparmiato né testimonianze** finché non sono veri.
 
-I **prezzi** invece ci sono (sezione `#prezzi`: 29 €/mese fino a 30 dipendenti,
-49 €/mese con dipendenti illimitati, +15 € per sede in più; l'annuale costa
-rispettivamente 290 €, 490 € e +150 € per sede, cioè 2 mesi gratis; 30 giorni
-di prova senza carta) e stanno **solo qui e
-nella dashboard web**: l'app non mostra prezzi né link al sito (App Store
-3.1.3, vedi la memoria sui vincoli di monetizzazione). Se cambiano, vanno
-aggiornati insieme `src/content/it.ts` e l'`offers` del JSON-LD in `index.html`.
+Il **listino definitivo** è pubblico soltanto qui, mai nell'app:
+
+- fino a 30 dipendenti: 29 € al mese oppure 290 € all'anno;
+- dipendenti illimitati: 49 € al mese oppure 490 € all'anno;
+- sede aggiuntiva: 15 € al mese oppure 150 € all'anno;
+- IVA esclusa e 30 giorni di prova senza carta.
+
+Con la fatturazione annuale si pagano 10 mensilità invece di 12: sono quindi
+inclusi **due mesi gratuiti**. Se cambia un importo, aggiornare insieme
+`src/content/it.ts` e l'`offers` JSON-LD in `index.html`.
 
 Il pubblico è **qualunque azienda con personale a turni**, non solo
 l'ospitalità: sul sito le persone sono «team» / «dipendenti», il luogo «sede».

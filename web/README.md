@@ -6,8 +6,9 @@ mobile basta e avanza (chi apre questa dashboard con un account professionista
 riceve una schermata di cortesia, non un errore).
 
 Stesso backend Supabase dell'app, **stessa RLS, stessa anon key**: non esistono
-policy dedicate al web. L'accesso del gestore è già derivato ovunque dalla
-proprietà della sede (`venues.owner_id = auth.uid()`).
+policy dedicate al web. L'accesso del gestore deriva da `workspace_members`:
+authority e permessi stabiliscono cosa può fare, mentre `member_scope` limita le
+sedi su cui può farlo. `venues` non contiene un `owner_id`.
 
 ## Comandi (dalla root del repo)
 
@@ -35,17 +36,16 @@ rotto**. Con una sola `node_modules` il problema non si pone. In
 
 ## Come funziona il riuso del data layer
 
-Sui `src/features/*/api.ts` e `hooks.ts` solo tre file dipendono da React Native
-o Expo (`onboarding/api.ts`, `plan/hooks.ts`, `push/api.ts`), e nessuno serve al
-ristoratore. Bastano quindi **due alias** (in `vite.config.mts` e, identici, nei
-`paths` di `tsconfig.json`):
+La dashboard riusa il data layer in `src/features/`; gli adattatori dipendenti
+dalla piattaforma sono sostituiti da alias in `vite.config.mts`:
 
 | Alias | Sostituito con | Perché |
 |---|---|---|
 | `@/lib/supabase` | `web/src/lib/supabase.ts` | niente SecureStore: su web basta localStorage |
 | `@/features/push/api` | `web/src/lib/pushStub.ts` | è l'unico import che rende `src/lib/auth.tsx` non portabile |
+| `@/features/venues/lastVenueStorage` | `web/src/lib/lastVenueStorage.ts` | usa localStorage invece di SecureStore |
 
-Con quei due, si riusano **verbatim** `AuthProvider`/`useAuth`, `queryClient`,
+Con questi alias si riusano **verbatim** `AuthProvider`/`useAuth`, `queryClient`,
 la factory `qk`, `format`, `cn`, ogni `api.ts`/`hooks.ts`/`schema.ts`,
 `assignments/{hours,coverage}.ts`, `staff/roles.ts`, `lib/exportBuilders.ts` e
 `RealtimeSync`. Qui dentro si scrive **solo UI**.
@@ -64,22 +64,21 @@ coppia `VITE_*` da tenere allineata.
 
 ## Deploy
 
-`.github/workflows/deploy-web-review.yml` monta un unico artifact Pages
-(GitHub Pages dà un solo sito per repo): `web-review/` alla radice — l'URL delle
-recensioni **non deve cambiare**, è dentro i QR già stampati — e `web/dist`
-sotto `/app/`.
+Il job `client` di `.github/workflows/ci.yml` costruisce un unico artifact Pages:
+`web-site/dist` alla radice, `web/dist` sotto `/app/` e la superficie sospesa
+`web-review/` sotto `/recensioni/`. Il deploy riusabile parte soltanto dopo i
+gate client, database ed Edge Function dello stesso SHA.
 
 Per questo il router è un **HashRouter**: Pages non fa fallback SPA. Quando la
 dashboard avrà un dominio proprio si passa a `BrowserRouter`.
 
 ## Scelte da conoscere prima di metterci mano
 
-- **La registrazione dal web crea solo account `manager`**: il ruolo non si
-  sceglie (a differenza dell'app), perché questa dashboard è per le sedi e un
-  professionista finirebbe comunque su `NotForWaitersPage`. L'account si crea
-  con `signUp` condiviso di `src/lib/auth.tsx` e la sede arriva dopo, dal gate
-  di `AppLayout` → `/sede`: senza sessione (conferma email attiva) la RLS non
-  permetterebbe l'insert in `venues`.
+- **La registrazione dal web suggerisce l'intento di gestione**: non crea un
+  ruolo sul profilo. L'account si crea con `signUp` condiviso di
+  `src/lib/auth.tsx`; dopo la conferma, il gate di `AppLayout` porta alla
+  creazione dell'azienda e della prima sede. La vista effettiva deriva poi da
+  `get_my_context()` e dalle appartenenze.
   ⚠️ Il link di conferma punta all'URL della dashboard (`emailRedirectTo`): va
   aggiunto ai **Redirect URLs** del progetto Supabase, altrimenti si ripiega sul
   Site URL. Il client web ha `detectSessionInUrl: false` (i token nel fragment

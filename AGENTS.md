@@ -127,7 +127,11 @@ web-review/ # recensioni cliente (sospese, sotto /recensioni/)
 ```
 
 ⚠️ Il copy del sito vetrina sta tutto in `web-site/src/content/it.ts` e non può
-nominare recensioni, candidature, paghe o prezzi: vedi `web-site/README.md`.
+nominare recensioni, candidature o paghe. Il listino è invece definitivo e può
+comparire soltanto sul sito: 29 €/mese o 290 €/anno fino a 30 dipendenti,
+49 €/mese o 490 €/anno senza limite, sede aggiuntiva 15 €/mese o 150 €/anno,
+IVA esclusa; l'annuale equivale a 10 mensilità, quindi offre 2 mesi gratuiti.
+L'app non mostra prezzi. Vedi `web-site/README.md`.
 
 ## Path alias
 `@/` → `src/`. Es. `import { cn } from "@/lib/cn"`, `import { View, Text } from "@/tw"`.

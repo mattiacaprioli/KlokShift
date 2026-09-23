@@ -68,6 +68,11 @@ supabase/tests/run.sh test     # lancia supabase/tests/rls/*.sql impersonando gl
 supabase/tests/gen-types.sh    # rigenera src/types/database.ts dallo schema locale
 ```
 
+`reset` è distruttivo per il solo container locale gestito dallo script. Non
+puntare questi comandi a un progetto remoto o a un database condiviso. Il gate
+completo eseguito dalla CI è `up` → `reset` → `test`; dopo una modifica SQL si
+eseguono anche `gen-types.sh`, `yarn typecheck` e `yarn web:typecheck`.
+
 - `tests/bootstrap.sql` allinea il Postgres locale al progetto reale (`auth.uid()`
   che legge `request.jwt.claims`, storage, publication). Non è una migration.
 - `tests/seed.sql` costruisce sei attori passando dalle RPC: `Ow` (titolare, in

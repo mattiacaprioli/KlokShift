@@ -1,17 +1,16 @@
 import * as SecureStore from "expo-secure-store";
 
 /**
- * Con quale cappello un professionista promosso ha aperto l'app l'ultima volta.
+ * Con quale cappello una persona con accesso sia alla gestione sia al lavoro ha
+ * aperto l'app l'ultima volta.
  *
- * Esiste solo per la F3: un membro dell'organico a cui il titolare ha dato la
- * gestione resta `profiles.role = 'waiter'` (cambiarlo gli porterebbe via turni,
- * card pubblica e recensioni), quindi il ruolo non può più decidere da solo
- * dove mandarlo all'avvio. Lo decide questa preferenza.
+ * Il cappello non è un ruolo persistito: `useViewMode()` lo ricava dalle
+ * appartenenze restituite da `get_my_context()`. Questa preferenza ricorda quale
+ * delle due viste valide mostrare all'avvio.
  *
- * Non è un permesso e non ne concede nessuno: chi non ha righe `venue_access`
- * attive resta nella sua app qualunque cosa ci sia scritto qui. È una comodità,
- * come `lastVenueStorage` — e per la stessa ragione sta in `expo-secure-store`,
- * che è già una dipendenza.
+ * Non è un permesso e non ne concede nessuno: authority, permessi e organico
+ * restano quelli delle appartenenze correnti. È una comodità, come
+ * `lastVenueStorage`, e per la stessa ragione sta in `expo-secure-store`.
  *
  * Chiave per account: su un telefono condiviso due persone non si scambiano la
  * vista.
