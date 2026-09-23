@@ -1,27 +1,30 @@
-name: Supabase migrations
+name: Deploy Supabase migrations
 
-# Forward-only migrations workflow. Al push su main che tocca supabase/migrations/**
-# applica le migrazioni al progetto cloud con `supabase db push`.
-# Richiede i secret repo: SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD.
-
+# Solo workflow riusabile: `ci.yml` lo chiama dopo gate client, DB ed Edge.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "supabase/migrations/**"
+  workflow_call:
+    secrets:
+      SUPABASE_ACCESS_TOKEN:
+        required: true
+      SUPABASE_DB_PASSWORD:
+        required: true
 
 jobs:
   db-push:
     runs-on: ubuntu-latest
+    concurrency:
+      group: supabase-production
+      cancel-in-progress: false
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # Stessa versione dichiarata nel package del progetto: niente latest.
+          version: 2.108.0
 
       - name: Link project
         run: supabase link --project-ref rmlobxjlqlpixkvrzmfg

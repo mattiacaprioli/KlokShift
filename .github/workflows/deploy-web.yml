@@ -1,82 +1,24 @@
-name: Deploy sito + dashboard to Pages
+name: Deploy Pages
 
-# Pubblica su GitHub Pages i pezzi web del progetto, in un solo artifact
-# (Pages consente un solo sito per repo):
-#   /              → web-site/dist : sito vetrina + pagine legali (privacy,
-#                    elimina-account). Gli URL delle legali sono dentro le
-#                    schede degli store: i nomi dei file NON devono cambiare.
-#   /app/          → web/dist      : dashboard dei locali (Vite, build richiesta).
-#   /recensioni/   → web-review/   : recensioni dei clienti, HTML/CSS/JS puri.
-#                    Sospese (REVIEWS_ENABLED=false) e destinate a sparire: la
-#                    vetrina rimanda qui i vecchi QR (`/?w=<id>`) finché ci sono.
-
+# Solo workflow riusabile: il chiamante deve aver già costruito e caricato
+# l'artifact `github-pages` dopo tutti i gate dello stesso SHA.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "web-site/**"
-      - "web-review/**"
-      - "web/**"
-      # La dashboard importa il data layer dell'app: una modifica lì cambia
-      # il bundle pubblicato.
-      - "src/**"
-      - "package.json"
-      - ".github/workflows/deploy-web.yml"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Un solo deploy Pages alla volta; non annullare quello in corso.
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  workflow_call:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    env:
-      # Chiavi pubbliche per definizione: la sicurezza è nella RLS, non nella
-      # loro segretezza (stessa scelta già fatta in web-review/config.js).
-      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-      EXPO_PUBLIC_SITE_URL: ${{ vars.EXPO_PUBLIC_SITE_URL }}
-      EXPO_PUBLIC_APP_URL: ${{ vars.EXPO_PUBLIC_APP_URL }}
-      EXPO_PUBLIC_IOS_URL: ${{ vars.EXPO_PUBLIC_IOS_URL }}
-      EXPO_PUBLIC_ANDROID_URL: ${{ vars.EXPO_PUBLIC_ANDROID_URL }}
+    concurrency:
+      group: pages-production
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.14.0
-          cache: yarn
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Build sito vetrina
-        run: npx vite build web-site
-
-      - name: Build dashboard
-        run: npx vite build web
-
-      - name: Assemble Pages artifact
-        run: |
-          rm -rf _site
-          cp -r web-site/dist _site
-          mkdir -p _site/app _site/recensioni
-          cp -r web/dist/. _site/app/
-          cp -r web-review/. _site/recensioni/
-
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

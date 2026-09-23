@@ -1,0 +1,9 @@
+{
+  "lock": {
+    "path": "./deno.lock",
+    "frozen": true
+  },
+  "tasks": {
+    "check": "deno check accept-invite/index.ts delete-account/index.ts invite-staff/index.ts push/index.ts"
+  }
+}

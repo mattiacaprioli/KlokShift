@@ -1,13 +1,69 @@
-name: CI
+name: CI e rilascio
 
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  check:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      pages: ${{ steps.filter.outputs.pages }}
+      database: ${{ steps.filter.outputs.database }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # I deploy restano selettivi, ma i gate sotto girano su ogni PR e push.
+      # Sul primo push del branch GitHub usa uno SHA `before` tutto zero: in
+      # quel caso l'albero corrente è l'unica base affidabile.
+      - id: filter
+        name: Individua superfici da pubblicare
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          pages=false
+          database=false
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if [[ "$BEFORE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE_SHA^{commit}"; then
+              mapfile -t files < <(git ls-tree -r --name-only "$GITHUB_SHA")
+            else
+              mapfile -t files < <(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA")
+            fi
+
+            for file in "${files[@]}"; do
+              case "$file" in
+                web-site/*|web-review/*|web/*|src/*|package.json|yarn.lock|.github/workflows/ci.yml|.github/workflows/deploy-web.yml)
+                  pages=true
+                  ;;
+              esac
+              case "$file" in
+                supabase/migrations/*|.github/workflows/ci.yml|.github/workflows/supabase.yml)
+                  database=true
+                  ;;
+              esac
+            done
+          fi
+
+          echo "pages=$pages" >> "$GITHUB_OUTPUT"
+          echo "database=$database" >> "$GITHUB_OUTPUT"
+
+  client:
+    runs-on: ubuntu-latest
+    env:
+      # Valori pubblici e fittizi: build e test non contattano produzione.
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: public-ci-key
+      EXPO_PUBLIC_SITE_URL: ${{ vars.EXPO_PUBLIC_SITE_URL || 'https://klokshift.com' }}
+      EXPO_PUBLIC_APP_URL: ${{ vars.EXPO_PUBLIC_APP_URL || './app' }}
+      EXPO_PUBLIC_IOS_URL: ${{ vars.EXPO_PUBLIC_IOS_URL }}
+      EXPO_PUBLIC_ANDROID_URL: ${{ vars.EXPO_PUBLIC_ANDROID_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -16,25 +72,89 @@ jobs:
           node-version: 22.14.0
           cache: yarn
 
-      - name: Install dependencies
+      - name: Installa dipendenze
         run: yarn install --frozen-lockfile
 
-      - name: Typecheck
-        run: npx tsc --noEmit
+      - name: Test client
+        run: yarn test:unit
 
-      # La dashboard web ha un tsconfig separato (lib DOM, alias verso il client
-      # Supabase web). La root la esclude, quindi va controllata a parte.
+      - name: Typecheck app
+        run: yarn typecheck
+
       - name: Typecheck dashboard web
-        run: npx tsc -p web --noEmit
+        run: yarn web:typecheck
 
-      # Stessa storia per il sito vetrina: tsconfig proprio, escluso dalla root.
       - name: Typecheck sito vetrina
-        run: npx tsc -p web-site --noEmit
+        run: yarn site:typecheck
 
-      # Blocking: ESLint is configured (eslint.config.js + eslint-config-expo).
-      # Fails on errors; advisory warnings (e.g. RHF watch) don't block.
-      # `expo lint` senza argomenti guarda solo src/app/components: dashboard e
-      # vetrina vanno nominate, altrimenti questo job dà falsa sicurezza su
-      # web/src e web-site/src.
       - name: Lint
-        run: npx expo lint src web/src web-site/src
+        run: yarn lint
+
+      - name: Build dashboard
+        run: yarn web:build
+
+      - name: Build sito vetrina
+        run: yarn site:build
+
+      - name: Verifica bundle iOS
+        run: CI=1 EXPO_OFFLINE=1 yarn expo export --platform ios --output-dir /tmp/klokshift-ci-ios
+
+      # Si pubblica esattamente l'artifact costruito dal job che ha superato i
+      # gate, senza ricompilarlo in un workflow indipendente.
+      - name: Assembla artifact Pages
+        run: |
+          mkdir -p _site/app _site/recensioni
+          cp -r web-site/dist/. _site/
+          cp -r web/dist/. _site/app/
+          cp -r web-review/. _site/recensioni/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Avvia Postgres di test
+        run: supabase/tests/run.sh up
+
+      - name: Replay completo delle migration
+        run: supabase/tests/run.sh reset
+
+      - name: Test SQL e RLS
+        run: supabase/tests/run.sh test
+
+      - name: Ferma Postgres di test
+        if: always()
+        run: supabase/tests/run.sh down
+
+  edge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.6
+          cache: true
+
+      - name: Verifica lock e tipi Edge Functions
+        working-directory: supabase/functions
+        run: deno task check
+
+  deploy-pages:
+    needs: [changes, client, database, edge]
+    if: github.event_name == 'push' && needs.changes.outputs.pages == 'true'
+    uses: ./.github/workflows/deploy-web.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+  deploy-database:
+    needs: [changes, client, database, edge]
+    if: github.event_name == 'push' && needs.changes.outputs.database == 'true'
+    uses: ./.github/workflows/supabase.yml
+    secrets: inherit
