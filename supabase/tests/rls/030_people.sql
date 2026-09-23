@@ -526,6 +526,85 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- Reinviti in-app
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  r jsonb;
+  m_linked uuid;
+  m_email uuid;
+begin
+  -- Primo invito a un account già confermato: una sola notifica al destinatario.
+  perform tests.login('Ow');
+  r := public.add_member(
+    tests.id('W1'), '{"full_name":"Sara","email":"str@t.test"}'::jsonb,
+    'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V2')))
+  );
+  m_linked := (r ->> 'member_id')::uuid;
+  perform tests.eq(r ->> 'outcome', 'invited_in_app', 'un account nuovo per l''azienda riceve un invito in-app');
+  perform tests.logout();
+  perform tests.eq(
+    (select count(*) from public.notifications
+      where user_id = tests.id('Str') and type = 'staff_invite' and related_id = m_linked),
+    1::bigint, 'il primo invito raggiunge l''account corretto una volta sola');
+
+  -- Dopo l'accettazione, richiamare add_member non deve creare duplicati.
+  perform tests.login('Str');
+  perform public.respond_to_invite(m_linked, true);
+  perform tests.login('Ow');
+  r := public.add_member(
+    tests.id('W1'), '{"full_name":"Sara","email":"str@t.test"}'::jsonb,
+    'none', '{}'::jsonb, 'all', '[]'::jsonb
+  );
+  perform tests.eq(r ->> 'outcome', 'already_member', 'un membro attivo non viene invitato di nuovo');
+  perform tests.logout();
+  perform tests.eq(
+    (select count(*) from public.notifications
+      where user_id = tests.id('Str') and type = 'staff_invite' and related_id = m_linked),
+    1::bigint, 'il membro già attivo non riceve notifiche duplicate');
+
+  -- Uscita e reinvito: stessa scheda, stato invited e seconda notifica.
+  perform tests.login('Ow');
+  perform public.remove_member(m_linked);
+  r := public.add_member(
+    tests.id('W1'), '{"full_name":"Sara di nuovo","email":"str@t.test"}'::jsonb,
+    'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V2')))
+  );
+  perform tests.eq((r ->> 'member_id')::uuid, m_linked, 'il reinvito riusa la scheda uscita');
+  perform tests.eq(r ->> 'outcome', 'invited_in_app', 'il membro collegato uscito torna invited');
+  perform tests.eq(
+    (select status::text from public.workspace_members where id = m_linked),
+    'invited', 'il consenso viene richiesto di nuovo');
+  perform tests.logout();
+  perform tests.eq(
+    (select count(*) from public.notifications
+      where user_id = tests.id('Str') and type = 'staff_invite' and related_id = m_linked),
+    2::bigint, 'il reinvito notifica di nuovo l''account corretto');
+
+  -- Senza account il canale resta email: nessuna notifica in-app compensativa.
+  perform tests.login('Ow');
+  r := public.add_member(
+    tests.id('W1'), '{"full_name":"Nora","email":"nora-reinvite@t.test"}'::jsonb,
+    'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V2')))
+  );
+  m_email := (r ->> 'member_id')::uuid;
+  perform public.remove_member(m_email);
+  r := public.add_member(
+    tests.id('W1'), '{"full_name":"Nora ritorna","email":"nora-reinvite@t.test"}'::jsonb,
+    'none', '{}'::jsonb, 'all',
+    jsonb_build_array(jsonb_build_object('venue_id', tests.id('V2')))
+  );
+  perform tests.eq(r ->> 'outcome', 'invite_email', 'senza account il reinvito resta sul canale email');
+  perform tests.logout();
+  perform tests.eq(
+    (select count(*) from public.notifications where type = 'staff_invite' and related_id = m_email),
+    0::bigint, 'la scheda senza account non genera notifiche in-app');
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- Eliminazione account
 -- ---------------------------------------------------------------------------
 do $$
