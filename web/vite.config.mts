@@ -7,6 +7,24 @@ import { dirname, resolve } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 
+function envDefinitions(mode: string) {
+  const publicEnv = loadEnv(mode, repoRoot, "EXPO_PUBLIC_");
+  const siteUrl =
+    publicEnv.EXPO_PUBLIC_SITE_URL?.trim() || "https://klokshift.com";
+
+  return {
+    ...Object.fromEntries(
+      Object.entries(publicEnv).map(([k, v]) => [
+        `process.env.${k}`,
+        JSON.stringify(v),
+      ])
+    ),
+    // Deve esistere anche nelle build pulite senza `.env`: `legal.ts` usa lo
+    // stesso fallback pubblico, mai localhost o il vecchio sito recensioni.
+    "process.env.EXPO_PUBLIC_SITE_URL": JSON.stringify(siteUrl),
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   root: here,
   // Percorsi relativi: la SPA gira sotto /topWaitr/app/ su github.io e sotto
@@ -20,12 +38,7 @@ export default defineConfig(({ mode }) => ({
   // convenzione di Expo), che nel browser non esiste. Invece di toccare quei
   // file, si sostituiscono a build-time: così qualunque file di `src/` che usi
   // una EXPO_PUBLIC_* funziona qui senza modifiche.
-  define: Object.fromEntries(
-    Object.entries(loadEnv(mode, repoRoot, "EXPO_PUBLIC_")).map(([k, v]) => [
-      `process.env.${k}`,
-      JSON.stringify(v),
-    ])
-  ),
+  define: envDefinitions(mode),
   plugins: [react(), tailwindcss()],
   resolve: {
     // L'ORDINE CONTA: i pattern esatti devono precedere il wildcard "@/".

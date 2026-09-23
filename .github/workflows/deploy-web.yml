@@ -45,6 +45,10 @@ jobs:
       # loro segretezza (stessa scelta già fatta in web-review/config.js).
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_SITE_URL: ${{ vars.EXPO_PUBLIC_SITE_URL }}
+      EXPO_PUBLIC_APP_URL: ${{ vars.EXPO_PUBLIC_APP_URL }}
+      EXPO_PUBLIC_IOS_URL: ${{ vars.EXPO_PUBLIC_IOS_URL }}
+      EXPO_PUBLIC_ANDROID_URL: ${{ vars.EXPO_PUBLIC_ANDROID_URL }}
     steps:
       - uses: actions/checkout@v4
 

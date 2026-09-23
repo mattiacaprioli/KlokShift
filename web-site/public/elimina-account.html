@@ -42,14 +42,14 @@
         font-size: 14.5px;
         color: var(--muted);
       }
-      .ph { background: #fff3cd; padding: 0 4px; border-radius: 3px; font-weight: 600; }
+      .pending { background: #fff3cd; padding: 8px 10px; border-radius: 6px; font-weight: 600; }
       table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14.5px; }
       th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
       th { background: var(--card); }
       footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
       @media (prefers-color-scheme: dark) {
         :root { --bg: #14110c; --fg: #f2ede4; --muted: #a89f92; --line: #2a241b; --accent: #eab54c; --card: #1c1811; }
-        .ph { background: #4a3c10; color: #ffe9a8; }
+        .pending { background: #4a3c10; color: #ffe9a8; }
       }
     </style>
   </head>
@@ -58,27 +58,26 @@
       <header>
         <a class="brand" href="./">KlokShift</a>
         <h1>Eliminazione dell'account</h1>
-        <div class="updated">Ultimo aggiornamento: 9 settembre 2026</div>
+        <div class="updated">Ultimo aggiornamento: 23 settembre 2026</div>
       </header>
 
       <p>
         Puoi eliminare il tuo account KlokShift in qualsiasi momento, direttamente
-        dall'app o scrivendoci.
+        dall'app. Il canale per farne richiesta senza accesso all'app è in corso
+        di attivazione.
       </p>
 
-      <h2>Dall'app (immediato)</h2>
+      <h2>Dall'app</h2>
       <ol>
         <li>Apri KlokShift e vai su <strong>Impostazioni</strong>.</li>
         <li>In fondo alla schermata, tocca <strong>Elimina account</strong>.</li>
-        <li>Conferma. L'eliminazione è immediata e non è reversibile.</li>
+        <li>Conferma. Quando il processo termina, l'eliminazione non è reversibile.</li>
       </ol>
 
       <h2>Per richiesta scritta</h2>
       <p>
-        Se non hai più accesso all'app, scrivi a
-        <span class="ph">[EMAIL DI CONTATTO]</span> dall'indirizzo email con cui
-        ti sei registrato, indicando che vuoi eliminare il tuo account.
-        Rispondiamo entro 30 giorni.
+        Il recapito esterno deve ancora essere confermato dal titolare e sarà
+        pubblicato qui prima della messa in esercizio del servizio.
       </p>
 
       <h2>Che cosa viene eliminato</h2>
@@ -89,20 +88,16 @@
           <td>Eliminate. Non è più possibile accedere.</td>
         </tr>
         <tr>
-          <td>Nome, foto, telefono, città, biografia</td>
+          <td>Profilo dell'account</td>
+          <td>Foto, telefono, città e preferenze vengono eliminati. Il nome è sostituito da «Utente eliminato»; l'identificativo interno e, se indicati, giorno e mese del compleanno restano nel profilo tecnico che preserva i riferimenti condivisi.</td>
+        </tr>
+        <tr>
+          <td>Dati professionali dell'account</td>
           <td>Eliminati.</td>
         </tr>
         <tr>
-          <td>Profilo professionale ed esperienze (professionisti)</td>
-          <td>Eliminati.</td>
-        </tr>
-        <tr>
-          <td>Recensioni ricevute (professionisti)</td>
-          <td>Eliminate.</td>
-        </tr>
-        <tr>
-          <td>Candidature inviate (professionisti)</td>
-          <td>Eliminate.</td>
+          <td>Avatar e documenti caricati dall'account</td>
+          <td>Eliminati tramite il servizio di archiviazione prima della chiusura definitiva.</td>
         </tr>
         <tr>
           <td>Notifiche e token per le notifiche push</td>
@@ -112,15 +107,15 @@
 
       <h2>Che cosa viene conservato, e perché</h2>
       <p>
-        Alcune informazioni non riguardano solo te, ma anche le persone e le
-        attività con cui hai lavorato. Vengono conservate in forma
-        <strong>anonima</strong>, senza più alcun collegamento alla tua identità:
+        Alcune informazioni non riguardano solo l'account, ma anche le aziende
+        con cui hai lavorato. Vengono conservate e non tutte sono anonime:
       </p>
       <ul>
         <li>
-          <strong>Le ore lavorate registrate da un locale.</strong> Sono scritture
-          del locale, necessarie ai suoi obblighi contabili e fiscali. Restano
-          associate alla scheda del personale, non più al tuo account.
+          <strong>La scheda nominativa nell'azienda.</strong> Nome usato
+          nell'azienda, email, telefono, dati contrattuali, lingue, mansioni,
+          assenze, presenze e ore restano associati alla scheda dell'organico,
+          che viene scollegata dal tuo account.
         </li>
         <li>
           <strong>I messaggi già inviati in chat.</strong> Restano visibili
@@ -128,12 +123,22 @@
           Il tuo nome è sostituito da «Utente eliminato».
         </li>
         <li>
-          <strong>Per i locali: lo storico dei turni passati.</strong>
-          Eliminarlo cancellerebbe le ore lavorate di tutto il personale del
-          locale. Il locale viene chiuso e i turni futuri annullati, avvisando
-          chi era assegnato.
+          <strong>I documenti caricati da altre persone.</strong> I file aggiunti
+          alla scheda aziendale da un titolare o collaboratore restano con la
+          scheda; la cancellazione rimuove quelli caricati dal tuo account.
+        </li>
+        <li>
+          <strong>I dati organizzativi dell'azienda.</strong> Se sei l'unico
+          titolare, l'azienda e le sedi vengono chiuse e i turni futuri
+          annullati. Lo storico operativo viene conservato.
         </li>
       </ul>
+
+      <div class="note">
+        Se la rimozione di un file o dell'account di accesso non riesce, il
+        processo si interrompe, l'account resta attivo e puoi riprovare. I
+        riferimenti ai file non vengono persi durante il tentativo.
+      </div>
 
       <div class="note">
         Le copie di sicurezza del database vengono sovrascritte a rotazione: i

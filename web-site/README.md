@@ -93,8 +93,10 @@ nelle schede degli store, quindi **i nomi dei file non cambiano** e non devono
 dipendere dal bundle per aprirsi. Stavano in `web-review/` finché quella cartella
 occupava la radice.
 
-⚠️ Contengono ancora i placeholder `[P.IVA]` e `[EMAIL DI CONTATTO]`, e il testo
-parla di candidature e recensioni: va riallineato al prodotto attuale.
+Il testo è allineato al comportamento di cancellazione implementato il 23/09:
+la scheda dell'organico resta nominativa e scollegata dall'account, mentre i file
+caricati dall'account vengono rimossi prima di eliminare le credenziali. Recapito
+privacy e dati fiscali restano da confermare prima della messa in esercizio.
 
 ## Variabili d'ambiente
 
@@ -105,8 +107,8 @@ In locale la si punta al dev server di `web` per provare i link davvero.
 
 `EXPO_PUBLIC_SITE_URL` non serve qui, ma serve all'**app**: è la base degli URL
 delle pagine legali. Va impostata nel `.env`, su EAS e nelle `vars` di GitHub;
-finché manca, `legal.ts` ripiega su `EXPO_PUBLIC_REVIEW_SITE_URL`, che punta allo
-stesso host.
+se manca, `legal.ts` usa esplicitamente `https://klokshift.com`, mai localhost o
+il vecchio sito delle recensioni.
 
 ## Deploy
 

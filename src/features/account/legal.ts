@@ -5,17 +5,19 @@
  * dell'informativa sia quello per la richiesta di cancellazione account — e
  * non devono cambiare quando cambia il resto del sito.
  *
- * La base URL arriva da `EXPO_PUBLIC_SITE_URL` (senza slash finale). Finché
- * quella variabile non è impostata ovunque (`.env`, EAS, `vars` di GitHub) si
- * ripiega su `EXPO_PUBLIC_REVIEW_SITE_URL`, che punta allo stesso host: prima
- * le pagine stavano dentro `web-review/`, che occupava la radice.
+ * La base URL arriva da `EXPO_PUBLIC_SITE_URL`. Il dominio pubblico è anche il
+ * fallback intenzionale: un'app distribuita non deve mai aprire localhost né
+ * tornare al vecchio sito delle recensioni quando una build omette la env.
  */
-const SITE_URL =
-  process.env.EXPO_PUBLIC_SITE_URL ??
-  process.env.EXPO_PUBLIC_REVIEW_SITE_URL ??
-  "http://localhost:8080";
+export const DEFAULT_SITE_URL = "https://klokshift.com";
 
-export const LEGAL_URLS = {
-  privacy: `${SITE_URL}/privacy.html`,
-  accountDeletion: `${SITE_URL}/elimina-account.html`,
-} as const;
+export function legalUrlsFor(siteUrl?: string) {
+  const baseUrl = (siteUrl?.trim() || DEFAULT_SITE_URL).replace(/\/+$/, "");
+
+  return {
+    privacy: `${baseUrl}/privacy.html`,
+    accountDeletion: `${baseUrl}/elimina-account.html`,
+  } as const;
+}
+
+export const LEGAL_URLS = legalUrlsFor(process.env.EXPO_PUBLIC_SITE_URL);

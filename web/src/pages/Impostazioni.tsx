@@ -500,9 +500,11 @@ function DeleteAccountSection() {
       <Card className="border-error/30">
         <p className="text-sm font-semibold text-t1">Elimina l&apos;account</p>
         <p className="mt-1 text-xs leading-5 text-t3">
-          I tuoi dati personali vengono rimossi e non potrai più accedere.
-          Turni e ore già registrati restano alla sede in forma anonima, perché
-          servono a chi ci ha lavorato. <b>L&apos;operazione non è reversibile.</b>
+          Foto, recapiti del profilo e file caricati vengono rimossi; il nome
+          del profilo diventa «Utente eliminato». Le schede nominative, i
+          documenti caricati da altri e lo storico restano alle aziende,
+          scollegati dall&apos;account. Al termine non potrai più accedere e
+          <b> l&apos;operazione non sarà reversibile.</b>
         </p>
 
         {!open ? (

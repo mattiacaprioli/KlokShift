@@ -43,14 +43,14 @@
         font-size: 14.5px;
         color: var(--muted);
       }
-      .ph { background: #fff3cd; padding: 0 4px; border-radius: 3px; font-weight: 600; }
+      .pending { background: #fff3cd; padding: 8px 10px; border-radius: 6px; font-weight: 600; }
       table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14.5px; }
       th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
       th { background: var(--card); }
       footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
       @media (prefers-color-scheme: dark) {
         :root { --bg: #14110c; --fg: #f2ede4; --muted: #a89f92; --line: #2a241b; --accent: #eab54c; --card: #1c1811; }
-        .ph { background: #4a3c10; color: #ffe9a8; }
+        .pending { background: #4a3c10; color: #ffe9a8; }
       }
     </style>
   </head>
@@ -59,36 +59,34 @@
       <header>
         <a class="brand" href="./">KlokShift</a>
         <h1>Informativa sulla privacy</h1>
-        <div class="updated">Ultimo aggiornamento: 9 settembre 2026</div>
+        <div class="updated">Ultimo aggiornamento: 23 settembre 2026</div>
       </header>
 
       <p>
         La presente informativa descrive come <strong>KlokShift</strong> (di seguito
-        "l'App") tratta i dati personali degli utenti — <strong>professionisti</strong> e
-        <strong>locali</strong> — e dei clienti finali che lasciano una
-        recensione. È resa ai sensi degli artt. 13 e 14 del Regolamento (UE)
-        2016/679 ("GDPR").
+        "l'App") tratta i dati personali di titolari, collaboratori e
+        <strong>professionisti</strong> che usano il servizio. È resa ai sensi
+        degli artt. 13 e 14 del Regolamento (UE) 2016/679 ("GDPR").
       </p>
 
       <h2>1. Titolare del trattamento</h2>
       <p>
         Il titolare del trattamento è <strong>Mattia Caprioli</strong>, titolare
-        dell'omonima ditta individuale, P.IVA
-        <span class="ph">[P.IVA]</span>.
-        Per qualsiasi richiesta relativa ai dati personali puoi scrivere a
-        <span class="ph">[EMAIL DI CONTATTO]</span>.
+        dell'omonima ditta individuale.
+      </p>
+      <p class="pending">
+        Il recapito privacy e i dati fiscali del titolare sono in corso di
+        conferma e saranno pubblicati prima della messa in esercizio del servizio.
       </p>
 
       <h2>2. Quali dati raccogliamo</h2>
       <table>
         <tr><th>Categoria</th><th>Dati</th></tr>
-        <tr><td>Account</td><td>Indirizzo email, password (in forma cifrata, gestita dal fornitore di autenticazione), nome, ruolo (professionista/locale).</td></tr>
-        <tr><td>Profilo professionista</td><td>Città (inserita manualmente), mansione, competenze, foto profilo, certificazioni caricate, esperienze lavorative.</td></tr>
-        <tr><td>Profilo del locale</td><td>Nome e dati del locale (indirizzo, tipo di attività, logo), turni pubblicati, organico, ore e presenze del personale.</td></tr>
-        <tr><td>Schede dell'organico</td><td>Dati che il locale inserisce sulle persone del proprio organico — nome, telefono, email, note, documenti con scadenza — anche quando quella persona non ha ancora un account KlokShift. L'email è usata per invitarla a scaricare l'App e, se si registra con quell'indirizzo, per collegarla alla sua scheda.</td></tr>
-        <tr><td>Inviti ai collaboratori</td><td>Indirizzo email delle persone che il titolare autorizza a gestire il proprio locale, usato per mandare loro un invito. Nessun account viene creato finché la persona non apre il link e non sceglie una password: se ignora l'email, resta solo l'indirizzo sull'invito, che il titolare può revocare.</td></tr>
-        <tr><td>Recensioni</td><td>Voto, commento, tag e nome facoltativo lasciati dai clienti finali tramite il sito di recensione (accesso tramite QR).</td></tr>
-        <tr><td>Messaggi</td><td>Contenuto delle chat tra professionisti e locali.</td></tr>
+        <tr><td>Account</td><td>Indirizzo email, credenziali gestite dal fornitore di autenticazione, nome, foto, telefono, città, giorno e mese del compleanno e preferenze di notifica.</td></tr>
+        <tr><td>Aziende e sedi</td><td>Nome dell'azienda; nome, indirizzo, città, tipo di attività, logo e impostazioni delle sedi; organico, ruoli operativi, turni, presenze e ore.</td></tr>
+        <tr><td>Schede dell'organico</td><td>Nome usato nell'azienda, telefono, email, lingue, mansioni, rapporto di lavoro, note e ore contrattuali, assenze e documenti con scadenza. La scheda può esistere anche senza un account; l'email confermata serve a collegarla all'account corretto.</td></tr>
+        <tr><td>Inviti</td><td>Indirizzo email e stato dell'invito. Per un collaboratore nessun account viene creato finché la persona non apre il link e sceglie una password; per un professionista l'email indica con quale indirizzo registrarsi.</td></tr>
+        <tr><td>Messaggi</td><td>Contenuto delle chat tra membri della stessa azienda e richieste operative collegate.</td></tr>
         <tr><td>Notifiche</td><td>Token di notifica push del dispositivo e piattaforma (iOS/Android).</td></tr>
         <tr><td>Dati tecnici</td><td>Dati di diagnostica ed eventuali errori, per la stabilità dell'App.</td></tr>
       </table>
@@ -99,21 +97,12 @@
 
       <h2>3. Finalità e base giuridica</h2>
       <ul>
-        <li><strong>Erogare il servizio</strong> (creazione profilo, pubblicazione e candidatura ai turni, gestione dello staff, chat) — base giuridica: <em>esecuzione del contratto</em> (art. 6.1.b GDPR).</li>
-        <li><strong>Reputazione e recensioni</strong> (raccolta e visualizzazione delle recensioni ricevute dai professionisti) — base giuridica: <em>esecuzione del contratto</em> e <em>legittimo interesse</em> (art. 6.1.f).</li>
-        <li><strong>Notifiche push</strong> (avvisi su candidature, turni, messaggi) — base giuridica: <em>consenso</em> del dispositivo (art. 6.1.a), revocabile dalle impostazioni.</li>
+        <li><strong>Erogare il servizio</strong> (account, aziende, sedi, organico, turni, presenze, ore, assenze, documenti e chat) — base giuridica: <em>esecuzione del contratto</em> (art. 6.1.b GDPR).</li>
+        <li><strong>Notifiche push</strong> (avvisi su turni, organico, assenze e messaggi) — base giuridica: <em>consenso</em> del dispositivo (art. 6.1.a), revocabile dalle impostazioni.</li>
         <li><strong>Sicurezza e miglioramento</strong> dell'App — base giuridica: <em>legittimo interesse</em>.</li>
       </ul>
 
-      <h2>4. Recensioni dei clienti finali</h2>
-      <p>
-        I clienti finali possono lasciare una recensione a un professionista aprendo
-        un sito web dedicato (tramite il suo QR), senza registrarsi. Il nome
-        è facoltativo. Le recensioni sono pubbliche e contribuiscono alla
-        reputazione del professionista sull'App.
-      </p>
-
-      <h2>5. Fornitori e destinatari dei dati</h2>
+      <h2>4. Fornitori e destinatari dei dati</h2>
       <p>Ci avvaliamo di fornitori che trattano i dati come responsabili per nostro conto:</p>
       <ul>
         <li><strong>Supabase</strong> — hosting del database, autenticazione, archiviazione file e realtime (server nell'Unione Europea).</li>
@@ -124,30 +113,34 @@
       </ul>
       <p>Non vendiamo i dati personali a terzi.</p>
 
-      <h2>6. Conservazione e cancellazione</h2>
+      <h2>5. Conservazione e cancellazione</h2>
       <p>
         Conserviamo i dati per il tempo necessario a erogare il servizio e finché
         l'account è attivo. Puoi eliminare il tuo account in qualsiasi momento
-        dall'App, da <em>Impostazioni → Elimina account</em>: l'operazione è
-        immediata e non reversibile. Le istruzioni complete sono nella pagina
+        dall'App, da <em>Impostazioni → Elimina account</em>. La chiusura diventa
+        definitiva quando anche i file personali sono stati rimossi; un problema
+        tecnico lascia l'account attivo e permette di riprovare senza perdere i
+        riferimenti ai file. Le istruzioni complete sono nella pagina
         <a href="elimina-account.html">Eliminazione dell'account</a>.
       </p>
       <p>
-        Alla cancellazione vengono <strong>eliminati</strong>: email e credenziali
-        di accesso, nome, foto, telefono, città e biografia, il profilo
-        professionale e le esperienze, le <strong>recensioni ricevute</strong>, le
-        candidature inviate, le notifiche e i token per le notifiche push.
+        A completamento vengono eliminati email e credenziali di accesso,
+        foto, telefono e città del profilo, preferenze e token push, notifiche,
+        dati professionali dell'account e file caricati dall'account. Il nome
+        del profilo è sostituito da «Utente eliminato». L'identificativo interno
+        e, se indicati, giorno e mese del compleanno restano nel profilo tecnico
+        che preserva i riferimenti condivisi.
       </p>
       <p>
-        Alcune informazioni non riguardano soltanto te e vengono
-        <strong>conservate in forma anonima</strong>, senza più alcun collegamento
-        alla tua identità:
+        Alcune informazioni non riguardano soltanto l'account e vengono
+        conservate. Non tutte sono anonime:
       </p>
       <ul>
         <li>
-          le <strong>ore lavorate registrate da un locale</strong>, che
-          costituiscono scritture del locale stesso e sono necessarie ai suoi
-          obblighi contabili e fiscali (art. 6.1.c GDPR);
+          la <strong>scheda nominativa nell'azienda</strong>, compresi i recapiti,
+          i dati contrattuali, le lingue, le assenze, le mansioni, le presenze e
+          le ore, viene scollegata dall'account ma resta all'azienda insieme al
+          suo storico;
         </li>
         <li>
           i <strong>messaggi già inviati in chat</strong>, che restano visibili
@@ -155,10 +148,12 @@
           tuo nome sostituito da «Utente eliminato» (art. 6.1.f);
         </li>
         <li>
-          per i locali, lo <strong>storico dei turni passati</strong>, la cui
-          eliminazione cancellerebbe le ore lavorate di tutto il personale del
-          locale. Il locale viene chiuso e i turni futuri annullati, avvisando chi
-          era assegnato.
+          i <strong>documenti caricati da altre persone</strong> sulla scheda
+          aziendale non vengono eliminati con l'account;
+        </li>
+        <li>
+          per chi è unico titolare, l'azienda e le sedi vengono chiuse e i turni
+          futuri annullati; i dati organizzativi e lo storico restano conservati.
         </li>
       </ul>
       <p>
@@ -166,20 +161,20 @@
         eliminati spariscono anche dai backup entro 30 giorni.
       </p>
 
-      <h2>7. I tuoi diritti</h2>
-      <p>Hai diritto di accedere ai tuoi dati, rettificarli, cancellarli, limitarne o opporti al trattamento e alla portabilità. Il diritto di cancellazione lo eserciti da solo e senza attendere risposta, direttamente dall'App (<em>Impostazioni → Elimina account</em>); per tutti gli altri, e se non hai più accesso all'App, scrivi a <span class="ph">[EMAIL DI CONTATTO]</span> e rispondiamo entro 30 giorni. Hai inoltre diritto di proporre reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it">garanteprivacy.it</a>).</p>
+      <h2>6. I tuoi diritti</h2>
+      <p>Hai diritto di accedere ai tuoi dati, rettificarli, cancellarli, limitarne o opporti al trattamento e alla portabilità. Puoi avviare la cancellazione direttamente dall'App (<em>Impostazioni → Elimina account</em>). Il recapito esterno per esercitare gli altri diritti sarà pubblicato in questa pagina prima della messa in esercizio. Hai inoltre diritto di proporre reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it">garanteprivacy.it</a>).</p>
 
-      <h2>8. Minori</h2>
+      <h2>7. Minori</h2>
       <p>L'App è destinata a utenti maggiorenni. Non raccogliamo consapevolmente dati di minori di 18 anni.</p>
 
-      <h2>9. Sicurezza</h2>
+      <h2>8. Sicurezza</h2>
       <p>Adottiamo misure tecniche e organizzative adeguate (cifratura in transito, controlli di accesso a livello di riga sul database) per proteggere i dati da accessi non autorizzati.</p>
 
-      <h2>10. Modifiche</h2>
+      <h2>9. Modifiche</h2>
       <p>Potremo aggiornare questa informativa; le modifiche saranno pubblicate su questa pagina con la data di aggiornamento.</p>
 
-      <h2>11. Contatti</h2>
-      <p>Per qualsiasi domanda su questa informativa scrivi a <span class="ph">[EMAIL DI CONTATTO]</span>.</p>
+      <h2>10. Contatti</h2>
+      <p class="pending">Recapito privacy in corso di conferma.</p>
 
       <footer>
         KlokShift · Gestione dei turni per il settore dell'ospitalità.
