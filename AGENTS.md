@@ -77,6 +77,24 @@ esattamente il bug che questo modulo ha chiuso. ⚠️ `moveImpact.ts` e `notify
 sono gemelli **manuali** dei trigger SQL: se cambia `notify_on_shift_change`,
 cambiali con lui.
 
+## Ore, assenze e maggiorazioni (2026-09-24)
+
+La decisione completa è in `plans/HOURS-ABSENCES-ADJUSTMENTS.md` e completa il
+piano `CLOCK_IN_OUT.md`. Tre quantità restano sempre distinte:
+
+- `worked_hours` contiene soltanto ore realmente lavorate e approvate;
+- ferie, permessi e altre assenze possono produrre **ore riconosciute** separate,
+  mai ore lavorate;
+- notturno, straordinario, festivo ed extra sono classificazioni di ore già
+  lavorate, con percentuale configurabile e snapshot storico: non moltiplicano
+  il totale delle ore.
+
+KlokShift prepara quantità ed export per il consulente, ma non calcola importi in
+euro, saldo ferie o busta paga. Non introdurre percentuali universali: fasce,
+cumulabilità e maggiorazioni dipendono dal contratto applicato. Un conflitto fra
+assenza riconosciuta e lavoro effettivo deve risultare **da verificare**, non
+essere contato due volte in silenzio.
+
 ## Stack
 | Categoria | Tecnologia |
 |-----------|-----------|
