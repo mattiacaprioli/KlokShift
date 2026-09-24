@@ -65,6 +65,7 @@ import { useSetMemberClockMethod } from "@/features/clock/hooks";
 import {
   CLOCK_METHOD_CHOICES,
   clockMethodChoice,
+  clockMethodDescription,
   clockMethodLabel,
   effectiveClockMethod,
   type ClockMethodChoice,
@@ -1099,19 +1100,31 @@ function WorkplaceCard({
   const [empType, setEmpType] = useState<Enums<"employment_type">>(
     membership.employment_type
   );
+  const [clockChoice, setClockChoice] = useState<ClockMethodChoice>(
+    clockMethodChoice(membership.clock_method)
+  );
   const [confirming, setConfirming] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
+  const effectiveMethod = effectiveClockMethod(
+    membership.clock_method,
+    membership.venue?.clock_method ?? "manual"
+  );
   const busy =
     update.isPending ||
     setRoles.isPending ||
     remove.isPending ||
     setClock.isPending;
-  const dirty =
+  const staffDirty =
     editing &&
     (empType !== membership.employment_type ||
       roleIds.length !== savedRoles.length ||
       roleIds.some((id) => !savedRoles.some((r) => r.id === id)));
+  const clockDirty =
+    editing &&
+    canEditClock &&
+    clockChoice !== clockMethodChoice(membership.clock_method);
+  const dirty = staffDirty || clockDirty;
   useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
 
   // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
@@ -1119,20 +1132,29 @@ function WorkplaceCard({
   function startEditing() {
     setRoleIds(savedRoles.map((r) => r.id));
     setEmpType(membership.employment_type);
+    setClockChoice(clockMethodChoice(membership.clock_method));
     setConfirming(false);
     setEditing(true);
   }
 
   async function onSave() {
     try {
-      // Una sola scrittura (`set_member_venue`): tipo di impiego e mansioni
-      // insieme, o passano tutte e due o non passa nessuna.
-      await update.mutateAsync({
-        memberId: person.id,
-        venueId: membership.venue_id,
-        employmentType: empType,
-        roleIds,
-      });
+      if (staffDirty) {
+        // Una sola scrittura (`set_member_venue`): tipo di impiego e mansioni
+        // insieme, o passano tutte e due o non passa nessuna.
+        await update.mutateAsync({
+          memberId: person.id,
+          venueId: membership.venue_id,
+          employmentType: empType,
+          roleIds,
+        });
+      }
+      if (clockDirty) {
+        await setClock.mutateAsync({
+          venueMemberId: membership.id,
+          method: clockChoice === "inherit" ? null : clockChoice,
+        });
+      }
       toast.show(`Modifiche salvate · ${venueName}`);
       setEditing(false);
     } catch (e) {
@@ -1226,6 +1248,34 @@ function WorkplaceCard({
             />
           </Field>
 
+          {canEditClock ? (
+            <Field
+              label="Metodo di timbratura"
+              hint={
+                clockChoice === "inherit"
+                  ? `Seguirà l’impostazione della sede: ${clockMethodLabel(
+                      membership.venue?.clock_method ?? "manual"
+                    )}.`
+                  : clockMethodDescription(clockChoice)
+              }
+            >
+              <Select
+                value={clockChoice}
+                disabled={busy}
+                onChange={(event) =>
+                  setClockChoice(event.target.value as ClockMethodChoice)
+                }
+                className="w-56"
+              >
+                {CLOCK_METHOD_CHOICES.map((choice) => (
+                  <option key={choice.id} value={choice.id}>
+                    {choice.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+
           <EditActions
             pending={busy}
             canSave={dirty}
@@ -1241,51 +1291,24 @@ function WorkplaceCard({
           <ReadItem label="Ruoli in questa sede">
             {savedRoles.map((r) => r.name).join(" · ")}
           </ReadItem>
+          {canEditClock ? (
+            <ReadItem label="Metodo di timbratura" wide>
+              <span>{clockMethodLabel(effectiveMethod)}</span>
+              {membership.clock_method == null ? (
+                <span className="ml-1 text-xs font-normal text-t4">
+                  · impostazione della sede
+                </span>
+              ) : null}
+              <p className="mt-1 text-xs font-normal leading-5 text-t4">
+                {clockMethodDescription(effectiveMethod)}
+              </p>
+            </ReadItem>
+          ) : null}
         </dl>
       )}
 
       {editing ? null : (
         <>
-          {canEditClock ? (
-            <div className="flex flex-wrap items-end gap-3 border-t border-border pt-3">
-              <Field
-                label="Metodo di timbratura"
-                hint={`Metodo effettivo: ${clockMethodLabel(
-                  effectiveClockMethod(
-                    membership.clock_method,
-                    membership.venue?.clock_method ?? "manual"
-                  )
-                )}`}
-              >
-                <Select
-                  value={clockMethodChoice(membership.clock_method)}
-                  disabled={setClock.isPending}
-                  onChange={(event) => {
-                    const choice = event.target.value as ClockMethodChoice;
-                    setClock.mutate(
-                      {
-                        venueMemberId: membership.id,
-                        method: choice === "inherit" ? null : choice,
-                      },
-                      {
-                        onSuccess: () =>
-                          toast.show("Metodo di timbratura aggiornato"),
-                        onError: (error) =>
-                          toast.show(userErrorMessage(error), "error"),
-                      }
-                    );
-                  }}
-                  className="w-56"
-                >
-                  {CLOCK_METHOD_CHOICES.map((choice) => (
-                    <option key={choice.id} value={choice.id}>
-                      {choice.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={startEditing}>Modifica</Button>
             {!isOnly && canRemove ? (

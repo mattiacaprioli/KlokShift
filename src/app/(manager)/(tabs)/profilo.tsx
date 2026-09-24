@@ -191,6 +191,7 @@ export default function ManagerProfiloScreen() {
   // I dati della sede sono un permesso a sé: un collaboratore che organizza i
   // turni non deve poter cambiare indirizzo e logo della sede.
   const canEditVenue = !!venue && venueQuery.can(venue.id, "can_manage_venue");
+  const canEditClock = !!venue && venueQuery.can(venue.id, "can_view_hours");
 
   return (
     <ScrollView
@@ -262,9 +263,9 @@ export default function ManagerProfiloScreen() {
             </View>
           </View>
 
-          {canEditVenue ? (
+          {canEditVenue || canEditClock ? (
             <GoldButton
-              label="Modifica sede"
+              label={canEditVenue ? "Gestisci sede" : "Gestisci timbrature"}
               onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
             />
           ) : null}

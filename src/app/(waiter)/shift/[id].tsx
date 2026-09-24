@@ -19,13 +19,9 @@ import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import {
-  addDaysToDate,
   formatDate,
   formatShiftRange,
   isShiftOver,
-  shiftEndsAt,
-  todayString,
-  toDateString,
 } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
@@ -37,6 +33,7 @@ import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
 import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { usePunchClock } from "@/features/clock/hooks";
+import { isClockWindowOpen } from "@/features/clock/availability";
 import {
   clockedHours,
   effectiveClockTimes,
@@ -211,13 +208,7 @@ export default function WaiterShiftDetailScreen() {
     shift.status !== "cancelled" &&
     myAssignment.status !== "declined" &&
     myAssignment.status !== "no_show";
-  const today = todayString();
-  const clockWindowOpen =
-    today >= addDaysToDate(shift.date, -1) &&
-    today <= addDaysToDate(
-      toDateString(shiftEndsAt(shift.date, shift.start_time, shift.end_time)),
-      1
-    );
+  const clockWindowOpen = isClockWindowOpen(shift);
 
   return (
     <>

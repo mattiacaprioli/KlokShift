@@ -25,7 +25,7 @@ export const VENUE_MEMBER_BRIEF =
 
 /** Come sopra, ma con un inner join: serve a filtrare per account. */
 export const VENUE_MEMBER_BY_ACCOUNT =
-  "venue_member:venue_members!inner(member:workspace_members!inner(user_id))";
+  "venue_member:venue_members!inner(clock_method, member:workspace_members!inner(user_id))";
 
 /** Riga completa: persona, foto dell'account, mansioni. */
 export const VENUE_MEMBER_FULL =

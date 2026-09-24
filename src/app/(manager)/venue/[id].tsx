@@ -7,6 +7,7 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { QueryError } from "@/components/ui/QueryError";
 import { useToast } from "@/providers/Toast";
 import { VenuePlanningToggle } from "@/features/planning/VenuePlanningToggle";
+import { VenueClockMethodCard } from "@/features/clock/VenueClockMethodCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useSetVenueClosed } from "@/features/venues/hooks";
 import { VenueFormView } from "@/features/venues/VenueFormView";
@@ -54,8 +55,18 @@ export default function VenueEditScreen() {
   // arriva toccando la riga dell'elenco, che non sa cosa ci sia dietro. Senza
   // questo, un collaboratore invitato sui soli turni apriva il modulo di
   // modifica — e il pulsante «Chiudi questa sede».
-  if (!can(venue.id, "can_manage_venue")) {
-    return <VenueInfoView venue={venue} />;
+  const canEditVenue = can(venue.id, "can_manage_venue");
+  const canEditClock = can(venue.id, "can_view_hours");
+
+  if (!canEditVenue) {
+    return (
+      <VenueInfoView
+        venue={venue}
+        footer={
+          canEditClock ? <VenueClockMethodCard venue={venue} /> : undefined
+        }
+      />
+    );
   }
 
   function doClose() {
@@ -83,6 +94,7 @@ export default function VenueEditScreen() {
         onSaved={() => router.back()}
         footer={
           <View className="gap-6">
+            {canEditClock ? <VenueClockMethodCard venue={venue} /> : null}
             <VenuePlanningToggle venue={venue} ownerId={workspaceId ?? ""} />
             <GhostButton
               label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}

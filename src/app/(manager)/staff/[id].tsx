@@ -29,7 +29,6 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
-import { Segmented } from "@/components/ui/Segmented";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
@@ -73,9 +72,70 @@ import { useSetMemberClockMethod } from "@/features/clock/hooks";
 import {
   CLOCK_METHOD_CHOICES,
   clockMethodChoice,
+  clockMethodDescription,
   clockMethodLabel,
   effectiveClockMethod,
+  type ClockMethodChoice,
 } from "@/features/clock/methods";
+
+function ClockMethodPicker({
+  value,
+  venueMethod,
+  onChange,
+}: {
+  value: ClockMethodChoice;
+  venueMethod: Enums<"clock_method">;
+  onChange: (value: ClockMethodChoice) => void;
+}) {
+  return (
+    <View className="gap-2">
+      {CLOCK_METHOD_CHOICES.map((option) => {
+        const active = option.id === value;
+        const description =
+          option.id === "inherit"
+            ? `Usa il metodo della sede: ${clockMethodLabel(venueMethod)}.`
+            : clockMethodDescription(option.id);
+
+        return (
+          <Pressable
+            key={option.id}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(option.id)}
+            className={cn(
+              "flex-row items-center gap-3 rounded-2xl border px-4 py-3",
+              active
+                ? "border-gold/70 bg-gold/10"
+                : "border-border bg-bg-1"
+            )}
+          >
+            <View
+              className={cn(
+                "h-6 w-6 shrink-0 items-center justify-center rounded-full border",
+                active ? "border-gold bg-gold" : "border-border-2"
+              )}
+            >
+              {active ? <Icon name="check" size={14} color="#1A1206" /> : null}
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text
+                className={cn(
+                  "text-[15px] font-sans-semibold",
+                  active ? "text-gold" : "text-t1"
+                )}
+              >
+                {option.id === "inherit" ? "Come la sede" : option.label}
+              </Text>
+              <Text className="mt-0.5 text-xs leading-4 text-t3">
+                {description}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 /**
  * Una sede in cui la persona lavora.
@@ -128,17 +188,29 @@ function WorkplaceCard({
   const [empType, setEmpType] = useState<Enums<"employment_type">>(
     membership.employment_type
   );
+  const [clockChoice, setClockChoice] = useState<ClockMethodChoice>(
+    clockMethodChoice(membership.clock_method)
+  );
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
+  const effectiveMethod = effectiveClockMethod(
+    membership.clock_method,
+    membership.venue?.clock_method ?? "manual"
+  );
   const busy = update.isPending || remove.isPending || setClock.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
-  const dirty =
+  const staffDirty =
     editing &&
     (empType !== membership.employment_type ||
       roleIds.length !== savedRoles.length ||
       roleIds.some((id) => !savedRoles.some((r) => r.id === id)));
+  const clockDirty =
+    editing &&
+    canEditClock &&
+    clockChoice !== clockMethodChoice(membership.clock_method);
+  const dirty = staffDirty || clockDirty;
   useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
 
   // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
@@ -146,6 +218,7 @@ function WorkplaceCard({
   function startEditing() {
     setRoleIds(savedRoles.map((r) => r.id));
     setEmpType(membership.employment_type);
+    setClockChoice(clockMethodChoice(membership.clock_method));
     setEditing(true);
   }
 
@@ -153,12 +226,20 @@ function WorkplaceCard({
   // insieme, o passano tutte e due o non passa nessuna.
   async function onSave() {
     try {
-      await update.mutateAsync({
-        memberId: person.id,
-        venueId: membership.venue_id,
-        employmentType: empType,
-        roleIds,
-      });
+      if (staffDirty) {
+        await update.mutateAsync({
+          memberId: person.id,
+          venueId: membership.venue_id,
+          employmentType: empType,
+          roleIds,
+        });
+      }
+      if (clockDirty) {
+        await setClock.mutateAsync({
+          venueMemberId: membership.id,
+          method: clockChoice === "inherit" ? null : clockChoice,
+        });
+      }
       toast.show(`Modifiche salvate · ${venueName}`);
       setEditing(false);
     } catch (e) {
@@ -268,6 +349,17 @@ function WorkplaceCard({
             </View>
           </View>
 
+          {canEditClock ? (
+            <View className="gap-2">
+              <Mono>Metodo di timbratura</Mono>
+              <ClockMethodPicker
+                value={clockChoice}
+                venueMethod={membership.venue?.clock_method ?? "manual"}
+                onChange={setClockChoice}
+              />
+            </View>
+          ) : null}
+
           <EditActions
             pending={busy}
             canSave={dirty}
@@ -289,43 +381,25 @@ function WorkplaceCard({
                 membership.employment_type === "fisso" ? "Fisso" : "A chiamata"
               }
             />
+            {canEditClock ? (
+              <>
+                <ReadField
+                  label="Metodo di timbratura"
+                  value={`${clockMethodLabel(effectiveMethod)}${
+                    membership.clock_method == null
+                      ? " · impostazione della sede"
+                      : ""
+                  }`}
+                />
+                <Text className="-mt-2 pb-3 text-xs leading-5 text-t3">
+                  {clockMethodDescription(effectiveMethod)}
+                </Text>
+              </>
+            ) : null}
           </View>
           <GhostButton label="Modifica" onPress={startEditing} />
         </>
       )}
-
-      {canEditClock && !editing ? (
-        <View className="gap-2 border-t border-border pt-4">
-          <Mono>Metodo di timbratura</Mono>
-          <Segmented
-            options={CLOCK_METHOD_CHOICES}
-            value={clockMethodChoice(membership.clock_method)}
-            onChange={(choice) => {
-              if (setClock.isPending) return;
-              setClock.mutate(
-                {
-                  venueMemberId: membership.id,
-                  method: choice === "inherit" ? null : choice,
-                },
-                {
-                  onSuccess: () =>
-                    toast.show("Metodo di timbratura aggiornato"),
-                  onError: (error) =>
-                    toast.show(userErrorMessage(error), "error"),
-                }
-              );
-            }}
-          />
-          <Text className="text-xs leading-5 text-t3">
-            Metodo effettivo: {clockMethodLabel(
-              effectiveClockMethod(
-                membership.clock_method,
-                membership.venue?.clock_method ?? "manual"
-              )
-            )}
-          </Text>
-        </View>
-      ) : null}
 
       {!isOnly && canRemove && !editing ? (
         <Pressable

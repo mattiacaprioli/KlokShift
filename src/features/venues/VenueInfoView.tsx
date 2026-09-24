@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -20,7 +21,13 @@ import type { Venue } from "./api";
  *
  * Gemella di `web/src/venues/VenueInfoCard.tsx`: due markup, stessa regola.
  */
-export function VenueInfoView({ venue }: { venue: Venue }) {
+export function VenueInfoView({
+  venue,
+  footer,
+}: {
+  venue: Venue;
+  footer?: ReactNode;
+}) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -66,6 +73,8 @@ export function VenueInfoView({ venue }: { venue: Venue }) {
           <Text className="text-sm leading-5 text-t2">{venue.description}</Text>
         ) : null}
       </View>
+
+      {footer}
     </ScrollView>
   );
 }

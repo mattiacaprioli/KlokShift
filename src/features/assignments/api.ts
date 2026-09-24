@@ -13,7 +13,10 @@ import type {
 } from "@/features/staff/types";
 import { isActiveAssignment } from "./status";
 import type { OwnerHoursRow } from "./hoursSummary";
-import type { ClockRecordWithCorrections } from "@/features/clock/hours";
+import {
+  effectiveClockTimes,
+  type ClockRecordWithCorrections,
+} from "@/features/clock/hours";
 import {
   toStaffMember,
   VENUE_MEMBER_BY_ACCOUNT,
@@ -37,6 +40,8 @@ export type AssignmentWithShift = Assignment & {
   shift: ShiftWithVenue | null;
   /** In che ruolo è chiamato: è ciò che vuole sapere prima di confermare. */
   role: { id: string; name: string } | null;
+  /** Null = usa il metodo predefinito della sede. */
+  clock_method: Enums<"clock_method"> | null;
   clock: ClockRecordWithCorrections | null;
 };
 
@@ -607,7 +612,11 @@ export async function getOwnerHoursSummary(
  * quello che sembra. Su insiemi già filtrati per data è irrilevante.
  */
 
-/** Waiter side: the waiter's upcoming assigned shifts (their "Prossimi turni"). */
+/**
+ * Waiter side: i prossimi turni assegnati. Conserva anche un turno appena
+ * concluso se ha ancora un'entrata aperta: deve restare raggiungibile dalla
+ * Home finché il professionista non timbra l'uscita.
+ */
 export async function getMyAssignedUpcoming(
   waiterId: string
 ): Promise<AssignmentWithShift[]> {
@@ -622,12 +631,18 @@ export async function getMyAssignedUpcoming(
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
     .gte("shift.date", addDaysToDate(todayString(), -1));
   if (error) throw new Error(error.message);
-  const rows = (data ?? []).map(({ clock, ...row }) => ({
+  const rows = (data ?? []).map(({ venue_member, clock, ...row }) => ({
     ...row,
+    clock_method: venue_member.clock_method,
     clock: activeClock(clock as ClockRecordWithCorrections[]),
   })) as AssignmentWithShift[];
   return rows
-    .filter((r) => r.shift != null && !isShiftOver(r.shift))
+    .filter(
+      (r) =>
+        r.shift != null &&
+        (!isShiftOver(r.shift) ||
+          (r.clock != null && effectiveClockTimes(r.clock).outAt == null))
+    )
     .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
 }
 

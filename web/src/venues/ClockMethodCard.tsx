@@ -13,11 +13,20 @@ export function ClockMethodCard({ venue }: { venue: Venue }) {
     <Card className="mt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
-          <h2 className="font-serif text-lg text-t1">Timbrature</h2>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gold">
+            Impostazione di questa sede
+          </span>
+          <h2 className="mt-1 font-serif text-lg text-t1">
+            Timbrature · {venue.name}
+          </h2>
           <p className="mt-1 text-sm leading-5 text-t3">
             {appEnabled
-              ? "I professionisti assegnati possono timbrare entrata e uscita dall’app. Le ore restano da verificare prima di diventare definitive."
-              : "Gli orari vengono inseriti manualmente da chi gestisce. Abilita il pulsante nell’app per raccogliere entrata e uscita."}
+              ? "Metodo predefinito: App. I professionisti possono timbrare entrata e uscita dal telefono."
+              : "Metodo predefinito: Manuale. Gli orari vengono inseriti da chi gestisce."}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-t4">
+            Vale solo per {venue.name} e per chi usa «Come la sede». Le
+            impostazioni personali dello staff non cambiano.
           </p>
         </div>
         <Button
@@ -33,8 +42,8 @@ export function ClockMethodCard({ venue }: { venue: Venue }) {
                 onSuccess: () =>
                   toast.show(
                     appEnabled
-                      ? "Timbratura manuale attivata"
-                      : "Timbratura dall’app attivata"
+                      ? `Metodo manuale attivato per ${venue.name}`
+                      : `Timbratura app attivata per ${venue.name}`
                   ),
                 onError: (error) =>
                   toast.show(userErrorMessage(error), "error"),
@@ -45,8 +54,8 @@ export function ClockMethodCard({ venue }: { venue: Venue }) {
           {save.isPending
             ? "Salvataggio…"
             : appEnabled
-              ? "Usa inserimento manuale"
-              : "Abilita timbratura app"}
+              ? "Usa Manuale in questa sede"
+              : "Usa App in questa sede"}
         </Button>
       </div>
     </Card>

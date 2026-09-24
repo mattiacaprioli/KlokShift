@@ -2,6 +2,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
 import { VenueCard } from "../venues/VenueCard";
 import { VenuesCard } from "../venues/VenuesCard";
+import { ClockMethodCard } from "../venues/ClockMethodCard";
 import { PageHeader } from "../ui/primitives";
 
 /**
@@ -43,6 +44,9 @@ export function SedePage() {
           }
         />
         <VenueCard venue={venues[0]} editable={editable} />
+        {can(venues[0].id, "can_view_hours") ? (
+          <ClockMethodCard venue={venues[0]} />
+        ) : null}
         {/* Con una sede sola l'elenco ripeterebbe la scheda che sta già sopra:
             `VenuesCard` allora non la elenca e resta solo «Aggiungi sede» (e le
             sedi chiuse da riaprire). Al titolare serve, a un collaboratore no:

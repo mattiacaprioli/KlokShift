@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clockMethodChoice,
+  clockMethodDescription,
   clockMethodLabel,
   effectiveClockMethod,
 } from "../../../src/features/clock/methods";
@@ -34,5 +35,16 @@ describe("clockMethodLabel", () => {
     expect(clockMethodLabel("app")).toBe("App");
     expect(clockMethodLabel("qr")).toBe("QR");
     expect(clockMethodLabel("geolocation")).toBe("Posizione");
+  });
+});
+
+describe("clockMethodDescription", () => {
+  it("spiega chi registra le ore nei metodi della prima milestone", () => {
+    expect(clockMethodDescription("manual")).toContain(
+      "ore vengono inserite da chi gestisce"
+    );
+    expect(clockMethodDescription("app")).toContain(
+      "timbra entrata e uscita direttamente dall’app"
+    );
   });
 });

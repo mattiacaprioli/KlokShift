@@ -18,11 +18,14 @@ import {
 } from "@/features/assignments/hooks";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { NextShiftCard } from "@/features/assignments/NextShiftCard";
+import { HomeClockCard } from "@/features/clock/HomeClockCard";
+import { homeClockState } from "@/features/clock/availability";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useMyPendingInvites } from "@/features/staff/hooks";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
+import { isShiftOver } from "@/lib/format";
 
 /** Quanti turni seguono il primo, prima di mandare all'agenda. */
 const PREVIEW_COUNT = 3;
@@ -48,15 +51,21 @@ export default function WaiterHomeScreen() {
     () => withShift(assignedQuery.data ?? []),
     [assignedQuery.data]
   );
+  const clockItems = items.filter((item) => homeClockState(item) != null);
+  // Un'entrata ancora aperta resta nella query anche oltre la fine pianificata,
+  // perché la Home deve offrire l'uscita. Non è però il «prossimo turno».
+  const upcomingItems = items.filter((item) => !isShiftOver(item.shift));
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
 
   // Quanti turni deve ancora confermare: è la sola cosa in questa schermata su
   // cui c'è qualcosa da fare, quindi ha un avviso suo.
-  const daConfermare = items.filter((a) => a.status === "assigned").length;
+  const daConfermare = upcomingItems.filter(
+    (a) => a.status === "assigned"
+  ).length;
 
-  const next = items[0];
+  const next = upcomingItems[0];
   // Il primo sta già nella card grande: la lista sotto riprende da lì.
-  const following = items.slice(1, 1 + PREVIEW_COUNT);
+  const following = upcomingItems.slice(1, 1 + PREVIEW_COUNT);
 
   function onConfirm(id: string) {
     respond.mutate(
@@ -142,10 +151,21 @@ export default function WaiterHomeScreen() {
           />
         ) : null}
 
+        {clockItems.length > 0 ? (
+          <View>
+            <SectionHeader title="Timbratura" />
+            <View className="gap-3">
+              {clockItems.map((item) => (
+                <HomeClockCard key={item.id} item={item} />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         <View>
           <SectionHeader
             title="Il tuo prossimo turno"
-            actionLabel={items.length > 0 ? "Agenda" : undefined}
+            actionLabel={upcomingItems.length > 0 ? "Agenda" : undefined}
             onAction={openAgenda}
           />
           {assignedQuery.isLoading ? (

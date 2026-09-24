@@ -3,9 +3,12 @@
 > **Stato 2026-09-24:** implementato il primo flusso end-to-end: fondamenta DB,
 > metodo `app`, entrata/uscita del professionista, correzione/annullamento
 > append-only e approvazione dalla dashboard. La sede parte da `manual` e può
-> abilitare `app`; dalla scheda staff, su app manager e dashboard, si può anche
-> ereditare il metodo della sede oppure impostare `manual`/`app` per la singola
-> persona. QR, geolocalizzazione e promemoria restano milestone future.
+> abilitare `app` sia dalla dashboard sia dall'app manager; dalla scheda staff
+> si può anche ereditare il metodo della sede oppure impostare `manual`/`app`
+> per la singola persona. Nella Home del professionista la card **Timbratura**
+> offre entrata e uscita rapide; il dettaglio turno conserva la stessa azione
+> come percorso contestuale. QR, geolocalizzazione e promemoria restano
+> milestone future.
 > Il piano era stato scritto prima del refactor del 2026-09-20; i riferimenti
 > storici qui sotto vanno letti sul modello nuovo (vedi `supabase/README.md`):
 > `staff_members` → `venue_members` (`shift_assignments.venue_member_id`),
