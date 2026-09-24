@@ -43,6 +43,13 @@ case "${1:-}" in
       echo "== $(basename "$f")"
       app < "$f" || fail=1
     done
+    if [ "$fail" -eq 0 ]; then
+      for f in "$HERE"/concurrency/*.sql; do
+        [ -e "$f" ] || break
+        echo "== concurrency/$(basename "$f")"
+        admin < "$f" || fail=1
+      done
+    fi
     exit $fail
     ;;
   sql)
