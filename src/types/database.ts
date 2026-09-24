@@ -468,6 +468,8 @@ export type Database = {
       }
       shift_assignments: {
         Row: {
+          attendance_reviewed_at: string | null
+          attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
           id: string
@@ -479,6 +481,8 @@ export type Database = {
           worked_hours: number | null
         }
         Insert: {
+          attendance_reviewed_at?: string | null
+          attendance_reviewed_by?: string | null
           confirmed_at?: string | null
           created_at?: string
           id?: string
@@ -490,6 +494,8 @@ export type Database = {
           worked_hours?: number | null
         }
         Update: {
+          attendance_reviewed_at?: string | null
+          attendance_reviewed_by?: string | null
           confirmed_at?: string | null
           created_at?: string
           id?: string
@@ -501,6 +507,13 @@ export type Database = {
           worked_hours?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shift_assignments_attendance_reviewed_by_fkey"
+            columns: ["attendance_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shift_assignments_role_id_venue_id_fkey"
             columns: ["role_id", "venue_id"]
@@ -600,6 +613,111 @@ export type Database = {
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_clock_corrections: {
+        Row: {
+          clock_record_id: string
+          corrected_by: string
+          corrected_in_at: string | null
+          corrected_out_at: string | null
+          created_at: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          clock_record_id: string
+          corrected_by: string
+          corrected_in_at?: string | null
+          corrected_out_at?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          clock_record_id?: string
+          corrected_by?: string
+          corrected_in_at?: string | null
+          corrected_out_at?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_clock_corrections_clock_record_id_fkey"
+            columns: ["clock_record_id"]
+            isOneToOne: false
+            referencedRelation: "shift_clock_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_clock_corrections_corrected_by_fkey"
+            columns: ["corrected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_clock_records: {
+        Row: {
+          assignment_id: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["clock_method"]
+          shift_id: string
+          venue_id: string
+          venue_member_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          clock_in_at: string
+          clock_out_at?: string | null
+          created_at?: string
+          id?: string
+          method: Database["public"]["Enums"]["clock_method"]
+          shift_id: string
+          venue_id: string
+          venue_member_id: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          clock_in_at?: string
+          clock_out_at?: string | null
+          created_at?: string
+          id?: string
+          method?: Database["public"]["Enums"]["clock_method"]
+          shift_id?: string
+          venue_id?: string
+          venue_member_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_clock_records_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "shift_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_clock_records_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -867,6 +985,7 @@ export type Database = {
       }
       venue_members: {
         Row: {
+          clock_method: Database["public"]["Enums"]["clock_method"] | null
           created_at: string
           employment_type: Database["public"]["Enums"]["employment_type"]
           id: string
@@ -876,6 +995,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          clock_method?: Database["public"]["Enums"]["clock_method"] | null
           created_at?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
@@ -885,6 +1005,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          clock_method?: Database["public"]["Enums"]["clock_method"] | null
           created_at?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
@@ -949,6 +1070,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
           created_at: string
           cuisine_type: string | null
@@ -962,6 +1084,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          clock_method?: Database["public"]["Enums"]["clock_method"]
           closed_at?: string | null
           created_at?: string
           cuisine_type?: string | null
@@ -975,6 +1098,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          clock_method?: Database["public"]["Enums"]["clock_method"]
           closed_at?: string | null
           created_at?: string
           cuisine_type?: string | null
@@ -1171,6 +1295,28 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_clock_record: {
+        Args: { p_assignment: string }
+        Returns: {
+          attendance_reviewed_at: string | null
+          attendance_reviewed_by: string | null
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          role_id: string | null
+          shift_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
+          worked_hours: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign: {
         Args: { p_role?: string; p_shift: string; p_venue_member: string }
         Returns: string
@@ -1191,9 +1337,55 @@ export type Database = {
         }[]
       }
       claim_invites: { Args: never; Returns: number }
+      clock_punch: {
+        Args: { p_action: string; p_assignment: string }
+        Returns: {
+          assignment_id: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["clock_method"]
+          shift_id: string
+          venue_id: string
+          venue_member_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       consume_invite: {
         Args: { p_hash: string; p_user: string }
         Returns: string
+      }
+      correct_clock_record: {
+        Args: {
+          p_in: string
+          p_out: string
+          p_reason: string
+          p_record: string
+        }
+        Returns: {
+          clock_record_id: string
+          corrected_by: string
+          corrected_in_at: string | null
+          corrected_out_at: string | null
+          created_at: string
+          id: string
+          reason: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_corrections"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_shifts: { Args: { p_plans: Json }; Returns: string[] }
       create_venue: {
@@ -1454,11 +1646,14 @@ export type Database = {
       get_workspace_hours_summary: {
         Args: { p_from: string; p_to: string; p_workspace: string }
         Returns: {
+          approved_hours: number
           hours: number
           member_id: string
           member_name: string
+          proposed_hours: number
           roles: string
           shifts_count: number
+          to_review_count: number
           venue_closed: boolean
           venue_id: string
           venue_name: string
@@ -1513,6 +1708,8 @@ export type Database = {
       record_attendance: {
         Args: { p_assignment: string; p_patch: Json }
         Returns: {
+          attendance_reviewed_at: string | null
+          attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
           id: string
@@ -1580,6 +1777,8 @@ export type Database = {
           p_status: Database["public"]["Enums"]["assignment_status"]
         }
         Returns: {
+          attendance_reviewed_at: string | null
+          attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
           id: string
@@ -1619,6 +1818,28 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_member_clock_method: {
+        Args: {
+          p_method?: Database["public"]["Enums"]["clock_method"]
+          p_venue_member: string
+        }
+        Returns: {
+          clock_method: Database["public"]["Enums"]["clock_method"] | null
+          created_at: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          id: string
+          left_at: string | null
+          member_id: string
+          venue_id: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "venue_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_member_roles: {
         Args: { p_role_ids: string[]; p_venue_member: string }
         Returns: undefined
@@ -1638,6 +1859,32 @@ export type Database = {
           p_status: Database["public"]["Enums"]["shift_status"]
         }
         Returns: undefined
+      }
+      set_venue_clock_method: {
+        Args: {
+          p_method: Database["public"]["Enums"]["clock_method"]
+          p_venue: string
+        }
+        Returns: {
+          address: string | null
+          city: string | null
+          clock_method: Database["public"]["Enums"]["clock_method"]
+          closed_at: string | null
+          created_at: string
+          cuisine_type: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          staff_sees_planning: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "venues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_venue_closed: {
         Args: { p_closed: boolean; p_venue: string }
@@ -1664,6 +1911,29 @@ export type Database = {
         Args: { p_payload: Json; p_shift: string }
         Returns: undefined
       }
+      void_clock_record: {
+        Args: { p_assignment: string; p_reason: string }
+        Returns: {
+          assignment_id: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["clock_method"]
+          shift_id: string
+          venue_id: string
+          venue_member_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       withdraw_absence: { Args: { p_absence: string }; Returns: undefined }
       withdraw_shift_change_request: {
         Args: { p_request: string }
@@ -1676,6 +1946,7 @@ export type Database = {
       assignment_status: "assigned" | "confirmed" | "declined" | "no_show"
       change_request_kind: "substitution" | "hours"
       change_request_status: "pending" | "approved" | "rejected" | "withdrawn"
+      clock_method: "manual" | "app" | "qr" | "geolocation"
       employment_type: "fisso" | "a_chiamata"
       member_authority: "owner" | "collaborator" | "none"
       member_status: "invited" | "active" | "left"
@@ -1838,6 +2109,7 @@ export const Constants = {
       assignment_status: ["assigned", "confirmed", "declined", "no_show"],
       change_request_kind: ["substitution", "hours"],
       change_request_status: ["pending", "approved", "rejected", "withdrawn"],
+      clock_method: ["manual", "app", "qr", "geolocation"],
       employment_type: ["fisso", "a_chiamata"],
       member_authority: ["owner", "collaborator", "none"],
       member_status: ["invited", "active", "left"],

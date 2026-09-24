@@ -109,6 +109,43 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questo turno è già finito.",
   },
   {
+    match: ["attendance_started"],
+    message:
+      "Questa persona ha già timbrato: annulla prima la timbratura indicando il motivo.",
+  },
+  {
+    match: ["clock_manual"],
+    message: "Per questa sede gli orari vengono registrati da chi gestisce.",
+  },
+  {
+    match: ["clock_method_unavailable"],
+    message: "Questo metodo di timbratura non è ancora disponibile.",
+  },
+  {
+    match: ["clock_wrong_day"],
+    message: "Questa timbratura appartiene a un altro giorno.",
+  },
+  {
+    match: ["clock_in_required"],
+    message: "Prima registra l’entrata.",
+  },
+  {
+    match: ["clock_out_required"],
+    message: "Manca l’uscita: correggi la timbratura prima di approvare le ore.",
+  },
+  {
+    match: ["reason_required", "clock_correction_required"],
+    message: "Indica il motivo della modifica.",
+  },
+  {
+    match: ["invalid_clock_interval"],
+    message: "L’uscita deve essere successiva all’entrata.",
+  },
+  {
+    match: ["clock_status_not_allowed"],
+    message: "Non puoi timbrare un turno rifiutato o segnato come assenza.",
+  },
+  {
     match: ["invalid_status"],
     message: "Stato non valido per questa azione.",
   },

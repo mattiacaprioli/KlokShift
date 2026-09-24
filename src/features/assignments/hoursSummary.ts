@@ -16,7 +16,12 @@ export type OwnerHoursRow = {
   /** Le mansioni **in quella sede**, già composte dal DB ("Cameriere, Barman"). */
   roles: string | null;
   shifts_count: number;
+  /** Durata pianificata/fallback storico, solo per confronto. */
+  planned_hours: number;
+  /** Ore definitive: solo valori inseriti o approvati esplicitamente. */
   hours: number;
+  to_review_count: number;
+  proposed_hours: number;
 };
 
 /**
@@ -36,6 +41,9 @@ export type PersonHours = {
   roles: string | null;
   shifts_count: number;
   hours: number;
+  planned_hours: number;
+  to_review_count: number;
+  proposed_hours: number;
   /**
    * ⚠️ **Interno: non si mostra.** Le righe per sede da cui il totale è
    * composto, tenute perché servono a `mergeRoles`. Dal 14/09/2026 né la pagina
@@ -62,6 +70,9 @@ export function groupHoursByPerson(rows: OwnerHoursRow[]): PersonHours[] {
     if (last && last.person_id === row.person_id) {
       last.shifts_count += row.shifts_count;
       last.hours += row.hours;
+      last.planned_hours += row.planned_hours;
+      last.to_review_count += row.to_review_count;
+      last.proposed_hours += row.proposed_hours;
       last.venues.push(row);
       continue;
     }
@@ -71,6 +82,9 @@ export function groupHoursByPerson(rows: OwnerHoursRow[]): PersonHours[] {
       roles: null, // composto in coda: serve l'elenco completo delle sedi
       shifts_count: row.shifts_count,
       hours: row.hours,
+      planned_hours: row.planned_hours,
+      to_review_count: row.to_review_count,
+      proposed_hours: row.proposed_hours,
       venues: [row],
     });
   }
@@ -89,4 +103,3 @@ function mergeRoles(venues: OwnerHoursRow[]): string | null {
   }
   return seen.size > 0 ? [...seen].join(", ") : null;
 }
-

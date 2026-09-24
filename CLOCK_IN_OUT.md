@@ -1,8 +1,13 @@
 # Clock in / clock out del turno (metodo configurabile per professionista)
 
-> ⚠️ **Piano non ancora implementato, scritto prima del refactor del 2026-09-20.**
-> Le decisioni di prodotto valgono ancora; i riferimenti al database sono da
-> riscrivere sul modello nuovo (vedi `supabase/README.md`):
+> **Stato 2026-09-24:** implementato il primo flusso end-to-end: fondamenta DB,
+> metodo `app`, entrata/uscita del professionista, correzione/annullamento
+> append-only e approvazione dalla dashboard. La sede parte da `manual` e può
+> abilitare `app`; dalla scheda staff, su app manager e dashboard, si può anche
+> ereditare il metodo della sede oppure impostare `manual`/`app` per la singola
+> persona. QR, geolocalizzazione e promemoria restano milestone future.
+> Il piano era stato scritto prima del refactor del 2026-09-20; i riferimenti
+> storici qui sotto vanno letti sul modello nuovo (vedi `supabase/README.md`):
 > `staff_members` → `venue_members` (`shift_assignments.venue_member_id`),
 > `can_manage_venue(v, perm)` → `private.can(v, perm)`,
 > `freeze_assignment_payroll` → il guard sulle assegnazioni + `record_attendance`,

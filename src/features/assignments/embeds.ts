@@ -29,11 +29,11 @@ export const VENUE_MEMBER_BY_ACCOUNT =
 
 /** Riga completa: persona, foto dell'account, mansioni. */
 export const VENUE_MEMBER_FULL =
-  "venue_member:venue_members(id, venue_id, member_id, employment_type, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url)), venue_member_roles(role:venue_roles(id, name, sort_order)))";
+  "venue_member:venue_members(id, venue_id, member_id, employment_type, clock_method, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url)), venue_member_roles(role:venue_roles(id, name, sort_order)))";
 
 /** Come `VENUE_MEMBER_FULL`, con anche la reputazione (home del gestore). */
 export const VENUE_MEMBER_WITH_RATING =
-  "venue_member:venue_members!inner(id, venue_id, member_id, employment_type, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))))";
+  "venue_member:venue_members!inner(id, venue_id, member_id, employment_type, clock_method, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))))";
 
 type RawWaiter = ProfileBrief | null;
 
@@ -42,6 +42,7 @@ export type RawVenueMember<W = RawWaiter> = {
   venue_id: string;
   member_id: string;
   employment_type: Enums<"employment_type">;
+  clock_method: Enums<"clock_method"> | null;
   left_at: string | null;
   created_at: string;
   member: {

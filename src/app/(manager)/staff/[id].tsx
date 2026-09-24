@@ -29,6 +29,7 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
+import { Segmented } from "@/components/ui/Segmented";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
@@ -68,6 +69,13 @@ import type {
   StaffPersonDetail,
 } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
+import { useSetMemberClockMethod } from "@/features/clock/hooks";
+import {
+  CLOCK_METHOD_CHOICES,
+  clockMethodChoice,
+  clockMethodLabel,
+  effectiveClockMethod,
+} from "@/features/clock/methods";
 
 /**
  * Una sede in cui la persona lavora.
@@ -95,17 +103,21 @@ function WorkplaceCard({
    * altrimenti sarebbe inamovibile, perché `leave_venue` è del professionista.
    */
   canRemove = true,
+  /** Il metodo di timbratura usa il permesso Ore, non Organico. */
+  canEditClock,
 }: {
   person: StaffPersonDetail;
   membership: PersonMembership;
   isOnly: boolean;
   canRestore: boolean;
   canRemove?: boolean;
+  canEditClock: boolean;
 }) {
   const toast = useToast();
   const update = useUpdateStaffMember();
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
+  const setClock = useSetMemberClockMethod();
 
   const savedRoles = membership.staff_member_roles
     .map((r) => r.role)
@@ -119,7 +131,7 @@ function WorkplaceCard({
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
-  const busy = update.isPending || remove.isPending;
+  const busy = update.isPending || remove.isPending || setClock.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
   const dirty =
@@ -281,6 +293,39 @@ function WorkplaceCard({
           <GhostButton label="Modifica" onPress={startEditing} />
         </>
       )}
+
+      {canEditClock && !editing ? (
+        <View className="gap-2 border-t border-border pt-4">
+          <Mono>Metodo di timbratura</Mono>
+          <Segmented
+            options={CLOCK_METHOD_CHOICES}
+            value={clockMethodChoice(membership.clock_method)}
+            onChange={(choice) => {
+              if (setClock.isPending) return;
+              setClock.mutate(
+                {
+                  venueMemberId: membership.id,
+                  method: choice === "inherit" ? null : choice,
+                },
+                {
+                  onSuccess: () =>
+                    toast.show("Metodo di timbratura aggiornato"),
+                  onError: (error) =>
+                    toast.show(userErrorMessage(error), "error"),
+                }
+              );
+            }}
+          />
+          <Text className="text-xs leading-5 text-t3">
+            Metodo effettivo: {clockMethodLabel(
+              effectiveClockMethod(
+                membership.clock_method,
+                membership.venue?.clock_method ?? "manual"
+              )
+            )}
+          </Text>
+        </View>
+      ) : null}
 
       {!isOnly && canRemove && !editing ? (
         <Pressable
@@ -1144,6 +1189,9 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                   isOnly={!multiVenue}
                   canRestore={canReassign}
                   canRemove={!isMe || isOwner}
+                  canEditClock={
+                    can(m.venue_id, "can_view_hours") && (!isMe || isOwner)
+                  }
                 />
               ))}
               {canReassign && otherVenues.length > 0 ? (

@@ -13,6 +13,7 @@ import type {
 } from "@/features/staff/types";
 import { isActiveAssignment } from "./status";
 import type { OwnerHoursRow } from "./hoursSummary";
+import type { ClockRecordWithCorrections } from "@/features/clock/hours";
 import {
   toStaffMember,
   VENUE_MEMBER_BY_ACCOUNT,
@@ -22,11 +23,21 @@ import {
 
 export type Assignment = Tables<"shift_assignments">;
 
+const CLOCK_EMBED =
+  "clock:shift_clock_records(*, corrections:shift_clock_corrections(*, corrector:profiles(full_name)))";
+
+function activeClock(
+  rows: ClockRecordWithCorrections[] | null | undefined
+): ClockRecordWithCorrections | null {
+  return rows?.find((row) => row.voided_at == null) ?? null;
+}
+
 /** Waiter side: an assignment joined with its shift + venue. */
 export type AssignmentWithShift = Assignment & {
   shift: ShiftWithVenue | null;
   /** In che ruolo è chiamato: è ciò che vuole sapere prima di confermare. */
   role: { id: string; name: string } | null;
+  clock: ClockRecordWithCorrections | null;
 };
 
 type WaiterMini = Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url">;
@@ -41,6 +52,7 @@ type WaiterMini = Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url">;
 export type AssignmentWithStaff = Assignment & {
   /** Il ruolo ricoperto su questo turno, non le mansioni della scheda. */
   role: { id: string; name: string } | null;
+  clock: ClockRecordWithCorrections | null;
   staff_member:
     | (StaffMember & {
         waiter: WaiterMini | null;
@@ -53,6 +65,7 @@ export type AssignmentWithStaff = Assignment & {
 export type TodayAssignmentRow = Assignment & {
   /** Il ruolo di quel giorno: è la risposta alla domanda che la card pone. */
   role: { id: string; name: string } | null;
+  clock: ClockRecordWithCorrections | null;
   staff_member:
     | (StaffMember & {
         waiter:
@@ -274,12 +287,13 @@ export async function getShiftAssignments(
 ): Promise<AssignmentWithStaff[]> {
   const { data, error } = await supabase
     .from("shift_assignments")
-    .select(`*, role:venue_roles(id, name), ${VENUE_MEMBER_FULL}`)
+    .select(`*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_FULL}`)
     .eq("shift_id", shiftId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(({ venue_member, ...row }) => ({
+  return (data ?? []).map(({ venue_member, clock, ...row }) => ({
     ...row,
+    clock: activeClock(clock as ClockRecordWithCorrections[]),
     staff_member: venue_member ? toStaffMember(venue_member) : null,
   }));
 }
@@ -572,10 +586,12 @@ export async function getOwnerHoursSummary(
   if (error) throw new Error(error.message);
   // La RPC parla di `member_*` (la persona = `workspace_members.id`): il resto
   // dell'app e gli export leggono ancora `person_*`, che è la stessa cosa.
-  return (data ?? []).map(({ member_id, member_name, ...row }) => ({
+  return (data ?? []).map(({ member_id, member_name, hours, approved_hours, ...row }) => ({
     ...row,
     person_id: member_id,
     person_name: member_name,
+    planned_hours: hours,
+    hours: approved_hours,
   }));
 }
 
@@ -598,7 +614,7 @@ export async function getMyAssignedUpcoming(
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      `*, role:venue_roles(id, name), ${VENUE_MEMBER_BY_ACCOUNT}, shift:shifts!inner(*, venue:venues(*))`
+      `*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_BY_ACCOUNT}, shift:shifts!inner(*, venue:venues(*))`
     )
     .eq("venue_member.member.user_id", waiterId)
     .neq("status", "declined")
@@ -606,7 +622,10 @@ export async function getMyAssignedUpcoming(
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
     .gte("shift.date", addDaysToDate(todayString(), -1));
   if (error) throw new Error(error.message);
-  const rows = (data as AssignmentWithShift[] | null) ?? [];
+  const rows = (data ?? []).map(({ clock, ...row }) => ({
+    ...row,
+    clock: activeClock(clock as ClockRecordWithCorrections[]),
+  })) as AssignmentWithShift[];
   return rows
     .filter((r) => r.shift != null && !isShiftOver(r.shift))
     .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
@@ -619,6 +638,8 @@ export async function getMyAssignedUpcoming(
 /** La propria assegnazione a un turno, col ruolo per cui si è chiamati. */
 export type MyAssignment = Assignment & {
   role: { id: string; name: string } | null;
+  clock_method: Enums<"clock_method"> | null;
+  clock: ClockRecordWithCorrections | null;
 };
 
 /** Waiter side: the waiter's assignment for a specific shift, if any. */
@@ -628,12 +649,20 @@ export async function getMyAssignmentForShift(
 ): Promise<MyAssignment | null> {
   const { data, error } = await supabase
     .from("shift_assignments")
-    .select(`*, role:venue_roles(id, name), ${VENUE_MEMBER_BY_ACCOUNT}`)
+    .select(
+      `*, role:venue_roles(id, name), ${CLOCK_EMBED}, venue_member:venue_members!inner(clock_method, member:workspace_members!inner(user_id))`
+    )
     .eq("shift_id", shiftId)
     .eq("venue_member.member.user_id", waiterId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as MyAssignment | null) ?? null;
+  if (!data) return null;
+  const { venue_member, clock, ...row } = data;
+  return {
+    ...row,
+    clock_method: venue_member.clock_method,
+    clock: activeClock(clock as ClockRecordWithCorrections[]),
+  } as MyAssignment;
 }
 
 /**
@@ -651,7 +680,7 @@ export async function getOwnerTodayAssignments(
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      `*, role:venue_roles(id, name), ${VENUE_MEMBER_WITH_RATING}, shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)`
+      `*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_WITH_RATING}, shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)`
     )
     // `venue_id` resta nel select del sub-embed: serve al badge della sede.
     .in("shift.venue_id", venueIds)
@@ -662,8 +691,9 @@ export async function getOwnerTodayAssignments(
     .neq("status", "declined");
   if (error) throw new Error(error.message);
   const rows: TodayAssignmentRow[] = (data ?? []).map(
-    ({ venue_member, ...row }) => ({
+    ({ venue_member, clock, ...row }) => ({
       ...row,
+      clock: activeClock(clock as ClockRecordWithCorrections[]),
       staff_member: venue_member ? toStaffMember(venue_member) : null,
     })
   );

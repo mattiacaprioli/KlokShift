@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { functionErrorCode } from "@/lib/functionError";
-import type { Json } from "@/types/database";
+import type { Enums, Json } from "@/types/database";
 import type { EmploymentType } from "@/features/workspace/types";
 import { isContractPeriod } from "./contract";
 import {
@@ -59,13 +59,13 @@ const PERSON_COLUMNS =
   "hr:member_hr(note, contract_hours, contract_period)";
 
 const VENUE_EMBED =
-  "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, closed_at)";
+  "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, closed_at, clock_method)";
 
 const ROLES_EMBED =
   "roles:venue_member_roles(role:venue_roles(id, name, sort_order))";
 
 const MEMBERSHIPS_EMBED =
-  "memberships:venue_members(id, venue_id, employment_type, left_at, created_at, " +
+  "memberships:venue_members(id, venue_id, employment_type, clock_method, left_at, created_at, " +
   VENUE_EMBED +
   ", " +
   ROLES_EMBED +
@@ -110,12 +110,14 @@ type RawVenueBrief = {
   name: string;
   city: string | null;
   closed_at: string | null;
+  clock_method: Enums<"clock_method">;
 } | null;
 
 type RawVenueMember = {
   id: string;
   venue_id: string;
   employment_type: EmploymentType;
+  clock_method: PersonMembership["clock_method"];
   left_at: string | null;
   created_at: string;
   venue: RawVenueBrief;
@@ -201,6 +203,7 @@ function toMembership(row: RawMember, vm: RawVenueMember): PersonMembership {
     venue_id: vm.venue_id,
     link_status: linkStatusOf(row.status, vm.left_at),
     employment_type: vm.employment_type,
+    clock_method: vm.clock_method,
     created_at: vm.created_at,
     left_at: vm.left_at,
     venue: vm.venue,
@@ -399,6 +402,7 @@ export async function getOwnerPeople(
           venue_id: m.venue_id,
           link_status: m.link_status,
           employment_type: m.employment_type,
+          clock_method: m.clock_method,
           venue: m.venue,
           staff_member_roles: m.staff_member_roles,
         })),

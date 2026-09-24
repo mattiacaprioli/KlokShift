@@ -1,4 +1,4 @@
-import type { Tables } from "@/types/database";
+import type { Enums, Tables } from "@/types/database";
 import type {
   Authority,
   EmploymentType,
@@ -104,7 +104,12 @@ export type PersonMembership = Pick<
   StaffMember,
   "id" | "venue_id" | "link_status" | "employment_type" | "created_at" | "left_at"
 > & {
-  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "closed_at"> | null;
+  /** Null = eredita il metodo predefinito della sede. */
+  clock_method: Enums<"clock_method"> | null;
+  venue: Pick<
+    Tables<"venues">,
+    "id" | "name" | "city" | "closed_at" | "clock_method"
+  > | null;
   staff_member_roles: { role: StaffRoleRef | null }[];
 };
 
@@ -112,10 +117,10 @@ export type PersonMembership = Pick<
 export type OwnerPerson = StaffPerson & {
   waiter: ProfileBrief | null;
   memberships: (Pick<
-    StaffMember,
-    "id" | "venue_id" | "link_status" | "employment_type"
+    PersonMembership,
+    "id" | "venue_id" | "link_status" | "employment_type" | "clock_method"
   > & {
-    venue: Pick<Tables<"venues">, "id" | "name" | "city" | "closed_at"> | null;
+    venue: PersonMembership["venue"];
     staff_member_roles: { role: StaffRoleRef | null }[];
   })[];
 };

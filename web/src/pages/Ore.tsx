@@ -61,6 +61,8 @@ export function OrePage() {
   // non arriva in pagina.
   const people = groupHoursByPerson(rows);
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
+  const toReview = people.reduce((s, p) => s + p.to_review_count, 0);
+  const proposedHours = people.reduce((s, p) => s + p.proposed_hours, 0);
   const maxHours = Math.max(1, ...people.map((p) => p.hours));
   const label = monthLabel(month);
   const company = companyName(venues, profile?.full_name);
@@ -106,7 +108,7 @@ export function OrePage() {
       <StickyHeader>
         <PageHeader
           title="Ore"
-          subtitle={`${label} · ${formatHours(totalHours)} totali`}
+          subtitle={`${label} · ${formatHours(totalHours)} approvate${toReview > 0 ? ` · ${toReview} da verificare` : ""}`}
         />
 
         {/* Una riga sotto il titolo, come i filtri dello Storico. Niente
@@ -179,6 +181,17 @@ export function OrePage() {
       ) : null}
 
       {people.length > 0 ? (
+        <>
+        {toReview > 0 ? (
+          <Card className="mb-4 border-gold/40 bg-gold/5">
+            <p className="text-sm font-semibold text-t1">
+              {toReview} {toReview === 1 ? "turno da verificare" : "turni da verificare"}
+            </p>
+            <p className="mt-1 text-xs text-t3">
+              Le timbrature complete propongono {formatHours(proposedHours)}. Non entrano nel totale finché non vengono approvate dal dettaglio del turno.
+            </p>
+          </Card>
+        ) : null}
         <Card className="p-0">
           <table className="w-full text-sm">
             <thead>
@@ -186,7 +199,8 @@ export function OrePage() {
                 <th className="px-5 py-3 font-semibold">Nome</th>
                 <th className="px-5 py-3 font-semibold">Ruolo</th>
                 <th className="px-5 py-3 text-right font-semibold">Turni</th>
-                <th className="px-5 py-3 text-right font-semibold">Ore</th>
+                <th className="px-5 py-3 text-right font-semibold">Ore approvate</th>
+                <th className="px-5 py-3 text-right font-semibold">Da verificare</th>
                 <th className="w-1/3 px-5 py-3 font-semibold">Ripartizione</th>
               </tr>
             </thead>
@@ -203,6 +217,9 @@ export function OrePage() {
                   </td>
                   <td className="px-5 py-2.5 text-right font-mono text-t1">
                     {formatHours(p.hours)}
+                  </td>
+                  <td className="px-5 py-2.5 text-right font-mono text-t2">
+                    {p.to_review_count || "—"}
                   </td>
                   <td className="px-5 py-2.5">
                     <div className="h-1.5 w-full rounded-full bg-bg-2">
@@ -225,11 +242,15 @@ export function OrePage() {
                 <td className="px-5 py-3 text-right font-mono font-semibold text-gold">
                   {formatHours(totalHours)}
                 </td>
+                <td className="px-5 py-3 text-right font-mono text-t2">
+                  {toReview || "—"}
+                </td>
                 <td />
               </tr>
             </tfoot>
           </table>
         </Card>
+        </>
       ) : null}
 
       {absences.length > 0 ? (

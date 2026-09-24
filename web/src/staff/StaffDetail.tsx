@@ -61,6 +61,14 @@ import {
 import { useToast } from "../ui/Toast";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { UnsavedEdits, useUnsavedEdit } from "@/lib/unsavedEdits";
+import { useSetMemberClockMethod } from "@/features/clock/hooks";
+import {
+  CLOCK_METHOD_CHOICES,
+  clockMethodChoice,
+  clockMethodLabel,
+  effectiveClockMethod,
+  type ClockMethodChoice,
+} from "@/features/clock/methods";
 
 /**
  * La scheda di un dipendente: **una per persona**, non una per sede.
@@ -901,7 +909,7 @@ function Workplaces({
   memberships: StaffPersonDetail["memberships"];
   multiVenue: boolean;
 }) {
-  const { isOwner, venues } = useOwnerVenues();
+  const { isOwner, venues, can } = useOwnerVenues();
   const { session } = useAuth();
   const isMe = !!person.waiter_id && person.waiter_id === session?.user.id;
   const liveCount = memberships.filter((m) => m.link_status !== "left").length;
@@ -935,6 +943,9 @@ function Workplaces({
           // mostrare un errore. Il titolare invece può — la sua scheda
           // altrimenti sarebbe inamovibile.
           canRemove={!isMe || isOwner}
+          canEditClock={
+            can(m.venue_id, "can_view_hours") && (!isMe || isOwner)
+          }
         />
       ))}
       {canReassign && otherVenues.length > 0 ? (
@@ -1063,17 +1074,21 @@ function WorkplaceCard({
   canRestore,
   /** Può togliere questa appartenenza: vedi `Workplaces`. */
   canRemove = true,
+  /** Il metodo di timbratura usa il permesso Ore, non Organico. */
+  canEditClock,
 }: {
   person: StaffPersonDetail;
   membership: PersonMembership;
   isOnly: boolean;
   canRestore: boolean;
   canRemove?: boolean;
+  canEditClock: boolean;
 }) {
   const update = useUpdateStaffMember();
   const setRoles = useSetStaffMemberRoles();
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
+  const setClock = useSetMemberClockMethod();
   const toast = useToast();
   const savedRoles = membership.staff_member_roles
     .map((r) => r.role)
@@ -1087,7 +1102,11 @@ function WorkplaceCard({
   const [confirming, setConfirming] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
-  const busy = update.isPending || setRoles.isPending || remove.isPending;
+  const busy =
+    update.isPending ||
+    setRoles.isPending ||
+    remove.isPending ||
+    setClock.isPending;
   const dirty =
     editing &&
     (empType !== membership.employment_type ||
@@ -1226,35 +1245,79 @@ function WorkplaceCard({
       )}
 
       {editing ? null : (
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={startEditing}>Modifica</Button>
-        {!isOnly && canRemove ? (
-          confirming ? (
-            <>
-              <Button
-                variant="danger"
-                disabled={busy}
-                onClick={() =>
-                  remove.mutate(
-                    { memberId: person.id, venueId: membership.venue_id },
-                    {
-                      onSuccess: () => toast.show(`Rimosso da ${venueName}`),
-                      onError: (e) => toast.show(userErrorMessage(e), "error"),
-                    }
+        <>
+          {canEditClock ? (
+            <div className="flex flex-wrap items-end gap-3 border-t border-border pt-3">
+              <Field
+                label="Metodo di timbratura"
+                hint={`Metodo effettivo: ${clockMethodLabel(
+                  effectiveClockMethod(
+                    membership.clock_method,
+                    membership.venue?.clock_method ?? "manual"
                   )
-                }
+                )}`}
               >
-                {remove.isPending ? "Rimozione…" : "Conferma"}
-              </Button>
-              <Button onClick={() => setConfirming(false)}>Annulla</Button>
-            </>
-          ) : (
-            <Button onClick={() => setConfirming(true)}>
-              Rimuovi da {venueName}
-            </Button>
-          )
-        ) : null}
-      </div>
+                <Select
+                  value={clockMethodChoice(membership.clock_method)}
+                  disabled={setClock.isPending}
+                  onChange={(event) => {
+                    const choice = event.target.value as ClockMethodChoice;
+                    setClock.mutate(
+                      {
+                        venueMemberId: membership.id,
+                        method: choice === "inherit" ? null : choice,
+                      },
+                      {
+                        onSuccess: () =>
+                          toast.show("Metodo di timbratura aggiornato"),
+                        onError: (error) =>
+                          toast.show(userErrorMessage(error), "error"),
+                      }
+                    );
+                  }}
+                  className="w-56"
+                >
+                  {CLOCK_METHOD_CHOICES.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={startEditing}>Modifica</Button>
+            {!isOnly && canRemove ? (
+              confirming ? (
+                <>
+                  <Button
+                    variant="danger"
+                    disabled={busy}
+                    onClick={() =>
+                      remove.mutate(
+                        { memberId: person.id, venueId: membership.venue_id },
+                        {
+                          onSuccess: () =>
+                            toast.show(`Rimosso da ${venueName}`),
+                          onError: (e) =>
+                            toast.show(userErrorMessage(e), "error"),
+                        }
+                      )
+                    }
+                  >
+                    {remove.isPending ? "Rimozione…" : "Conferma"}
+                  </Button>
+                  <Button onClick={() => setConfirming(false)}>Annulla</Button>
+                </>
+              ) : (
+                <Button onClick={() => setConfirming(true)}>
+                  Rimuovi da {venueName}
+                </Button>
+              )
+            ) : null}
+          </div>
+        </>
       )}
 
       {confirming && !isOnly && !editing ? (

@@ -18,7 +18,15 @@ import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import { formatDate, formatShiftRange, isShiftOver } from "@/lib/format";
+import {
+  addDaysToDate,
+  formatDate,
+  formatShiftRange,
+  isShiftOver,
+  shiftEndsAt,
+  todayString,
+  toDateString,
+} from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -28,6 +36,12 @@ import {
 import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
 import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
+import { usePunchClock } from "@/features/clock/hooks";
+import {
+  clockedHours,
+  effectiveClockTimes,
+  formatClockTime,
+} from "@/features/clock/hours";
 import type { Enums } from "@/types/database";
 
 /** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
@@ -70,6 +84,7 @@ export default function WaiterShiftDetailScreen() {
   const myAssignmentQuery = useMyAssignmentForShift(id, waiterId);
   const myAssignment = myAssignmentQuery.data ?? null;
   const respond = useRespondToAssignment();
+  const punch = usePunchClock();
   const startConversation = useStartConversation();
 
   function onContact() {
@@ -90,6 +105,7 @@ export default function WaiterShiftDetailScreen() {
 
   const [declineVisible, setDeclineVisible] = useState(false);
   const [requestVisible, setRequestVisible] = useState(false);
+  const [punchAction, setPunchAction] = useState<"in" | "out" | null>(null);
 
   // La RLS filtra già: qui torna solo la **propria** richiesta aperta.
   const pendingRequest = usePendingRequestsForShift(id).data?.[0] ?? null;
@@ -141,6 +157,24 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
+  function doPunch() {
+    if (!myAssignment || !punchAction) return;
+    const action = punchAction;
+    punch.mutate(
+      { assignmentId: myAssignment.id, action },
+      {
+        onSuccess: () => {
+          setPunchAction(null);
+          toast.show(action === "in" ? "Entrata registrata" : "Uscita registrata");
+        },
+        onError: (e) => {
+          setPunchAction(null);
+          toast.show(userErrorMessage(e, "Impossibile timbrare. Riprova."), "error");
+        },
+      }
+    );
+  }
+
   if (shiftQuery.isLoading || myAssignmentQuery.isLoading) {
     return (
       <GuardScreen>
@@ -169,6 +203,21 @@ export default function WaiterShiftDetailScreen() {
   }
 
   const venueName = shift.venue?.name ?? "Sede";
+  const clock = myAssignment?.clock ?? null;
+  const clockTimes = clock ? effectiveClockTimes(clock) : null;
+  const clockMethod = myAssignment?.clock_method ?? shift.venue?.clock_method ?? "manual";
+  const canClock =
+    !!myAssignment &&
+    shift.status !== "cancelled" &&
+    myAssignment.status !== "declined" &&
+    myAssignment.status !== "no_show";
+  const today = todayString();
+  const clockWindowOpen =
+    today >= addDaysToDate(shift.date, -1) &&
+    today <= addDaysToDate(
+      toDateString(shiftEndsAt(shift.date, shift.start_time, shift.end_time)),
+      1
+    );
 
   return (
     <>
@@ -306,6 +355,72 @@ export default function WaiterShiftDetailScreen() {
           </Card>
         )}
 
+        {myAssignment && canClock ? (
+          <View className="mt-8">
+            <Mono className="mb-3">Timbratura</Mono>
+            <Card className="rounded-3xl border-border-2 p-5">
+              {clockTimes ? (
+                clockTimes.outAt ? (
+                  <>
+                    <Text className="text-base font-sans-semibold text-t1">
+                      {formatClockTime(clockTimes.inAt)}–{formatClockTime(clockTimes.outAt)}
+                    </Text>
+                    <Text className="mt-1 text-sm text-t3">
+                      {clockedHours(clockTimes.inAt, clockTimes.outAt)
+                        .toString()
+                        .replace(".", ",")} h · {myAssignment.attendance_reviewed_at
+                        ? "ore approvate"
+                        : "in attesa di verifica"}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text className="text-sm text-t2">
+                      In servizio dalle {formatClockTime(clockTimes.inAt)}
+                    </Text>
+                    {clockWindowOpen ? (
+                      <GoldButton
+                        className="mt-4"
+                        label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
+                        disabled={punch.isPending}
+                        onPress={() => setPunchAction("out")}
+                      />
+                    ) : (
+                      <Text className="mt-2 text-sm text-error">
+                        La finestra di timbratura è terminata: contatta la sede per inserire l’uscita.
+                      </Text>
+                    )}
+                  </>
+                )
+              ) : clockMethod === "app" && clockWindowOpen ? (
+                <>
+                  <Text className="text-sm leading-5 text-t3">
+                    L’orario viene registrato dal server e sarà verificato dalla sede.
+                  </Text>
+                  <GoldButton
+                    className="mt-4"
+                    label={punch.isPending ? "Registrazione…" : "Timbra entrata"}
+                    disabled={punch.isPending}
+                    onPress={() => setPunchAction("in")}
+                  />
+                </>
+              ) : clockMethod === "app" ? (
+                <Text className="text-sm leading-5 text-t3">
+                  La timbratura sarà disponibile vicino al giorno del turno.
+                </Text>
+              ) : clockMethod === "manual" ? (
+                <Text className="text-sm leading-5 text-t3">
+                  Per questa sede gli orari vengono registrati da chi gestisce.
+                </Text>
+              ) : (
+                <Text className="text-sm leading-5 text-t3">
+                  Questo metodo di timbratura sarà disponibile in una prossima versione.
+                </Text>
+              )}
+            </Card>
+          </View>
+        ) : null}
+
         {/* Sotto l'azione, non sopra: la schermata esiste per confermare la
             presenza, e la squadra è il contesto di quel gesto. Si toglie da sé
             quando si è da soli o quando la sede non condivide il planning. */}
@@ -334,6 +449,16 @@ export default function WaiterShiftDetailScreen() {
         pending={respond.isPending}
         onConfirm={doDecline}
         onCancel={() => setDeclineVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={punchAction != null}
+        title={punchAction === "out" ? "Timbrare l’uscita?" : "Timbrare l’entrata?"}
+        message="Verrà registrato l’orario corrente del server."
+        confirmLabel={punchAction === "out" ? "Timbra uscita" : "Timbra entrata"}
+        pending={punch.isPending}
+        onConfirm={doPunch}
+        onCancel={() => setPunchAction(null)}
       />
 
       {myAssignment ? (
