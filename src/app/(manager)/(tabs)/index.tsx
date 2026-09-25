@@ -14,6 +14,13 @@ import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { useUnreadCount } from "@/features/notifications/hooks";
+import { useStartConversation } from "@/features/chat/hooks";
+import { LiveClockLine } from "@/features/clock/LiveClockLine";
+import {
+  liveClockStatusIn,
+  liveClockSummary,
+  type LiveClockStatus,
+} from "@/features/clock/live";
 import { ProUpsellCard } from "@/features/plan/ProLock";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
@@ -37,6 +44,9 @@ import {
   todayString,
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
+import { useNow } from "@/lib/useNow";
+import { userErrorMessage } from "@/lib/errors";
+import { useToast } from "@/providers/Toast";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
@@ -60,6 +70,10 @@ type TodayWorker = {
   venue?: { name: string; accent: string };
   /** È chi guarda: da quando chi gestisce può stare in organico. */
   isMe?: boolean;
+  /** La timbratura dal vivo; `null` se non timbra o non la si può vedere. */
+  live: LiveClockStatus | null;
+  /** La persona, per scriverle; `null` sulla propria riga. */
+  memberId: string | null;
   onPress?: () => void;
 };
 
@@ -71,7 +85,12 @@ export default function ManagerHome() {
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Ristoratore";
 
   const venueQuery = useOwnerVenues();
-  const { venues, isMultiVenue, canAny } = venueQuery;
+  const { venues, isMultiVenue, can, canAny } = venueQuery;
+  // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
+  // le timbrature arrivano già col realtime.
+  const now = useNow();
+  const toast = useToast();
+  const startConversation = useStartConversation();
   const [period, setPeriod] = useState<StatsPeriod>("week");
   // Lo stesso intervallo che apre il Planning, quindi la stessa entry di cache.
   const { from, to } = useMemo(() => periodRange(period), [period]);
@@ -159,14 +178,42 @@ export default function ManagerHome() {
         end: a.shift?.end_time ?? "",
         venue: venueBadge(a.shift?.venue_id),
         isMe,
+        // Le timbrature le legge chi ha Turni o Ore (la RLS): per gli altri
+        // non arrivano, e l'assenza sembrerebbe un ritardo.
+        live:
+          a.shift &&
+          (can(a.shift.venue_id, "can_manage_shifts") ||
+            can(a.shift.venue_id, "can_view_hours"))
+            ? liveClockStatusIn(venues, a.shift, a, now)
+            : null,
+        memberId: isMe ? null : personId,
         onPress: personId
           ? () => router.push(`/(manager)/staff/${personId}`)
           : undefined,
       };
     })
-    .sort((a, b) =>
-      `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
+    // Chi è in ritardo in cima, come nelle viste «chi sta lavorando»: è
+    // l'unica riga che chiede di fare qualcosa. Poi per giorno e ora.
+    .sort(
+      (a, b) =>
+        Number(b.live?.kind === "late") - Number(a.live?.kind === "late") ||
+        `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
     );
+  const liveSummary = liveClockSummary(workers.map((w) => w.live));
+
+  function onWrite(memberId: string) {
+    startConversation.mutate(
+      { memberId },
+      {
+        onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
+        onError: (e) =>
+          toast.show(
+            userErrorMessage(e, "Impossibile aprire la chat. Riprova."),
+            "error",
+          ),
+      },
+    );
+  }
 
   const { refreshing, onRefresh } = usePullToRefresh(() =>
     Promise.all([
@@ -343,7 +390,10 @@ export default function ManagerHome() {
           {workers.length > 0 ? (
             <View className="gap-3">
               <View>
-                <Mono gold>Oggi in sede · {workers.length}</Mono>
+                <Mono gold>
+                  Oggi in sede · {workers.length}
+                  {liveSummary ? ` · ${liveSummary}` : ""}
+                </Mono>
                 <Display className="mt-0.5 text-2xl">Chi lavora oggi</Display>
               </View>
               <View className="gap-3">
@@ -376,6 +426,17 @@ export default function ManagerHome() {
                             avg={w.ratingAvg}
                             count={w.ratingCount}
                             className="mt-1"
+                          />
+                        ) : null}
+                        {w.live ? (
+                          <LiveClockLine
+                            status={w.live}
+                            writing={startConversation.isPending}
+                            onWrite={
+                              w.memberId
+                                ? () => onWrite(w.memberId as string)
+                                : undefined
+                            }
                           />
                         ) : null}
                       </View>

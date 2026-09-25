@@ -1,5 +1,12 @@
 import { shiftCounts } from "@/features/assignments/coverage";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
+import { useStartConversation } from "@/features/chat/hooks";
+import {
+  liveClockStatusIn,
+  liveClockSummary,
+  type LiveClockStatus,
+} from "@/features/clock/live";
+import { useSelfStaff } from "@/features/staff/self";
 import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import type { Shift } from "@/features/shifts/api";
 import {
@@ -16,6 +23,8 @@ import {
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { cn } from "@/lib/cn";
+import { userErrorMessage } from "@/lib/errors";
+import { useNow } from "@/lib/useNow";
 import {
   formatDate,
   formatHours,
@@ -26,8 +35,10 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
+import { LiveClockLine } from "../shifts/LiveClockLine";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
+import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
 
 type Worker = {
@@ -42,6 +53,10 @@ type Worker = {
   end: string;
   /** Dove lavora oggi. `null` con una sede sola. */
   venue: string | null;
+  /** La timbratura dal vivo; `null` se non timbra o non la si può vedere. */
+  live: LiveClockStatus | null;
+  /** La persona, per scriverle; `null` sulla propria riga. */
+  memberId: string | null;
 };
 
 /**
@@ -50,7 +65,11 @@ type Worker = {
  * schermi.
  */
 export function HomePage() {
-  const { venues, isMultiVenue, canAny } = useOwnerVenues();
+  const { venues, isMultiVenue, can, canAny } = useOwnerVenues();
+  const self = useSelfStaff();
+  // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
+  // le timbrature arrivano già col realtime.
+  const now = useNow();
   /** Il nome della sede, o niente se il titolare ne ha una sola. */
   const venueName = useCallback(
     (venueId: string | undefined) => {
@@ -109,12 +128,28 @@ export function HomePage() {
           start: a.shift?.start_time ?? "",
           end: a.shift?.end_time ?? "",
           venue: venueName(a.shift?.venue_id),
+          // Le timbrature le legge chi ha Turni o Ore (la RLS): per gli altri
+          // non arrivano, e l'assenza sembrerebbe un ritardo.
+          live:
+            a.shift &&
+            (can(a.shift.venue_id, "can_manage_shifts") ||
+              can(a.shift.venue_id, "can_view_hours"))
+              ? liveClockStatusIn(venues, a.shift, a, now)
+              : null,
+          memberId: self.isSelf(a.staff_member?.waiter_id)
+            ? null
+            : (a.staff_member?.person_id ?? null),
         }))
-        .sort((a, b) =>
-          `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
+        // Chi è in ritardo in cima, come nelle viste «chi sta lavorando»: è
+        // l'unica riga che chiede di fare qualcosa. Poi per giorno e ora.
+        .sort(
+          (a, b) =>
+            Number(b.live?.kind === "late") - Number(a.live?.kind === "late") ||
+            `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
         ),
-    [todayAssignments, venueName],
+    [todayAssignments, venueName, venues, can, self, now],
   );
+  const liveSummary = liveClockSummary(workers.map((w) => w.live));
 
   const nextShifts = activeUpcoming.slice(0, 5);
 
@@ -199,6 +234,12 @@ export function HomePage() {
         <section>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
             Chi lavora oggi {workers.length > 0 ? `· ${workers.length}` : ""}
+            {liveSummary ? (
+              <span className="normal-case tracking-normal text-t2">
+                {" "}
+                · {liveSummary}
+              </span>
+            ) : null}
           </h2>
           {workers.length === 0 ? (
             <Placeholder
@@ -231,14 +272,20 @@ export function HomePage() {
                         <span className="ml-2 text-warning">da ieri</span>
                       ) : null}
                     </p>
+                    {w.live ? <LiveClockLine status={w.live} /> : null}
                   </div>
-                  <span className="shrink-0 font-mono text-xs text-t2">
-                    {w.start && w.end
-                      ? formatShiftRange(w.start, w.end)
-                      : w.start
-                        ? formatTime(w.start)
-                        : "—"}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {w.live?.kind === "late" && w.memberId ? (
+                      <WriteButton memberId={w.memberId} />
+                    ) : null}
+                    <span className="font-mono text-xs text-t2">
+                      {w.start && w.end
+                        ? formatShiftRange(w.start, w.end)
+                        : w.start
+                          ? formatTime(w.start)
+                          : "—"}
+                    </span>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -359,5 +406,30 @@ function Stat({
         <p className="mt-0.5 text-[11px] text-t4">{hint}</p>
       ) : null}
     </Tag>
+  );
+}
+
+/** Chi è in ritardo si sente con un messaggio: la chat c'è già. */
+function WriteButton({ memberId }: { memberId: string }) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const startConversation = useStartConversation();
+  return (
+    <button
+      type="button"
+      disabled={startConversation.isPending}
+      onClick={() =>
+        startConversation.mutate(
+          { memberId },
+          {
+            onSuccess: (conv) => navigate(`/chat/${conv.id}`),
+            onError: (e) => toast.show(userErrorMessage(e), "error"),
+          },
+        )
+      }
+      className="focus-gold rounded-lg border border-warning/50 px-2.5 py-1 text-xs font-semibold text-warning transition hover:bg-warning/10 disabled:opacity-50"
+    >
+      {startConversation.isPending ? "Apertura…" : "Scrivi"}
+    </button>
   );
 }

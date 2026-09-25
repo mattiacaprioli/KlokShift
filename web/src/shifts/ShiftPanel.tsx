@@ -38,7 +38,14 @@ import {
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
-import { formatShiftSummary, isShiftOver, todayString } from "@/lib/format";
+import {
+  formatShiftSummary,
+  isShiftOver,
+  shiftStartsAt,
+  todayString,
+} from "@/lib/format";
+import { useNow } from "@/lib/useNow";
+import { liveClockStatusIn } from "@/features/clock/live";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -54,6 +61,7 @@ import {
 } from "../ui/primitives";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
+import { LiveClockLine } from "./LiveClockLine";
 import { PresenceSection } from "./PresenceSection";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
@@ -439,6 +447,25 @@ function InternalForm({
       ),
     [assignmentsQuery.data]
   );
+
+  // A turno in corso chi gestisce vede chi è entrato. Le timbrature le legge
+  // chi ha Turni o Ore (la RLS): per gli altri l'assenza sembrerebbe un
+  // ritardo. Le presenze da approvare restano a turno finito, più in basso.
+  const now = useNow();
+  const assignmentByStaff = useMemo(
+    () =>
+      new Map(
+        (assignmentsQuery.data ?? []).map((a) => [a.venue_member_id, a])
+      ),
+    [assignmentsQuery.data]
+  );
+  const showLiveClock =
+    !!shift &&
+    !cancelled &&
+    now >= shiftStartsAt(shift.date, shift.start_time) &&
+    !isShiftOver(shift, now) &&
+    (can(shift.venue_id, "can_manage_shifts") ||
+      can(shift.venue_id, "can_view_hours"));
 
   /** Chi viene selezionato ora non ha ancora una riga: sarà `assigned` al salvataggio. */
   function staffStatus(id: string): AssignmentStatus {
@@ -842,6 +869,14 @@ function InternalForm({
                       .filter((r): r is NonNullable<typeof r> => !!r)
                       .sort((a, b) => a.sort_order - b.sort_order);
                     const chosen = staffRoles[member.id] ?? null;
+                    const liveAssignment =
+                      showLiveClock && on
+                        ? assignmentByStaff.get(member.id)
+                        : undefined;
+                    const live =
+                      shift && liveAssignment
+                        ? liveClockStatusIn(venues, shift, liveAssignment, now)
+                        : null;
                     // Avviso, non blocco: il titolare può sapere cose che l'app no.
                     const absence =
                       formDate && formStart && formEnd
@@ -875,6 +910,7 @@ function InternalForm({
                             <span className="block truncate text-xs text-t4">
                               {staffRoleNames(member) ?? "Ruoli non indicati"}
                             </span>
+                            {live ? <LiveClockLine status={live} /> : null}
                             {absence ? (
                               <span className="block truncate text-xs font-semibold text-warning">
                                 {absenceCellLabel(absence)}

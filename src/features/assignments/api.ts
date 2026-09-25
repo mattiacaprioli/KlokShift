@@ -60,6 +60,8 @@ export type AssignmentWithStaff = Assignment & {
   clock: ClockRecordWithCorrections | null;
   staff_member:
     | (StaffMember & {
+        /** Null = eredita il metodo della sede. */
+        clock_method: Enums<"clock_method"> | null;
         waiter: WaiterMini | null;
         staff_member_roles: { role: StaffRoleRef | null }[];
       })
@@ -73,6 +75,8 @@ export type TodayAssignmentRow = Assignment & {
   clock: ClockRecordWithCorrections | null;
   staff_member:
     | (StaffMember & {
+        /** Null = eredita il metodo della sede. */
+        clock_method: Enums<"clock_method"> | null;
         waiter:
           | (WaiterMini & {
               waiter_profile: {

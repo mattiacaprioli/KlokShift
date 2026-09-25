@@ -59,6 +59,8 @@ export type RawVenueMember<W = RawWaiter> = {
 export function toStaffMember<W>(
   vm: RawVenueMember<W>
 ): StaffMember & {
+  /** Null = eredita il metodo della sede (`effectiveClockMethod`). */
+  clock_method: Enums<"clock_method"> | null;
   waiter: W | null;
   staff_member_roles: { role: StaffRoleRef | null }[];
 } {
@@ -74,6 +76,7 @@ export function toStaffMember<W>(
     // schermate dei turni.
     note: null,
     employment_type: vm.employment_type,
+    clock_method: vm.clock_method,
     link_status: linkStatusOf(m?.status ?? "active", vm.left_at),
     left_at: vm.left_at,
     created_at: vm.created_at,

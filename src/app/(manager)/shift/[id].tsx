@@ -22,6 +22,7 @@ import {
   formatHours,
   formatShiftRange,
   isShiftOver,
+  shiftStartsAt,
   shiftEndsAt,
   shiftDurationHours,
 } from "@/lib/format";
@@ -41,6 +42,12 @@ import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { ManagerClockReview } from "@/features/clock/ManagerClockReview";
 import { useApproveClockRecords } from "@/features/clock/hooks";
+import { LiveClockLine } from "@/features/clock/LiveClockLine";
+import {
+  liveClockStatusIn,
+  type LiveClockStatus,
+} from "@/features/clock/live";
+import { useNow } from "@/lib/useNow";
 import {
   effectiveClockTimes,
   isRegularPendingClock,
@@ -80,12 +87,15 @@ function AssignedRow({
   onPress,
   onMessage,
   changeRequested,
+  live,
 }: {
   assignment: AssignmentWithStaff;
   onPress?: () => void;
   onMessage?: () => void;
   /** Tipo della richiesta aperta, se c'è: si legge e si decide in chat. */
   changeRequested?: Enums<"change_request_kind">;
+  /** La timbratura dal vivo, a turno in corso. */
+  live?: LiveClockStatus | null;
 }) {
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Staff";
@@ -111,6 +121,7 @@ function AssignedRow({
               · rispondi in chat
             </Text>
           ) : null}
+          {live ? <LiveClockLine status={live} /> : null}
         </View>
         <Pill
           label={ASSIGNMENT_STATUS_LABEL[assignment.status]}
@@ -341,7 +352,9 @@ export default function ShiftDetailScreen() {
   // Chi gestisce può essere in turno: la propria riga si riconosce, e su di essa
   // presenze e ore sono del titolare e non del collaboratore.
   const myRoster = useMyRosterIds();
-  const { authority, can } = useOwnerVenues();
+  const { authority, can, venues } = useOwnerVenues();
+  // A turno in corso l'etichetta «In ritardo» scatta a un'ora precisa.
+  const now = useNow();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -444,6 +457,13 @@ export default function ShiftDetailScreen() {
   // A turno finito (non a mezzanotte) si passa dalla vista "staff assegnato"
   // a quella delle presenze.
   const isPast = isShiftOver(shift);
+  // A turno in corso chi gestisce vede chi è entrato: le timbrature le legge
+  // chi ha Turni o Ore (la RLS), per gli altri l'assenza sembrerebbe un ritardo.
+  const showLiveClock =
+    !isPast &&
+    now >= shiftStartsAt(shift.date, shift.start_time) &&
+    (can(shift.venue_id, "can_manage_shifts") ||
+      can(shift.venue_id, "can_view_hours"));
   const plannedHours = shiftDurationHours(shift.start_time, shift.end_time);
   // A consuntivo si segna solo chi il turno l'ha accettato: un rifiuto non è
   // un'assenza, e nella riga presenza si leggerebbe come tale.
@@ -703,6 +723,11 @@ export default function ShiftDetailScreen() {
                     waiterId && memberId ? () => onMessage(memberId) : undefined
                   }
                   changeRequested={requestedByAssignment.get(a.id)}
+                  live={
+                    showLiveClock
+                      ? liveClockStatusIn(venues, shift, a, now)
+                      : null
+                  }
                 />
               );
             })

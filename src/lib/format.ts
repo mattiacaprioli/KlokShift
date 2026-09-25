@@ -57,6 +57,11 @@ export function shiftDurationHours(start: string, end: string): number {
 // Istante in cui il turno finisce davvero: se l'orario di fine non è successivo
 // a quello di inizio il turno scavalca la mezzanotte e finisce il giorno dopo
 // (stessa convenzione di shiftDurationHours).
+// Istante d'inizio del turno, nell'ora locale come `shiftEndsAt`.
+export function shiftStartsAt(date: string, start: string): Date {
+  return new Date(`${date}T${start.slice(0, 5)}:00`);
+}
+
 export function shiftEndsAt(date: string, start: string, end: string): Date {
   const d = new Date(`${date}T${end.slice(0, 5)}:00`);
   if (isOvernightShift(start, end)) d.setDate(d.getDate() + 1);
