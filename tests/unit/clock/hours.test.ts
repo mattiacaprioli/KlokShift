@@ -52,14 +52,16 @@ describe("effectiveClockTimes", () => {
   });
 });
 
-// Il pomeriggio del 24/09, 14:00-22:00 a Roma (UTC+2).
+// Il pomeriggio del 24/09, 14:00-22:00. Gli istanti di confronto sono in ora
+// locale, senza offset: l'orario del turno si legge nel fuso della macchina, e
+// un istante in UTC cadrebbe altrove a seconda di dove girano i test.
 const AFTERNOON = {
   date: "2026-09-24",
   start_time: "14:00:00",
   end_time: "22:00:00",
 };
-const DURING = new Date("2026-09-24T18:00:00Z");
-const AFTER = new Date("2026-09-25T08:00:00Z");
+const DURING = new Date("2026-09-24T18:00:00");
+const AFTER = new Date("2026-09-25T08:00:00");
 
 function punch(outAt: string | null): ClockRecordWithCorrections {
   return {

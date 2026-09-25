@@ -66,7 +66,10 @@ function shift(input?: {
   };
 }
 
-const afterShift = new Date("2026-09-25T16:00:00+02:00");
+// Ora locale, senza offset: l'orario del turno (14:00-15:00) `isShiftOver` lo
+// legge nel fuso della macchina, e un "+02:00" qui passava solo in Italia (la
+// CI gira in UTC, dove alle 16:00 italiane il turno non era ancora finito).
+const afterShift = new Date("2026-09-25T16:00:00");
 
 describe("clockAttentionForShift", () => {
   it("segnala un'uscita mancante soltanto dopo la fine del turno", () => {
@@ -76,7 +79,7 @@ describe("clockAttentionForShift", () => {
     expect(
       clockAttentionForShift(
         shift(),
-        new Date("2026-09-25T14:30:00+02:00")
+        new Date("2026-09-25T14:30:00")
       )
     ).toEqual([]);
   });
