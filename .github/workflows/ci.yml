@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Rilascio manuale di tutto (dashboard, sito e migration). Serve perché i
+  # deploy guardano solo i file dell'ultimo push: se un push fallisce e il
+  # successivo corregge solo i test, quello che il primo portava non esce mai.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,7 +34,10 @@ jobs:
           pages=false
           database=false
 
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            pages=true
+            database=true
+          elif [ "${{ github.event_name }}" = "push" ]; then
             if [[ "$BEFORE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE_SHA^{commit}"; then
               mapfile -t files < <(git ls-tree -r --name-only "$GITHUB_SHA")
             else
@@ -146,7 +153,7 @@ jobs:
 
   deploy-pages:
     needs: [changes, client, database, edge]
-    if: github.event_name == 'push' && needs.changes.outputs.pages == 'true'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.changes.outputs.pages == 'true'
     uses: ./.github/workflows/deploy-web.yml
     permissions:
       contents: read
@@ -155,6 +162,6 @@ jobs:
 
   deploy-database:
     needs: [changes, client, database, edge]
-    if: github.event_name == 'push' && needs.changes.outputs.database == 'true'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.changes.outputs.database == 'true'
     uses: ./.github/workflows/supabase.yml
     secrets: inherit
