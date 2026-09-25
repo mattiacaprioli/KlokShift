@@ -22,10 +22,15 @@ import { useOwnerPeople } from "@/features/staff/hooks";
 import { useSelfStaff } from "@/features/staff/self";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
-import { formatHours, formatShiftRange } from "@/lib/format";
+import {
+  formatHours,
+  formatHoursVariance,
+  formatShiftRange,
+} from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
 import { personRoleNames } from "@/features/staff/api";
+import type { ClockAttentionKind } from "@/features/clock/attention";
 import { dayLabel, isPastDay, isToday, PAST_DAY_REASON } from "../lib/week";
 import { Placeholder, Spinner } from "../ui/primitives";
 import {
@@ -49,6 +54,7 @@ const DIAGONAL_REASON =
 export function PeopleWeek({
   days,
   shifts,
+  clockKindByAssignment,
   venueIds,
   absences,
   onOpen,
@@ -58,6 +64,8 @@ export function PeopleWeek({
 }: {
   days: string[];
   shifts: ShiftWithAssignees[];
+  /** Eccezioni già filtrate per il permesso Ore nel Planning. */
+  clockKindByAssignment: Map<string, ClockAttentionKind>;
   /**
    * Chi non c'è nel periodo (`get_absence_availability`): date e stato, mai il
    * tipo. Le celle assenti restano cliccabili: è un avviso, non un blocco.
@@ -87,7 +95,7 @@ export function PeopleWeek({
    *  quella persona, i colleghi restano dov'erano. */
   onMovePerson: (payload: PersonDragPayload, toDate: string) => void;
 }) {
-  const { ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const { ownerId, venues, isMultiVenue, can } = useOwnerVenues();
   const peopleQuery = useOwnerPeople(ownerId);
   // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
   const self = useSelfStaff();
@@ -101,6 +109,13 @@ export function PeopleWeek({
    * ripeterlo su ogni chip toglierebbe spazio all'orario.
    */
   const showVenue = isMultiVenue && venueIds.length > 1;
+  const actualVenueIds = useMemo(
+    () =>
+      new Set(
+        venueIds.filter((venueId) => can(venueId, "can_view_hours"))
+      ),
+    [venueIds, can]
+  );
 
   /**
    * Nome e colore della sede di un turno. L'indice è quello di `venues`, non di
@@ -177,8 +192,8 @@ export function PeopleWeek({
         roles: personRoleNames(p),
         contract: personContract(p),
       }));
-    return computeWeekLoad(shifts, roster);
-  }, [shifts, peopleQuery.data, venueIds]);
+    return computeWeekLoad(shifts, roster, { actualVenueIds });
+  }, [shifts, peopleQuery.data, venueIds, actualVenueIds]);
 
   if (peopleQuery.isPending) return <Spinner />;
 
@@ -209,7 +224,7 @@ export function PeopleWeek({
       <div className="overflow-x-auto print:overflow-visible">
         <div className="min-w-5xl print:min-w-0">
           {/* Intestazione: gli stessi giorni delle altre viste. */}
-          <div className="mb-2 grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] gap-1.5">
+          <div className="mb-2 grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_9rem] gap-1.5">
             <span className="text-xs font-semibold uppercase tracking-wider text-t4">
               Persona
             </span>
@@ -236,7 +251,7 @@ export function PeopleWeek({
             {rows.map((person) => (
               <div
                 key={person.personId}
-                className="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] items-stretch gap-1.5 print:break-inside-avoid"
+                className="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_9rem] items-stretch gap-1.5 print:break-inside-avoid"
               >
                 <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border-2 bg-bg-card px-3 py-2">
                   <span className="truncate text-sm text-t1">
@@ -383,6 +398,9 @@ export function PeopleWeek({
                         <PersonShiftChip
                           key={ps.shiftId}
                           personShift={ps}
+                          clockAttention={clockKindByAssignment.get(
+                            ps.assignmentId
+                          )}
                           conflict={
                             !!absenceForShift(
                               ps,
@@ -438,6 +456,13 @@ export function PeopleWeek({
                   daysWorked={person.daysWorked}
                   contract={person.contract}
                   partial={filtered}
+                  approvedHours={person.approvedHours}
+                  approvedPlannedHours={person.approvedPlannedHours}
+                  approvedCount={person.approvedCount}
+                  proposedHours={person.proposedHours}
+                  proposedPlannedHours={person.proposedPlannedHours}
+                  proposedCount={person.proposedCount}
+                  missingOutCount={person.missingOutCount}
                 />
               </div>
             ))}
@@ -473,10 +498,11 @@ export function PeopleWeek({
       </div>
 
       <p className="mt-2 text-xs leading-5 text-t4">
-        Sono ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
+        Il totale principale mostra le ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
         rifiutato o è stato segnato assente non le somma e gli intervalli
-        sovrapposti si contano una volta sola. Le ore effettivamente lavorate —
-        quelle che vanno al commercialista — stanno nella pagina Ore.
+        sovrapposti si contano una volta sola. Sui turni conclusi, il consuntivo
+        confronta le ore effettive o proposte con gli stessi turni programmati;
+        la pagina Ore resta il riepilogo definitivo per il commercialista.
         {isMultiVenue && !filtered ? (
           <>
             {" "}
@@ -520,6 +546,7 @@ function absenceCellStyle(a: Pick<AbsenceAvailability, "status">): CSSProperties
 
 function PersonShiftChip({
   personShift,
+  clockAttention,
   conflict,
   personId,
   personVenueIds,
@@ -531,6 +558,7 @@ function PersonShiftChip({
   onOpen,
 }: {
   personShift: PersonShift;
+  clockAttention?: ClockAttentionKind;
   /** Il turno cade in un'assenza approvata della persona: va coperto. */
   conflict: boolean;
   /** La persona della riga: dice se il rilascio è sulla stessa o su un'altra. */
@@ -553,6 +581,11 @@ function PersonShiftChip({
   const dnd = useShiftDrag();
   const active = isActiveAssignment(personShift.status);
   const dragging = dnd.isSource(personShift.shiftId, personShift.assignmentId);
+  const actual = personShift.actual;
+  const actualDelta =
+    actual && actual.kind !== "missing_out"
+      ? formatHoursVariance(actual.hours - personShift.hours)
+      : null;
 
   return (
     <button
@@ -587,6 +620,11 @@ function PersonShiftChip({
               formatShiftRange(personShift.start_time, personShift.end_time),
               active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
               conflict ? "In conflitto con un'assenza" : null,
+              clockAttention === "missing_out"
+                ? "Uscita mancante"
+                : clockAttention === "to_review"
+                  ? "Ore da approvare"
+                  : null,
               personShift.overlaps
                 ? "Orario sovrapposto a un altro turno: le ore comuni sono contate una volta"
                 : null,
@@ -634,6 +672,24 @@ function PersonShiftChip({
           <span className="truncate text-[10px] text-t4">{venue.name}</span>
         </span>
       ) : null}
+      {actual && actual.kind !== "missing_out" ? (
+        <span
+          className={cn(
+            "mt-1 block text-[10px] font-semibold",
+            actual.kind === "approved" ? "text-success" : "text-warning"
+          )}
+        >
+          {actual.kind === "approved" ? "Effettive" : "Proposte"}{" "}
+          {formatHours(actual.hours)}
+          {actualDelta ? ` · ${actualDelta}` : ""}
+          {actual.kind === "proposed" ? " · da verificare" : ""}
+        </span>
+      ) : null}
+      {clockAttention === "missing_out" ? (
+        <span className="mt-1 block text-[10px] font-semibold text-warning">
+          ! Uscita mancante
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -655,6 +711,13 @@ function HoursCell({
   daysWorked,
   contract,
   partial,
+  approvedHours,
+  approvedPlannedHours,
+  approvedCount,
+  proposedHours,
+  proposedPlannedHours,
+  proposedCount,
+  missingOutCount,
 }: {
   hours: number;
   overlapHours: number;
@@ -668,10 +731,19 @@ function HoursCell({
    * tranquilla non promette più niente: va detto.
    */
   partial: boolean;
+  approvedHours: number;
+  approvedPlannedHours: number;
+  approvedCount: number;
+  proposedHours: number;
+  proposedPlannedHours: number;
+  proposedCount: number;
+  missingOutCount: number;
 }) {
   const target = weeklyTarget(contract, daysWorked);
   const tone = loadTone(hours, target);
   const explainer = targetExplainer(contract, target);
+  const approvedDelta = formatHoursVariance(approvedHours - approvedPlannedHours);
+  const proposedDelta = formatHoursVariance(proposedHours - proposedPlannedHours);
 
   return (
     <div
@@ -719,6 +791,35 @@ function HoursCell({
           {formatHours(overlapHours)} sovrapposte
         </span>
       ) : null}
+      {approvedCount > 0 ? (
+        <div className="mt-1 w-full border-t border-border pt-1 text-right">
+          <span className="block text-[10px] font-semibold text-success">
+            Effettive {formatHours(approvedHours)}
+          </span>
+          <span className="block text-[10px] text-success">
+            su {formatHours(approvedPlannedHours)} previste
+            {approvedDelta ? ` · ${approvedDelta}` : ""}
+          </span>
+        </div>
+      ) : null}
+      {proposedCount > 0 ? (
+        <div className="mt-1 w-full border-t border-border pt-1 text-right">
+          <span className="block text-[10px] font-semibold text-warning">
+            Proposte {formatHours(proposedHours)}
+          </span>
+          <span className="block text-[10px] text-warning">
+            su {formatHours(proposedPlannedHours)} previste
+            {proposedDelta ? ` · ${proposedDelta}` : ""} · da verificare
+          </span>
+        </div>
+      ) : null}
+      {missingOutCount > 0 ? (
+        <span className="mt-1 text-right text-[10px] font-semibold text-warning">
+          {missingOutCount === 1 ? "1 uscita mancante" : `${missingOutCount} uscite mancanti`}
+        </span>
+      ) : null}
     </div>
   );
 }
+
+/** Scostamento firmato, senza mostrare rumore quando coincide col previsto. */

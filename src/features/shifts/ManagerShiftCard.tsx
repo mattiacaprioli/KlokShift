@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
 import { Mono } from "@/components/ui/Mono";
@@ -58,6 +59,7 @@ export function ManagerShiftCard({
   onPress,
   variant = "agenda",
   venue,
+  footer,
 }: {
   shift: ShiftWithCount;
   onPress: () => void;
@@ -69,6 +71,8 @@ export function ManagerShiftCard({
    * card. Il nome è il segnale, `accent` (vedi `venueColor.ts`) è l'appiglio.
    */
   venue?: { name: string; accent: string };
+  /** Sotto la copertura, solo nella variante agenda: lo storico ci mette il consuntivo. */
+  footer?: ReactNode;
 }) {
   const cancelled = shift.status === "cancelled";
   const closed = shift.status === "closed";
@@ -235,6 +239,7 @@ export function ManagerShiftCard({
               {total > 0 ? `${filled}/${total} coperti` : "Nessun fabbisogno"}
             </Text>
           )}
+          {footer}
         </View>
       </View>
     </Card>

@@ -77,6 +77,11 @@ import { ShiftPanel } from "../shifts/ShiftPanel";
 import { PeopleWeek } from "../shifts/PeopleWeek";
 import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
 import { MovePersonDialog } from "../shifts/MovePersonDialog";
+import { ClockAttentionBanner } from "../shifts/ClockAttentionBanner";
+import {
+  clockAttentionItems,
+  type ClockAttentionKind,
+} from "@/features/clock/attention";
 import { CoverageLegend, TONE_BORDER } from "../shifts/CoverageLegend";
 import {
   dropClass,
@@ -124,7 +129,7 @@ function storedVenue(): string | null {
  * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
-  const { venues, venueIds, isMultiVenue, canAny } = useOwnerVenues();
+  const { venues, venueIds, isMultiVenue, can, canAny } = useOwnerVenues();
   // Chi gestisce può essere in turno: il trigger non avvisa chi sta spostando,
   // e la finestra di conferma non deve promettere un avviso in più.
   const { session } = useAuth();
@@ -237,6 +242,31 @@ export function PlanningPage() {
           return sum + Math.max(0, total - filled);
         }, 0),
     [data]
+  );
+
+  const clockItems = useMemo(
+    () =>
+      clockAttentionItems(data ?? []).filter((item) =>
+        can(item.shift.venue_id, "can_view_hours") &&
+        (isWeekly || isSameMonth(item.shift.date, month))
+      ),
+    [data, can, isWeekly, month]
+  );
+  const clockKindsByShift = useMemo(() => {
+    const map = new Map<string, ClockAttentionKind[]>();
+    for (const item of clockItems) {
+      const kinds = map.get(item.shift.id);
+      if (kinds) kinds.push(item.kind);
+      else map.set(item.shift.id, [item.kind]);
+    }
+    return map;
+  }, [clockItems]);
+  const clockKindByAssignment = useMemo(
+    () =>
+      new Map(
+        clockItems.map((item) => [item.assignmentId, item.kind] as const)
+      ),
+    [clockItems]
   );
 
   /**
@@ -538,6 +568,13 @@ export function PlanningPage() {
       ) : null}
       {isPending ? <Spinner /> : null}
 
+      <ClockAttentionBanner
+        items={clockItems}
+        onOpen={(item) =>
+          setPanel({ date: item.shift.date, shift: item.shift })
+        }
+      />
+
       {/* La regola in una riga: un turno si sposta nel tempo, una persona si
           sposta fra turni. Nella vista per persona il chip è una persona su un
           turno, quindi fa entrambe le cose a seconda della direzione. */}
@@ -552,6 +589,7 @@ export function PlanningPage() {
           <WeekGrid
             days={days}
             byDay={byDay}
+            clockKindsByShift={clockKindsByShift}
             venueOf={venueOf}
             onCreate={(day) => setPanel({ date: day })}
             onOpen={(day, shift) => setPanel({ date: day, shift })}
@@ -561,6 +599,7 @@ export function PlanningPage() {
           <PeopleWeek
             days={days}
             shifts={data ?? []}
+            clockKindByAssignment={clockKindByAssignment}
             venueIds={scopedIds}
             absences={absences}
             onOpen={(shift) => setPanel({ date: shift.date, shift })}
@@ -575,6 +614,7 @@ export function PlanningPage() {
             days={days}
             month={month}
             byDay={byDay}
+            clockKindsByShift={clockKindsByShift}
             venueOf={venueOf}
             onCreate={(day) => setPanel({ date: day })}
             onOpen={(day, shift) => setPanel({ date: day, shift })}
@@ -753,6 +793,7 @@ function reassignMessage(
 function WeekGrid({
   days,
   byDay,
+  clockKindsByShift,
   onCreate,
   onOpen,
   onMove,
@@ -760,6 +801,7 @@ function WeekGrid({
 }: {
   days: string[];
   byDay: Map<string, ShiftWithAssignees[]>;
+  clockKindsByShift: Map<string, ClockAttentionKind[]>;
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
   onMove: (payload: MoveDragPayload, toDate: string) => void;
@@ -815,6 +857,7 @@ function WeekGrid({
                   <ShiftCell
                     key={shift.id}
                     shift={shift}
+                    clockKinds={clockKindsByShift.get(shift.id) ?? []}
                     accent={venueOf(shift.venue_id)?.accent}
                     venueName={venueOf(shift.venue_id)?.name}
                     onOpen={() => onOpen(day, shift)}
@@ -844,6 +887,7 @@ function MonthGrid({
   days,
   month,
   byDay,
+  clockKindsByShift,
   onCreate,
   onOpen,
   onOpenDay,
@@ -853,6 +897,7 @@ function MonthGrid({
   days: string[];
   month: Date;
   byDay: Map<string, ShiftWithAssignees[]>;
+  clockKindsByShift: Map<string, ClockAttentionKind[]>;
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
   /** Il giorno è più fitto di quanto la cella regga: si passa alla settimana. */
@@ -941,6 +986,7 @@ function MonthGrid({
                   const counts = shiftCounts(shift);
                   const cancelled = shift.status === "cancelled";
                   const tone = shiftTone(shift);
+                  const clockKinds = clockKindsByShift.get(shift.id) ?? [];
                   return (
                     <button
                       key={shift.id}
@@ -992,6 +1038,18 @@ function MonthGrid({
                           }}
                         />
                       ) : null}
+                      {clockKinds.length > 0 ? (
+                        <span
+                          aria-label={
+                            clockKinds.includes("missing_out")
+                              ? "Uscita mancante"
+                              : "Ore da approvare"
+                          }
+                          className="flex size-4 shrink-0 items-center justify-center rounded-full bg-warning/15 text-[10px] font-bold text-warning"
+                        >
+                          !
+                        </span>
+                      ) : null}
                       <span className="shrink-0 font-mono text-[10px] text-t4">
                         {formatTime(shift.start_time)}
                         {/* Qui c'è posto solo per l'ora d'inizio: senza questo,
@@ -1040,11 +1098,13 @@ function MonthGrid({
 
 function ShiftCell({
   shift,
+  clockKinds,
   accent,
   venueName,
   onOpen,
 }: {
   shift: ShiftWithAssignees;
+  clockKinds: ClockAttentionKind[];
   /** Il colore della sede. Assente con una sede sola. */
   accent?: string;
   venueName?: string;
@@ -1142,6 +1202,13 @@ function ShiftCell({
             {filled}/{total}
           </Pill>
         )}
+        {clockKinds.length > 0 && !cancelled ? (
+          <Pill tone="warning">
+            {clockKinds.includes("missing_out")
+              ? "Uscita mancante"
+              : "Ore da approvare"}
+          </Pill>
+        ) : null}
       </div>
     </button>
   );

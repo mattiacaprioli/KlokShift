@@ -6,11 +6,16 @@ import {
 import { assignmentHours } from "@/features/assignments/hours";
 import { useSelfStaff } from "@/features/staff/self";
 import { userErrorMessage } from "@/lib/errors";
-import { shiftDurationHours } from "@/lib/format";
+import {
+  formatHours,
+  formatHoursVariance,
+  shiftDurationHours,
+} from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Button, Input, Spinner } from "../ui/primitives";
 import {
   useApproveClockRecord,
+  useApproveClockRecords,
   useCorrectClockRecord,
   useVoidClockRecord,
 } from "@/features/clock/hooks";
@@ -18,6 +23,7 @@ import {
   clockedHours,
   effectiveClockTimes,
   formatClockTime,
+  isRegularPendingClock,
 } from "@/features/clock/hours";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 
@@ -65,9 +71,12 @@ function romeLocalToIso(value: string): string {
 
 function ClockReview({
   assignment,
+  plannedHours,
   locked,
 }: {
   assignment: AssignmentWithStaff;
+  /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
+  plannedHours: number;
   locked: boolean;
 }) {
   const clock = assignment.clock;
@@ -87,6 +96,7 @@ function ClockReview({
   }
 
   const hours = times.outAt ? clockedHours(times.inAt, times.outAt) : null;
+  const delta = hours != null ? formatHoursVariance(hours - plannedHours) : null;
   const pending = approve.isPending || correct.isPending || voidClock.isPending;
   const error = approve.error ?? correct.error ?? voidClock.error;
 
@@ -96,12 +106,24 @@ function ClockReview({
   }
 
   return (
-    <div className="mt-2 border-t border-border pt-2">
+    <div
+      className="mt-2 border-t border-border pt-2"
+      onKeyDown={(event) => {
+        // Questa UI vive dentro il form del turno, ma salva con RPC proprie.
+        // Invio in un campo della correzione non deve inviare il turno padre.
+        if (event.key === "Enter") event.preventDefault();
+      }}
+    >
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-mono text-t2">
           Timbrato {formatClockTime(times.inAt)}–{times.outAt ? formatClockTime(times.outAt) : "uscita mancante"}
-          {hours != null ? ` · ${hours.toString().replace(".", ",")} h` : ""}
+          {hours != null ? ` · ${formatHours(hours)}` : ""}
         </span>
+        {delta ? (
+          <span className="rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">
+            {delta} sul turno
+          </span>
+        ) : null}
         {assignment.attendance_reviewed_at ? (
           <span className="rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">
             Approvato
@@ -117,15 +139,17 @@ function ClockReview({
         <div className="mt-2 flex flex-wrap gap-2">
           {times.outAt && !assignment.attendance_reviewed_at ? (
             <Button
+              type="button"
               variant="gold"
               disabled={pending}
               onClick={() => approve.mutate(assignment.id)}
               className="px-3 py-1.5 text-xs"
             >
-              Approva ore timbrate
+              {hours != null ? `Approva ${formatHours(hours)}` : "Approva"}
             </Button>
           ) : null}
           <Button
+            type="button"
             disabled={pending}
             onClick={() => {
               setInAt(dateTimeLocal(times.inAt));
@@ -137,6 +161,7 @@ function ClockReview({
             {times.outAt ? "Correggi orari" : "Inserisci uscita"}
           </Button>
           <Button
+            type="button"
             variant="danger"
             disabled={pending}
             onClick={() => setMode("void")}
@@ -174,8 +199,9 @@ function ClockReview({
             className="sm:col-span-2"
           />
           <div className="flex gap-2 sm:col-span-2">
-            <Button onClick={close}>Annulla</Button>
+            <Button type="button" onClick={close}>Annulla</Button>
             <Button
+              type="button"
               variant="gold"
               disabled={pending || !reason.trim() || !inAt || !outAt}
               onClick={() =>
@@ -204,8 +230,9 @@ function ClockReview({
             placeholder="Motivo dell’annullamento"
             className="min-w-64 flex-1"
           />
-          <Button onClick={close}>Indietro</Button>
+          <Button type="button" onClick={close}>Indietro</Button>
           <Button
+            type="button"
             variant="danger"
             disabled={pending || !reason.trim()}
             onClick={() =>
@@ -262,6 +289,7 @@ export function PresenceSection({
 }) {
   const { data, isPending } = useShiftAssignments(shiftId);
   const presence = useSetAssignmentPresence(shiftId);
+  const approveRegular = useApproveClockRecords();
   const planned = shiftDurationHours(startTime, endTime);
   /**
    * La propria riga, per chi gestisce e lavora.
@@ -279,15 +307,45 @@ export function PresenceSection({
   // "Chi lavora" con la sua etichetta, ma qui darebbe un "Presente" verde (e un
   // tocco sul toggle ne sovrascriverebbe lo stato con `no_show`).
   const rows = (data ?? []).filter((a) => a.status !== "declined");
+  // La mia riga, e non sono io a poterla consuntivare.
+  const isMineLocked = (a: AssignmentWithStaff) =>
+    locked && self.isSelf(a.staff_member?.waiter_id);
+  const times = { start_time: startTime, end_time: endTime };
+  const approvable = rows.filter(
+    (a) =>
+      !isMineLocked(a) &&
+      a.clock != null &&
+      a.attendance_reviewed_at == null &&
+      effectiveClockTimes(a.clock).outAt != null
+  );
+  // In blocco solo chi ha fatto le ore del turno: chi si è discostato resta da
+  // guardare riga per riga. Con una sola timbratura basta il suo pulsante.
+  const regular = approvable.filter((a) => isRegularPendingClock(times, a));
+  const showApproveRegular = regular.length > 0 && approvable.length > 1;
 
   if (isPending) return <Spinner label="Caricamento presenze…" />;
   if (rows.length === 0) return null;
 
   return (
     <section>
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
-        Presenze e ore
-      </span>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+          Presenze e ore
+        </span>
+        {showApproveRegular ? (
+          <Button
+            type="button"
+            variant="gold"
+            disabled={approveRegular.isPending}
+            onClick={() => approveRegular.mutate(regular.map((a) => a.id))}
+            className="px-3 py-1.5 text-xs"
+          >
+            {approveRegular.isPending
+              ? "Approvazione…"
+              : `Approva le timbrature in orario (${regular.length})`}
+          </Button>
+        ) : null}
+      </div>
       <div className="flex flex-col gap-1">
         {rows.map((a) => {
           const absent = a.status === "no_show";
@@ -295,8 +353,7 @@ export function PresenceSection({
             start_time: startTime,
             end_time: endTime,
           });
-          // La mia riga, e non sono io a poterla consuntivare.
-          const mineLocked = locked && self.isSelf(a.staff_member?.waiter_id);
+          const mineLocked = isMineLocked(a);
           return (
             <div
               key={a.id}
@@ -369,7 +426,11 @@ export function PresenceSection({
               </>
               )}
               </div>
-              <ClockReview assignment={a} locked={mineLocked} />
+              <ClockReview
+                assignment={a}
+                plannedHours={planned}
+                locked={mineLocked}
+              />
             </div>
           );
         })}
@@ -386,6 +447,11 @@ export function PresenceSection({
       ) : null}
       {presence.isError ? (
         <p className="mt-2 text-xs text-error">{userErrorMessage(presence.error)}</p>
+      ) : null}
+      {approveRegular.isError ? (
+        <p className="mt-2 text-xs text-error">
+          {userErrorMessage(approveRegular.error)}
+        </p>
       ) : null}
     </section>
   );

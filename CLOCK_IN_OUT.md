@@ -1,13 +1,18 @@
 # Clock in / clock out del turno (metodo configurabile per professionista)
 
-> **Stato 2026-09-24:** implementato il primo flusso end-to-end: fondamenta DB,
+> **Stato 2026-09-25:** implementato il primo flusso end-to-end: fondamenta DB,
 > metodo `app`, entrata/uscita del professionista, correzione/annullamento
 > append-only e approvazione dalla dashboard. La sede parte da `manual` e può
 > abilitare `app` sia dalla dashboard sia dall'app manager; dalla scheda staff
 > si può anche ereditare il metodo della sede oppure impostare `manual`/`app`
 > per la singola persona. Nella Home del professionista la card **Timbratura**
 > offre entrata e uscita rapide; il dettaglio turno conserva la stessa azione
-> come percorso contestuale. QR, geolocalizzazione e promemoria restano
+> come percorso contestuale. Nel Planning per persona, web e app, ogni turno
+> concluso confronta ore programmate ed effettive: le ore approvate sono
+> definitive, quelle timbrate ma non ancora approvate restano **proposte**, e
+> il riepilogo calcola lo scostamento soltanto sugli stessi turni già
+> consuntivati (mai contro i turni futuri della settimana). QR,
+> geolocalizzazione e promemoria restano
 > milestone future.
 > Il piano era stato scritto prima del refactor del 2026-09-20; i riferimenti
 > storici qui sotto vanno letti sul modello nuovo (vedi `supabase/README.md`):
@@ -165,6 +170,11 @@ Decisioni prese con l'utente:
   solo timbrature complete, non annullate e senza anomalie; le altre restano
   esplicitamente “Da verificare”. Vale la stessa restrizione sulle proprie ore
   già applicata da `record_attendance`.
+- **Da rivalutare dopo i primi test reali:** nell'MVP l'approvazione arrotonda la
+  durata al quarto d'ora più vicino, mentre entrata e uscita originali restano
+  esatte. Verificare con titolari e consulenti se mantenere questa regola,
+  conservare i minuti esatti oppure renderla configurabile per azienda/contratto;
+  non assumere che un unico criterio sia valido per tutti.
 - I riepiloghi mensili devono esporre separatamente totale approvato e ore non
   ancora revisionate; il totale definitivo non usa il fallback pianificato.
 
@@ -234,13 +244,24 @@ Applicare via MCP Supabase + allineare history (vedi memoria supabase-cli-no-tok
 - **Rotazione segreto**: azione separata con conferma nelle impostazioni della
   sede, utile se si sospetta una compromissione. Non è la normale rotazione dei
   30 secondi e comporta l'invalidazione immediata dei token precedenti.
-- **Presenze** — `web/src/shifts/PresenceSection.tsx` e `PresenceRow` in `(manager)/shift/[id].tsx`: per riga mostra timbratura ("18:04–23:40", "entrata senza uscita", "non timbrato") e, se completa e diversa dalle ore attuali, bottone "Usa ore timbrate (5,5h)" → `presence.mutate({ id, status, worked_hours: clockedHours })`. Nessuna scrittura automatica.
+- **Presenze** — `web/src/shifts/PresenceSection.tsx` e
+  `src/features/clock/ManagerClockReview.tsx` dentro `PresenceRow` mobile: per
+  riga mostrano la timbratura ("18:04–23:40", "uscita mancante", "non
+  timbrato"). Una timbratura completa resta "Da verificare" finché chi ha il
+  permesso Ore sceglie **“Approva ore timbrate”**; solo allora la RPC salva le
+  ore lavorate definitive. Nessuna scrittura automatica.
 - Se manca il clock-out, chi ha il permesso Ore vede **“Inserisci uscita”**. Se
   la scansione è avvenuta in ritardo, vede **“Correggi orari”**. Entrambe le
   azioni richiedono una motivazione e aggiungono una riga a
   `shift_clock_corrections`, senza cambiare la scansione originale.
 - Quando esiste una correzione, la UI mostra l'orario corretto come principale e
   rende consultabile anche quello originale con autore, data e motivazione.
+- Il Planning web e il tab Turni dell'app mostrano un riepilogo del periodo
+  **“Timbrature da controllare”**, con voci apribili per persona e turno. Le
+  categorie restano distinte: “uscita mancante” è un'anomalia, “ore da
+  approvare” è un'azione in attesa. Prima della fine prevista un'entrata aperta
+  è normale e non genera avvisi. Le viste web mostrano lo stesso segnale anche
+  sulla card o sul chip del turno.
 - Sulla timbratura attiva chi ha il permesso Ore vede anche **“Annulla
   timbratura”**: apre
   una conferma con motivazione obbligatoria, spiega che l'operazione sbloccherà

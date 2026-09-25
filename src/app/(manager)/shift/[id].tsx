@@ -9,6 +9,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Icon } from "@/components/ui/Icon";
 import { InfoRow } from "@/components/ui/InfoRow";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
@@ -21,6 +22,7 @@ import {
   formatHours,
   formatShiftRange,
   isShiftOver,
+  shiftEndsAt,
   shiftDurationHours,
 } from "@/lib/format";
 import { userErrorMessage } from "@/lib/errors";
@@ -37,6 +39,12 @@ import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
 import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
+import { ManagerClockReview } from "@/features/clock/ManagerClockReview";
+import { useApproveClockRecords } from "@/features/clock/hooks";
+import {
+  effectiveClockTimes,
+  isRegularPendingClock,
+} from "@/features/clock/hours";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
 
@@ -138,11 +146,13 @@ function PresenceRow({
   assignment,
   plannedHours,
   shiftId,
+  scheduledOutAt,
   locked,
 }: {
   assignment: AssignmentWithStaff;
   plannedHours: number;
   shiftId: string;
+  scheduledOutAt: Date;
   locked?: boolean;
 }) {
   const presence = useSetAssignmentPresence(shiftId);
@@ -230,6 +240,13 @@ function PresenceRow({
         </View>
         )}
       </View>
+
+      <ManagerClockReview
+        assignment={assignment}
+        scheduledOutAt={scheduledOutAt}
+        plannedHours={plannedHours}
+        locked={locked}
+      />
 
       {locked ? (
         <View className="mt-3 border-t border-border pt-3">
@@ -324,7 +341,7 @@ export default function ShiftDetailScreen() {
   // Chi gestisce può essere in turno: la propria riga si riconosce, e su di essa
   // presenze e ore sono del titolare e non del collaboratore.
   const myRoster = useMyRosterIds();
-  const { authority } = useOwnerVenues();
+  const { authority, can } = useOwnerVenues();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -343,6 +360,7 @@ export default function ShiftDetailScreen() {
   );
 
   const statusMutation = useUpdateShiftStatus(id);
+  const approveRegular = useApproveClockRecords();
   const busy = statusMutation.isPending;
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
@@ -430,6 +448,40 @@ export default function ShiftDetailScreen() {
   // A consuntivo si segna solo chi il turno l'ha accettato: un rifiuto non è
   // un'assenza, e nella riga presenza si leggerebbe come tale.
   const presenceRows = assignments.filter((a) => a.status !== "declined");
+  // La propria riga, quando le proprie ore non sono mie da scrivere: il
+  // collaboratore (`authority !== 'owner'`). Anche sulle righe altrui serve il
+  // permesso Ore della sede.
+  const isPresenceLocked = (a: AssignmentWithStaff) =>
+    !can(shift.venue_id, "can_view_hours") ||
+    (myRoster.has(a.venue_member_id) && authority !== "owner");
+  const approvableClocks = presenceRows.filter(
+    (a) =>
+      !isPresenceLocked(a) &&
+      a.clock != null &&
+      a.attendance_reviewed_at == null &&
+      effectiveClockTimes(a.clock).outAt != null
+  );
+  // In blocco solo chi ha fatto le ore del turno: chi si è discostato resta da
+  // guardare riga per riga. Con una sola timbratura basta il suo pulsante.
+  const regularClocks = approvableClocks.filter((a) =>
+    isRegularPendingClock(shift, a)
+  );
+  const showApproveRegular =
+    isPast && regularClocks.length > 0 && approvableClocks.length > 1;
+
+  function onApproveRegular() {
+    approveRegular.mutate(
+      regularClocks.map((a) => a.id),
+      {
+        onSuccess: () => toast.show("Timbrature in orario approvate"),
+        onError: (error) =>
+          toast.show(
+            userErrorMessage(error, "Impossibile approvare le ore."),
+            "error"
+          ),
+      }
+    );
+  }
   const staffRows = isPast ? presenceRows : assignments;
   const roleCoverage = computeCoverage(
     roleRequirements.map((r) => ({
@@ -588,6 +640,18 @@ export default function ShiftDetailScreen() {
               Segna chi ha svolto il turno e correggi le ore se serve.
             </Text>
           ) : null}
+          {showApproveRegular ? (
+            <GoldButton
+              label={
+                approveRegular.isPending
+                  ? "Attendere…"
+                  : `Approva le timbrature in orario (${regularClocks.length})`
+              }
+              size="sm"
+              disabled={approveRegular.isPending}
+              onPress={onApproveRegular}
+            />
+          ) : null}
           {assignmentsQuery.isError ? (
             <QueryError
               onRetry={() => assignmentsQuery.refetch()}
@@ -609,11 +673,12 @@ export default function ShiftDetailScreen() {
                 assignment={a}
                 plannedHours={plannedHours}
                 shiftId={id}
-                // La propria riga, quando le proprie ore non sono mie da
-                // scrivere: il collaboratore (`authority !== 'owner'`).
-                locked={
-                  myRoster.has(a.venue_member_id) && authority !== "owner"
-                }
+                scheduledOutAt={shiftEndsAt(
+                  shift.date,
+                  shift.start_time,
+                  shift.end_time
+                )}
+                locked={isPresenceLocked(a)}
               />
             ))
           ) : (

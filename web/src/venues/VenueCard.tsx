@@ -16,9 +16,11 @@ import { VenueInfoCard } from "./VenueInfoCard";
 export function VenueCard({
   venue,
   editable,
+  clockEditable = false,
 }: {
   venue: Venue;
   editable: boolean;
+  clockEditable?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const toast = useToast();
@@ -30,6 +32,7 @@ export function VenueCard({
   return (
     <VenueFormCard
       venue={venue}
+      showClockMethod={clockEditable}
       onCancel={() => setEditing(false)}
       onSaved={() => {
         toast.show("Sede aggiornata");

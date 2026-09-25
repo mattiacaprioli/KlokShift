@@ -112,6 +112,13 @@ export function formatHours(hours: number): string {
   return `${label} h`;
 }
 
+// Scostamento con segno ("+1 h", "-0,5 h"); null quando non c'è scostamento,
+// così chi lo mostra può ometterlo invece di scrivere "+0 h".
+export function formatHoursVariance(hours: number): string | null {
+  if (Math.abs(hours) < 0.001) return null;
+  return `${hours > 0 ? "+" : ""}${formatHours(hours)}`;
+}
+
 // Tempo relativo in italiano da un timestamp ISO: "ora", "5 min fa", "2 ore fa",
 // "ieri", "3 giorni fa"; oltre la settimana ricade sulla data formattata.
 export function timeAgo(iso: string): string {

@@ -18,6 +18,9 @@ function assignment(
   return {
     id,
     status,
+    worked_hours: null,
+    attendance_reviewed_at: null,
+    clock: null,
     role_id: null,
     role: null,
     staff_member: {

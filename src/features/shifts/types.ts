@@ -4,6 +4,7 @@ import type {
   RoleRequirementEmbed,
 } from "@/features/assignments/coverage";
 import type { AssignmentStatus } from "@/features/assignments/status";
+import type { ClockRecordWithCorrections } from "@/features/clock/hours";
 
 export type Shift = Tables<"shifts">;
 
@@ -35,6 +36,12 @@ export type ShiftWithAssignees = Shift & {
     /** Identità della riga: è l'assegnazione a spostarsi, non la persona. */
     id: string;
     status: AssignmentStatus;
+    /** Ore definitive: approvate dalla timbratura oppure inserite a mano. */
+    worked_hours: number | null;
+    /** Null finché le ore timbrate non sono state approvate esplicitamente. */
+    attendance_reviewed_at: string | null;
+    /** Sola timbratura attiva: gli annullamenti restano nello storico DB. */
+    clock: ClockRecordWithCorrections | null;
     /** Il ruolo ricoperto **su questo turno**, non quello dell'anagrafica. */
     role_id: string | null;
     role: { id: string; name: string } | null;

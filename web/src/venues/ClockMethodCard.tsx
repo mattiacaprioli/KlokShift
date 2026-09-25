@@ -4,20 +4,31 @@ import { userErrorMessage } from "@/lib/errors";
 import { Button, Card } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
-export function ClockMethodCard({ venue }: { venue: Venue }) {
+export function ClockMethodCard({
+  venue,
+  embedded = false,
+}: {
+  venue: Venue;
+  /** Dentro il modulo sede non serve una seconda card né il nome ripetuto. */
+  embedded?: boolean;
+}) {
   const save = useSetVenueClockMethod();
   const toast = useToast();
   const appEnabled = venue.clock_method === "app";
 
-  return (
-    <Card className="mt-6">
+  const content = (
+    <section
+      className={
+        embedded ? "mt-6 border-t border-border-2 pt-5" : undefined
+      }
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-wider text-gold">
-            Impostazione di questa sede
+            Timbrature
           </span>
           <h2 className="mt-1 font-serif text-lg text-t1">
-            Timbrature · {venue.name}
+            Metodo predefinito
           </h2>
           <p className="mt-1 text-sm leading-5 text-t3">
             {appEnabled
@@ -30,6 +41,7 @@ export function ClockMethodCard({ venue }: { venue: Venue }) {
           </p>
         </div>
         <Button
+          type="button"
           variant={appEnabled ? "ghost" : "gold"}
           disabled={save.isPending}
           onClick={() =>
@@ -58,6 +70,8 @@ export function ClockMethodCard({ venue }: { venue: Venue }) {
               : "Usa App in questa sede"}
         </Button>
       </div>
-    </Card>
+    </section>
   );
+
+  return embedded ? content : <Card className="mt-6 max-w-2xl">{content}</Card>;
 }

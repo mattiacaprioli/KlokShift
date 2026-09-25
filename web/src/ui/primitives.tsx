@@ -28,12 +28,17 @@ import { cn } from "@/lib/cn";
 export function Button({
   variant = "ghost",
   className,
+  // Un bottone generico è un'azione, non un submit implicito. Nei form i soli
+  // salvataggi dichiarano `type="submit"`: così un comando annidato (es.
+  // "Inserisci uscita") non fa validare o inviare il form del turno.
+  type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "gold" | "ghost" | "danger";
 }) {
   return (
     <button
+      type={type}
       className={cn(
         "focus-gold inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
         variant === "gold" &&

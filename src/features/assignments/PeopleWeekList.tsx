@@ -10,6 +10,7 @@ import {
   addDaysToDate,
   formatDate,
   formatHours,
+  formatHoursVariance,
   formatShiftRange,
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
@@ -79,7 +80,7 @@ export function PeopleWeekList({
   onOpenShift: (shiftId: string) => void;
   paddingBottom: number;
 }) {
-  const { workspaceId, venues, isMultiVenue } = useOwnerVenues();
+  const { workspaceId, venues, isMultiVenue, can } = useOwnerVenues();
   const shiftsQuery = useOwnerShiftsRange(from, to, scope);
   const peopleQuery = useOwnerPeople(workspaceId);
   // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
@@ -108,6 +109,11 @@ export function PeopleWeekList({
     () => Array.from({ length: 7 }, (_, i) => addDaysToDate(from, i)),
     [from]
   );
+  const actualVenueIds = useMemo(
+    () =>
+      new Set(scope.filter((venueId) => can(venueId, "can_view_hours"))),
+    [scope, can]
+  );
 
   const rows = useMemo(() => {
     const inScope = new Set(scope);
@@ -126,8 +132,10 @@ export function PeopleWeekList({
         roles: personRoleNames(p),
         contract: personContract(p),
       }));
-    return computeWeekLoad(shiftsQuery.data ?? [], roster);
-  }, [shiftsQuery.data, peopleQuery.data, scope]);
+    return computeWeekLoad(shiftsQuery.data ?? [], roster, {
+      actualVenueIds,
+    });
+  }, [shiftsQuery.data, peopleQuery.data, scope, actualVenueIds]);
 
   /** Nome e colore della sede di un turno, con più sedi. */
   const venueOf = (venueId: string) => {
@@ -208,12 +216,13 @@ export function PeopleWeekList({
       ListFooterComponent={
         rows.length > 0 ? (
           <Text className="mt-4 text-xs leading-5 text-t3">
-            Sono ore <Text className="font-sans-semibold">programmate</Text>,
-            calcolate dagli orari dei turni: chi ha rifiutato o è stato segnato
-            assente non le somma e gli intervalli sovrapposti si contano una
-            volta sola. Le ore effettivamente lavorate stanno nella pagina Ore.
-            Il confronto con le ore da contratto compare per chi le ha sulla
-            scheda.
+            Il totale principale mostra ore{" "}
+            <Text className="font-sans-semibold">programmate</Text>: chi ha
+            rifiutato o è stato segnato assente non le somma e gli intervalli
+            sovrapposti si contano una volta sola. Sui turni conclusi trovi
+            anche il confronto con ore effettive o proposte; la pagina Ore resta
+            il riepilogo definitivo. Il confronto col contratto compare per chi
+            lo ha sulla scheda.
           </Text>
         ) : null
       }
@@ -279,6 +288,29 @@ function PersonWeekCard({
             {person.overlapHours > 0 ? (
               <Text className="mt-1 text-[11px] font-sans-semibold text-warning">
                 Orari sovrapposti · le ore comuni sono contate una volta
+              </Text>
+            ) : null}
+            {person.approvedCount > 0 ? (
+              <Text className="mt-1 text-[11px] font-sans-semibold text-success">
+                Effettive {formatHours(person.approvedHours)} su {formatHours(person.approvedPlannedHours)}
+                {formatHoursVariance(person.approvedHours - person.approvedPlannedHours)
+                  ? ` · ${formatHoursVariance(person.approvedHours - person.approvedPlannedHours)}`
+                  : ""}
+              </Text>
+            ) : null}
+            {person.proposedCount > 0 ? (
+              <Text className="mt-1 text-[11px] font-sans-semibold text-warning">
+                Proposte {formatHours(person.proposedHours)} su {formatHours(person.proposedPlannedHours)}
+                {formatHoursVariance(person.proposedHours - person.proposedPlannedHours)
+                  ? ` · ${formatHoursVariance(person.proposedHours - person.proposedPlannedHours)}`
+                  : ""} · da verificare
+              </Text>
+            ) : null}
+            {person.missingOutCount > 0 ? (
+              <Text className="mt-1 text-[11px] font-sans-semibold text-warning">
+                {person.missingOutCount === 1
+                  ? "1 uscita mancante"
+                  : `${person.missingOutCount} uscite mancanti`}
               </Text>
             ) : null}
             {absences.map((a) => (
@@ -380,6 +412,21 @@ function PersonWeekCard({
                       .filter(Boolean)
                       .join(" · ")}
                   </Text>
+                  {ps.actual ? (
+                    <Text
+                      className={cn(
+                        "mt-0.5 text-[11px] font-sans-semibold",
+                        ps.actual.kind === "approved"
+                          ? "text-success"
+                          : "text-warning"
+                      )}
+                      numberOfLines={1}
+                    >
+                      {ps.actual.kind === "missing_out"
+                        ? "Uscita mancante"
+                        : `${ps.actual.kind === "approved" ? "Effettive" : "Proposte"} ${formatHours(ps.actual.hours)}${formatHoursVariance(ps.actual.hours - ps.hours) ? ` · ${formatHoursVariance(ps.actual.hours - ps.hours)}` : ""}${ps.actual.kind === "proposed" ? " · da verificare" : ""}`}
+                    </Text>
+                  ) : null}
                 </View>
                 <Icon name="chevR" size={14} color="#8C857A" />
               </Pressable>
@@ -391,6 +438,7 @@ function PersonWeekCard({
   );
 }
 
+/** Scostamento firmato, omesso quando il consuntivo coincide col turno. */
 /**
  * Un giorno nella riga dei sette: pieno se ci lavora, vuoto se è libero.
  *

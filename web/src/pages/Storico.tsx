@@ -8,9 +8,15 @@ import {
   hasPastFilters,
   type PastShiftsFilters as PastFilters,
 } from "@/features/shifts/pastFilters";
-import { formatDate, formatShiftRange } from "@/lib/format";
+import {
+  formatDate,
+  formatHoursVariance,
+  formatShiftRange,
+} from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
-import type { Shift } from "@/features/shifts/api";
+import { clockAttentionForShift } from "@/features/clock/attention";
+import { shiftDeviations } from "@/features/clock/hours";
+import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
 import { PastShiftsFilters } from "../shifts/PastShiftsFilters";
@@ -39,7 +45,9 @@ const SEARCH_DEBOUNCE_MS = 350;
  * chiamerebbe quel risultato "lo storico".
  */
 export function StoricoPage() {
-  const { venues } = useOwnerVenues();
+  const { venues, can, canAny } = useOwnerVenues();
+  // Ore e timbrature sono dati del permesso Ore, come nel Planning.
+  const showHours = canAny("can_view_hours");
   // Il dettaglio si apre qui sopra, senza cambiare rotta: mandare l'utente sul
   // Planning gli faceva perdere lo storico e riportava il calendario indietro.
   const [panel, setPanel] = useState<Shift | null>(null);
@@ -118,12 +126,16 @@ export function StoricoPage() {
                   <th className="px-5 py-3 font-semibold">Turno</th>
                   <th className="px-5 py-3 font-semibold">Orario</th>
                   <th className="px-5 py-3 text-right font-semibold">Coperti</th>
+                  {showHours ? (
+                    <th className="px-5 py-3 font-semibold">Ore</th>
+                  ) : null}
                   <th className="px-5 py-3 font-semibold">Stato</th>
                 </tr>
               </thead>
               <tbody>
                 {shifts.map((s) => {
                   const counts = shiftCounts(s);
+                  const hoursVisible = showHours && can(s.venue_id, "can_view_hours");
                   return (
                   <tr
                     key={s.id}
@@ -138,12 +150,17 @@ export function StoricoPage() {
                     <td className="px-5 py-2.5 text-right font-mono text-t2">
                       {counts.filled}/{counts.total}
                     </td>
+                    {showHours ? (
+                      <td className="px-5 py-2.5">
+                        {hoursVisible ? (
+                          <HoursDeviations shift={s} />
+                        ) : (
+                          <span className="text-t4">—</span>
+                        )}
+                      </td>
+                    ) : null}
                     <td className="px-5 py-2.5">
-                      {s.status === "cancelled" ? (
-                        <Pill tone="error">Annullato</Pill>
-                      ) : (
-                        <Pill tone="neutral">Concluso</Pill>
-                      )}
+                      <ShiftStatus shift={s} withClock={hoursVisible} />
                     </td>
                   </tr>
                   );
@@ -174,4 +191,66 @@ export function StoricoPage() {
       ) : null}
     </>
   );
+}
+
+/** Oltre questo numero di nomi la cella dice «e altri N». */
+const MAX_DEVIATION_NAMES = 2;
+
+/**
+ * Le ore del turno dette per persona: «In orario», oppure solo chi si è
+ * discostato («Andrea +1 h»). Mai una somma: nasconderebbe di chi è l'ora in
+ * più, e due scostamenti opposti si annullerebbero. Quelli ancora solo timbrati
+ * restano in colore d'avviso, perché non sono ancora ore lavorate.
+ */
+function HoursDeviations({ shift }: { shift: ShiftWithAssignees }) {
+  if (shift.status === "cancelled") return <span className="text-t4">—</span>;
+  const { measured, deviations } = shiftDeviations(shift);
+  if (measured === 0) return <span className="text-t4">—</span>;
+  if (deviations.length === 0) return <span className="text-t3">In orario</span>;
+  const shown = deviations.slice(0, MAX_DEVIATION_NAMES);
+  const others = deviations.length - shown.length;
+  return (
+    <span className="text-t2">
+      {shown.map((d, i) => (
+        <span key={`${d.name}:${i}`}>
+          {i > 0 ? ", " : ""}
+          {d.name}{" "}
+          <span
+            title={d.proposed ? "Ore timbrate, ancora da approvare" : "Ore approvate"}
+            className={
+              d.proposed ? "font-mono text-warning" : "font-mono text-t1"
+            }
+          >
+            {formatHoursVariance(d.delta)}
+          </span>
+        </span>
+      ))}
+      {others > 0 ? ` e altri ${others}` : ""}
+    </span>
+  );
+}
+
+/**
+ * «Concluso» solo se non resta niente da fare: una timbratura aperta o da
+ * approvare lo dice qui, perché il banner del Planning copre solo il periodo
+ * visibile e passata la settimana nessun'altra vista la mostrerebbe.
+ */
+function ShiftStatus({
+  shift,
+  withClock,
+}: {
+  shift: ShiftWithAssignees;
+  withClock: boolean;
+}) {
+  if (shift.status === "cancelled") return <Pill tone="error">Annullato</Pill>;
+  const kinds = withClock
+    ? clockAttentionForShift(shift).map((item) => item.kind)
+    : [];
+  if (kinds.includes("missing_out")) {
+    return <Pill tone="warning">Uscita mancante</Pill>;
+  }
+  if (kinds.includes("to_review")) {
+    return <Pill tone="warning">Da approvare</Pill>;
+  }
+  return <Pill tone="neutral">Concluso</Pill>;
 }

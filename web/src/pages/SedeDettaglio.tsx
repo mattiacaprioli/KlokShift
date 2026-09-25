@@ -44,6 +44,7 @@ export function SedeDettaglioPage() {
   // Il permesso è **per sede**: con due sedi delegate un collaboratore può
   // scrivere l'una e non l'altra, quindi la domanda si fa qui e non sul menu.
   const editable = can(venue.id, "can_manage_venue");
+  const clockEditable = can(venue.id, "can_view_hours");
 
   return (
     <>
@@ -51,13 +52,19 @@ export function SedeDettaglioPage() {
         title={venue.name}
         subtitle={
           editable
-            ? "Questi dati sono ciò che i professionisti vedono di te."
+            ? "Qui trovi i dati della sede. Usa Modifica per aggiornare dati e impostazioni."
             : "Questi dati sono ciò che i professionisti vedono della sede."
         }
         actions={back}
       />
-      <VenueCard key={venue.id} venue={venue} editable={editable} />
-      {can(venue.id, "can_view_hours") ? (
+      <VenueCard
+        key={venue.id}
+        venue={venue}
+        editable={editable}
+        clockEditable={clockEditable}
+      />
+      {/* Il fallback resta solo per chi gestisce Ore ma non i dati sede. */}
+      {!editable && clockEditable ? (
         <ClockMethodCard venue={venue} />
       ) : null}
     </>

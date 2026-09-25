@@ -1,15 +1,22 @@
 import { shiftDurationHours } from "@/lib/format";
 import type { Contract } from "@/features/staff/contract";
+import {
+  assignmentActual,
+  type AssignmentActual,
+  type ClockRecordWithCorrections,
+} from "@/features/clock/hours";
 import { isActiveAssignment, type AssignmentStatus } from "./status";
 
 /**
- * Carico di lavoro **programmato** per persona su un intervallo di giorni.
+ * Carico di lavoro **programmato** per persona su un intervallo di giorni, con
+ * il confronto separato del consuntivo per i soli turni che lo possiedono.
  *
- * ⚠️ Non è il consuntivo: qui le ore vengono dagli orari del turno, mentre le
- * ore *lavorate* stanno in `shift_assignments.worked_hours` e le aggrega
- * `get_owner_hours_summary` (pagina Ore, quella che va al commercialista). Questo
- * serve **mentre** si assegna, per accorgersi degli squilibri prima che
- * diventino un problema di busta paga.
+ * ⚠️ Il totale principale non diventa un consuntivo: viene sempre dagli orari
+ * del turno. Le ore *lavorate* definitive stanno in
+ * `shift_assignments.worked_hours` e le aggrega `get_owner_hours_summary`
+ * (pagina Ore, quella che va al commercialista). Qui vengono affiancate solo
+ * agli stessi turni già conclusi, per rendere visibile lo scostamento senza
+ * confrontarle con il futuro della settimana.
  *
  * Il metro con cui si giudicano queste ore è il contratto della persona
  * (`features/staff/contract.ts`), che ogni titolare imposta sulla scheda. Fino al
@@ -21,6 +28,11 @@ import { isActiveAssignment, type AssignmentStatus } from "./status";
 type LoadAssignment = {
   id: string;
   status: AssignmentStatus;
+  /** Ore definitive, da approvazione della timbratura o inserimento manuale. */
+  worked_hours: number | null;
+  attendance_reviewed_at: string | null;
+  /** Sola timbratura attiva; gli annullamenti sono già esclusi dal data layer. */
+  clock: ClockRecordWithCorrections | null;
   /** Il ruolo ricoperto su **questo** turno, se è stato scelto. */
   role: { name: string } | null;
   staff_member: {
@@ -86,6 +98,11 @@ export type PersonShift = {
   role: string | null;
   /** Ore che questo turno aggiunge al carico: 0 se la persona non viene. */
   hours: number;
+  /**
+   * Consuntivo confrontabile con questo turno. `approved` è definitivo;
+   * `proposed` viene dalla timbratura completa ma aspetta ancora la revisione.
+   */
+  actual: AssignmentActual;
   /** Questo turno si sovrappone a un altro turno attivo della stessa persona. */
   overlaps: boolean;
 };
@@ -121,6 +138,16 @@ export type PersonLoad = {
    * giorni non sanno convertirsi a settimana.
    */
   daysWorked: number;
+  /** Consuntivo soltanto dei turni che hanno già un dato effettivo definitivo. */
+  approvedHours: number;
+  approvedPlannedHours: number;
+  approvedCount: number;
+  /** Timbrature complete che aspettano la revisione del gestore. */
+  proposedHours: number;
+  proposedPlannedHours: number;
+  proposedCount: number;
+  /** Timbrature ancora aperte oltre la fine prevista del turno. */
+  missingOutCount: number;
 };
 
 /**
@@ -143,7 +170,16 @@ export function computeWeekLoad(
     display_name: string;
     roles: string | null;
     contract: Contract | null;
-  }[]
+  }[],
+  options: {
+    /**
+     * Le sedi per cui chi guarda possiede il permesso Ore. Il confronto non
+     * deve trasformare la query del Planning in una scorciatoia per leggere
+     * presenze fuori dal proprio ambito.
+     */
+    actualVenueIds: ReadonlySet<string>;
+    now?: Date;
+  }
 ): PersonLoad[] {
   const rows = new Map<string, PersonLoad>();
   const activeDays = new Map<string, Set<string>>();
@@ -169,6 +205,13 @@ export function computeWeekLoad(
       hours: 0,
       overlapHours: 0,
       daysWorked: 0,
+      approvedHours: 0,
+      approvedPlannedHours: 0,
+      approvedCount: 0,
+      proposedHours: 0,
+      proposedPlannedHours: 0,
+      proposedCount: 0,
+      missingOutCount: 0,
     };
     rows.set(member.person_id, created);
     activeDays.set(member.person_id, new Set());
@@ -188,6 +231,10 @@ export function computeWeekLoad(
       const hours = active
         ? shiftDurationHours(shift.start_time, shift.end_time)
         : 0;
+      const actual: PersonShift["actual"] =
+        active && options.actualVenueIds.has(shift.venue_id)
+          ? assignmentActual(shift, assignment, options.now)
+          : null;
 
       const list = person.byDay.get(shift.date) ?? [];
       const personShift: PersonShift = {
@@ -204,6 +251,7 @@ export function computeWeekLoad(
         status: assignment.status,
         role: assignment.role?.name ?? null,
         hours,
+        actual,
         overlaps: false,
       };
       list.push(personShift);
@@ -213,6 +261,18 @@ export function computeWeekLoad(
         const activeForPerson = activeShifts.get(member.person_id) ?? [];
         activeForPerson.push(personShift);
         activeShifts.set(member.person_id, activeForPerson);
+
+        if (actual?.kind === "approved") {
+          person.approvedHours += actual.hours;
+          person.approvedPlannedHours += hours;
+          person.approvedCount += 1;
+        } else if (actual?.kind === "proposed") {
+          person.proposedHours += actual.hours;
+          person.proposedPlannedHours += hours;
+          person.proposedCount += 1;
+        } else if (actual?.kind === "missing_out") {
+          person.missingOutCount += 1;
+        }
       }
     }
   }

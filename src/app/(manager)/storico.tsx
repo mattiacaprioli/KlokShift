@@ -11,6 +11,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Segmented } from "@/components/ui/Segmented";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
+import { ShiftClockSummary } from "@/features/clock/ShiftClockSummary";
 import {
   useOwnerPastShifts,
   useOwnerPastShiftsCount,
@@ -123,7 +124,7 @@ function ChipRow({ label, children }: { label: string; children: React.ReactNode
 export default function ManagerHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { venues, isMultiVenue } = useOwnerVenues();
+  const { venues, isMultiVenue, can } = useOwnerVenues();
   const roles = groupRolesByName(useOwnerVenueRoles().data ?? []);
 
   const [filters, setFilters] = useState<PastShiftsFilters>(NO_PAST_FILTERS);
@@ -326,6 +327,12 @@ export default function ManagerHistoryScreen() {
               shift={item}
               venue={venueBadge(item.venue_id)}
               onPress={() => router.push(`/(manager)/shift/${item.id}`)}
+              // Ore e timbrature sono dati del permesso Ore, come nel planning.
+              footer={
+                can(item.venue_id, "can_view_hours") ? (
+                  <ShiftClockSummary shift={item} />
+                ) : null
+              }
             />
           )}
           onEndReachedThreshold={0.5}

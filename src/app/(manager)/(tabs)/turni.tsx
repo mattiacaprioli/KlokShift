@@ -25,8 +25,13 @@ import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
-import { useOwnerShifts } from "@/features/shifts/hooks";
+import {
+  useOwnerShifts,
+  useOwnerShiftsRange,
+} from "@/features/shifts/hooks";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
+import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
+import { clockAttentionItems } from "@/features/clock/attention";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -76,7 +81,6 @@ export default function ManagerShiftsScreen() {
   // con un errore che non spiega niente.
   const canCreateShift = venueQuery.canAny("can_manage_shifts");
   const upcomingQuery = useOwnerShifts();
-  const pull = usePullToRefresh(() => upcomingQuery.refetch());
 
   const today = todayString();
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
@@ -113,6 +117,26 @@ export default function ManagerShiftsScreen() {
   const scope = useMemo(
     () => venues.filter((v) => !hiddenVenues.has(v.id)).map((v) => v.id),
     [venues, hiddenVenues]
+  );
+
+  /**
+   * Le anomalie guardano l'intera settimana selezionata, passato compreso.
+   * L'agenda principale invece resta intenzionalmente solo futura: così Andrea
+   * con un'uscita mancante emerge senza rimettere tutti i turni vecchi in lista.
+   */
+  const weekFrom = startOfWeek(visibleDay);
+  const weekTo = addDaysToDate(weekFrom, 6);
+  const clockScope = useMemo(
+    () => scope.filter((venueId) => venueQuery.can(venueId, "can_view_hours")),
+    [scope, venueQuery]
+  );
+  const clockRangeQuery = useOwnerShiftsRange(weekFrom, weekTo, clockScope);
+  const clockItems = useMemo(
+    () => clockAttentionItems(clockRangeQuery.data ?? []),
+    [clockRangeQuery.data]
+  );
+  const pull = usePullToRefresh(() =>
+    Promise.all([upcomingQuery.refetch(), clockRangeQuery.refetch()])
   );
 
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
@@ -452,6 +476,24 @@ export default function ManagerShiftsScreen() {
             })}
           </ScrollView>
         ) : null}
+
+        {clockRangeQuery.isError && clockScope.length > 0 ? (
+          <Pressable
+            onPress={() => clockRangeQuery.refetch()}
+            accessibilityRole="button"
+            className="mt-3 rounded-2xl border border-error/50 px-3.5 py-3"
+          >
+            <Text className="text-xs font-sans-semibold text-error">
+              Controllo timbrature non disponibile · Riprova
+            </Text>
+          </Pressable>
+        ) : (
+          <ClockAttentionBanner
+            className="mt-3"
+            items={clockItems}
+            onOpen={(item) => openShift(item.shift.id)}
+          />
+        )}
       </View>
 
       {mode === "people" ? (

@@ -12,6 +12,11 @@ import {
 function invalidateClockViews(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: qk.assignments.all });
   qc.invalidateQueries({ queryKey: qk.staff.all });
+  // Planning e storico incorporano lo stato minimo delle timbrature per
+  // segnalare le anomalie: un'uscita/correzione/approvazione deve spegnere
+  // subito il badge.
+  qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
+  qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
 }
 
 export function usePunchClock() {
@@ -28,6 +33,21 @@ export function useApproveClockRecord() {
   return useMutation({
     mutationFn: approveClockRecord,
     onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+/**
+ * Approva più timbrature insieme: è il pulsante «Approva le timbrature in
+ * orario». La RPC resta quella della singola riga, e qualunque sia l'esito le
+ * viste si aggiornano, così un errore a metà mostra cosa è passato davvero.
+ */
+export function useApproveClockRecords() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (assignmentIds: string[]) => {
+      await Promise.all(assignmentIds.map((id) => approveClockRecord(id)));
+    },
+    onSettled: () => invalidateClockViews(qc),
   });
 }
 

@@ -207,8 +207,28 @@ export function RealtimeSync({
           // La copertura si legge dalle liste di turni: invalidare quelle basta.
           invalidate(qk.shifts.byOwnerAll);
           invalidate(qk.shifts.rangeAny);
+          // Lo storico mostra le ore approvate e quelle ancora da approvare.
+          invalidate(qk.shifts.pastAll);
           // Ore lavorate e performance dell'organico.
           invalidate(qk.staff.all);
+        }
+      );
+      // Entrata e uscita cambiano `shift_clock_records`, non l'assegnazione:
+      // senza questo evento il planning del titolare resterebbe senza avviso
+      // finché non viene ricaricato a mano. La riga porta sia sede sia turno.
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shift_clock_records", filter },
+        (payload) => {
+          const row = rowOf(payload);
+          const shiftId = idOf(row, "shift_id");
+          if (shiftId) {
+            invalidate(qk.assignments.byShift(shiftId));
+            invalidate(qk.shifts.detail(shiftId));
+          }
+          invalidate(qk.assignments.todayAll);
+          invalidate(qk.shifts.rangeAny);
+          invalidate(qk.shifts.pastAll);
         }
       );
     }

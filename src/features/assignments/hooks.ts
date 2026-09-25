@@ -405,6 +405,10 @@ export function useSetAssignmentPresence(shiftId: string) {
       qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
       qc.invalidateQueries({ queryKey: qk.assignments.all });
       qc.invalidateQueries({ queryKey: qk.staff.all });
+      // Le ore inserite a mano sono consuntivo come quelle approvate: planning
+      // per persona e storico le confrontano col programmato.
+      qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
+      qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
     },
   });
 }

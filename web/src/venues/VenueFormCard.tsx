@@ -13,6 +13,7 @@ import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, Textarea } from "../ui/primitives";
+import { ClockMethodCard } from "./ClockMethodCard";
 
 /**
  * Logo + modulo di una sede, in creazione o in modifica.
@@ -24,6 +25,7 @@ export function VenueFormCard({
   venue,
   onSaved,
   onCancel,
+  showClockMethod = false,
 }: {
   /** `null` = creazione. */
   venue: Venue | null;
@@ -31,6 +33,8 @@ export function VenueFormCard({
   onSaved?: (venue: { id: string }) => void;
   /** Aperto da una lettura (`VenueCard`): «Annulla» ci torna senza salvare. */
   onCancel?: () => void;
+  /** Le timbrature sono un'impostazione della sede e vivono nella sua modifica. */
+  showClockMethod?: boolean;
 }) {
   const toast = useToast();
   const { session } = useAuth();
@@ -212,6 +216,10 @@ export function VenueFormCard({
             </Button>
           </div>
         </form>
+
+        {venue && showClockMethod ? (
+          <ClockMethodCard venue={venue} embedded />
+        ) : null}
       </Card>
     </>
   );

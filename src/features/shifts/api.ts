@@ -7,6 +7,7 @@ import {
 } from "./pastFilters";
 import type { Enums } from "@/types/database";
 import { VENUE_MEMBER_BRIEF } from "@/features/assignments/embeds";
+import type { ClockRecordWithCorrections } from "@/features/clock/hours";
 import type {
   Shift,
   ShiftWithAssignees,
@@ -77,6 +78,63 @@ export async function getOwnerShifts(
 }
 
 /**
+ * Turno + copertura + chi è assegnato con le sue timbrature: la forma di
+ * `ShiftWithAssignees`. La usano il planning (`getOwnerShiftsRange`) e lo
+ * storico, che deve saper dire quali turni conclusi hanno ancora ore da
+ * approvare.
+ *
+ * Identità dell'assegnato oltre al ruolo: la stessa query alimenta la
+ * copertura (per ruolo) e la vista per persona (chi lavora quanto).
+ *
+ * Gli altri tre campi servono al drag & drop del planning, e servono qui
+ * per non fare una query in più a ogni trascinamento:
+ *   · `id` dell'assegnazione → è ciò che si riassegna;
+ *   · l'account (`user_id`) → chi non ha un account collegato non riceve
+ *     notifiche, quindi non va contato quando si chiede conferma.
+ * La riga di organico arriva con la persona sotto (`member`): sotto il nome
+ * `staff_member` la rimette in forma `toShiftWithAssignees`.
+ */
+const ASSIGNEES_SELECT = `*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, worked_hours, attendance_reviewed_at, role:venue_roles(id, name), clock:shift_clock_records(*, corrections:shift_clock_corrections(*)), ${VENUE_MEMBER_BRIEF})`;
+
+type AssigneesRow = Shift & {
+  shift_role_requirements: ShiftWithAssignees["shift_role_requirements"];
+  shift_assignments: (Omit<
+    ShiftWithAssignees["shift_assignments"][number],
+    "clock" | "staff_member"
+  > & {
+    clock: ClockRecordWithCorrections[];
+    venue_member: {
+      id: string;
+      member_id: string;
+      member: { display_name: string; user_id: string | null } | null;
+    } | null;
+  })[];
+};
+
+function toShiftWithAssignees({
+  shift_assignments,
+  ...shift
+}: AssigneesRow): ShiftWithAssignees {
+  return {
+    ...shift,
+    shift_assignments: shift_assignments.map(
+      ({ venue_member: vm, clock, ...a }) => ({
+        ...a,
+        // Il vincolo è unico solo sulle righe non annullate: nello storico
+        // possono esserci più tentativi, ma nel planning conta quello attivo.
+        clock: clock.find((record) => record.voided_at == null) ?? null,
+        staff_member: vm && {
+          id: vm.id,
+          display_name: vm.member?.display_name ?? "",
+          person_id: vm.member_id,
+          waiter_id: vm.member?.user_id ?? null,
+        },
+      })
+    ),
+  };
+}
+
+/**
  * Turni dell'azienda in un intervallo di date arbitrario (estremi inclusi).
  * Serve alle viste a calendario, che devono poter navigare anche indietro:
  * `getOwnerShifts` copre solo futuri/oggi e `getOwnerPastShiftsPage` è paginata.
@@ -98,17 +156,7 @@ export async function getOwnerShiftsRange(
   const { data, error } = await supabase
     .from("shifts")
     .select(
-      // Identità dell'assegnato oltre al ruolo: la stessa query alimenta la
-      // copertura (per ruolo) e la vista per persona (chi lavora quanto).
-      //
-      // Gli altri tre campi servono al drag & drop del planning, e servono qui
-      // per non fare una query in più a ogni trascinamento:
-      //   · `id` dell'assegnazione → è ciò che si riassegna;
-      //   · l'account (`user_id`) → chi non ha un account collegato non riceve
-      //     notifiche, quindi non va contato quando si chiede conferma.
-      // La riga di organico arriva con la persona sotto (`member`): sotto il nome
-      // `staff_member` la rimette in forma `toStaffMember`.
-      `*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), ${VENUE_MEMBER_BRIEF})`
+      ASSIGNEES_SELECT
     )
     .in("venue_id", venueIds)
     .gte("date", from)
@@ -117,23 +165,18 @@ export async function getOwnerShiftsRange(
     .order("start_time", { ascending: true })
     .order("venue_id", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(({ shift_assignments, ...shift }) => ({
-    ...shift,
-    shift_assignments: shift_assignments.map(({ venue_member: vm, ...a }) => ({
-      ...a,
-      staff_member: vm && {
-        id: vm.id,
-        display_name: vm.member?.display_name ?? "",
-        person_id: vm.member_id,
-        waiter_id: vm.member?.user_id ?? null,
-      },
-    })),
-  }));
+  return ((data as unknown as AssigneesRow[] | null) ?? []).map(
+    toShiftWithAssignees
+  );
 }
 
-/** Una pagina di storico, con l'indicazione che ce ne sono altre. */
+/**
+ * Una pagina di storico, con l'indicazione che ce ne sono altre. Le righe
+ * portano anche assegnati e timbrature: lo storico segnala i turni conclusi
+ * con ore ancora da approvare e lo scostamento dal programmato.
+ */
 export type PastShiftsPage = {
-  rows: ShiftWithCount[];
+  rows: ShiftWithAssignees[];
   /** Ultima riga DB ricevuta: cursore della pagina successiva. */
   nextCursor: PastShiftsCursor | null;
 };
@@ -143,10 +186,6 @@ export type PastShiftsCursor = {
   start_time: string;
   id: string;
 };
-
-/** Le relazioni della copertura: le stesse di `getOwnerShifts`. */
-const PAST_SELECT =
-  "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)";
 
 /**
  * Le sedi su cui interrogare: quelle scelte, ristrette a quelle dell'azienda.
@@ -202,9 +241,11 @@ export async function getOwnerPastShiftsPage(
     })
     // Le relazioni della copertura restano intere anche col filtro mansione:
     // quel filtro vive nell'EXISTS della RPC e non taglia questo innesto.
-    .select(PAST_SELECT);
+    .select(ASSIGNEES_SELECT);
   if (error) throw new Error(error.message);
-  const received = (data as unknown as ShiftWithCount[] | null) ?? [];
+  const received = ((data as unknown as AssigneesRow[] | null) ?? []).map(
+    toShiftWithAssignees
+  );
   return {
     rows: received,
     nextCursor:

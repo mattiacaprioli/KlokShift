@@ -33,18 +33,26 @@ export function SedePage() {
     // turni la vede — deve sapere dove lavora — ma non la scrive. Come il
     // Profilo dell'app, che a lui nasconde «Modifica sede».
     const editable = can(venues[0].id, "can_manage_venue");
+    const clockEditable = can(venues[0].id, "can_view_hours");
     return (
       <>
         <PageHeader
           title="Sede"
           subtitle={
             editable
-              ? "Questi dati sono ciò che i professionisti vedono di te."
+              ? "Qui trovi i dati della sede. Usa Modifica per aggiornare dati e impostazioni."
               : "Questi dati sono ciò che i professionisti vedono della sede."
           }
         />
-        <VenueCard venue={venues[0]} editable={editable} />
-        {can(venues[0].id, "can_view_hours") ? (
+        <VenueCard
+          venue={venues[0]}
+          editable={editable}
+          clockEditable={clockEditable}
+        />
+        {/* Chi può gestire i dati trova questa impostazione dentro «Modifica».
+            Un collaboratore con il solo permesso Ore deve però conservarne
+            l'accesso anche se non può aprire il modulo anagrafico. */}
+        {!editable && clockEditable ? (
           <ClockMethodCard venue={venues[0]} />
         ) : null}
         {/* Con una sede sola l'elenco ripeterebbe la scheda che sta già sopra:
