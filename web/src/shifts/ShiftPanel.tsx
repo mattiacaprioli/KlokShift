@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
-import { absenceForShift } from "@/features/absences/conflicts";
+import { absencesOnDates } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceCellLabel } from "@/features/absences/labels";
 import { useForm } from "react-hook-form";
@@ -36,6 +36,7 @@ import {
   type AssignmentStatus,
 } from "@/features/assignments/status";
 import {
+  addDaysToDate,
   formatDate,
   formatShiftSummary,
   isShiftOver,
@@ -190,8 +191,12 @@ function InternalForm({
     {}
   );
   const [roleTargets, setRoleTargets] = useState<RoleTarget[]>([]);
-  // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
-  const [extraDates, setExtraDates] = useState<string[]>([]);
+  /**
+   * Chi va messo in turno anche nei giorni in cui ha un'assenza approvata. Di
+   * norma lì resta fuori (vedi `staffForDate`); il titolare può forzare,
+   * perché può sapere cose che l'app non sa. Schede di sede, come `staffRoles`.
+   */
+  const [forcedAbsent, setForcedAbsent] = useState<Set<string>>(new Set());
 
   const {
     register,
@@ -219,16 +224,26 @@ function InternalForm({
    * selezionabili. In modifica è quella del turno, sempre.
    */
   const formVenueId = shift?.venue_id ?? watch("venue_id");
-  // Chi non c'è nel giorno del turno. Solo il giorno principale: sui giorni in
-  // più di una ripetizione l'avviso non si vede, ed è un limite accettato.
   const formDate = watch("date");
   const formStart = watch("start_time");
   const formEnd = watch("end_time");
   const impactWindow = moveImpactWindow(formDate);
+  // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
+  const [extraDates, setExtraDates] = useState<string[]>([]);
+  // Tutti i giorni su cui nascerà il turno: la data e le ripetizioni.
+  const plannedDates = useMemo(
+    () =>
+      formDate
+        ? [formDate, ...extraDates.filter((d) => d !== formDate)].sort()
+        : [],
+    [formDate, extraDates]
+  );
+  // Chi non c'è in uno qualsiasi di quei giorni. Un giorno in più per lato per
+  // i turni notturni, come `moveImpactWindow` (che per un giorno solo coincide).
   const absencesQuery = useAbsenceAvailability(
-    impactWindow.from,
-    impactWindow.to,
-    !!formDate
+    plannedDates.length ? addDaysToDate(plannedDates[0], -1) : "",
+    plannedDates.length ? addDaysToDate(plannedDates[plannedDates.length - 1], 1) : "",
+    plannedDates.length > 0
   );
   // La finestra adiacente trova anche i turni notturni iniziati il giorno prima
   // o quelli che cominciano dopo mezzanotte. Senza scope include tutte le sedi.
@@ -306,11 +321,13 @@ function InternalForm({
     const picked = staffQuery.data.filter((m) => wanted.has(m.person_id));
     if (picked.length > 0) {
       setStaffRoles(Object.fromEntries(picked.map((m) => [m.id, null])));
+      // La casella l'ha cliccata apposta, anche se diceva «Non disponibile».
+      setForcedAbsent(new Set(picked.map((m) => m.id)));
     }
     applied.current = true;
   }, [shift, initialPersonIds, staffQuery.data]);
 
-  const staff = staffQuery.data ?? [];
+  const staff = useMemo(() => staffQuery.data ?? [], [staffQuery.data]);
   const roles = rolesQuery.data ?? [];
   // La richiesta punta all'assegnazione; la riga qui è la persona: si passa per
   // gli assegnati del turno per tradurre l'una nell'altra.
@@ -331,6 +348,39 @@ function InternalForm({
     () => staff.filter((m) => m.id in staffRoles),
     [staff, staffRoles]
   );
+
+  // Per ogni scheda, i giorni scelti in cui la persona ha un'assenza.
+  const absencesByStaff = useMemo(() => {
+    const out = new Map<string, { date: string; absence: AbsenceSlot }[]>();
+    if (!formStart || !formEnd) return out;
+    const all = absencesQuery.data ?? [];
+    for (const m of staff) {
+      const hits = absencesOnDates(
+        plannedDates,
+        { start_time: formStart, end_time: formEnd },
+        all.filter((a) => a.member_id === m.person_id)
+      );
+      if (hits.length) out.set(m.id, hits);
+    }
+    return out;
+  }, [staff, plannedDates, formStart, formEnd, absencesQuery.data]);
+
+  /**
+   * In creazione, i giorni in cui una persona scelta resta fuori: quelli con
+   * un'assenza approvata, se il titolare non ha forzato. Una richiesta ancora
+   * da decidere non toglie nessuno: resta l'avviso.
+   */
+  const skippedDays = useMemo(() => {
+    const out = new Map<string, string[]>();
+    if (shift) return out;
+    for (const m of selectedStaff) {
+      const days = (absencesByStaff.get(m.id) ?? [])
+        .filter((h) => h.absence.status === "approved")
+        .map((h) => h.date);
+      if (days.length) out.set(m.id, days);
+    }
+    return out;
+  }, [shift, selectedStaff, absencesByStaff]);
 
   // Stato reale dell'assegnazione. Chi ha rifiutato (o è stato segnato assente)
   // resta in elenco ma NON copre il suo ruolo: darlo per `assigned` faceva
@@ -475,7 +525,17 @@ function InternalForm({
     // che cambia tra le copie — la sede no, sono copie dello stesso turno.
     const dates = [values.date, ...extraDates.filter((d) => d !== values.date)];
     create.mutate(
-      dates.sort().map((d) => ({ ...payload, venue_id: values.venue_id, date: d })),
+      dates.sort().map((d) => ({
+        ...payload,
+        venue_id: values.venue_id,
+        date: d,
+        // Chi quel giorno è assente resta fuori da quella copia sola.
+        staff: payload.staff.filter(
+          (p) =>
+            forcedAbsent.has(p.venue_member_id) ||
+            !skippedDays.get(p.venue_member_id)?.includes(d)
+        ),
+      })),
       {
         onSuccess: () => {
           // La sede appena usata diventa quella proposta al prossimo turno.
@@ -766,20 +826,10 @@ function InternalForm({
                       shift && liveAssignment
                         ? liveClockStatusIn(venues, shift, liveAssignment, now)
                         : null;
-                    // Avviso, non blocco: il titolare può sapere cose che l'app no.
-                    const absence =
-                      formDate && formStart && formEnd
-                        ? absenceForShift(
-                            {
-                              date: formDate,
-                              start_time: formStart,
-                              end_time: formEnd,
-                            },
-                            (absencesQuery.data ?? []).filter(
-                              (a) => a.member_id === member.person_id
-                            )
-                          )
-                        : null;
+                    const absenceLabel = absenceHitsLabel(
+                      absencesByStaff.get(member.id) ?? [],
+                      plannedDates.length > 1
+                    );
                     return (
                       <div key={member.id}>
                         <button
@@ -800,9 +850,9 @@ function InternalForm({
                               {staffRoleNames(member) ?? "Ruoli non indicati"}
                             </span>
                             {live ? <LiveClockLine status={live} /> : null}
-                            {absence ? (
+                            {absenceLabel ? (
                               <span className="block truncate text-xs font-semibold text-warning">
-                                {absenceCellLabel(absence)}
+                                {absenceLabel}
                               </span>
                             ) : null}
                             {requestedByStaff.has(member.id) ? (
@@ -853,6 +903,19 @@ function InternalForm({
                   })}
                 </div>
               )}
+              <SkippedNotes
+                staff={selectedStaff.filter((m) => skippedDays.has(m.id))}
+                skippedDays={skippedDays}
+                forced={forcedAbsent}
+                onToggle={(id) =>
+                  setForcedAbsent((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  })
+                }
+              />
             </section>
 
             {/* Di norma la conferma la chiede solo chi è a chiamata: l'assegnazione di
@@ -920,5 +983,78 @@ function InternalForm({
         />
       ) : null}
     </form>
+  );
+}
+
+type AbsenceSlot = NonNullable<
+  ReturnType<typeof useAbsenceAvailability>["data"]
+>[number];
+
+/** «gio 1, ven 2». */
+function shortDays(dates: string[]): string {
+  return dates
+    .map((d) => {
+      const { name, num } = dayLabel(d);
+      return `${name} ${num}`;
+    })
+    .join(", ");
+}
+
+/**
+ * La riga arancione sotto il nome. Su un giorno solo l'etichetta del planning;
+ * su più giorni anche quali, raggruppati per etichetta:
+ * «Non disponibile gio 1, ven 2 · Assenza richiesta mer 30».
+ */
+function absenceHitsLabel(
+  hits: { date: string; absence: AbsenceSlot }[],
+  manyDays: boolean
+): string | null {
+  if (!hits.length) return null;
+  if (!manyDays) return absenceCellLabel(hits[0].absence);
+  const byLabel = new Map<string, string[]>();
+  for (const h of hits) {
+    const label = absenceCellLabel(h.absence);
+    byLabel.set(label, [...(byLabel.get(label) ?? []), h.date]);
+  }
+  return [...byLabel].map(([label, days]) => `${label} ${shortDays(days)}`).join(" · ");
+}
+
+/**
+ * Chi resta fuori da qualche giorno per un'assenza approvata, e l'interruttore
+ * per metterlo comunque. Avviso, non blocco.
+ */
+function SkippedNotes({
+  staff,
+  skippedDays,
+  forced,
+  onToggle,
+}: {
+  staff: StaffMemberWithWaiter[];
+  skippedDays: Map<string, string[]>;
+  forced: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  if (!staff.length) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2">
+      {staff.map((m) => {
+        const days = shortDays(skippedDays.get(m.id) ?? []);
+        const isForced = forced.has(m.id);
+        return (
+          <p key={m.id} className="text-xs leading-5 text-t2">
+            {isForced
+              ? `${m.display_name} è in turno anche ${days}, nonostante l'assenza approvata.`
+              : `${m.display_name} resta fuori ${days}: non è disponibile.`}{" "}
+            <button
+              type="button"
+              onClick={() => onToggle(m.id)}
+              className="focus-gold font-semibold text-gold hover:underline"
+            >
+              {isForced ? "Lascia fuori" : "Metti in turno comunque"}
+            </button>
+          </p>
+        );
+      })}
+    </div>
   );
 }

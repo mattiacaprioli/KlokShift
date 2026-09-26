@@ -92,3 +92,20 @@ export function absenceOnDay<A extends AbsenceWindow>(
   );
   return hits.find((a) => a.status === "approved") ?? hits[0] ?? null;
 }
+
+/**
+ * Lo stesso orario ripetuto su più giorni: per ciascun giorno l'assenza che lo
+ * tocca, solo dove ce n'è una. È il turno creato in serie dal planning, dove
+ * guardare il solo giorno principale lasciava in turno chi era in ferie gli
+ * altri giorni.
+ */
+export function absencesOnDates<A extends AbsenceWindow>(
+  dates: string[],
+  times: Pick<ShiftTimes, "start_time" | "end_time">,
+  absences: A[]
+): { date: string; absence: A }[] {
+  return dates.flatMap((date) => {
+    const absence = absenceForShift({ date, ...times }, absences);
+    return absence ? [{ date, absence }] : [];
+  });
+}

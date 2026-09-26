@@ -293,6 +293,11 @@ const RECENT_SICK_DAYS = 7;
  * Chi gestisce l'organico: le richieste da decidere e le malattie comunicate di
  * recente (che non si decidono, ma vanno viste per trovare chi copre).
  *
+ * Una malattia già finita non c'entra più: non c'è nessuno da sostituire, e
+ * fino al 26/09/2026 restava in home per una settimana dalla comunicazione
+ * come una «richiesta» a cui non c'era niente da rispondere. Le richieste da
+ * decidere restano tutte, anche se le date sono passate: una risposta va data.
+ *
  * La RLS (`manager read`) limita alle persone che l'utente gestisce con il
  * permesso Organico. Le malattie registrate dal titolare stesso restano fuori
  * (`requested_by` null): le sa già.
@@ -300,13 +305,14 @@ const RECENT_SICK_DAYS = 7;
 export async function getAbsencesToHandle(
   workspaceId: string
 ): Promise<AbsenceWithPerson[]> {
-  const since = addDaysToDate(todayString(), -RECENT_SICK_DAYS);
+  const today = todayString();
+  const since = addDaysToDate(today, -RECENT_SICK_DAYS);
   const { data, error } = await supabase
     .from("staff_absences")
     .select(`*, ${PERSON_EMBED}`)
     .eq("person.workspace_id", workspaceId)
     .or(
-      `status.eq.pending,and(kind.eq.malattia,status.eq.approved,requested_by.not.is.null,created_at.gte.${since})`
+      `status.eq.pending,and(kind.eq.malattia,status.eq.approved,requested_by.not.is.null,created_at.gte.${since},end_date.gte.${today})`
     )
     .order("start_date", { ascending: true });
   if (error) throw new Error(error.message);

@@ -10,7 +10,7 @@ import { ResolveAbsenceForm } from "./ResolveAbsenceForm";
 
 /**
  * Il blocco «Richieste» della home: ferie e permessi da decidere, malattie
- * comunicate negli ultimi giorni. Sparisce quando non c'è niente.
+ * comunicate di recente e non ancora finite. Sparisce quando non c'è niente.
  *
  * ⚠️ Gemello app in `src/features/absences/AbsencesToHandle.tsx`.
  */

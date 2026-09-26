@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   absenceConflicts,
   absenceForShift,
+  absencesOnDates,
   shiftOverlapsAbsence,
   type AbsenceWindow,
 } from "@/features/absences/conflicts";
@@ -94,5 +95,22 @@ describe("conflitti delle assenze", () => {
         fullDay("approved", "2026-09-21", "2026-09-23")
       ).map((shift) => shift.id)
     ).toEqual(["future"]);
+  });
+
+  it("trova l'assenza giorno per giorno su un turno ripetuto", () => {
+    const leave = fullDay("approved", "2026-10-01", "2026-10-04");
+    const asked = fullDay("pending", "2026-09-30");
+
+    expect(
+      absencesOnDates(
+        ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"],
+        { start_time: "09:00", end_time: "17:00" },
+        [leave, asked]
+      )
+    ).toEqual([
+      { date: "2026-09-30", absence: asked },
+      { date: "2026-10-01", absence: leave },
+      { date: "2026-10-02", absence: leave },
+    ]);
   });
 });

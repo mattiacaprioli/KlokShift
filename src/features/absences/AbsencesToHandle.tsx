@@ -11,8 +11,8 @@ import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
 
 /**
  * Il blocco «Richieste» della home: ferie e permessi da decidere, e le malattie
- * comunicate negli ultimi giorni (non si decidono, ma servono per trovare chi
- * copre). Sparisce quando non c'è niente.
+ * comunicate di recente e non ancora finite (non si decidono, ma servono per
+ * trovare chi copre). Sparisce quando non c'è niente.
  *
  * `enabled` segue il permesso Organico: senza, la RLS restituirebbe zero righe
  * e la query sarebbe solo una richiesta sprecata.
