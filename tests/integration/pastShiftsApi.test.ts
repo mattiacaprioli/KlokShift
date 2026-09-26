@@ -21,6 +21,7 @@ const filters: PastShiftsFilters = {
   to: "2026-09-23",
   status: "done",
   role: { name: "Barman", ids: ["role-1", "role-2"] },
+  person: { id: "member-1", name: "Andrea" },
   q: " Gala_% ",
 };
 
@@ -65,6 +66,7 @@ describe("API storico turni", () => {
       p_to: "2026-09-23",
       p_status: "done",
       p_role_ids: ["role-1", "role-2"],
+      p_member_ids: ["member-1"],
       p_query: "Gala",
       p_limit: 20,
       p_before_date: "2026-09-20",
@@ -86,6 +88,7 @@ describe("API storico turni", () => {
       p_to: "2026-09-23",
       p_status: "done",
       p_role_ids: ["role-1", "role-2"],
+      p_member_ids: ["member-1"],
       p_query: "Gala",
     });
   });
