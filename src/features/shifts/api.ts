@@ -213,6 +213,7 @@ function pastRpcFilters(scope: string[], filters: PastShiftsFilters) {
     p_to: filters.to ?? undefined,
     p_status: filters.status,
     p_role_ids: filters.role?.ids.length ? filters.role.ids : undefined,
+    p_member_ids: filters.person ? [filters.person.id] : undefined,
     p_query: text || undefined,
   };
 }

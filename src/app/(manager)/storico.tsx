@@ -28,6 +28,7 @@ import {
   type PeriodPresetId,
 } from "@/features/shifts/pastFilters";
 import { useOwnerVenueRoles } from "@/features/roles/hooks";
+import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { cn } from "@/lib/cn";
@@ -124,8 +125,9 @@ function ChipRow({ label, children }: { label: string; children: React.ReactNode
 export default function ManagerHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { venues, isMultiVenue, can } = useOwnerVenues();
+  const { ownerId, venues, isMultiVenue, can } = useOwnerVenues();
   const roles = groupRolesByName(useOwnerVenueRoles().data ?? []);
+  const people = useOwnerPeople(ownerId).data ?? [];
 
   const [filters, setFilters] = useState<PastShiftsFilters>(NO_PAST_FILTERS);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -285,6 +287,32 @@ export default function ManagerHistoryScreen() {
                       setFilters({
                         ...filters,
                         role: filters.role?.name === r.name ? null : r,
+                      })
+                    }
+                  />
+                ))}
+              </ChipRow>
+            ) : null}
+
+            {people.length > 0 ? (
+              <ChipRow label="Persona">
+                <FilterChip
+                  label="Tutte"
+                  active={!filters.person}
+                  onPress={() => setFilters({ ...filters, person: null })}
+                />
+                {people.map((p) => (
+                  <FilterChip
+                    key={p.id}
+                    label={p.full_name}
+                    active={filters.person?.id === p.id}
+                    onPress={() =>
+                      setFilters({
+                        ...filters,
+                        person:
+                          filters.person?.id === p.id
+                            ? null
+                            : { id: p.id, name: p.full_name },
                       })
                     }
                   />

@@ -89,6 +89,50 @@ begin
     public.get_owner_past_shifts_count(array[v1, v2, v3]),
     26::bigint, 'scope include un altra sede gestita ma non un altra azienda');
 
+  -- Filtro persona: Emma su «Speciale barman», Carlo su «Oggi concluso» ma ha
+  -- rifiutato, Enzo sul turno di V2. Un turno in cui la persona ha rifiutato
+  -- non è un turno suo.
+  perform tests.logout();
+  insert into public.shift_assignments (shift_id, venue_id, venue_member_id, status)
+  select special_id, v1, vm.id, 'confirmed'
+    from public.venue_members vm
+   where vm.member_id = tests.id('M_Emp') and vm.venue_id = v1;
+  insert into public.shift_assignments (shift_id, venue_id, venue_member_id, status)
+  select s.id, v1, vm.id, 'declined'
+    from public.shifts s, public.venue_members vm
+   where s.title = 'Oggi concluso'
+     and vm.member_id = tests.id('M_Co') and vm.venue_id = v1;
+  insert into public.shift_assignments (shift_id, venue_id, venue_member_id, status)
+  select s.id, v2, vm.id, 'no_show'
+    from public.shifts s, public.venue_members vm
+   where s.title = 'Altra sede autorizzata'
+     and vm.member_id = tests.id('M_Emp2') and vm.venue_id = v2;
+  perform tests.login('Ow');
+
+  perform tests.eq(
+    public.get_owner_past_shifts_count(array[v1], p_member_ids => array[tests.id('M_Emp')]),
+    1::bigint, 'filtro persona');
+  perform tests.eq(
+    (select p.title from public.get_owner_past_shifts_page(
+       array[v1], 100, p_member_ids => array[tests.id('M_Emp')]) p),
+    'Speciale barman', 'la pagina coincide col conteggio del filtro persona');
+  perform tests.eq(
+    public.get_owner_past_shifts_count(array[v1], p_member_ids => array[tests.id('M_Co')]),
+    0::bigint, 'un rifiuto non conta come turno della persona');
+  perform tests.eq(
+    public.get_owner_past_shifts_count(
+      array[v1, v2], p_member_ids => array[tests.id('M_Emp'), tests.id('M_Emp2')]
+    ),
+    2::bigint, 'più persone, più sedi; il no-show conta');
+  perform tests.eq(
+    public.get_owner_past_shifts_count(array[v1], p_member_ids => array[tests.id('M_Emp_W2')]),
+    0::bigint, 'un membro di un altra azienda non apre niente');
+  perform tests.eq(
+    public.get_owner_past_shifts_count(
+      array[v1], p_member_ids => array[tests.id('M_Emp')], p_status => 'cancelled'
+    ),
+    0::bigint, 'il filtro persona si combina con gli altri');
+
   select array_agg(p.id) into page1
     from public.get_owner_past_shifts_page(array[v1], 20) p;
   select p.date, p.start_time, p.id

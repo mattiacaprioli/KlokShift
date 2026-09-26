@@ -17,12 +17,10 @@ import {
   usePersonPerformance,
   usePersonWorkedShifts,
 } from "@/features/assignments/hooks";
-import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import {
   useSetStaffMemberRoles,
   useVenueRoles,
 } from "@/features/roles/hooks";
-import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
   CONTRACT_PERIOD_SHORT,
   CONTRACT_PERIODS,
@@ -38,7 +36,6 @@ import {
   formatBirthday,
   formatDate,
   formatHours,
-  formatShiftRange,
 } from "@/lib/format";
 import type {
   PersonMembership,
@@ -74,11 +71,11 @@ import {
 /**
  * La scheda di un dipendente: **una per persona**, non una per sede.
  *
- * Anagrafica (vale in tutte le sedi), ore e performance dell'azienda, documenti, e
+ * Anagrafica (vale in tutte le sedi) con le ore del mese nell'azienda, documenti, e
  * una card per ogni sede in cui lavora con i ruoli e il tipo di impiego di *quella*
  * sede. Prima Marco ne aveva due, e ognuna mostrava le ore di una sola sede.
  *
- * È un dialogo centrale diviso in tab (anagrafica, sedi, documenti, performance,
+ * È un dialogo centrale diviso in tab (anagrafica, sedi, assenze, documenti,
  * gestione): da cassetto laterale con tutto impilato era diventata troppo lunga.
  */
 export function StaffDetail({
@@ -165,7 +162,6 @@ type TabId =
   | "sedi"
   | "assenze"
   | "documenti"
-  | "performance"
   | "gestione";
 
 function PersonPanel({
@@ -213,9 +209,6 @@ function PersonPanel({
       : []),
     ...(canAny("can_manage_documents")
       ? [{ id: "documenti" as const, label: "Documenti" }]
-      : []),
-    ...(canAny("can_view_hours")
-      ? [{ id: "performance" as const, label: "Performance" }]
       : []),
     // La promozione è del titolare e di nessun altro: un collaboratore che
     // potesse promuoverne altri sarebbe una catena di deleghe. E non su sé
@@ -268,7 +261,7 @@ function PersonPanel({
           </div>
           <div className="flex shrink-0 gap-2">
             {/* Scrivere a chi hai davanti è il gesto più frequente su questa
-                scheda: sta in testa, non in fondo alle performance. */}
+                scheda: sta in testa, non in fondo a un tab. */}
             {/* Anche da collaboratore: da quando la conversazione è fra due
                 membri qualsiasi dell'azienda (20260920001900), il thread è suo
                 e porta il suo nome — non più un messaggio che al professionista
@@ -309,6 +302,9 @@ function PersonPanel({
         <div className="flex-1 overflow-y-auto p-6">
           <TabPanel active={tab === "anagrafica"}>
             <Anagrafica person={person} />
+            {/* Dietro il permesso Ore: senza, la RPC torna zero righe e uno
+                «0 h» sembrerebbe un dato. */}
+            {canAny("can_view_hours") ? <ThisMonth person={person} /> : null}
             {/* Le ore da contratto sono un accordo fra la persona e l'azienda. */}
             {isOwner ? <ContractSection person={person} /> : null}
           </TabPanel>
@@ -330,18 +326,6 @@ function PersonPanel({
           {canAny("can_manage_documents") ? (
             <TabPanel active={tab === "documenti"}>
               <DocumentsPanel personId={person.id} />
-            </TabPanel>
-          ) : null}
-          {canAny("can_view_hours") ? (
-            <TabPanel active={tab === "performance"}>
-              <Performance
-                personId={person.id}
-                // ⚠️ `null` sulla propria scheda: `waiter_public_cards`
-                // contiene solo i professionisti, quindi un gestore non ha una
-                // card e la media clienti non avrebbe niente da leggere.
-                waiterId={isMe ? null : (person.waiter_id ?? null)}
-                showVenue={multiVenue}
-              />
             </TabPanel>
           ) : null}
           {tabs.some((t) => t.id === "gestione") && person.waiter_id ? (
@@ -1359,133 +1343,41 @@ function WorkplaceCard({
 }
 
 /**
- * Performance della **persona**, su tutte le sedi del titolare: sono i numeri
- * della sua busta paga. Prima l'aggregazione era per appartenenza, e un'assenza
- * fatta a Milano non scalfiva il 100% di affidabilità di Roma.
+ * Il mese della persona in tre numeri, su **tutte** le sedi dell'azienda: sono
+ * le ore della sua busta paga. Sta in anagrafica e non in una scheda sua: turni
+ * e ore di sempre e una percentuale di «affidabilità» servivano a scegliere uno
+ * sconosciuto sul marketplace, non a chi la persona ce l'ha già in organico. Il
+ * dettaglio è in Ore e Storico.
+ *
+ * Il confronto col contratto solo se è mensile: convertire una settimana o un
+ * giorno in un mese in corso darebbe un numero che nessuno ha firmato.
  */
-function Performance({
-  personId,
-  waiterId,
-  showVenue,
-}: {
-  personId: string;
-  waiterId: string | null;
-  /** La sede su ogni turno recente: serve solo a chi ha più di una sede. */
-  showVenue: boolean;
-}) {
-  // Totali dal database; la lista sono solo le ultime righe, già limitate.
-  const perfQuery = usePersonPerformance(personId);
-  const recentQuery = usePersonWorkedShifts(personId);
-  const card = useWaiterPublicCard(waiterId ?? undefined).data ?? null;
+function ThisMonth({ person }: { person: StaffPersonDetail }) {
+  const perfQuery = usePersonPerformance(person.id);
+  const lastQuery = usePersonWorkedShifts(person.id, 1);
 
-  if (perfQuery.isLoading || recentQuery.isLoading) return <Spinner />;
+  if (perfQuery.isLoading || lastQuery.isLoading) return <Spinner />;
 
   const perf = perfQuery.data ?? null;
-  const totalPast = perf?.past_total ?? 0;
-  const workedCount = perf?.worked_count ?? 0;
-  const noShow = perf?.no_show_count ?? 0;
-  const declined = perf?.declined_count ?? 0;
-  const reliability = totalPast > 0 ? workedCount / totalPast : null;
-  const totalHours = perf?.total_hours ?? 0;
-  const recent = recentQuery.data ?? [];
+  const last = lastQuery.data?.[0] ?? null;
+  const contract = personContract(person);
+  const monthlyTarget = contract?.period === "month" ? contract.hours : null;
 
   return (
     <section className="flex flex-col gap-3">
-      <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Performance
-      </span>
-
-      {waiterId && REVIEWS_ENABLED ? (
-        <Card className="flex items-center justify-between gap-3 p-4">
-          <span className="text-sm text-t2">Valutazione clienti</span>
-          <span className="flex items-center gap-3">
-            {card && card.rating_count ? (
-              <span className="font-mono text-sm text-gold">
-                ★ {card.rating_avg?.toFixed(1)}{" "}
-                <span className="text-t4">({card.rating_count})</span>
-              </span>
-            ) : (
-              <span className="text-xs text-t4">Nessuna recensione</span>
-            )}
-            {/* ⚠️ Qui c'è solo la media. Le recensioni per esteso stavano sul
-                profilo pubblico del professionista, caduto col CV
-                (20260920001700): riaccendendo `REVIEWS_ENABLED` serve una
-                pagina nuova dove metterle, questo link non esiste più. */}
-          </span>
-        </Card>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4">
-          <p className="font-mono text-2xl text-t1">{workedCount}</p>
-          <p className="mt-1 text-xs text-t3">turni svolti</p>
-        </Card>
-        <Card className="p-4">
-          <p className="font-mono text-2xl text-t1">
-            {formatHours(totalHours)}
-          </p>
-          <p className="mt-1 text-xs text-t3">ore totali</p>
-        </Card>
-      </div>
-
-      {reliability != null ? (
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-t2">Affidabilità</span>
-            <span className="text-sm font-semibold text-gold">
-              {Math.round(reliability * 100)}%
-            </span>
-          </div>
-          <div className="mt-2 h-1.5 w-full rounded-full bg-bg-2">
-            <div
-              className={cn(
-                "h-1.5 rounded-full",
-                reliability >= 0.9 ? "bg-success" : "bg-warning"
-              )}
-              style={{ width: `${reliability * 100}%` }}
-            />
-          </div>
-          <p className="mt-2 text-xs text-t3">
-            {noShow + declined > 0
-              ? `${noShow} assenze · ${declined} rifiuti su ${totalPast} turni`
-              : `Sempre presente su ${totalPast} ${totalPast === 1 ? "turno" : "turni"}`}
-          </p>
-        </Card>
-      ) : null}
-
-      {recent.length > 0 ? (
-        <div>
-          <span className="mb-2 block text-xs text-t4">Ultimi turni</span>
-          <Card className="p-0">
-            {recent.map((a, i) => (
-              <div
-                key={a.id}
-                className={cn(
-                  "flex items-center justify-between px-4 py-2.5 text-sm",
-                  i > 0 && "border-t border-border"
-                )}
-              >
-                <span className="text-t2">
-                  {formatDate(a.date)}
-                  <span className="ml-2 font-mono text-xs text-t4">
-                    {formatShiftRange(a.start_time, a.end_time)}
-                  </span>
-                  {/* Senza la sede, due turni lo stesso giovedì alla stessa ora
-                      in due sedi diverse sembrerebbero un doppione. */}
-                  {showVenue ? (
-                    <span className="ml-2 text-xs text-t4">
-                      · {a.venue_name}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="font-mono text-xs text-t1">
-                  {formatHours(a.hours)}
-                </span>
-              </div>
-            ))}
-          </Card>
-        </div>
-      ) : null}
+      <SectionHeading title="Questo mese" />
+      <ReadGrid>
+        <ReadItem label="Ore lavorate">
+          {formatHours(perf?.month_hours ?? 0)}
+          {monthlyTarget != null
+            ? ` su ${formatHours(monthlyTarget)} da contratto`
+            : ""}
+        </ReadItem>
+        <ReadItem label="Turni svolti">{String(perf?.month_shifts ?? 0)}</ReadItem>
+        <ReadItem label="Ultimo turno" wide>
+          {last ? formatDate(last.date) : null}
+        </ReadItem>
+      </ReadGrid>
     </section>
   );
 }

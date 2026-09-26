@@ -45,9 +45,7 @@ import {
   useUpdateStaffMember,
   useUpdateStaffPerson,
 } from "@/features/staff/hooks";
-import { PersonHoursSection } from "@/features/assignments/PersonHoursSection";
-import { PersonPerformanceSection } from "@/features/assignments/PersonPerformanceSection";
-import { ProLockedCard } from "@/features/plan/ProLock";
+import { PersonThisMonthSection } from "@/features/assignments/PersonThisMonthSection";
 import { useIsPro } from "@/features/plan/hooks";
 import { PersonAbsencesSection } from "@/features/absences/PersonAbsencesSection";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
@@ -961,7 +959,6 @@ function PersonContractForm({
 type PersonTab =
   | "dati"
   | "sedi"
-  | "ore"
   | "assenze"
   | "documenti"
   | "gestione";
@@ -988,8 +985,7 @@ function TabPanel({
  * La scheda di un dipendente: **una per persona**, non una per sede.
  *
  * Prima Marco, che lavora a Roma e a Milano, aveva due URL e due schede, e ognuna
- * mostrava le ore della sola sede da cui l'avevi aperta — un'assenza a Milano non
- * scalfiva il 100% di affidabilità di Roma. Ore, presenze e affidabilità sono
+ * mostrava le ore della sola sede da cui l'avevi aperta. Le ore sono
  * dell'azienda; ruoli e tipo di impiego restano della sede, e stanno in "Dove
  * lavora".
  *
@@ -1088,7 +1084,6 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   const tabs: { id: PersonTab; label: string }[] = [
     { id: "dati", label: "Dati" },
     { id: "sedi", label: multiVenue ? `Sedi · ${liveMemberships.length}` : "Sedi" },
-    ...(canAny("can_view_hours") ? [{ id: "ore" as const, label: "Ore" }] : []),
     // Stesso permesso della RLS di `staff_absences`: la malattia è un dato
     // sanitario, chi fa solo i turni non la legge.
     ...(canAny("can_manage_staff")
@@ -1248,6 +1243,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
               </View>
             ) : null}
             <PersonIdentitySection person={person} />
+            {/* Dietro il permesso Ore: senza, la RPC torna zero righe e uno
+                «0 h» sembrerebbe un dato. */}
+            {canAny("can_view_hours") && isPro ? (
+              <PersonThisMonthSection person={person} />
+            ) : null}
             {/* Le ore da contratto sono un accordo fra la persona e l'azienda,
                 non un dato della sede: le vede e le cambia solo il titolare. */}
             {isOwner ? <PersonContractSection person={person} /> : null}
@@ -1288,32 +1288,6 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
               </Pressable>
             ) : null}
           </TabPanel>
-
-          {/* Ore, affidabilità e presenze: dietro il permesso Ore. Senza, le RPC
-              tornerebbero comunque zero righe (`get_person_performance` è
-              scopata su `my_venue_ids('hours')`) e la scheda mostrerebbe un 0%
-              che sembra un dato. */}
-          {canAny("can_view_hours") ? (
-            <TabPanel active={tab === "ore"}>
-              {isPro ? (
-                <>
-                  <PersonHoursSection
-                    personId={person.id}
-                    showVenue={multiVenue}
-                  />
-                  <PersonPerformanceSection
-                    personId={person.id}
-                    waiterId={waiterId}
-                  />
-                </>
-              ) : (
-                <ProLockedCard
-                  title="Ore e performance"
-                  subtitle="Ore lavorate, affidabilità e statistiche di questa persona, su tutte le tue sedi."
-                />
-              )}
-            </TabPanel>
-          ) : null}
 
           {canAny("can_manage_staff") ? (
             <TabPanel active={tab === "assenze"}>

@@ -10,6 +10,7 @@ import {
   type PeriodPresetId,
 } from "@/features/shifts/pastFilters";
 import { useOwnerVenueRoles } from "@/features/roles/hooks";
+import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { Button, Input, Select } from "../ui/primitives";
 
@@ -37,8 +38,9 @@ export function PastShiftsFilters({
   text: string;
   onTextChange: (next: string) => void;
 }) {
-  const { venues, isMultiVenue } = useOwnerVenues();
+  const { ownerId, venues, isMultiVenue } = useOwnerVenues();
   const roles = groupRolesByName(useOwnerVenueRoles().data ?? []);
+  const people = useOwnerPeople(ownerId).data ?? [];
   const preset = periodPresetOf(value);
   const active = activePastFilterCount(value);
 
@@ -165,6 +167,31 @@ export function PastShiftsFilters({
             {roles.map((r) => (
               <option key={r.name} value={r.name}>
                 {r.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+      ) : null}
+
+      {people.length > 0 ? (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+            Persona
+          </span>
+          <Select
+            value={value.person?.id ?? ""}
+            onChange={(e) => {
+              const p = people.find((x) => x.id === e.target.value);
+              onChange({
+                ...value,
+                person: p ? { id: p.id, name: p.full_name } : null,
+              });
+            }}
+          >
+            <option value="">Tutte le persone</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
               </option>
             ))}
           </Select>

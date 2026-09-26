@@ -14,6 +14,16 @@ import type { VenueRole } from "@/features/roles/api";
  * Nessun import di React o React Native: la dashboard web lo riusa verbatim.
  */
 
+/**
+ * Una persona come la sceglie chi filtra. Il nome viaggia con l'id perché
+ * l'app lo mostra sul chip acceso senza dover ricercare la persona.
+ */
+export type PersonOption = {
+  /** `workspace_members.id` (`StaffPerson.id`), non un venue member id. */
+  id: string;
+  name: string;
+};
+
 /** Concluso o annullato: lo stato del turno passato. */
 export type PastShiftStatus = "all" | "done" | "cancelled";
 
@@ -36,6 +46,8 @@ export type PastShiftsFilters = {
   to: string | null;
   status: PastShiftStatus;
   role: RoleOption | null;
+  /** Solo i turni a cui la persona era assegnata (i rifiuti non contano). */
+  person: PersonOption | null;
   /** Ricerca sul titolo del turno. Vuota = nessuna ricerca. */
   q: string;
 };
@@ -47,6 +59,7 @@ export const NO_PAST_FILTERS: PastShiftsFilters = {
   to: null,
   status: "all",
   role: null,
+  person: null,
   q: "",
 };
 
@@ -74,6 +87,7 @@ export function activePastFilterCount(f: PastShiftsFilters): number {
   if (f.from || f.to) n++;
   if (f.status !== "all") n++;
   if (f.role) n++;
+  if (f.person) n++;
   if (normalizeQuery(f.q)) n++;
   return n;
 }
@@ -90,6 +104,7 @@ export function pastFiltersKey(f: PastShiftsFilters): string {
     f.to ?? "",
     f.status,
     f.role ? [...f.role.ids].sort().join("+") : "",
+    f.person?.id ?? "",
     normalizeQuery(f.q).toLowerCase(),
   ].join("|");
 }

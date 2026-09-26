@@ -1553,6 +1553,7 @@ export type Database = {
       get_owner_past_shifts_count: {
         Args: {
           p_from?: string
+          p_member_ids?: string[]
           p_query?: string
           p_role_ids?: string[]
           p_status?: string
@@ -1568,6 +1569,7 @@ export type Database = {
           p_before_start?: string
           p_from?: string
           p_limit?: number
+          p_member_ids?: string[]
           p_query?: string
           p_role_ids?: string[]
           p_status?: string

@@ -417,8 +417,8 @@ export async function setAssignmentPresence(
 }
 
 /**
- * Statistiche di una **persona** dell'organico (sezioni "Ore & presenze" e
- * "Performance"). Sette numeri, calcolati dal database.
+ * Statistiche di una **persona** dell'organico (il blocco "Questo mese" della
+ * scheda). Sette numeri, calcolati dal database.
  *
  * Sono i numeri dell'**azienda**, non di una sede: chi lavora a Roma e a Milano
  * per lo stesso titolare ha un solo monte ore e una sola affidabilità. Prima
