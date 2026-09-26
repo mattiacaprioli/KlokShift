@@ -1,21 +1,30 @@
 import { ActivityIndicator, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMemo, useState } from "react";
+import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { Pill } from "@/components/ui/Pill";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useAuth } from "@/lib/auth";
-import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
+import {
+  formatDate,
+  formatHours,
+  formatHoursVariance,
+  formatShiftRange,
+} from "@/lib/format";
+import { clockedHours, formatClockTime } from "@/features/clock/hours";
 import {
   useMyWorkHistory,
   useMyWorkHistoryRange,
+  type WorkHistoryItem,
 } from "@/features/assignments/history";
 import {
   periodLabel,
@@ -34,6 +43,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 
 export default function WaiterHistoryScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { session } = useAuth();
   const waiterId = session!.user.id;
   // Il mese è il periodo che finisce in busta paga; «Tutto» è lo storico di
@@ -53,10 +63,28 @@ export default function WaiterHistoryScreen() {
     setOffset(0);
   };
 
+  // Nel totale le ore non ancora approvate valgono l'orario del turno: lo si
+  // dice, invece di farle passare per definitive. Solo su un periodo, dove le
+  // righe a schermo sono tutte quelle del totale.
+  const unconfirmedHours =
+    filter === "all"
+      ? 0
+      : history.items
+          .filter((i) => i.source === "pending" || i.source === "planned")
+          .reduce((sum, i) => sum + i.hours, 0);
+
   const stats = (
     <View className="flex-row gap-2.5">
       <StatCard value={String(history.count)} label="Turni svolti" />
-      <StatCard value={formatHours(history.totalHours)} label="Ore lavorate" />
+      <StatCard
+        value={formatHours(history.totalHours)}
+        label="Ore lavorate"
+        hint={
+          unconfirmedHours > 0
+            ? `di cui ${formatHours(unconfirmedHours)} da orario`
+            : undefined
+        }
+      />
     </View>
   );
 
@@ -124,27 +152,11 @@ export default function WaiterHistoryScreen() {
           data={history.items}
           keyExtractor={(i) => i.key}
           ListHeaderComponent={history.items.length > 0 ? stats : null}
-          renderItem={({ item: i }) => (
-            <Card className="rounded-3xl border-border-2 p-4">
-              <View className="flex-row items-center gap-3">
-                <Avatar uri={i.logoUrl ?? undefined} name={i.venueName} size={44} />
-                <View className="flex-1">
-                  <Text
-                    className="text-base font-sans-bold text-t1"
-                    numberOfLines={1}
-                  >
-                    {i.venueName}
-                  </Text>
-                  <Text className="text-xs text-t3">
-                    {formatDate(i.date)} ·{" "}
-                    {formatShiftRange(i.start_time, i.end_time)}
-                  </Text>
-                </View>
-                <Text className="text-sm font-sans-bold text-gold">
-                  {formatHours(i.hours)}
-                </Text>
-              </View>
-            </Card>
+          renderItem={({ item }) => (
+            <HistoryCard
+              item={item}
+              onPress={() => router.push(`/(waiter)/shift/${item.shiftId}`)}
+            />
           )}
           ListEmptyComponent={
             <View style={{ gap: 16 }}>
@@ -180,4 +192,104 @@ export default function WaiterHistoryScreen() {
       )}
     </View>
   );
+}
+
+/**
+ * Un turno svolto: dove, cosa, quando e **da dove vengono le ore**. Senza
+ * quest'ultima riga un 9 h su un turno 14:00–22:00 era un numero senza motivo.
+ */
+function HistoryCard({
+  item: i,
+  onPress,
+}: {
+  item: WorkHistoryItem;
+  onPress: () => void;
+}) {
+  const detail = [i.title, i.roleName].filter(Boolean).join(" · ");
+  // Lo scarto si dice solo su ore definitive: una proposta da approvare o
+  // l'orario del turno non sono uno scostamento.
+  const variance =
+    i.workedHours != null ? formatHoursVariance(i.workedHours - i.plannedHours) : null;
+  const clock =
+    i.clockInAt && i.clockOutAt
+      ? `Timbrato ${formatClockTime(i.clockInAt)}–${formatClockTime(i.clockOutAt)}`
+      : i.clockInAt
+        ? `Entrata ${formatClockTime(i.clockInAt)}, uscita non timbrata`
+        : null;
+
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button">
+      <Card className="rounded-3xl border-border-2 p-4">
+        <View className="flex-row items-center gap-3">
+          <Avatar uri={i.logoUrl ?? undefined} name={i.venueName} size={44} />
+          <View className="flex-1">
+            <Text className="text-base font-sans-bold text-t1" numberOfLines={1}>
+              {i.venueName}
+            </Text>
+            {detail ? (
+              <Text className="text-xs text-t2" numberOfLines={1}>
+                {detail}
+              </Text>
+            ) : null}
+            <Text className="text-xs text-t3">
+              {formatDate(i.date)} · {formatShiftRange(i.start_time, i.end_time)}
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text className="text-sm font-sans-bold text-gold">
+              {formatHours(i.hours)}
+            </Text>
+            {variance ? (
+              <Text className="text-[11px] text-t3">{variance} sul turno</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {i.source ? (
+          <View className="mt-3 flex-row items-center justify-between gap-3 border-t border-border pt-3">
+            <View className="flex-1 flex-row items-center gap-2">
+              <Icon name="clock" size={14} color="#8c857a" />
+              <Text className="flex-1 text-xs text-t3" numberOfLines={2}>
+                {sourceLine(i.source, i, clock)}
+              </Text>
+            </View>
+            {i.source === "approved" ? (
+              <Pill label="Approvate" variant="accepted" />
+            ) : i.source === "adjusted" ? (
+              <Pill label="Rettificate" variant="tag" />
+            ) : i.source === "pending" ? (
+              <Pill label="Da approvare" variant="pending" />
+            ) : null}
+          </View>
+        ) : null}
+      </Card>
+    </Pressable>
+  );
+}
+
+function sourceLine(
+  source: NonNullable<WorkHistoryItem["source"]>,
+  i: WorkHistoryItem,
+  clock: string | null
+): string {
+  switch (source) {
+    case "approved":
+      return clock ?? "Timbratura approvata";
+    case "adjusted":
+      return clock
+        ? `${clock} · ore inserite da chi gestisce`
+        : "Ore inserite da chi gestisce";
+    case "pending": {
+      const proposed =
+        i.clockInAt && i.clockOutAt
+          ? ` (${formatHours(clockedHours(i.clockInAt, i.clockOutAt))})`
+          : "";
+      return `${clock ?? "Timbratura"}${proposed} · finché non è approvata valgono le ore del turno`;
+    }
+    case "planned":
+      // Due turni sovrapposti: il tratto comune conta una volta sola.
+      return i.hours < i.plannedHours
+        ? "Orario del turno · le ore in comune con un altro turno contano una volta"
+        : "Orario del turno, senza timbratura";
+  }
 }

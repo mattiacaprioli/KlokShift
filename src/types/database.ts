@@ -1499,27 +1499,41 @@ export type Database = {
           p_limit?: number
         }
         Returns: {
+          clock_in_at: string
+          clock_out_at: string
           date: string
           end_time: string
           hours: number
+          hours_source: string
           key: string
           logo_url: string
+          planned_hours: number
+          role_name: string
+          shift_id: string
           start_time: string
           title: string
           venue_name: string
+          worked_hours: number
         }[]
       }
       get_my_work_history_range: {
         Args: { p_from: string; p_to: string }
         Returns: {
+          clock_in_at: string
+          clock_out_at: string
           date: string
           end_time: string
           hours: number
+          hours_source: string
           key: string
           logo_url: string
+          planned_hours: number
+          role_name: string
+          shift_id: string
           start_time: string
           title: string
           venue_name: string
+          worked_hours: number
         }[]
       }
       get_my_work_history_totals: {

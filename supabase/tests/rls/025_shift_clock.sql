@@ -107,7 +107,19 @@ begin
     )
   ), 0::numeric, 'la proposta non entra nelle ore definitive');
 
+  perform tests.login('Emp');
+  perform tests.eq((select hours_source from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+    'pending', 'nello storico la timbratura da approvare non è definitiva');
+  perform tests.eq((select clock_out_at from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+    ((current_date - 1)::timestamp + time '12:10') at time zone 'Europe/Rome', 'e mostra gli orari corretti');
+  perform tests.login('Co2');
   reviewed := public.approve_clock_record(a);
+  perform tests.login('Emp');
+  perform tests.eq((select hours_source from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+    'approved', 'dopo l''approvazione le ore vengono dalla timbratura');
+  perform tests.eq((select worked_hours from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+    4.25::numeric, 'con le ore approvate');
+  perform tests.login('Co2');
   perform tests.eq(reviewed.worked_hours, 4.25::numeric,
     'l''approvazione arrotonda al quarto d''ora');
   perform tests.ok(reviewed.attendance_reviewed_at is not null,

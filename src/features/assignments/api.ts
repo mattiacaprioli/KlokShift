@@ -493,6 +493,13 @@ export async function getPersonWorkedShifts(
  */
 export const WORK_HISTORY_PAGE_SIZE = 20;
 
+/**
+ * Da dove vengono le ore di una riga dello storico (`private.my_work_history`):
+ * timbratura approvata, ore scritte da chi gestisce, timbratura ancora da
+ * approvare, oppure l'orario del turno.
+ */
+export type WorkHoursSource = "approved" | "adjusted" | "pending" | "planned";
+
 export type WorkHistoryRow = {
   key: string;
   venue_name: string | null;
@@ -502,9 +509,39 @@ export type WorkHistoryRow = {
   start_time: string;
   end_time: string;
   hours: number;
+  shift_id: string;
+  role_name: string | null;
+  planned_hours: number;
+  worked_hours: number | null;
+  clock_in_at: string | null;
+  clock_out_at: string | null;
+  hours_source: WorkHoursSource | null;
 };
 
 export type WorkHistoryCursor = { date: string; key: string };
+
+const WORK_HOURS_SOURCES: readonly string[] = [
+  "approved",
+  "adjusted",
+  "pending",
+  "planned",
+] satisfies WorkHoursSource[];
+
+/**
+ * Il DB dichiara `hours_source` come `text`: qui si restringe all'enum. Un
+ * valore che non si conosce (o che manca, da un database non ancora migrato)
+ * diventa `null`, e la card non dice niente invece di dire una cosa sbagliata.
+ */
+function toWorkHistoryRow<T extends { hours_source: string | null }>(
+  row: T
+): Omit<T, "hours_source"> & { hours_source: WorkHoursSource | null } {
+  return {
+    ...row,
+    hours_source: WORK_HOURS_SOURCES.includes(row.hours_source ?? "")
+      ? (row.hours_source as WorkHoursSource)
+      : null,
+  };
+}
 
 export async function getMyWorkHistoryPage(
   cursor: WorkHistoryCursor | null
@@ -515,7 +552,7 @@ export async function getMyWorkHistoryPage(
     p_before_key: cursor?.key,
   });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map(toWorkHistoryRow);
 }
 
 /**
@@ -542,7 +579,7 @@ export async function getMyWorkHistoryRange(
     p_to: to,
   });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map(toWorkHistoryRow);
 }
 
 /** Come `getMyWorkHistoryTotals`, ma solo sui turni fra `from` e `to` (inclusi). */

@@ -9,6 +9,7 @@ import {
   getMyWorkTotals,
   type WorkHistoryRow,
   type WorkHistoryCursor,
+  type WorkHoursSource,
 } from "./api";
 
 export type WorkHistoryItem = {
@@ -20,6 +21,15 @@ export type WorkHistoryItem = {
   start_time: string;
   end_time: string;
   hours: number;
+  shiftId: string;
+  roleName: string | null;
+  plannedHours: number;
+  /** Solo quando `source` è `approved` o `adjusted`. */
+  workedHours: number | null;
+  clockInAt: string | null;
+  clockOutAt: string | null;
+  /** Null = non si sa (database non migrato): meglio tacere che indovinare. */
+  source: WorkHoursSource | null;
 };
 
 /**
@@ -53,6 +63,13 @@ function toItem(r: WorkHistoryRow): WorkHistoryItem {
     start_time: r.start_time,
     end_time: r.end_time,
     hours: r.hours,
+    shiftId: r.shift_id,
+    roleName: r.role_name,
+    plannedHours: r.planned_hours,
+    workedHours: r.worked_hours,
+    clockInAt: r.clock_in_at,
+    clockOutAt: r.clock_out_at,
+    source: r.hours_source,
   };
 }
 

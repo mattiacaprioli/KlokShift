@@ -11,10 +11,7 @@ import {
   useShiftRoleRequirements,
   useUpdateInternalShift,
 } from "@/features/assignments/hooks";
-import {
-  useOwnerShiftsRange,
-  useUpdateShiftStatus,
-} from "@/features/shifts/hooks";
+import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import {
   hasMoveImpact,
   MOVE_IMPACT_LOADING,
@@ -39,6 +36,7 @@ import {
   type AssignmentStatus,
 } from "@/features/assignments/status";
 import {
+  formatDate,
   formatShiftSummary,
   isShiftOver,
   shiftStartsAt,
@@ -62,7 +60,7 @@ import {
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { LiveClockLine } from "./LiveClockLine";
-import { PresenceSection } from "./PresenceSection";
+import { ShiftDetails } from "./ShiftDetails";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 
@@ -98,6 +96,11 @@ export function ShiftPanel({
   initialPersonIds?: string[];
   onClose: () => void;
 }) {
+  // Un turno esistente si apre in lettura: il form arriva solo da «Modifica»,
+  // perché un clic distratto su un nome toglieva qualcuno dal turno.
+  const [editing, setEditing] = useState(!shift);
+  const title = !shift ? "Nuovo turno" : editing ? "Modifica turno" : shift.title;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
       <div
@@ -108,150 +111,39 @@ export function ShiftPanel({
       <div
         role="dialog"
         aria-modal
-        aria-label={shift ? "Modifica turno" : "Nuovo turno"}
+        aria-label={title}
         className="relative flex max-h-[min(90vh,56rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-0"
       >
         <header className="flex items-start justify-between gap-4 border-b border-border-2 px-6 py-4">
-          <div>
-            <h2 className="font-serif text-xl text-t1">
-              {shift ? "Modifica turno" : "Nuovo turno"}
-            </h2>
-            <p className="mt-1 text-xs text-t3">Con il tuo staff interno</p>
+          <div className="min-w-0">
+            <h2 className="truncate font-serif text-xl text-t1">{title}</h2>
+            <p className="mt-1 text-xs text-t3">
+              {shift && !editing
+                ? formatDate(shift.date)
+                : "Con il tuo staff interno"}
+            </p>
           </div>
           <Button onClick={onClose} aria-label="Chiudi">
             Chiudi
           </Button>
         </header>
 
-        <InternalForm
-          date={date}
-          shift={shift}
-          initialPersonIds={initialPersonIds}
-          onClose={onClose}
-        />
+        {shift && !editing ? (
+          <ShiftDetails
+            shift={shift}
+            onEdit={() => setEditing(true)}
+            onClose={onClose}
+          />
+        ) : (
+          <InternalForm
+            date={date}
+            shift={shift}
+            initialPersonIds={initialPersonIds}
+            onClose={onClose}
+            onCancelEdit={shift ? () => setEditing(false) : undefined}
+          />
+        )}
       </div>
-    </div>
-  );
-}
-
-/**
- * Annullare un turno non è una modifica come le altre: fa sparire il turno da
- * tutte le viste dei professionisti e manda una notifica a testa. Quindi si
- * chiede conferma, e la conferma dice anche che il passo è reversibile — è la
- * prima cosa che serve sapere quando si clicca per sbaglio.
- */
-function CancelShiftButton({
-  shift,
-  onDone,
-}: {
-  shift: Shift;
-  onDone: () => void;
-}) {
-  const toast = useToast();
-  const status = useUpdateShiftStatus(shift.id);
-  const [asking, setAsking] = useState(false);
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="danger"
-        onClick={() => setAsking(true)}
-        disabled={status.isPending}
-      >
-        Annulla turno
-      </Button>
-      {asking ? (
-        <ConfirmDialog
-          title="Annullare il turno?"
-          message="Chi è assegnato riceve una notifica e il turno sparisce dalla sua agenda. Potrai ripristinarlo da qui."
-          confirmLabel="Annulla il turno"
-          cancelLabel="Lascialo attivo"
-          destructive
-          pending={status.isPending}
-          onCancel={() => setAsking(false)}
-          onConfirm={() =>
-            status.mutate("cancelled", {
-              onSuccess: () => {
-                toast.show("Turno annullato");
-                onDone();
-              },
-              onError: (e) => {
-                toast.show(userErrorMessage(e), "error");
-                setAsking(false);
-              },
-            })
-          }
-        />
-      ) : null}
-    </>
-  );
-}
-
-/**
- * Il ritorno indietro dall'annullamento. Senza, un clic sbagliato costava il
- * turno: l'unico rimedio era ricrearlo da zero e riassegnare tutti.
- */
-function RestoreShiftButton({
-  shift,
-  onDone,
-}: {
-  shift: Shift;
-  onDone: () => void;
-}) {
-  const toast = useToast();
-  const status = useUpdateShiftStatus(shift.id);
-  const [asking, setAsking] = useState(false);
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="gold"
-        onClick={() => setAsking(true)}
-        disabled={status.isPending}
-      >
-        Ripristina turno
-      </Button>
-      {asking ? (
-        <ConfirmDialog
-          title="Ripristinare il turno?"
-          message="Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
-          confirmLabel="Ripristina turno"
-          pending={status.isPending}
-          onCancel={() => setAsking(false)}
-          onConfirm={() =>
-            status.mutate("open", {
-              onSuccess: () => {
-                toast.show("Turno ripristinato");
-                onDone();
-              },
-              onError: (e) => {
-                toast.show(userErrorMessage(e), "error");
-                setAsking(false);
-              },
-            })
-          }
-        />
-      ) : null}
-    </>
-  );
-}
-
-/** Striscia «questo turno è annullato» + il modo per tornare indietro. */
-function CancelledBanner({
-  shift,
-  onDone,
-}: {
-  shift: Shift;
-  onDone: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/40 bg-error/10 px-3 py-3">
-      <p className="text-xs leading-4 text-error">
-        Turno annullato. Non compare più a chi era assegnato.
-      </p>
-      <RestoreShiftButton shift={shift} onDone={onDone} />
     </div>
   );
 }
@@ -261,11 +153,14 @@ function InternalForm({
   shift,
   initialPersonIds,
   onClose,
+  onCancelEdit,
 }: {
   date: string;
   shift?: Shift;
   initialPersonIds?: string[];
   onClose: () => void;
+  /** Torna al dettaglio senza salvare. Solo in modifica. */
+  onCancelEdit?: () => void;
 }) {
   const toast = useToast();
   // Solo le sedi su cui si possono fare i turni: il selettore non deve offrire
@@ -673,12 +568,6 @@ function InternalForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        {shift && cancelled ? (
-          <div className="mb-4">
-            <CancelledBanner shift={shift} onDone={onClose} />
-          </div>
-        ) : null}
-
         <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
           {/* Colonna sinistra: dove e quando. */}
           <div className="flex min-w-0 flex-col gap-4">
@@ -983,16 +872,6 @@ function InternalForm({
                 </span>
               </span>
             </label>
-
-            {/* Solo a turno concluso: prima non c'è nulla da consuntivare. */}
-            {shift && isShiftOver(shift) && !cancelled ? (
-              <PresenceSection
-                shiftId={shift.id}
-                venueId={shift.venue_id}
-                startTime={shift.start_time}
-                endTime={shift.end_time}
-              />
-            ) : null}
           </div>
         </div>
       </div>
@@ -1015,8 +894,10 @@ function InternalForm({
                   ? `Crea ${extraDates.length + 1} turni`
                   : "Crea turno"}
           </Button>
-          {shift && !cancelled ? (
-            <CancelShiftButton shift={shift} onDone={onClose} />
+          {onCancelEdit ? (
+            <Button onClick={onCancelEdit} disabled={pending}>
+              Annulla modifiche
+            </Button>
           ) : null}
         </div>
         {shift ? (

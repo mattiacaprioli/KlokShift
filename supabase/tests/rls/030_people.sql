@@ -392,6 +392,13 @@ begin
   perform tests.eq((select total_count from public.get_my_work_totals(current_date + 1, current_date + 7)), 0, 'e niente fuori periodo');
   perform tests.eq((select count(*) from public.get_my_work_history_range(current_date - 30, current_date)), 3::bigint, 'lo storico del periodo');
   perform tests.eq((select sum(hours) from public.get_my_work_history_range(current_date - 30, current_date)), 12.5::numeric, 'righe dello storico coerenti col totale');
+  -- Da dove vengono le ore: il 3,5 h scritto a mano non è l'orario del turno.
+  perform tests.eq((select hours_source from public.get_my_work_history_range(current_date - 30, current_date) where title = 'Ieri'),
+    'adjusted', 'le ore scritte da chi gestisce si riconoscono');
+  perform tests.eq((select planned_hours from public.get_my_work_history_range(current_date - 30, current_date) where title = 'Ieri'),
+    4::numeric, 'con le ore del turno accanto per il confronto');
+  perform tests.eq((select count(*) from public.get_my_work_history_range(current_date - 30, current_date) where hours_source = 'planned'),
+    2::bigint, 'senza timbratura né rettifica valgono gli orari del turno');
   perform tests.ok(exists (select 1 from public.get_staff_planning(current_date - 5, current_date + 30) where is_me and venue_id = tests.id('V1')),
     'il planning della sede mi include');
   perform tests.ok(not exists (select 1 from public.get_staff_planning(current_date - 5, current_date + 30) where venue_id = tests.id('V2')),
