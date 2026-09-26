@@ -177,6 +177,9 @@ function AccountSection() {
   const [name, setName] = useState(profile?.full_name ?? "");
   const [savingName, setSavingName] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  // Si apre in lettura: nome e foto si vedono in chat e sui turni di tutti, e
+  // non devono cambiare per un tasto premuto per sbaglio.
+  const [editing, setEditing] = useState(false);
 
   const userId = session!.user.id;
   const trimmed = name.trim();
@@ -188,6 +191,7 @@ function AccountSection() {
     try {
       await updateMyProfile(userId, { full_name: trimmed });
       await refreshProfile();
+      setEditing(false);
       toast.show("Nome aggiornato");
     } catch (e) {
       toast.show(userErrorMessage(e, "Salvataggio non riuscito"), "error");
@@ -247,28 +251,35 @@ function AccountSection() {
             size={72}
           />
           <div className="flex min-w-0 flex-col items-start gap-2">
+            {editing ? null : (
+              <p className="truncate text-lg text-t1">
+                {profile?.full_name || "Nome non indicato"}
+              </p>
+            )}
             <p className="truncate text-xs text-t3">{session?.user.email}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => fileRef.current?.click()}
-                disabled={photoBusy}
-              >
-                {photoBusy
-                  ? "Caricamento…"
-                  : profile?.avatar_url
-                    ? "Cambia foto"
-                    : "Carica una foto"}
-              </Button>
-              {profile?.avatar_url ? (
+            {editing ? (
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  variant="danger"
+                  onClick={() => fileRef.current?.click()}
                   disabled={photoBusy}
-                  onClick={() => void removePhoto()}
                 >
-                  Rimuovi
+                  {photoBusy
+                    ? "Caricamento…"
+                    : profile?.avatar_url
+                      ? "Cambia foto"
+                      : "Carica una foto"}
                 </Button>
-              ) : null}
-            </div>
+                {profile?.avatar_url ? (
+                  <Button
+                    variant="danger"
+                    disabled={photoBusy}
+                    onClick={() => void removePhoto()}
+                  >
+                    Rimuovi
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             <input
               ref={fileRef}
               type="file"
@@ -279,26 +290,53 @@ function AccountSection() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Nome e cognome">
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Mario Rossi"
-              className="w-64"
-            />
-          </Field>
-          <Button
-            variant="gold"
-            disabled={!dirty || !trimmed || savingName}
-            onClick={() => void saveName()}
-          >
-            {savingName ? "Salvataggio…" : "Salva"}
-          </Button>
-          <Button className="ml-auto" onClick={() => void signOut()}>
-            Esci
-          </Button>
-        </div>
+        {editing ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Nome e cognome">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Mario Rossi"
+                className="w-64"
+              />
+            </Field>
+            <Button
+              variant="gold"
+              disabled={!dirty || !trimmed || savingName}
+              onClick={() => void saveName()}
+            >
+              {savingName ? "Salvataggio…" : "Salva"}
+            </Button>
+            <Button
+              disabled={savingName}
+              onClick={() => {
+                setName(profile?.full_name ?? "");
+                setEditing(false);
+              }}
+            >
+              {/* La foto si salva appena scelta: senza un nome da buttare via
+                  «Annulla» prometterebbe di annullare anche quella. */}
+              {dirty ? "Annulla" : "Chiudi"}
+            </Button>
+            <Button className="ml-auto" onClick={() => void signOut()}>
+              Esci
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={() => {
+                setName(profile?.full_name ?? "");
+                setEditing(true);
+              }}
+            >
+              Modifica
+            </Button>
+            <Button className="ml-auto" onClick={() => void signOut()}>
+              Esci
+            </Button>
+          </div>
+        )}
       </Card>
       <p className="mt-2 px-1 text-xs text-t4">
         È lo stesso profilo dell&apos;app: nome e foto si vedono in chat e sui
