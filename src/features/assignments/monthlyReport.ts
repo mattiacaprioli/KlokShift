@@ -58,3 +58,21 @@ function reportRow(
     untracked_hours,
   };
 }
+
+/**
+ * Quando si possono esportare i documenti del mese: dashboard e app usano la
+ * stessa regola. Il mensile compone ore e assenze, quindi aspetta **entrambe**:
+ * con le sole assenze arrivate uscirebbe un file valido con il lavoro a zero.
+ * Il CSV delle assenze dipende solo dalle assenze.
+ */
+export function exportAvailability(input: {
+  hoursReady: boolean;
+  absencesReady: boolean;
+  reportRows: number;
+  absenceRows: number;
+}): { monthly: boolean; absences: boolean } {
+  return {
+    monthly: input.hoursReady && input.absencesReady && input.reportRows > 0,
+    absences: input.absencesReady && input.absenceRows > 0,
+  };
+}

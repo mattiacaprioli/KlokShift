@@ -25,10 +25,14 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function reviewCell(conflictHours: number, untrackedHours: number): string {
+/** Le stesse anomalie per cui il CSV scrive «Da verificare», a parole. */
+function reviewCell(conflictHours: number, untrackedHours: number, toReviewCount: number): string {
   const parts = [
     conflictHours > 0 ? `${hoursNumber(conflictHours)} h assenza` : null,
     untrackedHours > 0 ? `${hoursNumber(untrackedHours)} h senza timbratura` : null,
+    toReviewCount > 0
+      ? `${toReviewCount} ${toReviewCount === 1 ? "turno" : "turni"} da verificare`
+      : null,
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
@@ -64,7 +68,7 @@ export function buildHoursHtml(
         `<td class="n">${hoursNumber(p.worked_hours)}</td>` +
         `<td class="n">${hoursNumber(p.justified_hours)}</td>` +
         `<td class="n">${hoursNumber(p.covered_hours)}</td>` +
-        `<td class="n">${reviewCell(p.conflict_hours, p.untracked_hours)}</td></tr>`
+        `<td class="n">${reviewCell(p.conflict_hours, p.untracked_hours, p.to_review_count)}</td></tr>`
     )
     .join("");
 
@@ -135,6 +139,17 @@ function csvCell(v: string): string {
 }
 
 /**
+ * Una cella di **testo** (nome, ruolo, riferimenti): se comincia come una
+ * formula (`=`, `+`, `-`, `@`, tab, a capo) un foglio elettronico la
+ * eseguirebbe all'apertura. L'apostrofo davanti la lascia testo letterale.
+ * Le celle numeriche passano da `csvCell`: un numero non va reso testo, o il
+ * foglio smette di sommarlo.
+ */
+function csvText(v: string): string {
+  return csvCell(/^[=+\-@\t\r\n]/.test(v) ? `'${v}` : v);
+}
+
+/**
  * CSV separatore ';' e decimali con virgola (default Excel IT), con BOM UTF-8.
  *
  * **Una riga per persona, col totale.** Al commercialista serve quante ore ha fatto
@@ -147,8 +162,8 @@ export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow
   const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale ore coperte;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
   const lines = monthlyReportRows(people, absences).map((p) =>
     [
-      p.person_name,
-      p.roles ?? "",
+      csvText(p.person_name),
+      csvText(p.roles ?? ""),
       String(p.shifts_count),
       hoursNumber(p.worked_hours),
       hoursNumber(p.ferie_hours),
@@ -159,9 +174,7 @@ export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow
       hoursNumber(p.conflict_hours),
       hoursNumber(p.untracked_hours),
       p.conflict_hours > 0 || p.untracked_hours > 0 || p.to_review_count > 0 ? "Da verificare" : "",
-    ]
-      .map(csvCell)
-      .join(";")
+    ].join(";")
   );
   return "﻿" + [header, ...lines].join("\r\n");
 }
@@ -186,15 +199,13 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
   const num = (n: number) => (n > 0 ? hoursNumber(n) : "0");
   const lines = rows.map((r) =>
     [
-      r.person_name,
+      csvText(r.person_name),
       num(r.ferie_days),
       num(r.permesso_days),
       num(r.permesso_hours),
       num(r.malattia_days),
-      r.inps_protocols ?? "",
-    ]
-      .map(csvCell)
-      .join(";")
+      csvText(r.inps_protocols ?? ""),
+    ].join(";")
   );
   return "\uFEFF" + [header, ...lines].join("\r\n");
 }

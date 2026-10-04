@@ -5,7 +5,7 @@
 // essere puro — oggi regge solo perché quel `import type` sparisce a compile time,
 // ed è una dipendenza fragile da cui è meglio uscire.
 
-/** Una riga di `get_owner_hours_summary`: quel che una persona ha fatto in UNA sede. */
+/** Una riga di `get_workspace_hours_summary`: quel che una persona ha fatto in UNA sede. */
 export type OwnerHoursRow = {
   person_id: string;
   person_name: string;
@@ -58,29 +58,31 @@ export type PersonHours = {
 };
 
 /**
- * Raggruppa **scorrendo**, senza riordinare.
+ * Raggruppa per `person_id`, **senza riordinare**: le persone escono nell'ordine
+ * in cui compaiono la prima volta.
  *
- * `get_owner_hours_summary` ordina già per ore totali della persona decrescenti e
- * poi per nome della sede, quindi le righe di una stessa persona arrivano
- * adiacenti (verificato: il tiebreak su `person_name` lo garantisce anche a parità
- * di totale). Se riordinasse il client, la pagina e il file esportato finirebbero
- * per mostrare due ordini diversi dello stesso mese.
+ * `get_workspace_hours_summary` ordina per ore totali della persona decrescenti, poi
+ * per nome della persona e della sede — ma non per id, quindi due omonimi con lo
+ * stesso totale possono arrivare intercalati (A/Roma, B/Roma, A/Torino). Per
+ * questo si raggruppa con una mappa e non confrontando la riga precedente. Se
+ * riordinasse il client, la pagina e il file esportato finirebbero per mostrare
+ * due ordini diversi dello stesso mese.
  */
 export function groupHoursByPerson(rows: OwnerHoursRow[]): PersonHours[] {
-  const out: PersonHours[] = [];
+  const byId = new Map<string, PersonHours>();
   for (const row of rows) {
-    const last = out[out.length - 1];
-    if (last && last.person_id === row.person_id) {
-      last.shifts_count += row.shifts_count;
-      last.hours += row.hours;
-      last.planned_hours += row.planned_hours;
-      last.to_review_count += row.to_review_count;
-      last.proposed_hours += row.proposed_hours;
-      last.untracked_hours += row.untracked_hours;
-      last.venues.push(row);
+    const person = byId.get(row.person_id);
+    if (person) {
+      person.shifts_count += row.shifts_count;
+      person.hours += row.hours;
+      person.planned_hours += row.planned_hours;
+      person.to_review_count += row.to_review_count;
+      person.proposed_hours += row.proposed_hours;
+      person.untracked_hours += row.untracked_hours;
+      person.venues.push(row);
       continue;
     }
-    out.push({
+    byId.set(row.person_id, {
       person_id: row.person_id,
       person_name: row.person_name,
       roles: null, // composto in coda: serve l'elenco completo delle sedi
@@ -93,6 +95,7 @@ export function groupHoursByPerson(rows: OwnerHoursRow[]): PersonHours[] {
       venues: [row],
     });
   }
+  const out = [...byId.values()];
   for (const person of out) person.roles = mergeRoles(person.venues);
   return out;
 }

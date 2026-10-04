@@ -23,7 +23,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
-import { monthlyReportRows } from "@/features/assignments/monthlyReport";
+import { exportAvailability, monthlyReportRows } from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import {
   ABSENCE_SUMMARY_NOTE,
@@ -85,6 +85,12 @@ export default function VenueHoursScreen() {
   const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
   const absences = absenceQuery.data ?? [];
   const report = monthlyReportRows(people, absences);
+  const canExport = exportAvailability({
+    hoursReady: query.isSuccess,
+    absencesReady: absenceQuery.isSuccess,
+    reportRows: report.length,
+    absenceRows: absences.length,
+  });
 
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
@@ -96,6 +102,7 @@ export default function VenueHoursScreen() {
   const label = monthLabel(month);
 
   async function onExport(kind: "pdf" | "csv" | "absences") {
+    if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
     const company = companyName(venues, profile?.full_name);
     try {
       if (kind === "pdf") {
@@ -253,14 +260,16 @@ export default function VenueHoursScreen() {
           ) : null}
 
           <View className="mt-2 gap-2.5">
-            <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
-            {report.length > 0 ? (
-              <GhostButton
-                label="Esporta CSV mensile"
-                onPress={() => onExport("csv")}
-              />
+            {canExport.monthly ? (
+              <>
+                <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
+                <GhostButton
+                  label="Esporta CSV mensile"
+                  onPress={() => onExport("csv")}
+                />
+              </>
             ) : null}
-            {absences.length > 0 ? (
+            {canExport.absences ? (
               <GhostButton
                 label="Esporta CSV assenze"
                 onPress={() => onExport("absences")}

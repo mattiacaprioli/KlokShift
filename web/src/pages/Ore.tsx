@@ -4,7 +4,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
-import { monthlyReportRows } from "@/features/assignments/monthlyReport";
+import { exportAvailability, monthlyReportRows } from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import { ABSENCE_SUMMARY_NOTE } from "@/features/absences/summary";
 import {
@@ -74,6 +74,12 @@ export function OrePage() {
   const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
   const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
   const totalUntracked = report.reduce((s, p) => s + p.untracked_hours, 0);
+  const canExport = exportAvailability({
+    hoursReady: !isPending && !isError,
+    absencesReady: !absenceQuery.isPending && !absenceQuery.isError,
+    reportRows: report.length,
+    absenceRows: absences.length,
+  });
 
   function download(content: string, fileName: string) {
     // Stesse funzioni pure dell'app: i file devono coincidere.
@@ -87,10 +93,12 @@ export function OrePage() {
   }
 
   function downloadCsv() {
+    if (!canExport.monthly) return;
     download(buildHoursCsv(people, absences), hoursFileName(company, label, "csv"));
   }
 
   function downloadAbsencesCsv() {
+    if (!canExport.absences) return;
     download(
       buildAbsencesCsv(absences),
       absencesFileName(company, label, "csv")
@@ -98,6 +106,7 @@ export function OrePage() {
   }
 
   function printPdf() {
+    if (!canExport.monthly) return;
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
     const html = buildHoursHtml(company, label, people, totalHours, absences);
     const w = window.open("", "_blank");
@@ -152,19 +161,19 @@ export function OrePage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={downloadCsv} disabled={report.length === 0 || absenceQuery.isPending || absenceQuery.isError}>
+            <Button onClick={downloadCsv} disabled={!canExport.monthly}>
               CSV mensile
             </Button>
             <Button
               onClick={downloadAbsencesCsv}
-              disabled={absences.length === 0 || absenceQuery.isPending || absenceQuery.isError}
+              disabled={!canExport.absences}
             >
               CSV assenze
             </Button>
             <Button
               variant="gold"
               onClick={printPdf}
-              disabled={report.length === 0 || isPending || isError || absenceQuery.isPending || absenceQuery.isError}
+              disabled={!canExport.monthly}
             >
               Stampa / PDF
             </Button>
