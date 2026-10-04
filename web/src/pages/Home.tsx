@@ -101,7 +101,8 @@ export function HomePage() {
   // resta tale: "Prossimi turni" deve mostrare cosa viene dopo anche di domenica
   // sera, quando il periodo scelto è ormai finito.
   const shifts = useOwnerShifts().data ?? [];
-  const todayAssignments = useOwnerTodayAssignments().data ?? [];
+  const todayData = useOwnerTodayAssignments().data;
+  const todayAssignments = useMemo(() => todayData ?? [], [todayData]);
 
   // Gli annullati non hanno posti da coprire: fuori anche dall'elenco.
   const activeUpcoming = shifts.filter((s) => s.status !== "cancelled");

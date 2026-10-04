@@ -23,10 +23,12 @@ export async function setAbsenceHourCredit(args: {
   date: string;
   minutes: number | null;
 }): Promise<void> {
+  // Togliere il credito = non passare `p_minutes`: il parametro ha `default null`
+  // e così il tipo generato resta quello del database, senza ritocchi a mano.
   const { error } = await supabase.rpc("set_absence_hour_credit", {
     p_absence: args.absenceId,
     p_date: args.date,
-    p_minutes: args.minutes,
+    ...(args.minutes == null ? {} : { p_minutes: args.minutes }),
   });
   if (error) throw new Error(error.message);
 }

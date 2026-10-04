@@ -223,6 +223,10 @@ function InternalForm({
    * La sede su cui il form sta lavorando: da lei dipendono organico e mansioni
    * selezionabili. In modifica è quella del turno, sempre.
    */
+  // ⚠️ `watch()` fa saltare al React Compiler l'intero componente (avviso lint
+  // «incompatible library»). Passare a `useWatch` lo farebbe analizzare, e il
+  // compilatore segnala allora quattro setState dentro effetti (righe ~266,
+  // ~278, ~326, ~482): va prima rifatta quella logica (audit B14).
   const formVenueId = shift?.venue_id ?? watch("venue_id");
   const formDate = watch("date");
   const formStart = watch("start_time");
@@ -328,7 +332,7 @@ function InternalForm({
   }, [shift, initialPersonIds, staffQuery.data]);
 
   const staff = useMemo(() => staffQuery.data ?? [], [staffQuery.data]);
-  const roles = rolesQuery.data ?? [];
+  const roles = useMemo(() => rolesQuery.data ?? [], [rolesQuery.data]);
   // La richiesta punta all'assegnazione; la riga qui è la persona: si passa per
   // gli assegnati del turno per tradurre l'una nell'altra.
   const requestedByStaff = useMemo(() => {

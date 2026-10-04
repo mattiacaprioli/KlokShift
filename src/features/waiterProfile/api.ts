@@ -75,8 +75,8 @@ export async function getMyWaiterProfile(
  * ⚠️ **Niente `.upsert({ id, … })`**. PostgREST traduce l'upsert in
  * `insert … on conflict (id) do update set id = excluded.id, …`: mette in SET
  * **ogni** colonna del payload, `id` compreso. Ma l'UPDATE su questa tabella è
- * concesso per colonna e `id` non è nell'elenco (la chiave non si riscrive, come
- * `rating_*` che li tiene il trigger), quindi il comando muore con
+ * concesso per colonna e `id` non è nell'elenco (la chiave non si riscrive),
+ * quindi il comando muore con
  * `42501 permission denied for table waiter_profiles` — anche quando la riga non
  * esiste ancora, perché il permesso si controlla prima di sapere se ci sarà un
  * conflitto. Due passaggi allora: la riga (senza toccarla se c'è già) e poi i

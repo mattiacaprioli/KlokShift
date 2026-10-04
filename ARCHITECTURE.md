@@ -1,7 +1,7 @@
 # Architettura KlokShift
 
 Gestione dei turni per l'ospitalità (Expo SDK 56 · React Native 0.85 · Expo
-Router · Supabase · NativeWind v4/Tailwind v4). Questo documento è la guida di
+Router · Supabase · NativeWind v5 preview/Tailwind v4). Questo documento è la guida di
 riferimento per come è organizzato il codice e come si aggiunge una feature.
 
 ## Struttura

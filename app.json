@@ -47,13 +47,6 @@
       "@react-native-community/datetimepicker",
       "expo-font",
       [
-        "expo-media-library",
-        {
-          "savePhotosPermission": "Consenti a KlokShift di salvare il tuo QR nella galleria.",
-          "granularPermissions": ["photo"]
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "Consenti a KlokShift di accedere alle foto per scegliere l'immagine del tuo profilo."

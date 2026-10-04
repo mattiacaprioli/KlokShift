@@ -1772,7 +1772,7 @@ export type Database = {
         Returns: undefined
       }
       set_absence_hour_credit: {
-        Args: { p_absence: string; p_date: string; p_minutes?: number | null }
+        Args: { p_absence: string; p_date: string; p_minutes?: number }
         Returns: undefined
       }
       set_absence_inps_protocol: {
