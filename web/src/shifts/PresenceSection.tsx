@@ -462,7 +462,7 @@ export function PresenceSection({
         })}
       </div>
       <p className="mt-2 text-[11px] text-t4">
-        Con il metodo Manuale, le ore del turno concluso compaiono automaticamente in Ore.
+        Senza timbratura, le ore del turno concluso compaiono automaticamente in Ore.
         Durata prevista {planned.toString().replace(".", ",")} h: correggi il numero se le ore svolte sono diverse.
       </p>
       {locked && rows.some((a) => self.isSelf(a.staff_member?.waiter_id)) ? (

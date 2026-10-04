@@ -1,15 +1,25 @@
 import { useState } from "react";
-import { Modal } from "react-native";
-import { Pressable, Text, View } from "@/tw";
+import { ActivityIndicator, KeyboardAvoidingView, Modal } from "react-native";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Pill } from "@/components/ui/Pill";
+import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
-import { todayString } from "@/lib/format";
+import { formatDate, todayString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { Absence } from "./api";
-import { useAbsenceHourCredits, useSetAbsenceHourCredit, useSetAbsenceInpsProtocol, useWithdrawAbsence } from "./hooks";
+import {
+  absenceDates,
+  canCreditAbsence,
+  creditChanges,
+  creditDraftOf,
+  creditSummary,
+  fillEmptyCredits,
+  parseCreditHours,
+} from "./credits";
+import { useAbsenceHourCredits, useSetAbsenceHourCredits, useSetAbsenceInpsProtocol, useWithdrawAbsence } from "./hooks";
 import {
   ABSENCE_KIND_LABEL,
   ABSENCE_STATUS_LABEL,
@@ -17,6 +27,7 @@ import {
   absenceStatusTone,
   canWithdrawAbsence,
   formatAbsenceRange,
+  visibleAbsenceNote,
 } from "./labels";
 import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
@@ -67,6 +78,10 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
           const days = absenceDays(a);
           const subtitle = subtitleFor?.(a);
           const title = titleFor?.(a);
+          const note = visibleAbsenceNote(a);
+          const creditable =
+            mode === "manager" &&
+            canCreditAbsence(a, { canHours: canAny("can_view_hours"), isOwner, myMemberId });
           const actions = [
             mode === "manager" && a.status === "pending" ? (
               <RowAction
@@ -83,7 +98,7 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
                 onPress={() => setProtocolFor(a)}
               />
             ) : null,
-            mode === "manager" && a.status === "approved" && !a.start_time && canAny("can_view_hours") && (isOwner || a.member_id !== myMemberId) ? (
+            creditable ? (
               <RowAction key="credit" label="Ore riconosciute" onPress={() => setCreditFor(a)} />
             ) : null,
             mode === "mine" && canWithdrawAbsence(a) ? (
@@ -122,8 +137,8 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
               {subtitle ? (
                 <Text className="mt-0.5 text-xs text-t3">{subtitle}</Text>
               ) : null}
-              {a.note ? (
-                <Text className="mt-2 text-[13px] leading-5 text-t2">{a.note}</Text>
+              {note ? (
+                <Text className="mt-2 text-[13px] leading-5 text-t2">{note}</Text>
               ) : null}
               {sick && a.status === "approved" ? (
                 <Text className="mt-2 text-xs text-t3">
@@ -132,6 +147,7 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
                     : "Riferimento del certificato non ancora indicato"}
                 </Text>
               ) : null}
+              {creditable ? <CreditSummaryLine absence={a} /> : null}
               {a.resolution_note ? (
                 <Text className="mt-2 text-xs leading-4 text-t3">
                   Nota: {a.resolution_note}
@@ -172,46 +188,94 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
   );
 }
 
+/**
+ * Le ore riconosciute, un campo per giorno; nessuna conversione implicita.
+ * ⚠️ Gemello web: `web/src/absences/AbsenceHourCredits.tsx`.
+ */
 function CreditModal({ absence, onClose }: { absence: Absence; onClose: () => void }) {
   const toast = useToast();
   const query = useAbsenceHourCredits(absence.id);
-  const save = useSetAbsenceHourCredit();
-  const [date, setDate] = useState(absence.start_date);
-  const [hours, setHours] = useState("");
-  const value = Number(hours.replace(",", "."));
-  const valid = date >= absence.start_date && date <= absence.end_date &&
-    Number.isFinite(value) && value > 0 && value <= 24 && Number.isInteger(value * 60);
+  const save = useSetAbsenceHourCredits();
+  const saved = query.data;
+  const dates = absenceDates(absence);
+  // Il modulo nasce quando le ore salvate sono arrivate: prima sarebbe vuoto, e
+  // salvarlo cancellerebbe quel che c'è.
+  const [draft, setDraft] = useState<Record<string, string> | null>(null);
+  const form = draft ?? (saved ? creditDraftOf(dates, saved) : null);
+  const [same, setSame] = useState("");
+  const changes = form && saved ? creditChanges(form, saved) : null;
+  const conflictOn = new Set((saved ?? []).filter((c) => c.conflict).map((c) => c.date));
 
   function onSave() {
-    if (!valid) return;
-    save.mutate({ absenceId: absence.id, date, minutes: value * 60 }, {
-      onSuccess: () => { setHours(""); toast.show("Ore riconosciute salvate"); },
+    if (!changes || changes.length === 0) return;
+    save.mutate({ absenceId: absence.id, changes }, {
+      onSuccess: () => { toast.show("Ore riconosciute salvate"); onClose(); },
       onError: (e) => toast.show(userErrorMessage(e, "Salvataggio non riuscito"), "error"),
     });
   }
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} className="items-center justify-center px-6">
-        <Pressable onPress={() => {}} className="w-full rounded-3xl border border-border-2 bg-bg-card p-6">
-          <Text className="text-lg font-sans-bold text-t1">Ore di assenza riconosciute</Text>
-          <Text className="mt-1 text-xs text-t3">{formatAbsenceRange(absence)} · Indica le ore per singolo giorno. Nessuna conversione automatica.</Text>
-          <View className="mt-4 gap-2">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-GG" autoCapitalize="none" />
-            <Input value={hours} onChangeText={setHours} placeholder="Ore, es. 8" keyboardType="decimal-pad" />
-            <GoldButton label={save.isPending ? "Salvataggio…" : "Salva ore"} disabled={!valid || save.isPending} onPress={onSave} />
-          </View>
-          {query.data?.map((c) => (
-            <View key={c.date} className="mt-3 flex-row items-center justify-between gap-2">
-              <Text className="text-xs text-t2">{c.date} · {(c.minutes / 60).toLocaleString("it-IT")} h{c.conflict ? " · Da verificare" : ""}</Text>
-              <Pressable disabled={save.isPending} onPress={() => save.mutate({ absenceId: absence.id, date: c.date, minutes: null })}><Text className="text-xs text-t4">Rimuovi</Text></Pressable>
-            </View>
-          ))}
-          <Pressable onPress={onClose} className="mt-4 items-center py-2"><Text className="text-sm text-t4">Chiudi</Text></Pressable>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <Pressable onPress={save.isPending ? undefined : onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} className="items-center justify-center px-6">
+          <Pressable onPress={() => {}} className="w-full rounded-3xl border border-border-2 bg-bg-card p-6">
+            <Text className="text-lg font-sans-bold text-t1">Ore di assenza riconosciute</Text>
+            <Text className="mt-1 text-xs leading-4 text-t3">
+              {ABSENCE_KIND_LABEL[absence.kind]} · {formatAbsenceRange(absence)}. Un giorno lasciato vuoto non viene convertito in ore.
+            </Text>
+            {!form ? (
+              <ActivityIndicator color="#EAB54C" className="mt-6" />
+            ) : (
+              <>
+                {dates.length > 1 ? (
+                  <View className="mt-4 flex-row items-center gap-2">
+                    <View className="flex-1">
+                      <Input value={same} onChangeText={setSame} placeholder="Stesse ore, es. 8" keyboardType="decimal-pad" className="py-2.5" />
+                    </View>
+                    <RowAction
+                      label="Compila i vuoti"
+                      disabled={parseCreditHours(same) == null}
+                      onPress={() => setDraft(fillEmptyCredits(form, same.trim()))}
+                    />
+                  </View>
+                ) : null}
+                <ScrollView style={{ maxHeight: 300 }} className="mt-3" keyboardShouldPersistTaps="handled">
+                  {dates.map((d) => (
+                    <View key={d} className="flex-row items-center justify-between gap-3 py-1">
+                      <Text className="flex-1 text-[13px] text-t2">
+                        {formatDate(d)}
+                        {conflictOn.has(d) ? <Text className="text-gold"> · da verificare</Text> : null}
+                      </Text>
+                      <View className="w-24">
+                        <Input
+                          value={form[d]}
+                          onChangeText={(t) => setDraft({ ...form, [d]: t })}
+                          placeholder="—"
+                          keyboardType="decimal-pad"
+                          className={cn("py-2 text-right", parseCreditHours(form[d]) === undefined && "border-error")}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+                <View className="mt-4">
+                  <GoldButton label={save.isPending ? "Salvataggio…" : "Salva ore"} disabled={!changes || changes.length === 0 || save.isPending} onPress={onSave} />
+                </View>
+              </>
+            )}
+            <Pressable onPress={onClose} disabled={save.isPending} className="mt-2 items-center py-2"><Text className="text-sm text-t4">Annulla</Text></Pressable>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
+}
+
+/** «Ore riconosciute · 16 h su 2 giorni di 4»: una query per riga, come sul web. */
+function CreditSummaryLine({ absence }: { absence: Absence }) {
+  const credits = useAbsenceHourCredits(absence.id).data;
+  if (!credits) return null;
+  return <Text className="mt-2 text-xs text-t3">{creditSummary(credits, absenceDays(absence))}</Text>;
 }
 
 function RowAction({
@@ -229,6 +293,7 @@ function RowAction({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      style={disabled ? { opacity: 0.4 } : undefined}
       className={
         gold
           ? "rounded-full bg-gold px-4 py-2"

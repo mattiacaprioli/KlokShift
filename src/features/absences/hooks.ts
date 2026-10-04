@@ -27,7 +27,7 @@ import {
   requestAbsence,
   resolveAbsence,
   setAbsenceInpsProtocol,
-  setAbsenceHourCredit,
+  setAbsenceHourCredits,
   withdrawAbsence,
 } from "./api";
 
@@ -39,11 +39,13 @@ export function useAbsenceHourCredits(absenceId: string | undefined) {
   });
 }
 
-export function useSetAbsenceHourCredit() {
+/** Salva le differenze del modulo giorno per giorno (`creditChanges`). */
+export function useSetAbsenceHourCredits() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: setAbsenceHourCredit,
-    onSuccess: (_, args) => {
+    mutationFn: setAbsenceHourCredits,
+    // Anche dopo un errore: i giorni salvati prima restano scritti.
+    onSettled: (_, __, args) => {
       qc.invalidateQueries({ queryKey: qk.absences.credits(args.absenceId) });
       qc.invalidateQueries({ queryKey: qk.absences.summaryAll });
     },

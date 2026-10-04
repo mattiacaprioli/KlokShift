@@ -219,9 +219,6 @@ export function PeopleWeek({
     );
   }
 
-  const totalHours = rows.reduce((s, r) => s + r.hours, 0);
-  const working = rows.filter((r) => r.hours > 0).length;
-
   return (
     <div>
       {/* Sullo schermo la griglia ha una larghezza minima e scorre; sul foglio
@@ -477,11 +474,6 @@ export function PeopleWeek({
 
       {renderLegend(
         <span className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-t4">
-        <span>
-          <b className="font-mono text-t2">{formatHours(totalHours)}</b>{" "}
-          programmate in totale · {working} di {rows.length}{" "}
-          {rows.length === 1 ? "persona" : "persone"} al lavoro
-        </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-warning" /> sotto le ore del
           contratto

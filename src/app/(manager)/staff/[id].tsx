@@ -73,6 +73,7 @@ import {
   clockMethodDescription,
   clockMethodLabel,
   effectiveClockMethod,
+  inheritedClockMethodHint,
   type ClockMethodChoice,
 } from "@/features/clock/methods";
 
@@ -91,7 +92,7 @@ function ClockMethodPicker({
         const active = option.id === value;
         const description =
           option.id === "inherit"
-            ? `Usa il metodo della sede: ${clockMethodLabel(venueMethod)}.`
+            ? inheritedClockMethodHint(venueMethod)
             : clockMethodDescription(option.id);
 
         return (
@@ -122,7 +123,7 @@ function ClockMethodPicker({
                   active ? "text-gold" : "text-t1"
                 )}
               >
-                {option.id === "inherit" ? "Come la sede" : option.label}
+                {option.label}
               </Text>
               <Text className="mt-0.5 text-xs leading-4 text-t3">
                 {description}
@@ -385,7 +386,7 @@ function WorkplaceCard({
                   label="Metodo di timbratura"
                   value={`${clockMethodLabel(effectiveMethod)}${
                     membership.clock_method == null
-                      ? " · impostazione della sede"
+                      ? " · come la sede"
                       : ""
                   }`}
                 />

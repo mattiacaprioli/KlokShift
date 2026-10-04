@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import type { Absence, AbsenceKind } from "@/features/absences/api";
+import { canCreditAbsence, creditSummary } from "@/features/absences/credits";
 import {
+  useAbsenceHourCredits,
   usePersonAbsences,
   useRecordAbsence,
   useSetAbsenceInpsProtocol,
@@ -11,13 +13,14 @@ import {
   ABSENCE_STATUS_LABEL,
   absenceDays,
   formatAbsenceRange,
+  visibleAbsenceNote,
 } from "@/features/absences/labels";
 import { userErrorMessage } from "@/lib/errors";
 import { todayString } from "@/lib/format";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
 import { useToast } from "../ui/Toast";
-import { Button, Card, Field, Input, Pill, Spinner } from "../ui/primitives";
+import { Button, Field, Input, Pill, Spinner } from "../ui/primitives";
 import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
 import { AbsenceHourCredits } from "./AbsenceHourCredits";
@@ -53,7 +56,9 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
           </p>
         ) : (
           <>
-            {absences.map((a) => <AbsenceRow key={a.id} absence={a} />)}
+            <AbsenceRows>
+              {absences.map((a) => <AbsenceRow key={a.id} absence={a} />)}
+            </AbsenceRows>
             {hasNextPage ? (
               <Button
                 onClick={() => fetchNextPage()}
@@ -71,64 +76,170 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
 }
 
 /**
+ * Il contenitore delle righe: un elenco unico a divisori, non una pila di card.
+ * Le assenze si scorrono per confronto (chi, cosa, quando), e righe allineate
+ * in colonna lo rendono possibile.
+ */
+export function AbsenceRows({ children }: { children: ReactNode }) {
+  return (
+    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border-2 bg-bg-card">
+      {children}
+    </ul>
+  );
+}
+
+/**
  * Una riga d'assenza con i comandi di chi gestisce: rispondere, il riferimento
- * del certificato,
- * i turni da liberare. La usano la scheda persona e la pagina Assenze.
+ * del certificato, le ore riconosciute, i turni da liberare. La usano la scheda
+ * persona e la pagina Assenze, sempre dentro `AbsenceRows`.
+ *
+ * Tre colonne da schermo largo — persona, assenza, comandi — e una sola su
+ * quello stretto. I moduli si aprono sotto, allineati alla colonna centrale.
  */
 export function AbsenceRow({
   absence: a,
   personName,
+  impliedStatus,
 }: {
   absence: Absence;
-  /** In testa alla riga, nelle liste con più persone. */
+  /** La prima colonna, nelle liste con più persone. */
   personName?: string | null;
+  /**
+   * Lo stato che la sezione dice già («Da decidere», «In corso e prossime»):
+   * su quelle righe la pill sarebbe la stessa parola ripetuta a ogni riga.
+   */
+  impliedStatus?: Absence["status"];
 }) {
   const { canAny, isOwner, myMemberId } = useOwnerVenues();
+  // Un solo pannello aperto per riga: i moduli restano chiusi finché servono,
+  // così una lista di assenze resta una lista e non una colonna di form.
+  const [open, setOpen] = useState<"credits" | "protocol" | null>(null);
   const closed = a.status === "rejected" || a.status === "withdrawn";
-  const sick = a.kind === "malattia";
+  const sick = a.kind === "malattia" && a.status === "approved";
+  const creditable = canCreditAbsence(a, {
+    canHours: canAny("can_view_hours"),
+    isOwner,
+    myMemberId,
+  });
+  const credits = useAbsenceHourCredits(creditable ? a.id : undefined);
   const days = absenceDays(a);
+  const note = visibleAbsenceNote(a);
+  const details = [
+    note,
+    a.resolution_note ? `Nota: ${a.resolution_note}` : null,
+    sick
+      ? a.inps_protocol
+        ? `Certificato ${a.inps_protocol}`
+        : "Certificato non indicato"
+      : null,
+    creditable && credits.data ? creditSummary(credits.data, days) : null,
+  ].filter(Boolean);
+  const showStatus = a.status !== impliedStatus;
+  const toggle = (panel: "credits" | "protocol") =>
+    setOpen((cur) => (cur === panel ? null : panel));
+  // Il rientro dei moduli: sotto la colonna centrale, se c'è quella del nome.
+  const indent = personName ? "md:pl-[11.5rem]" : "";
+
   return (
-    <Card className={cn("p-3", closed && "opacity-60")}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          {personName ? (
-            <p className="mb-0.5 truncate text-sm font-semibold text-t1">
-              {personName}
-            </p>
-          ) : null}
-          <p
-            className={cn(
-              "text-sm",
-              personName ? "text-t2" : "font-semibold text-t1"
-            )}
-          >
-            {ABSENCE_KIND_LABEL[a.kind]}
-            {a.start_time ? "" : ` · ${days} ${days === 1 ? "giorno" : "giorni"}`}
+    <li className="px-4 py-3">
+      <div
+        className={cn(
+          "grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-6 gap-y-1",
+          personName && "md:grid-cols-[10rem_minmax(0,1fr)_auto]"
+        )}
+      >
+        {personName ? (
+          <p className="col-span-2 truncate text-sm font-semibold text-t1 md:col-span-1">
+            {personName}
           </p>
-          <p className="mt-0.5 text-xs text-t4">{formatAbsenceRange(a)}</p>
-          {a.note ? <p className="mt-1 text-xs text-t2">{a.note}</p> : null}
-          {a.resolution_note ? (
-            <p className="mt-1 text-xs text-t4">Nota: {a.resolution_note}</p>
+        ) : null}
+
+        <div className={cn("min-w-0", closed && "opacity-60")}>
+          <p className="text-sm text-t1">
+            <span className={personName ? undefined : "font-semibold"}>
+              {ABSENCE_KIND_LABEL[a.kind]}
+            </span>
+            <span className="text-t3">
+              {" · "}
+              {formatAbsenceRange(a)}
+              {a.start_time || days === 1 ? "" : ` · ${days} giorni`}
+            </span>
+          </p>
+          {details.length > 0 ? (
+            <p className="mt-0.5 text-xs text-t3">{details.join(" · ")}</p>
           ) : null}
         </div>
-        <Pill tone={absencePillTone(a.status)}>
-          {ABSENCE_STATUS_LABEL[a.status]}
-        </Pill>
+
+        <div className="flex items-center justify-end gap-4 whitespace-nowrap">
+          {open === null && creditable && credits.data ? (
+            <RowLink onClick={() => toggle("credits")}>
+              {credits.data.length > 0 ? "Modifica ore" : "Indica ore"}
+            </RowLink>
+          ) : null}
+          {open === null && sick ? (
+            <RowLink onClick={() => toggle("protocol")}>
+              {a.inps_protocol ? "Modifica certificato" : "Aggiungi certificato"}
+            </RowLink>
+          ) : null}
+          {showStatus ? (
+            <Pill tone={absencePillTone(a.status)}>
+              {ABSENCE_STATUS_LABEL[a.status]}
+            </Pill>
+          ) : null}
+        </div>
       </div>
-      {a.status === "pending" ? (
-        <ResolveAbsenceForm absence={a} className="mt-3" />
-      ) : null}
-      {sick && a.status === "approved" ? <ProtocolField absence={a} /> : null}
-      {a.status === "approved" && !a.start_time && canAny("can_view_hours") && (isOwner || a.member_id !== myMemberId) ? <AbsenceHourCredits absence={a} /> : null}
-      {/* Su una assenza finita non c'è più niente da togliere, e ogni blocco è
-          una query sui turni della persona. */}
-      {a.end_date >= todayString() ? <AbsenceConflictsBlock absence={a} /> : null}
-    </Card>
+
+      <div className={indent}>
+        {a.status === "pending" ? (
+          <ResolveAbsenceForm absence={a} className="mt-3" />
+        ) : null}
+        {open === "credits" && credits.data ? (
+          <AbsenceHourCredits
+            absence={a}
+            saved={credits.data}
+            onDone={() => setOpen(null)}
+          />
+        ) : null}
+        {open === "protocol" ? (
+          <ProtocolField absence={a} onDone={() => setOpen(null)} />
+        ) : null}
+        {/* Su una assenza finita non c'è più niente da togliere, e ogni blocco
+            è una query sui turni della persona. */}
+        {a.end_date >= todayString() ? (
+          <AbsenceConflictsBlock absence={a} />
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+/** Un comando di riga: testo in oro, senza il peso di un bottone. */
+function RowLink({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="focus-gold rounded text-xs font-semibold text-gold underline-offset-2 hover:underline"
+    >
+      {children}
+    </button>
   );
 }
 
 /** Il riferimento del certificato arriva spesso dopo: si aggiunge dalla riga. */
-function ProtocolField({ absence }: { absence: Absence }) {
+function ProtocolField({
+  absence,
+  onDone,
+}: {
+  absence: Absence;
+  onDone: () => void;
+}) {
   const toast = useToast();
   const save = useSetAbsenceInpsProtocol();
   const [value, setValue] = useState(absence.inps_protocol ?? "");
@@ -136,13 +247,16 @@ function ProtocolField({ absence }: { absence: Absence }) {
 
   return (
     <form
-      className="mt-3 flex items-center gap-2"
+      className="mt-3 flex items-center gap-2 rounded-xl bg-bg-1 p-3"
       onSubmit={(e) => {
         e.preventDefault();
         save.mutate(
           { absenceId: absence.id, protocol: value },
           {
-            onSuccess: () => toast.show("Riferimento salvato"),
+            onSuccess: () => {
+              toast.show("Riferimento salvato");
+              onDone();
+            },
             onError: (err) =>
               toast.show(userErrorMessage(err, "Salvataggio non riuscito"), "error"),
           }
@@ -155,9 +269,13 @@ function ProtocolField({ absence }: { absence: Absence }) {
         placeholder="Riferimento certificato medico"
         maxLength={40}
         className="max-w-60"
+        autoFocus
       />
-      <Button type="submit" disabled={!dirty || save.isPending}>
+      <Button type="submit" variant="gold" disabled={!dirty || save.isPending}>
         Salva
+      </Button>
+      <Button onClick={onDone} disabled={save.isPending}>
+        Annulla
       </Button>
     </form>
   );

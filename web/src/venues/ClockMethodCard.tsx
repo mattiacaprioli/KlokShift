@@ -32,8 +32,8 @@ export function ClockMethodCard({
           </h2>
           <p className="mt-1 text-sm leading-5 text-t3">
             {appEnabled
-              ? "Metodo predefinito: App. I professionisti possono timbrare entrata e uscita dal telefono."
-              : "Metodo predefinito: Manuale. Le ore del turno concluso si contano automaticamente e chi gestisce può correggerle."}
+              ? "Timbratura dall’app: i professionisti timbrano entrata e uscita dal telefono."
+              : "Nessuna timbratura: le ore del turno concluso si contano automaticamente e chi gestisce può correggerle."}
           </p>
           <p className="mt-1 text-xs leading-5 text-t4">
             Vale solo per {venue.name} e per chi usa «Come la sede». Le
@@ -54,8 +54,8 @@ export function ClockMethodCard({
                 onSuccess: () =>
                   toast.show(
                     appEnabled
-                      ? `Metodo manuale attivato per ${venue.name}`
-                      : `Timbratura app attivata per ${venue.name}`
+                      ? `Timbratura disattivata per ${venue.name}`
+                      : `Timbratura dall’app attivata per ${venue.name}`
                   ),
                 onError: (error) =>
                   toast.show(userErrorMessage(error), "error"),
@@ -66,8 +66,8 @@ export function ClockMethodCard({
           {save.isPending
             ? "Salvataggio…"
             : appEnabled
-              ? "Usa Manuale in questa sede"
-              : "Usa App in questa sede"}
+              ? "Disattiva la timbratura"
+              : "Attiva la timbratura dall’app"}
         </Button>
       </div>
     </section>

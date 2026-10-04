@@ -167,7 +167,7 @@ export default function VenueHoursScreen() {
       ) : people.length === 0 && absences.length === 0 ? (
         <EmptyState
           title="Nessuna ora registrata"
-          subtitle="Con il metodo Manuale, le ore compaiono dopo la fine del turno. Le timbrature degli altri metodi richiedono approvazione."
+          subtitle="Senza timbratura, le ore compaiono dopo la fine del turno. Le timbrature richiedono approvazione."
         />
       ) : (
         <>
@@ -180,7 +180,7 @@ export default function VenueHoursScreen() {
                   <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
                   <View><Text className="text-xs text-t3">Totale ore coperte</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalCoveredHours)}</Text></View>
                 </View>
-                <Text className="mt-2 text-xs text-t3">Con il metodo Manuale, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Gli altri metodi richiedono una timbratura approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
+                <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
                 {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
                 {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo.</Text> : null}
                 <Text className="text-xs text-t3">

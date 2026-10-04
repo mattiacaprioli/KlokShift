@@ -65,6 +65,7 @@ import {
   clockMethodDescription,
   clockMethodLabel,
   effectiveClockMethod,
+  inheritedClockMethodHint,
   type ClockMethodChoice,
 } from "@/features/clock/methods";
 
@@ -1237,9 +1238,9 @@ function WorkplaceCard({
               label="Metodo di timbratura"
               hint={
                 clockChoice === "inherit"
-                  ? `Seguirà l’impostazione della sede: ${clockMethodLabel(
+                  ? inheritedClockMethodHint(
                       membership.venue?.clock_method ?? "manual"
-                    )}.`
+                    )
                   : clockMethodDescription(clockChoice)
               }
             >
@@ -1280,7 +1281,7 @@ function WorkplaceCard({
               <span>{clockMethodLabel(effectiveMethod)}</span>
               {membership.clock_method == null ? (
                 <span className="ml-1 text-xs font-normal text-t4">
-                  · impostazione della sede
+                  · come la sede
                 </span>
               ) : null}
               <p className="mt-1 text-xs font-normal leading-5 text-t4">

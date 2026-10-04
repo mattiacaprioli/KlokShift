@@ -20,8 +20,8 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
         onSuccess: () =>
           toast.show(
             value
-              ? `Timbratura app attivata per ${venue.name}`
-              : `Metodo manuale attivato per ${venue.name}`
+              ? `Timbratura dall’app attivata per ${venue.name}`
+              : `Timbratura disattivata per ${venue.name}`
           ),
         onError: (error) =>
           toast.show(userErrorMessage(error, "Impossibile salvare. Riprova."), "error"),

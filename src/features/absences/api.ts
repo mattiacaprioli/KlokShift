@@ -33,6 +33,20 @@ export async function setAbsenceHourCredit(args: {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Più giorni in una volta: una RPC per giorno, in fila. Ogni giorno è
+ * indipendente e idempotente, quindi dopo un errore a metà basta ricaricare e
+ * risalvare — i giorni già scritti non cambiano.
+ */
+export async function setAbsenceHourCredits(args: {
+  absenceId: string;
+  changes: readonly { date: string; minutes: number | null }[];
+}): Promise<void> {
+  for (const c of args.changes) {
+    await setAbsenceHourCredit({ absenceId: args.absenceId, ...c });
+  }
+}
+
 export const ABSENCES_PAGE_SIZE = 20;
 
 export type RemoveFromShiftsResult = {

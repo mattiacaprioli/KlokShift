@@ -6,9 +6,9 @@ export const CLOCK_METHOD_CHOICES: readonly {
   id: ClockMethodChoice;
   label: string;
 }[] = [
-  { id: "inherit", label: "Impostazione sede" },
-  { id: "manual", label: "Manuale" },
-  { id: "app", label: "App" },
+  { id: "inherit", label: "Come la sede" },
+  { id: "manual", label: "Nessuna timbratura" },
+  { id: "app", label: "Timbratura dall’app" },
 ];
 
 export function clockMethodChoice(
@@ -18,16 +18,20 @@ export function clockMethodChoice(
   return "inherit";
 }
 
+/**
+ * Le etichette dicono cosa fa il professionista, non ripetono l'enum: anche
+ * QR e posizione passano dall'app, `app` è quello senza prove.
+ */
 export function clockMethodLabel(method: Enums<"clock_method">): string {
   switch (method) {
     case "manual":
-      return "Manuale";
+      return "Nessuna timbratura";
     case "app":
-      return "App";
+      return "Timbratura dall’app";
     case "qr":
-      return "QR";
+      return "Timbratura con QR";
     case "geolocation":
-      return "Posizione";
+      return "Timbratura con posizione";
   }
 }
 
@@ -44,6 +48,13 @@ export function clockMethodDescription(
     case "geolocation":
       return "Il professionista timbra dall’app con verifica della posizione.";
   }
+}
+
+/** Il suggerimento sotto «Come la sede»: cosa succede, non il nome del metodo. */
+export function inheritedClockMethodHint(
+  venueMethod: Enums<"clock_method">
+): string {
+  return `Segue l’impostazione della sede. ${clockMethodDescription(venueMethod)}`;
 }
 
 export function effectiveClockMethod(

@@ -46,6 +46,20 @@ export function formatAbsenceRange(a: AbsenceRange): string {
   return `${formatDate(a.start_date)} – ${formatDate(a.end_date)}`;
 }
 
+/**
+ * La nota da mostrare sotto il tipo, o niente se ripete il tipo stesso (chi
+ * chiede le ferie scrive spesso «Ferie» come motivo).
+ */
+export function visibleAbsenceNote(
+  a: Pick<Absence, "kind" | "note">
+): string | null {
+  const note = a.note?.trim();
+  if (!note) return null;
+  return note.toLowerCase() === ABSENCE_KIND_LABEL[a.kind].toLowerCase()
+    ? null
+    : note;
+}
+
 /** Giorni di calendario dell'intervallo, estremi compresi. */
 export function absenceDays(a: Pick<Absence, "start_date" | "end_date">): number {
   const ms =
