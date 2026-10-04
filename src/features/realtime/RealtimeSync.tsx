@@ -8,6 +8,7 @@ import {
   shiftViewQueryKeys,
   workEventQueryKeys,
 } from "@/features/shifts/invalidation";
+import { watchRejoin } from "./rejoin";
 
 type Row = Record<string, unknown>;
 type Payload = RealtimePostgresChangesPayload<Row>;
@@ -152,6 +153,21 @@ export function RealtimeSync({
     }
 
     const channel = supabase.channel(`sync:owner:${workspaceId}`);
+    // Al rientro dopo una caduta: tutto quello che i gestori qui sotto
+    // avrebbero invalidato, in una raffica sola (vedi `rejoin.ts`).
+    const rejoin = watchRejoin(() => {
+      for (const queryKey of [
+        ...shiftViewQueryKeys(),
+        ...workEventQueryKeys({}),
+        qk.staff.all,
+        qk.roles.all,
+        qk.team.all,
+        qk.chat.conversationsAll,
+        qk.chat.unreadAll,
+      ]) {
+        invalidate(queryKey);
+      }
+    });
 
     for (const chunk of chunks) {
       const filter = `venue_id=in.(${chunk.join(",")})`;
@@ -246,9 +262,10 @@ export function RealtimeSync({
           invalidate(qk.chat.unreadAll);
         }
       )
-      .subscribe();
+      .subscribe(rejoin.onStatus);
 
     return () => {
+      rejoin.stop();
       supabase.removeChannel(channel);
     };
   }, [isManager, workspaceId, venuesKey, invalidate]);
@@ -258,6 +275,10 @@ export function RealtimeSync({
   // non dipende da `role`. Il filtro per account tiene il subscriber leggero:
   // gli eventi che arrivano sono solo le mie righe.
   useEffect(() => {
+    const rejoin = watchRejoin(() => {
+      invalidate(qk.context.mine);
+      invalidate(qk.venues.mine);
+    });
     const channel = supabase
       .channel(`sync:me:${userId}`)
       .on(
@@ -273,9 +294,10 @@ export function RealtimeSync({
           invalidate(qk.venues.mine);
         }
       )
-      .subscribe();
+      .subscribe(rejoin.onStatus);
 
     return () => {
+      rejoin.stop();
       supabase.removeChannel(channel);
     };
   }, [userId, invalidate]);
@@ -283,6 +305,10 @@ export function RealtimeSync({
   useEffect(() => {
     if (isManager) return;
 
+    const rejoin = watchRejoin(() => {
+      invalidate(qk.chat.conversationsAll);
+      invalidate(qk.chat.unreadAll);
+    });
     const channel = supabase
       .channel(`sync:waiter:${userId}`)
       .on(
@@ -293,9 +319,10 @@ export function RealtimeSync({
           invalidate(qk.chat.unreadAll);
         }
       )
-      .subscribe();
+      .subscribe(rejoin.onStatus);
 
     return () => {
+      rejoin.stop();
       supabase.removeChannel(channel);
     };
   }, [isManager, userId, invalidate]);

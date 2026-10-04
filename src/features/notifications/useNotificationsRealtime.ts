@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { qk } from "@/lib/queryKeys";
+import { watchRejoin } from "@/features/realtime/rejoin";
 
 export type IncomingNotification = {
   title?: string;
@@ -43,6 +44,16 @@ const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
   absence_sick: [qk.absences.all],
 };
 
+/** La campanella e ogni dominio che una notifica può toccare, una volta sola. */
+const NOTIFICATION_RECOVERY_KEYS: readonly (readonly unknown[])[] = [
+  qk.notifications.all,
+  ...new Map(
+    Object.values(DOMAINS_BY_TYPE)
+      .flat()
+      .map((key) => [JSON.stringify(key), key] as const)
+  ).values(),
+];
+
 /**
  * Canale realtime delle notifiche dell'utente: invalida le query a ogni
  * cambiamento e segnala i nuovi arrivi tramite `onNotify`.
@@ -76,6 +87,13 @@ export function useNotificationsRealtime({
   const qc = useQueryClient();
 
   useEffect(() => {
+    // Al rientro dopo una caduta le notifiche perse non arrivano più: si
+    // rileggono la campanella e i domini che avrebbero toccato (vedi `rejoin.ts`).
+    const rejoin = watchRejoin(() => {
+      for (const queryKey of NOTIFICATION_RECOVERY_KEYS) {
+        qc.invalidateQueries({ queryKey });
+      }
+    });
     const channel = supabase
       .channel(`notifications:${userId}`)
       .on(
@@ -102,9 +120,10 @@ export function useNotificationsRealtime({
           if (n.title && !inThisChat) notifyRef.current(n);
         }
       )
-      .subscribe();
+      .subscribe(rejoin.onStatus);
 
     return () => {
+      rejoin.stop();
       supabase.removeChannel(channel);
     };
   }, [userId, qc]);
