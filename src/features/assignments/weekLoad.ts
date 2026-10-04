@@ -30,6 +30,8 @@ type LoadAssignment = {
   status: AssignmentStatus;
   /** Ore definitive, da approvazione della timbratura o inserimento manuale. */
   worked_hours: number | null;
+  /** Il metodo storico del turno: senza, le ore scritte non sono definitive. */
+  hours_source: string | null;
   attendance_reviewed_at: string | null;
   /** Sola timbratura attiva; gli annullamenti sono già esclusi dal data layer. */
   clock: ClockRecordWithCorrections | null;
@@ -99,8 +101,8 @@ export type PersonShift = {
   /** Ore che questo turno aggiunge al carico: 0 se la persona non viene. */
   hours: number;
   /**
-   * Consuntivo confrontabile con questo turno. `approved` è definitivo;
-   * `proposed` viene dalla timbratura completa ma aspetta ancora la revisione.
+   * Consuntivo confrontabile con questo turno: solo `approved` è definitivo
+   * (vedi `assignmentActual`).
    */
   actual: AssignmentActual;
   /** Questo turno si sovrappone a un altro turno attivo della stessa persona. */

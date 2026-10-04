@@ -28,6 +28,7 @@ function shift(input: {
   id: string;
   date: string;
   workedHours?: number | null;
+  hoursSource?: string | null;
   clock?: ClockRecordWithCorrections | null;
 }): LoadShift {
   return {
@@ -43,6 +44,12 @@ function shift(input: {
         id: `assignment-${input.id}`,
         status: "confirmed",
         worked_hours: input.workedHours ?? null,
+        hours_source:
+          input.hoursSource !== undefined
+            ? input.hoursSource
+            : input.workedHours == null
+              ? null
+              : "manual",
         attendance_reviewed_at:
           input.workedHours == null ? null : "2026-09-24T22:30:00Z",
         clock: input.clock ?? null,
@@ -120,6 +127,21 @@ describe("computeWeekLoad: confronto programmato/effettivo", () => {
     expect(andrea.proposedHours).toBe(0);
     expect(andrea.byDay.get("2026-09-24")?.[0].actual).toEqual({
       kind: "missing_out",
+    });
+  });
+
+  it("non chiama effettive le ore scritte senza timbratura sul metodo App (B08)", () => {
+    const [andrea] = computeWeekLoad(
+      [shift({ id: "past", date: "2026-09-24", workedHours: 6, hoursSource: null })],
+      roster,
+      { actualVenueIds, now }
+    );
+
+    expect(andrea.approvedCount).toBe(0);
+    expect(andrea.approvedHours).toBe(0);
+    expect(andrea.byDay.get("2026-09-24")?.[0].actual).toEqual({
+      kind: "untracked",
+      hours: 6,
     });
   });
 

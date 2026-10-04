@@ -94,7 +94,7 @@ export async function getOwnerShifts(
  * La riga di organico arriva con la persona sotto (`member`): sotto il nome
  * `staff_member` la rimette in forma `toShiftWithAssignees`.
  */
-const ASSIGNEES_SELECT = `*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, worked_hours, attendance_reviewed_at, role:venue_roles(id, name), clock:shift_clock_records(*, corrections:shift_clock_corrections(*)), ${VENUE_MEMBER_BRIEF})`;
+const ASSIGNEES_SELECT = `*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, worked_hours, hours_source, attendance_reviewed_at, role:venue_roles(id, name), clock:shift_clock_records(*, corrections:shift_clock_corrections(*)), ${VENUE_MEMBER_BRIEF})`;
 
 type AssigneesRow = Shift & {
   shift_role_requirements: ShiftWithAssignees["shift_role_requirements"];

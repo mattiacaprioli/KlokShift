@@ -43,9 +43,9 @@ export function ShiftClockSummary({ shift }: { shift: ShiftWithAssignees }) {
                 {d.name}{" "}
                 <Text
                   className={
-                    d.proposed
-                      ? "font-sans-semibold text-warning"
-                      : "font-sans-semibold text-t1"
+                    d.kind === "approved"
+                      ? "font-sans-semibold text-t1"
+                      : "font-sans-semibold text-warning"
                   }
                 >
                   {formatHoursVariance(d.delta)}

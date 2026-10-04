@@ -16,13 +16,9 @@ const ICONS: Record<string, IconName> = {
 
 export default function ManagerTabsLayout() {
   const { session } = useAuth();
-  const { isOwner, canAny } = useOwnerVenues();
+  const { canAny } = useOwnerVenues();
   const unread = useChatUnreadCount(session?.user.id).data ?? 0;
 
-  // La chat è la coppia (professionista, titolare) e non è scopata per sede: a
-  // un collaboratore mostrerebbe le conversazioni di qualcun altro. Resta al
-  // titolare finché la conversazione non diventa un oggetto della sede.
-  const showChat = isOwner;
   const showStaff = canAny("can_manage_staff");
   // Le assenze non hanno una tab: stanno in Staff, e il badge dice da qualunque
   // schermata che c'è una richiesta che aspetta.
@@ -44,10 +40,9 @@ export default function ManagerTabsLayout() {
       {/* `href: null` toglie la voce dalla barra **e** la rotta dal navigatore:
           è il modo di Expo Router di nascondere una tab, non un `display:none`
           che lascerebbe la schermata raggiungibile da un deep link. */}
-      <Tabs.Screen
-        name="messaggi"
-        options={{ title: "Messaggi", href: showChat ? undefined : null }}
-      />
+      {/* Per tutti: una conversazione è fra due persone dell'azienda e la RLS
+          fa leggere a ciascuno solo le proprie (vedi AGENTS.md, «La chat»). */}
+      <Tabs.Screen name="messaggi" options={{ title: "Messaggi" }} />
       <Tabs.Screen
         name="staff"
         options={{ title: "Staff", href: showStaff ? undefined : null }}

@@ -38,6 +38,11 @@ export type ShiftWithAssignees = Shift & {
     status: AssignmentStatus;
     /** Ore definitive: approvate dalla timbratura oppure inserite a mano. */
     worked_hours: number | null;
+    /**
+     * Il metodo con cui il turno si è svolto: decide se `worked_hours` è
+     * definitivo (vedi `isDefinitiveWorkedHours`).
+     */
+    hours_source: string | null;
     /** Null finché le ore timbrate non sono state approvate esplicitamente. */
     attendance_reviewed_at: string | null;
     /** Sola timbratura attiva: gli annullamenti restano nello storico DB. */

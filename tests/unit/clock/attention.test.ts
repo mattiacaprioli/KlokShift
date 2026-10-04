@@ -51,6 +51,7 @@ function shift(input?: {
         id: "assignment-1",
         status: "confirmed",
         worked_hours: null,
+        hours_source: null,
         role_id: null,
         role: null,
         attendance_reviewed_at: input?.reviewedAt ?? null,

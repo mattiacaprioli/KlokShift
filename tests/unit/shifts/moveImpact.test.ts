@@ -19,6 +19,7 @@ function assignment(
     id,
     status,
     worked_hours: null,
+    hours_source: null,
     attendance_reviewed_at: null,
     clock: null,
     role_id: null,

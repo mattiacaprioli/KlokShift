@@ -31,6 +31,7 @@ import type { AbsenceAvailability } from "@/features/absences/api";
 import { absenceForShift, absenceOnDay } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceCellLabel, formatAbsenceRange } from "@/features/absences/labels";
+import { actualChipText } from "@/features/clock/hours";
 import { computeWeekLoad, type PersonLoad } from "./weekLoad";
 import { ASSIGNMENT_STATUS_LABEL, isActiveAssignment } from "./status";
 
@@ -422,9 +423,7 @@ function PersonWeekCard({
                       )}
                       numberOfLines={1}
                     >
-                      {ps.actual.kind === "missing_out"
-                        ? "Uscita mancante"
-                        : `${ps.actual.kind === "approved" ? "Effettive" : "Proposte"} ${formatHours(ps.actual.hours)}${formatHoursVariance(ps.actual.hours - ps.hours) ? ` · ${formatHoursVariance(ps.actual.hours - ps.hours)}` : ""}${ps.actual.kind === "proposed" ? " · da verificare" : ""}`}
+                      {actualChipText(ps.actual, ps.hours)}
                     </Text>
                   ) : null}
                 </View>

@@ -39,10 +39,10 @@ const NAV: NavItem[] = [
     badge: "assenze",
   },
   { to: "/storico", label: "Storico" },
-  // La chat è la coppia (professionista, titolare): non è scopata per sede, e a
-  // un collaboratore mostrerebbe le conversazioni di qualcun altro. Fuori
-  // scope dichiarato della delega, non una dimenticanza.
-  { to: "/chat", label: "Messaggi", badge: "chat", ownerOnly: true },
+  // Per tutti: dal 20/09 una conversazione è fra due persone qualsiasi della
+  // stessa azienda, e la RLS fa leggere a ciascuno solo le proprie. Chi può
+  // scrivere a chi lo decidono la rubrica e `open_conversation`.
+  { to: "/chat", label: "Messaggi", badge: "chat" },
   { to: "/notifiche", label: "Notifiche", badge: "notifiche" },
   { to: "/sede", label: "Sede" },
   { to: "/collaboratori", label: "Collaboratori", ownerOnly: true },

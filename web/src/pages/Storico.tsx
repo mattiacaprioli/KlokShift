@@ -202,6 +202,12 @@ const MAX_DEVIATION_NAMES = 2;
  * più, e due scostamenti opposti si annullerebbero. Quelli ancora solo timbrati
  * restano in colore d'avviso, perché non sono ancora ore lavorate.
  */
+const DEVIATION_TITLE = {
+  approved: "Ore definitive",
+  proposed: "Ore timbrate, ancora da approvare",
+  untracked: "Ore registrate senza timbratura approvata, escluse dalle ore lavorate",
+} as const;
+
 function HoursDeviations({ shift }: { shift: ShiftWithAssignees }) {
   if (shift.status === "cancelled") return <span className="text-t4">—</span>;
   const { measured, deviations } = shiftDeviations(shift);
@@ -216,9 +222,9 @@ function HoursDeviations({ shift }: { shift: ShiftWithAssignees }) {
           {i > 0 ? ", " : ""}
           {d.name}{" "}
           <span
-            title={d.proposed ? "Ore timbrate, ancora da approvare" : "Ore approvate"}
+            title={DEVIATION_TITLE[d.kind]}
             className={
-              d.proposed ? "font-mono text-warning" : "font-mono text-t1"
+              d.kind === "approved" ? "font-mono text-t1" : "font-mono text-warning"
             }
           >
             {formatHoursVariance(d.delta)}

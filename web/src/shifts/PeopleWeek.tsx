@@ -32,6 +32,7 @@ import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
 import { personRoleNames } from "@/features/staff/api";
 import type { ClockAttentionKind } from "@/features/clock/attention";
+import { actualChipText } from "@/features/clock/hours";
 import { dayLabel, isPastDay, isToday, PAST_DAY_REASON } from "../lib/week";
 import { Placeholder, Spinner } from "../ui/primitives";
 import {
@@ -568,10 +569,6 @@ function PersonShiftChip({
   const active = isActiveAssignment(personShift.status);
   const dragging = dnd.isSource(personShift.shiftId, personShift.assignmentId);
   const actual = personShift.actual;
-  const actualDelta =
-    actual && actual.kind !== "missing_out"
-      ? formatHoursVariance(actual.hours - personShift.hours)
-      : null;
 
   return (
     <button
@@ -665,10 +662,7 @@ function PersonShiftChip({
             actual.kind === "approved" ? "text-success" : "text-warning"
           )}
         >
-          {actual.kind === "approved" ? "Effettive" : "Proposte"}{" "}
-          {formatHours(actual.hours)}
-          {actualDelta ? ` · ${actualDelta}` : ""}
-          {actual.kind === "proposed" ? " · da verificare" : ""}
+          {actualChipText(actual, personShift.hours)}
         </span>
       ) : null}
       {clockAttention === "missing_out" ? (
