@@ -11,7 +11,8 @@ export type MonthlyReportRow = {
   malattia_hours: number;
   permesso_hours: number;
   justified_hours: number;
-  total_retribuibile: number;
+  /** Ore lavorate più ore di assenza riconosciute; non è un importo di busta paga. */
+  covered_hours: number;
   conflict_hours: number;
   to_review_count: number;
   untracked_hours: number;
@@ -51,7 +52,7 @@ function reportRow(
   return {
     person_id, person_name, roles, shifts_count, worked_hours,
     ferie_hours, malattia_hours, permesso_hours, justified_hours,
-    total_retribuibile: worked_hours + justified_hours,
+    covered_hours: worked_hours + justified_hours,
     conflict_hours: a?.conflict_hours ?? 0,
     to_review_count,
     untracked_hours,

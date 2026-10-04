@@ -391,7 +391,7 @@ export function PresenceSection({
                   presence.mutate({
                     id: a.id,
                     status: absent ? "confirmed" : "no_show",
-                    // Rientrando da un'assenza si torna alla durata pianificata.
+                    // Rientrando da un'assenza torna la base del turno concluso.
                     worked_hours: absent ? null : a.worked_hours,
                   })
                 }
@@ -416,7 +416,7 @@ export function PresenceSection({
                   const v = e.target.value;
                   presence.mutate({
                     id: a.id,
-                    // Campo svuotato → torna alla durata pianificata (null).
+                    // Campo svuotato → durata del turno come base del metodo Manuale.
                     worked_hours: v === "" ? null : Number(v),
                   });
                 }}
@@ -436,8 +436,8 @@ export function PresenceSection({
         })}
       </div>
       <p className="mt-2 text-[11px] text-t4">
-        Durata pianificata {planned.toString().replace(".", ",")} h. Lascia il
-        campo vuoto per usarla; scrivi un numero solo se le ore sono diverse.
+        Con il metodo Manuale, le ore del turno concluso compaiono automaticamente in Ore.
+        Durata prevista {planned.toString().replace(".", ",")} h: correggi il numero se le ore svolte sono diverse.
       </p>
       {locked && rows.some((a) => self.isSelf(a.staff_member?.waiter_id)) ? (
         <p className="mt-1 text-[11px] text-t4">

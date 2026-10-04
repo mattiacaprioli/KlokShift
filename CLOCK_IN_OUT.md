@@ -54,7 +54,8 @@ Decisioni prese con l'utente:
 - La sede ha un metodo di timbratura predefinito. Il titolare o un collaboratore
   con permesso **Ore** può scegliere un metodo diverso sulla singola scheda di
   organico (`venue_member`):
-  - `manual`: il professionista non timbra; chi gestisce inserisce le ore;
+  - `manual`: il professionista non timbra; il turno concluso genera le ore
+    automaticamente e chi gestisce può correggerle;
   - `app`: pulsante entrata/uscita nell'app, senza verifica del luogo;
   - `qr`: scansione del QR dinamico mostrato dal display della sede;
   - `geolocation`: pulsante nell'app accettato entro il raggio configurato.
@@ -82,9 +83,10 @@ Decisioni prese con l'utente:
 - Chi ha il permesso **Ore** può approvare una riga, correggerla oppure usare
   **“Approva tutte le timbrature regolari”**. L'approvazione copia la durata in
   `worked_hours` e registra chi e quando l'ha approvata.
-- Il riepilogo mensile separa ore pianificate, ore effettive approvate, turni da
-  verificare e anomalie aperte. Il totale definitivo usa soltanto le ore
-  approvate; non deve presentare come effettive quelle ancora da verificare.
+- Il riepilogo mensile separa ore pianificate, ore effettive, turni da
+  verificare e anomalie aperte. Per i metodi con timbratura usa solo ore
+  approvate; per il metodo Manuale usa automaticamente la durata del turno
+  concluso, correggibile da chi gestisce. I turni futuri restano fuori.
 
 ### 5. Promemoria push
 - Solo per i metodi `app`, `qr` e `geolocation`; nessun promemoria nel metodo
@@ -175,8 +177,9 @@ Decisioni prese con l'utente:
   esatte. Verificare con titolari e consulenti se mantenere questa regola,
   conservare i minuti esatti oppure renderla configurabile per azienda/contratto;
   non assumere che un unico criterio sia valido per tutti.
-- I riepiloghi mensili devono esporre separatamente totale approvato e ore non
-  ancora revisionate; il totale definitivo non usa il fallback pianificato.
+- I riepiloghi mensili devono esporre separatamente totale consuntivato e ore
+  non ancora revisionate. Il fallback del turno concluso vale solo per il
+  metodo Manuale; gli altri metodi richiedono l'approvazione della timbratura.
 
 **Guard sulle assegnazioni**
 - `unassign`, `reassign`, `move_assignment` e la sostituzione dello staff in

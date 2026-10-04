@@ -33,7 +33,7 @@ export function ClockMethodCard({
           <p className="mt-1 text-sm leading-5 text-t3">
             {appEnabled
               ? "Metodo predefinito: App. I professionisti possono timbrare entrata e uscita dal telefono."
-              : "Metodo predefinito: Manuale. Gli orari vengono inseriti da chi gestisce."}
+              : "Metodo predefinito: Manuale. Le ore del turno concluso si contano automaticamente e chi gestisce può correggerle."}
           </p>
           <p className="mt-1 text-xs leading-5 text-t4">
             Vale solo per {venue.name} e per chi usa «Come la sede». Le

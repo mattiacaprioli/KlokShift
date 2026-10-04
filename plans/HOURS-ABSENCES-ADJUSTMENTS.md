@@ -6,9 +6,10 @@
 > quando una persona ha lavorato; questo documento stabilisce come presentare
 > lavoro, assenze e maggiorazioni nel consuntivo.
 
-Il consuntivo mensile ora separa lavoro timbrato e approvato, ore di assenza
-riconosciute e totale retribuibile. I crediti giornalieri sono manuali; un
-conflitto con lavoro timbrato approvato li esclude dal totale e li segnala da
+Il consuntivo mensile ora separa lavoro timbrato e approvato o attribuito
+automaticamente ai turni conclusi con metodo Manuale (correggibile da chi gestisce), ore di assenza
+riconosciute e totale ore coperte. I crediti giornalieri sono manuali; un
+conflitto con lavoro effettivo li esclude dal totale e li segnala da
 verificare. Mancano ancora le maggiorazioni e il calendario contrattuale.
 Il CSV usa `MAL` come etichetta della malattia (codice evento UniEmens INPS),
 ma non genera un flusso UniEmens: il consulente deve mappare le colonne ai codici
@@ -33,8 +34,11 @@ Il prodotto deve tenere separati tre dati:
 
 - Le ferie sono assenze retribuite, ma **non sono ore lavorate**: non vanno mai
   scritte o sommate in `shift_assignments.worked_hours`.
-- `worked_hours` continua a rappresentare soltanto il lavoro effettivo
-  approvato. Il piano timbrature e la sua revisione sono in
+- Le ore lavorate del metodo Manuale partono dalla durata del turno concluso;
+  chi gestisce può correggere `worked_hours` se le ore svolte sono diverse.
+  Gli altri metodi richiedono una timbratura approvata. Al cambio di metodo la
+  fonte dei turni già conclusi viene fissata sull'assegnazione, così lo storico
+  non cambia. I turni futuri non entrano nel consuntivo. Il piano è in
   `CLOCK_IN_OUT.md`.
 - Le ore riconosciute stanno in un dato distinto. Servono al confronto con il
   monte ore contrattuale e all'export, non alterano lo storico dei turni.

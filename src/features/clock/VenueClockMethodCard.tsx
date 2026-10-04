@@ -43,7 +43,7 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
           <Text className="mt-0.5 text-[13px] leading-5 text-t3">
             {appEnabled
               ? "Attiva: entrata e uscita si registrano dal telefono."
-              : "Disattiva: le ore vengono inserite da chi gestisce."}
+              : "Disattiva: le ore del turno concluso si contano automaticamente e chi gestisce può correggerle."}
           </Text>
         </View>
         <Switch

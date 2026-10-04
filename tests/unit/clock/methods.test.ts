@@ -39,10 +39,11 @@ describe("clockMethodLabel", () => {
 });
 
 describe("clockMethodDescription", () => {
-  it("spiega chi registra le ore nei metodi della prima milestone", () => {
+  it("spiega come vengono conteggiate le ore nei metodi della prima milestone", () => {
     expect(clockMethodDescription("manual")).toContain(
-      "ore vengono inserite da chi gestisce"
+      "turno concluso si contano automaticamente"
     );
+    expect(clockMethodDescription("manual")).toContain("chi gestisce può correggerle");
     expect(clockMethodDescription("app")).toContain(
       "timbra entrata e uscita direttamente dall’app"
     );

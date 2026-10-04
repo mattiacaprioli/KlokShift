@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      absence_hour_credits: {
+        Row: {
+          absence_id: string
+          created_by: string | null
+          date: string
+          minutes: number
+          updated_at: string
+        }
+        Insert: {
+          absence_id: string
+          created_by?: string | null
+          date: string
+          minutes: number
+          updated_at?: string
+        }
+        Update: {
+          absence_id?: string
+          created_by?: string | null
+          date?: string
+          minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absence_hour_credits_absence_id_fkey"
+            columns: ["absence_id"]
+            isOneToOne: false
+            referencedRelation: "staff_absences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_hour_credits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_file_cleanup: {
         Row: {
           attempts: number
@@ -472,6 +511,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          hours_source: string | null
           id: string
           role_id: string | null
           shift_id: string
@@ -485,6 +525,7 @@ export type Database = {
           attendance_reviewed_by?: string | null
           confirmed_at?: string | null
           created_at?: string
+          hours_source?: string | null
           id?: string
           role_id?: string | null
           shift_id: string
@@ -498,6 +539,7 @@ export type Database = {
           attendance_reviewed_by?: string | null
           confirmed_at?: string | null
           created_at?: string
+          hours_source?: string | null
           id?: string
           role_id?: string | null
           shift_id?: string
@@ -1302,6 +1344,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          hours_source: string | null
           id: string
           role_id: string | null
           shift_id: string
@@ -1413,6 +1456,14 @@ export type Database = {
           start_date: string
           start_time: string
           status: Database["public"]["Enums"]["absence_status"]
+        }[]
+      }
+      get_absence_hour_credits: {
+        Args: { p_absence: string }
+        Returns: {
+          conflict: boolean
+          date: string
+          minutes: number
         }[]
       }
       get_absence_summary: {
@@ -1634,16 +1685,12 @@ export type Database = {
           rating_count: number
         }[]
       }
-      get_absence_hour_credits: {
-        Args: { p_absence: string }
-        Returns: { date: string; minutes: number; conflict: boolean }[]
-      }
       get_workspace_absence_summary: {
         Args: { p_from: string; p_to: string; p_workspace: string }
         Returns: {
+          conflict_hours: number
           ferie_days: number
           ferie_hours: number
-          conflict_hours: number
           inps_protocols: string
           malattia_days: number
           malattia_hours: number
@@ -1675,10 +1722,10 @@ export type Database = {
           member_id: string
           member_name: string
           proposed_hours: number
-          untracked_hours: number
           roles: string
           shifts_count: number
           to_review_count: number
+          untracked_hours: number
           venue_closed: boolean
           venue_id: string
           venue_name: string
@@ -1737,6 +1784,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          hours_source: string | null
           id: string
           role_id: string | null
           shift_id: string
@@ -1806,6 +1854,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          hours_source: string | null
           id: string
           role_id: string | null
           shift_id: string

@@ -53,7 +53,7 @@ export function buildHoursHtml(
   const rows = monthlyReportRows(people, absences);
   const totalShifts = rows.reduce((s, p) => s + p.shifts_count, 0);
   const totalJustified = rows.reduce((s, p) => s + p.justified_hours, 0);
-  const totalRetribuibile = rows.reduce((s, p) => s + p.total_retribuibile, 0);
+  const totalCoveredHours = rows.reduce((s, p) => s + p.covered_hours, 0);
 
   const body = rows
     .map(
@@ -63,7 +63,7 @@ export function buildHoursHtml(
         `<td class="n">${p.shifts_count}</td>` +
         `<td class="n">${hoursNumber(p.worked_hours)}</td>` +
         `<td class="n">${hoursNumber(p.justified_hours)}</td>` +
-        `<td class="n">${hoursNumber(p.total_retribuibile)}</td>` +
+        `<td class="n">${hoursNumber(p.covered_hours)}</td>` +
         `<td class="n">${reviewCell(p.conflict_hours, p.untracked_hours)}</td></tr>`
     )
     .join("");
@@ -90,12 +90,12 @@ export function buildHoursHtml(
     <h1>Ore tracciate</h1>
     <div class="sub">${sub}</div>
     <table>
-      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore lavorate effettive</th><th class="n">Ore di assenza giustificata</th><th class="n">Totale retribuibile</th><th class="n">Da verificare</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore lavorate effettive</th><th class="n">Ore di assenza giustificata</th><th class="n">Totale ore coperte</th><th class="n">Da verificare</th></tr></thead>
       <tbody>${body}</tbody>
-      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(totalHours)}</td><td class="n">${hoursNumber(totalJustified)}</td><td class="n">${hoursNumber(totalRetribuibile)}</td><td></td></tr></tfoot>
+      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(totalHours)}</td><td class="n">${hoursNumber(totalJustified)}</td><td class="n">${hoursNumber(totalCoveredHours)}</td><td></td></tr></tfoot>
     </table>
     ${absences.length > 0 ? absencesHtmlSection(absences) : ""}
-    <div class="foot">Documento generato da KlokShift · Le ore da verificare sono escluse dal totale. I codici evento del CSV vanno confermati con il consulente in base al contratto applicato.</div>
+    <div class="foot">Documento generato da KlokShift · Il totale indica ore coperte, non un importo o un trattamento retributivo. Le ore da verificare sono escluse. I codici evento del CSV vanno confermati con il consulente in base al contratto applicato.</div>
   </body></html>`;
 }
 
@@ -144,7 +144,7 @@ function csvCell(v: string): string {
  * Le colonne evento sono distinte: nessuna assenza entra nelle ore ordinarie.
  */
 export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow[] = []): string {
-  const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale retribuibile;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
+  const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale ore coperte;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
   const lines = monthlyReportRows(people, absences).map((p) =>
     [
       p.person_name,
@@ -155,7 +155,7 @@ export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow
       hoursNumber(p.malattia_hours),
       hoursNumber(p.permesso_hours),
       hoursNumber(p.justified_hours),
-      hoursNumber(p.total_retribuibile),
+      hoursNumber(p.covered_hours),
       hoursNumber(p.conflict_hours),
       hoursNumber(p.untracked_hours),
       p.conflict_hours > 0 || p.untracked_hours > 0 || p.to_review_count > 0 ? "Da verificare" : "",

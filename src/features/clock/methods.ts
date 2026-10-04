@@ -36,7 +36,7 @@ export function clockMethodDescription(
 ): string {
   switch (method) {
     case "manual":
-      return "Il professionista non timbra: le ore vengono inserite da chi gestisce.";
+      return "Il professionista non timbra: le ore del turno concluso si contano automaticamente e chi gestisce può correggerle.";
     case "app":
       return "Il professionista timbra entrata e uscita direttamente dall’app.";
     case "qr":

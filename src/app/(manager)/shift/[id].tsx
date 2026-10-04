@@ -263,7 +263,7 @@ function PresenceRow({
         <View className="mt-3 border-t border-border pt-3">
           <View className="flex-row items-center gap-2">
             <Icon name="clock" size={15} color="#8c857a" />
-            <Text className="text-sm text-t2">Ore: {formatHours(effective)}</Text>
+            <Text className="text-sm text-t2">{assignment.worked_hours == null ? "Ore del turno" : "Ore corrette"}: {formatHours(effective)}</Text>
           </View>
           <Text className="mt-1.5 text-xs leading-4 text-t3">
             Le tue presenze e le tue ore le segna chi ha il permesso Ore su
@@ -284,7 +284,7 @@ function PresenceRow({
             >
               <View className="flex-row items-center gap-2">
                 <Icon name="clock" size={15} color="#8c857a" />
-                <Text className="text-sm text-t2">Ore: {formatHours(effective)}</Text>
+                <Text className="text-sm text-t2">{assignment.worked_hours == null ? "Ore del turno" : "Ore corrette"}: {formatHours(effective)}</Text>
                 {assignment.worked_hours != null ? (
                   <Text className="text-[11px] text-t4">· modificate</Text>
                 ) : null}
@@ -322,7 +322,7 @@ function PresenceRow({
                   className="flex-1 items-center rounded-2xl border border-border-2 py-2.5"
                 >
                   <Text className="text-sm font-sans-semibold text-t2">
-                    Pianificate
+                    Usa ore del turno
                   </Text>
                 </Pressable>
                 <Pressable

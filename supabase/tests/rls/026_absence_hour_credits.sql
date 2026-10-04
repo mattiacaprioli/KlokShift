@@ -8,6 +8,7 @@ declare
   shift_ids uuid[];
   assignment_id uuid;
   venue_member_id uuid;
+  manual_absence uuid;
 begin
   perform tests.login('Ow');
   a := public.record_absence(tests.id('M_Emp'), 'ferie', current_date + 10, current_date + 11);
@@ -57,13 +58,82 @@ begin
     'date', (current_date - 4)::text, 'start_time', '09:00', 'end_time', '15:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', venue_member_id)))));
   select id into assignment_id from public.shift_assignments where shift_id = shift_ids[1];
-  perform public.record_attendance(assignment_id, '{"worked_hours":6}'::jsonb);
   perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
     tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp') limit 1),
-    0::numeric, 'le ore manuali prive di clock-in e clock-out non sono ore lavorate effettive');
+    6::numeric, 'il turno Manuale concluso entra automaticamente con la durata pianificata');
+  perform public.record_attendance(assignment_id, '{"worked_hours":5}'::jsonb);
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp') limit 1),
+    5::numeric, 'chi gestisce può correggere le ore automatiche del metodo Manuale');
+  perform tests.eq((select shifts_count from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp') limit 1),
+    1::integer, 'il turno consuntivato manualmente conta nel riepilogo');
   perform tests.eq((select untracked_hours from public.get_workspace_hours_summary(
     tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp') limit 1),
-    6::numeric, 'le ore manuali escluse restano visibili come da verificare');
+    0::numeric, 'le ore del metodo Manuale non sono senza timbratura');
+  manual_absence := public.record_absence(tests.id('M_Emp'), 'ferie', current_date - 4, current_date - 4);
+  perform public.set_absence_hour_credit(manual_absence, current_date - 4, 360);
+  perform tests.eq((select conflict_hours from public.get_workspace_absence_summary(
+    tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp')),
+    6::numeric, 'lavoro manuale e ferie nello stesso giorno sono in conflitto');
+  perform tests.eq((select ferie_hours from public.get_workspace_absence_summary(
+    tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp')),
+    0::numeric, 'le ferie in conflitto non si sommano al lavoro manuale');
+  perform public.set_member_clock_method(venue_member_id, 'app');
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 4, current_date - 3) where member_id = tests.id('M_Emp') limit 1),
+    5::numeric, 'il cambio di metodo non riscrive le ore manuali storiche');
+  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Turno App senza timbratura',
+    'date', (current_date - 6)::text, 'start_time', '09:00', 'end_time', '15:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', venue_member_id)))));
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 6, current_date - 5) where member_id = tests.id('M_Emp') limit 1),
+    0::numeric, 'il turno App senza timbratura non entra automaticamente');
+  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Presenza con metodo App',
+    'date', (current_date - 5)::text, 'start_time', '09:00', 'end_time', '15:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', venue_member_id)))));
+  select id into assignment_id from public.shift_assignments where shift_id = shift_ids[1];
+  perform public.record_attendance(assignment_id, '{"worked_hours":6}'::jsonb);
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 5, current_date - 4) where member_id = tests.id('M_Emp') limit 1),
+    0::numeric, 'le ore senza timbratura per il metodo App restano fuori dal consuntivo');
+  perform tests.eq((select untracked_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 5, current_date - 4) where member_id = tests.id('M_Emp') limit 1),
+    6::numeric, 'le ore senza timbratura per il metodo App sono da verificare');
+  perform public.set_member_clock_method(venue_member_id, 'manual');
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 5, current_date - 4) where member_id = tests.id('M_Emp') limit 1),
+    0::numeric, 'il cambio a Manuale non approva ore del metodo App già registrate');
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 6, current_date - 5) where member_id = tests.id('M_Emp') limit 1),
+    0::numeric, 'il cambio a Manuale non trasforma turni App passati in ore lavorate');
+  perform public.set_member_clock_method(venue_member_id, null);
+  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Turno Manuale ereditato dalla sede',
+    'date', (current_date - 7)::text, 'start_time', '09:00', 'end_time', '13:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', venue_member_id)))));
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 7, current_date - 6) where member_id = tests.id('M_Emp') limit 1),
+    4::numeric, 'anche il metodo Manuale ereditato dalla sede conta il turno concluso');
+  manual_absence := public.record_absence(tests.id('M_Emp'), 'ferie', current_date - 7, current_date - 7);
+  perform public.set_absence_hour_credit(manual_absence, current_date - 7, 240);
+  perform tests.eq((select conflict_hours from public.get_workspace_absence_summary(
+    tests.id('W1'), current_date - 7, current_date - 6) where member_id = tests.id('M_Emp')),
+    4::numeric, 'anche le ore manuali automatiche sospendono il credito ferie in conflitto');
+  perform public.set_venue_clock_method(tests.id('V1'), 'app');
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 7, current_date - 6) where member_id = tests.id('M_Emp') limit 1),
+    4::numeric, 'cambiare il metodo della sede non riscrive il turno Manuale passato');
+  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Turno App ereditato dalla sede',
+    'date', (current_date - 8)::text, 'start_time', '09:00', 'end_time', '13:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', venue_member_id)))));
+  perform public.set_venue_clock_method(tests.id('V1'), 'manual');
+  perform tests.eq((select approved_hours from public.get_workspace_hours_summary(
+    tests.id('W1'), current_date - 8, current_date - 7) where member_id = tests.id('M_Emp') limit 1),
+    0::numeric, 'cambiare la sede a Manuale non attribuisce ore ai turni App passati');
   perform tests.eq((select count(*) from public.get_absence_hour_credits(a)),
     1::bigint, 'chi ha Ore legge i crediti');
   perform tests.raises(format('select public.set_absence_hour_credit(%L, %L, 480)', a, current_date + 9),

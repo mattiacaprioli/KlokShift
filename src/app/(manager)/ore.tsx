@@ -88,7 +88,7 @@ export default function VenueHoursScreen() {
 
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
-  const totalRetribuibile = report.reduce((s, p) => s + p.total_retribuibile, 0);
+  const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
   const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
   const totalUntracked = report.reduce((s, p) => s + p.untracked_hours, 0);
   const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
@@ -160,7 +160,7 @@ export default function VenueHoursScreen() {
       ) : people.length === 0 && absences.length === 0 ? (
         <EmptyState
           title="Nessuna ora registrata"
-          subtitle="Le ore dei turni interni conclusi di questo mese, in tutte le tue sedi, compariranno qui."
+          subtitle="Con il metodo Manuale, le ore compaiono dopo la fine del turno. Le timbrature degli altri metodi richiedono approvazione."
         />
       ) : (
         <>
@@ -171,8 +171,9 @@ export default function VenueHoursScreen() {
                 <View className="mt-3 flex-row flex-wrap gap-4">
                   <View><Text className="text-xs text-t3">Ore Lavorate Effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
                   <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
-                  <View><Text className="text-xs text-t3">Totale Retribuibile</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalRetribuibile)}</Text></View>
+                  <View><Text className="text-xs text-t3">Totale ore coperte</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalCoveredHours)}</Text></View>
                 </View>
+                <Text className="mt-2 text-xs text-t3">Con il metodo Manuale, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Gli altri metodi richiedono una timbratura approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
                 {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
                 {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo.</Text> : null}
                 <Text className="text-xs text-t3">
@@ -197,7 +198,7 @@ export default function VenueHoursScreen() {
                         {formatHours(p.worked_hours)}
                       </Text>
                     </View>
-                    <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale retribuibile {formatHours(p.total_retribuibile)}</Text>
+                    <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale ore coperte {formatHours(p.covered_hours)}</Text>
                     {p.conflict_hours > 0 ? <Text className="text-xs text-warning">Da verificare: {formatHours(p.conflict_hours)} di assenza</Text> : null}
                     {p.untracked_hours > 0 ? <Text className="text-xs text-warning">Senza timbratura: {formatHours(p.untracked_hours)} escluse</Text> : null}
                     <ProgressBar progress={maxHours > 0 ? p.worked_hours / maxHours : 0} />

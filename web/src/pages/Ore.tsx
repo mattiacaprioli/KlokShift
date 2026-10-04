@@ -71,7 +71,7 @@ export function OrePage() {
   const absences = absenceQuery.data ?? [];
   const report = monthlyReportRows(people, absences);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
-  const totalRetribuibile = report.reduce((s, p) => s + p.total_retribuibile, 0);
+  const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
   const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
   const totalUntracked = report.reduce((s, p) => s + p.untracked_hours, 0);
 
@@ -184,7 +184,7 @@ export function OrePage() {
       absences.length === 0 ? (
         <Placeholder
           title={`Nessuna ora registrata a ${label}`}
-          detail="Le ore arrivano dai turni interni conclusi di tutte le tue sedi. Segna le presenze aprendo un turno passato dal Planning."
+          detail="Le ore dei turni con metodo Manuale compaiono automaticamente dopo la fine del turno. Le timbrature degli altri metodi richiedono approvazione."
         />
       ) : null}
 
@@ -203,7 +203,8 @@ export function OrePage() {
         <Card className="mb-4 grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
           <div><p className="text-xs text-t3">Ore Lavorate Effettive</p><p className="font-mono text-xl text-t1">{formatHours(totalHours)}</p></div>
           <div><p className="text-xs text-t3">Ore di Assenza Giustificata</p><p className="font-mono text-xl text-t1">{formatHours(totalJustified)}</p></div>
-          <div><p className="text-xs text-t3">Totale Retribuibile</p><p className="font-mono text-xl text-gold">{formatHours(totalRetribuibile)}</p></div>
+          <div><p className="text-xs text-t3">Totale ore coperte</p><p className="font-mono text-xl text-gold">{formatHours(totalCoveredHours)}</p></div>
+          <p className="text-xs text-t4 sm:col-span-3">Per il metodo Manuale, le ore del turno concluso entrano automaticamente e si possono correggere dal turno. Gli altri metodi richiedono una timbratura approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</p>
           {totalConflicts > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</p> : null}
           {totalUntracked > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dalle ore lavorate effettive.</p> : null}
         </Card>
@@ -216,7 +217,7 @@ export function OrePage() {
                 <th className="px-5 py-3 text-right font-semibold">Turni</th>
                 <th className="px-5 py-3 text-right font-semibold">Ore Lavorate Effettive</th>
                 <th className="px-5 py-3 text-right font-semibold">Ore di Assenza Giustificata</th>
-                <th className="px-5 py-3 text-right font-semibold">Totale Retribuibile</th>
+                <th className="px-5 py-3 text-right font-semibold">Totale ore coperte</th>
                 <th className="px-5 py-3 text-right font-semibold">Da verificare</th>
               </tr>
             </thead>
@@ -235,7 +236,7 @@ export function OrePage() {
                     {formatHours(p.worked_hours)}
                   </td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">{formatHours(p.justified_hours)}</td>
-                  <td className="px-5 py-2.5 text-right font-mono text-gold">{formatHours(p.total_retribuibile)}</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-gold">{formatHours(p.covered_hours)}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">
                     {[
                       p.conflict_hours > 0 ? `${formatHours(p.conflict_hours)} assenza` : null,
@@ -257,7 +258,7 @@ export function OrePage() {
                   {formatHours(totalHours)}
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-t2">{formatHours(totalJustified)}</td>
-                <td className="px-5 py-3 text-right font-mono font-semibold text-gold">{formatHours(totalRetribuibile)}</td>
+                <td className="px-5 py-3 text-right font-mono font-semibold text-gold">{formatHours(totalCoveredHours)}</td>
                 <td className="px-5 py-3 text-right font-mono text-t2">
                   {[
                     totalConflicts > 0 ? `${formatHours(totalConflicts)} assenza` : null,

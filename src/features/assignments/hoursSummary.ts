@@ -18,11 +18,11 @@ export type OwnerHoursRow = {
   shifts_count: number;
   /** Durata pianificata/fallback storico, solo per confronto. */
   planned_hours: number;
-  /** Ore definitive: solo valori inseriti o approvati esplicitamente. */
+  /** Ore del turno concluso in Manuale (correggibili) o da timbratura approvata. */
   hours: number;
   to_review_count: number;
   proposed_hours: number;
-  /** Ore registrate senza una timbratura approvata, escluse dal lavorato effettivo. */
+  /** Ore non definitive per il metodo di rilevazione usato, escluse dal lavorato. */
   untracked_hours: number;
 };
 
