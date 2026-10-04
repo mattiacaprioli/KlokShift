@@ -101,6 +101,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questa persona è già su questo turno.",
   },
   {
+    // Un altro spostamento della stessa persona è arrivato prima (B11).
+    match: ["assignment_changed"],
+    message: "Questa assegnazione è appena cambiata: aggiorna la pagina e riprova.",
+  },
+  {
     match: ["shift_cancelled"],
     message: "Questo turno è stato annullato.",
   },
