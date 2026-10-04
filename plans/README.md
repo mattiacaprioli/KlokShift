@@ -1,5 +1,17 @@
 # Piani e decisioni
 
+## Audit 2026-10-04 — riferimento corrente
+
+[AUDIT-2026-10-04.md](AUDIT-2026-10-04.md) contiene l'audit aggiornato al commit
+`d4ed077`, inclusa la rimozione intenzionale delle recensioni. Riporta 14
+interventi B01–B14 con evidenze, ordine, dipendenze, stato, passaggi operativi,
+regressioni e condizioni di arresto, oltre a un prompt per il modello esecutore.
+
+Partire da B01 (configurazione dell'artifact pubblicato), poi seguire l'ordine
+pratico nel documento. Nessuna correzione al prodotto applicata durante l'audit.
+I vecchi A13–A15 mantengono le verifiche esterne pendenti: B14 le richiama senza
+duplicarle. Aggiornare la tabella di stato del nuovo documento dopo ogni blocco.
+
 ## Audit 2026-09-22
 
 Il documento completo è [AUDIT-2026-09-22.md](AUDIT-2026-09-22.md).

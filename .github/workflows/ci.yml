@@ -64,9 +64,13 @@ jobs:
   client:
     runs-on: ubuntu-latest
     env:
-      # Valori pubblici e fittizi: build e test non contattano produzione.
-      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: public-ci-key
+      # Vite scrive URL e key Supabase dentro il bundle al momento della build:
+      # l'artifact pubblicato deve nascere qui con quelli reali. Su PR e branch
+      # restano fittizi (li sceglie scripts/release-config.mjs), e i valori reali
+      # non arrivano nemmeno al job.
+      KS_RELEASE: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      RELEASE_SUPABASE_URL: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.EXPO_PUBLIC_SUPABASE_URL || '' }}
+      RELEASE_SUPABASE_ANON_KEY: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || '' }}
       EXPO_PUBLIC_SITE_URL: ${{ vars.EXPO_PUBLIC_SITE_URL || 'https://klokshift.com' }}
       EXPO_PUBLIC_APP_URL: ${{ vars.EXPO_PUBLIC_APP_URL || './app' }}
       EXPO_PUBLIC_IOS_URL: ${{ vars.EXPO_PUBLIC_IOS_URL }}
@@ -81,6 +85,11 @@ jobs:
 
       - name: Installa dipendenze
         run: yarn install --frozen-lockfile
+
+      # Nel rilascio fallisce se le variabili mancano o sono i placeholder:
+      # così deploy-pages, che dipende da questo job, non parte.
+      - name: Seleziona configurazione Supabase
+        run: node scripts/release-config.mjs select
 
       - name: Test client
         run: yarn test:unit
@@ -100,6 +109,10 @@ jobs:
       - name: Build dashboard
         run: yarn web:build
 
+      - name: Verifica bundle dashboard
+        if: env.KS_RELEASE == 'true'
+        run: node scripts/release-config.mjs check-bundle web/dist
+
       - name: Build sito vetrina
         run: yarn site:build
 
@@ -109,12 +122,14 @@ jobs:
       # Si pubblica esattamente l'artifact costruito dal job che ha superato i
       # gate, senza ricompilarlo in un workflow indipendente.
       - name: Assembla artifact Pages
+        if: env.KS_RELEASE == 'true'
         run: |
           mkdir -p _site/app
           cp -r web-site/dist/. _site/
           cp -r web/dist/. _site/app/
 
       - uses: actions/upload-pages-artifact@v3
+        if: env.KS_RELEASE == 'true'
         with:
           path: _site
 

@@ -62,6 +62,14 @@ Vite legge il **`.env` della root** con gli stessi nomi dell'app (`envDir` +
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Una sola configurazione Supabase, nessuna
 coppia `VITE_*` da tenere allineata.
 
+⚠️ Vite **scrive URL e key dentro il bundle** al momento della build: cambiarle
+dopo non serve. In CI le sceglie `scripts/release-config.mjs` prima della build:
+su PR e branch sono fittizie (`example.supabase.co`), nel rilascio (push o
+dispatch su `main`) arrivano dalle **variabili GitHub del repo** con gli stessi
+nomi. Il rilascio fallisce se mancano, se sono i placeholder o se la key non è
+pubblica (service role / `sb_secret_`), e il bundle compilato viene ricontrollato
+(`check-bundle web/dist`) prima di diventare l'artifact Pages.
+
 ## Deploy
 
 Il job `client` di `.github/workflows/ci.yml` costruisce un unico artifact Pages:
