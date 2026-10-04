@@ -12,7 +12,7 @@ import {
   shiftDurationHours,
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { Button, Input, Spinner } from "../ui/primitives";
+import { Button, Input, Select, Spinner } from "../ui/primitives";
 import {
   useApproveClockRecord,
   useApproveClockRecords,
@@ -25,48 +25,67 @@ import {
   formatClockTime,
   isRegularPendingClock,
 } from "@/features/clock/hours";
+import {
+  resolveRomeLocal,
+  romeDateTimeLocal,
+  romeFieldToIso,
+  type RomeFieldResult,
+} from "@/features/clock/timezone";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 
-function dateTimeLocal(value: string): string {
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date(value));
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
-
-/** Converte l'orario civile italiano del campo in un istante ISO. */
-function romeLocalToIso(value: string): string {
-  const [date, time] = value.split("T");
-  const [year, month, day] = date.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  const wallUtc = Date.UTC(year, month - 1, day, hour, minute);
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(wallUtc));
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)?.value ?? 0);
-  const shownUtc = Date.UTC(
-    get("year"),
-    get("month") - 1,
-    get("day"),
-    get("hour"),
-    get("minute")
+/**
+ * Un campo data+ora della correzione, sempre nell'ora di Roma. Nell'ora che a
+ * ottobre si ripete chiede quale delle due; nell'ora che a marzo non esiste dà
+ * errore. Non indovina mai: un orario lavorato sbagliato di un'ora è peggio di
+ * una domanda in più.
+ */
+function RomeDateTimeField({
+  label,
+  value,
+  onChange,
+  choice,
+  onChoice,
+  result,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  choice: 0 | 1 | undefined;
+  onChoice: (choice: 0 | 1 | undefined) => void;
+  result: RomeFieldResult;
+}) {
+  const ambiguous = resolveRomeLocal(value).kind === "ambiguous";
+  return (
+    <label className="text-[11px] text-t3">
+      {label}
+      <Input
+        type="datetime-local"
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+          onChoice(undefined);
+        }}
+        className="mt-1"
+      />
+      {ambiguous && (choice !== undefined || !result.ok) ? (
+        <Select
+          aria-label={`${label}: quale delle due ore`}
+          value={choice ?? ""}
+          onChange={(event) =>
+            onChoice(event.target.value === "" ? undefined : (Number(event.target.value) as 0 | 1))
+          }
+          className="mt-1"
+        >
+          <option value="">Quale delle due?</option>
+          <option value="0">La prima volta (prima del cambio d’ora)</option>
+          <option value="1">La seconda volta (dopo il cambio d’ora)</option>
+        </Select>
+      ) : null}
+      {!result.ok && value ? (
+        <span className="mt-1 block text-warning">{result.message}</span>
+      ) : null}
+    </label>
   );
-  return new Date(wallUtc - (shownUtc - wallUtc)).toISOString();
 }
 
 function ClockReview({
@@ -85,10 +104,12 @@ function ClockReview({
   const voidClock = useVoidClockRecord();
   const [mode, setMode] = useState<"correct" | "void" | null>(null);
   const times = clock ? effectiveClockTimes(clock) : null;
-  const [inAt, setInAt] = useState(() => (times ? dateTimeLocal(times.inAt) : ""));
+  const [inAt, setInAt] = useState(() => (times ? romeDateTimeLocal(times.inAt) : ""));
   const [outAt, setOutAt] = useState(() =>
-    times?.outAt ? dateTimeLocal(times.outAt) : ""
+    times?.outAt ? romeDateTimeLocal(times.outAt) : ""
   );
+  const [inChoice, setInChoice] = useState<0 | 1 | undefined>();
+  const [outChoice, setOutChoice] = useState<0 | 1 | undefined>();
   const [reason, setReason] = useState("");
 
   if (!clock || !times) {
@@ -100,9 +121,15 @@ function ClockReview({
   const pending = approve.isPending || correct.isPending || voidClock.isPending;
   const error = approve.error ?? correct.error ?? voidClock.error;
 
+  // Il campo non toccato salva l'istante di prima, così com'era.
+  const inResult = romeFieldToIso(inAt, { originalIso: times.inAt, ambiguousChoice: inChoice });
+  const outResult = romeFieldToIso(outAt, { originalIso: times.outAt, ambiguousChoice: outChoice });
+
   function close() {
     setMode(null);
     setReason("");
+    setInChoice(undefined);
+    setOutChoice(undefined);
   }
 
   return (
@@ -152,8 +179,8 @@ function ClockReview({
             type="button"
             disabled={pending}
             onClick={() => {
-              setInAt(dateTimeLocal(times.inAt));
-              setOutAt(times.outAt ? dateTimeLocal(times.outAt) : "");
+              setInAt(romeDateTimeLocal(times.inAt));
+              setOutAt(times.outAt ? romeDateTimeLocal(times.outAt) : "");
               setMode("correct");
             }}
             className="px-3 py-1.5 text-xs"
@@ -174,24 +201,22 @@ function ClockReview({
 
       {mode === "correct" ? (
         <div className="mt-3 grid gap-2 rounded-xl bg-bg-2 p-3 sm:grid-cols-2">
-          <label className="text-[11px] text-t3">
-            Entrata
-            <Input
-              type="datetime-local"
-              value={inAt}
-              onChange={(event) => setInAt(event.target.value)}
-              className="mt-1"
-            />
-          </label>
-          <label className="text-[11px] text-t3">
-            Uscita
-            <Input
-              type="datetime-local"
-              value={outAt}
-              onChange={(event) => setOutAt(event.target.value)}
-              className="mt-1"
-            />
-          </label>
+          <RomeDateTimeField
+            label="Entrata"
+            value={inAt}
+            onChange={setInAt}
+            choice={inChoice}
+            onChoice={setInChoice}
+            result={inResult}
+          />
+          <RomeDateTimeField
+            label="Uscita"
+            value={outAt}
+            onChange={setOutAt}
+            choice={outChoice}
+            onChoice={setOutChoice}
+            result={outResult}
+          />
           <Input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -203,18 +228,19 @@ function ClockReview({
             <Button
               type="button"
               variant="gold"
-              disabled={pending || !reason.trim() || !inAt || !outAt}
-              onClick={() =>
+              disabled={pending || !reason.trim() || !inResult.ok || !outResult.ok}
+              onClick={() => {
+                if (!inResult.ok || !outResult.ok) return;
                 correct.mutate(
                   {
                     recordId: clock.id,
-                    inAt: romeLocalToIso(inAt),
-                    outAt: romeLocalToIso(outAt),
+                    inAt: inResult.iso,
+                    outAt: outResult.iso,
                     reason: reason.trim(),
                   },
                   { onSuccess: close }
-                )
-              }
+                );
+              }}
             >
               Salva correzione
             </Button>
