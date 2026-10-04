@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { invalidateWorkViews } from "@/features/shifts/invalidation";
 import {
   approveClockRecord,
   correctClockRecord,
@@ -9,16 +10,10 @@ import {
   voidClockRecord,
 } from "./api";
 
+// Planning e storico incorporano lo stato minimo delle timbrature per segnalare
+// le anomalie: un'uscita/correzione/approvazione deve spegnere subito il badge.
 function invalidateClockViews(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: qk.assignments.all });
-  qc.invalidateQueries({ queryKey: qk.staff.all });
-  qc.invalidateQueries({ queryKey: qk.absences.summaryAll });
-  qc.invalidateQueries({ queryKey: qk.absences.creditsAll });
-  // Planning e storico incorporano lo stato minimo delle timbrature per
-  // segnalare le anomalie: un'uscita/correzione/approvazione deve spegnere
-  // subito il badge.
-  qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
-  qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
+  invalidateWorkViews(qc);
 }
 
 export function usePunchClock() {
@@ -79,7 +74,7 @@ export function useSetVenueClockMethod() {
     }) => setVenueClockMethod(vars.venueId, vars.method),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.venues.mine });
-      qc.invalidateQueries({ queryKey: qk.assignments.all });
+      invalidateWorkViews(qc);
     },
   });
 }
@@ -91,9 +86,6 @@ export function useSetMemberClockMethod() {
       venueMemberId: string;
       method: Parameters<typeof setMemberClockMethod>[1];
     }) => setMemberClockMethod(vars.venueMemberId, vars.method),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.staff.all });
-      qc.invalidateQueries({ queryKey: qk.assignments.all });
-    },
+    onSuccess: () => invalidateWorkViews(qc),
   });
 }

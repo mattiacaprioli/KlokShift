@@ -31,3 +31,48 @@ export function invalidateShiftViews(qc: QueryClient, shiftId?: string) {
     qc.invalidateQueries({ queryKey });
   }
 }
+
+/**
+ * Prefissi toccati quando cambia il **lavorato** di un'assegnazione: presenza,
+ * ore rettificate, timbratura (entrata, uscita, correzione, approvazione,
+ * annullamento), metodo di rilevazione. Locale o realtime, la lista è questa.
+ *
+ * Accanto alle ore ci sono **sempre** i crediti di assenza: il server decide il
+ * conflitto fra lavoro e assenza riconosciuta, e un consuntivo che rilegge le ore
+ * nuove ma tiene i crediti in cache le sommerebbe tutte e due.
+ *
+ * `assignments.all` e non solo `byShift`: sotto lo stesso prefisso vivono le
+ * ore e il rendimento della persona (`personWorked`, `personPerformance`), che
+ * un evento non sa indirizzare perché porta il membro di sede, non la persona.
+ */
+export function workViewQueryKeys(
+  shiftId?: string
+): readonly (readonly unknown[])[] {
+  return [
+    ...(shiftId ? [qk.shifts.detail(shiftId)] : []),
+    qk.assignments.all,
+    qk.shifts.byOwnerAll,
+    qk.shifts.rangeAny,
+    qk.shifts.pastAll,
+    qk.staff.all,
+    qk.absences.summaryAll,
+    qk.absences.creditsAll,
+  ];
+}
+
+/**
+ * Le chiavi di un evento realtime su `shift_assignments` o `shift_clock_records`.
+ * Su DELETE la riga porta solo l'id: senza `shift_id` resta la lista larga.
+ */
+export function workEventQueryKeys(
+  row: Record<string, unknown>
+): readonly (readonly unknown[])[] {
+  const shiftId = typeof row.shift_id === "string" ? row.shift_id : undefined;
+  return workViewQueryKeys(shiftId);
+}
+
+export function invalidateWorkViews(qc: QueryClient, shiftId?: string) {
+  for (const queryKey of workViewQueryKeys(shiftId)) {
+    qc.invalidateQueries({ queryKey });
+  }
+}

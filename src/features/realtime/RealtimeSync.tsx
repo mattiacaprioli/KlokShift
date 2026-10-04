@@ -4,7 +4,10 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { qk } from "@/lib/queryKeys";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { shiftViewQueryKeys } from "@/features/shifts/invalidation";
+import {
+  shiftViewQueryKeys,
+  workEventQueryKeys,
+} from "@/features/shifts/invalidation";
 
 type Row = Record<string, unknown>;
 type Payload = RealtimePostgresChangesPayload<Row>;
@@ -194,23 +197,12 @@ export function RealtimeSync({
       channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table: "shift_assignments", filter },
+        // Presenza, ore e copertura: la stessa lista del percorso locale,
+        // crediti di assenza compresi (vedi `workViewQueryKeys`).
         (payload) => {
-          const shiftId = idOf(rowOf(payload), "shift_id");
-          if (shiftId) {
-            invalidate(qk.assignments.byShift(shiftId));
-            invalidate(qk.shifts.detail(shiftId));
-          } else {
-            // DELETE: `old` porta solo l'id, il turno non si sa.
-            invalidate(qk.assignments.all);
+          for (const queryKey of workEventQueryKeys(rowOf(payload))) {
+            invalidate(queryKey);
           }
-          invalidate(qk.assignments.todayAll);
-          // La copertura si legge dalle liste di turni: invalidare quelle basta.
-          invalidate(qk.shifts.byOwnerAll);
-          invalidate(qk.shifts.rangeAny);
-          // Lo storico mostra le ore approvate e quelle ancora da approvare.
-          invalidate(qk.shifts.pastAll);
-          // Ore lavorate e performance dell'organico.
-          invalidate(qk.staff.all);
         }
       );
       // Entrata e uscita cambiano `shift_clock_records`, non l'assegnazione:
@@ -220,15 +212,9 @@ export function RealtimeSync({
         "postgres_changes",
         { event: "*", schema: "public", table: "shift_clock_records", filter },
         (payload) => {
-          const row = rowOf(payload);
-          const shiftId = idOf(row, "shift_id");
-          if (shiftId) {
-            invalidate(qk.assignments.byShift(shiftId));
-            invalidate(qk.shifts.detail(shiftId));
+          for (const queryKey of workEventQueryKeys(rowOf(payload))) {
+            invalidate(queryKey);
           }
-          invalidate(qk.assignments.todayAll);
-          invalidate(qk.shifts.rangeAny);
-          invalidate(qk.shifts.pastAll);
         }
       );
     }
@@ -245,6 +231,9 @@ export function RealtimeSync({
       () => {
         invalidate(qk.staff.all);
         invalidate(qk.team.all);
+        // Il permesso «Ore» decide anche chi legge riepilogo e crediti.
+        invalidate(qk.absences.summaryAll);
+        invalidate(qk.absences.creditsAll);
       }
     );
 

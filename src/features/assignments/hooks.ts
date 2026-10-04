@@ -3,7 +3,10 @@ import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
-import { invalidateShiftViews } from "@/features/shifts/invalidation";
+import {
+  invalidateShiftViews,
+  invalidateWorkViews,
+} from "@/features/shifts/invalidation";
 import type { InternalShiftPlan } from "./api";
 import {
   createInternalShift,
@@ -401,14 +404,9 @@ export function useSetAssignmentPresence(shiftId: string) {
       status?: Enums<"assignment_status">;
       worked_hours?: number | null;
     }) => setAssignmentPresence(id, fields),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
-      qc.invalidateQueries({ queryKey: qk.assignments.all });
-      qc.invalidateQueries({ queryKey: qk.staff.all });
-      // Le ore inserite a mano sono consuntivo come quelle approvate: planning
-      // per persona e storico le confrontano col programmato.
-      qc.invalidateQueries({ queryKey: qk.shifts.rangeAny });
-      qc.invalidateQueries({ queryKey: qk.shifts.pastAll });
-    },
+    // Le ore inserite a mano sono consuntivo come quelle approvate: planning per
+    // persona e storico le confrontano col programmato, e i crediti di assenza
+    // dello stesso giorno possono passare in conflitto.
+    onSuccess: () => invalidateWorkViews(qc, shiftId),
   });
 }
