@@ -93,19 +93,6 @@ export const qk = {
     detailWithVenue: (id: string) =>
       ["shifts", "detail", id, "venue"] as const,
   },
-  reviews: {
-    all: ["reviews"] as const,
-    preview: (waiterId: string, limit: number) =>
-      ["reviews", "preview", waiterId, limit] as const,
-    page: (
-      waiterId: string,
-      sort: string,
-      ratingFilter: number | null,
-      tag: string | null
-    ) =>
-      ["reviews", "page", waiterId, sort, ratingFilter ?? "all", tag ?? "all"] as const,
-    breakdown: (waiterId: string) => ["reviews", "breakdown", waiterId] as const,
-  },
   documents: {
     all: ["documents"] as const,
     // Per membro (`staff_documents.member_id`): un membro dell'azienda ha una

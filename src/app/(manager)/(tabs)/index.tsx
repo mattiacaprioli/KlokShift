@@ -8,7 +8,6 @@ import { Mono } from "@/components/ui/Mono";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
-import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
 import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
@@ -22,7 +21,6 @@ import {
   type LiveClockStatus,
 } from "@/features/clock/live";
 import { ProUpsellCard } from "@/features/plan/ProLock";
-import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import {
   computeHomeStats,
   periodLabel,
@@ -38,7 +36,6 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
 import {
-  formatHours,
   formatRelativeStart,
   formatShiftRange,
   todayString,
@@ -60,8 +57,6 @@ type TodayWorker = {
   name: string;
   avatarUri?: string;
   role: string | null;
-  ratingAvg: number | null;
-  ratingCount: number | null;
   /** Giorno del turno: serve a ordinare, e a segnalare chi è qui da ieri sera. */
   date: string;
   start: string;
@@ -101,7 +96,7 @@ export default function ManagerHome() {
     () => computeHomeStats(periodQuery.data ?? []),
     [periodQuery.data],
   );
-  // Cambiare periodo cambia la chiave di cache: senza questo i quattro numeri
+  // Cambiare periodo cambia la chiave di cache: senza questo i due numeri
   // cadrebbero a zero per un istante prima di riempirsi, e uno zero è una
   // risposta — non un'attesa.
   const statsReady = periodQuery.isSuccess;
@@ -171,8 +166,6 @@ export default function ManagerHome() {
         name: sm?.display_name ?? "Staff",
         avatarUri: sm?.waiter?.avatar_url ?? undefined,
         role: a.role?.name ?? null,
-        ratingAvg: sm?.waiter?.waiter_profile?.rating_avg ?? null,
-        ratingCount: sm?.waiter?.waiter_profile?.rating_count ?? null,
         date: a.shift?.date ?? "",
         start: a.shift?.start_time ?? "",
         end: a.shift?.end_time ?? "",
@@ -299,20 +292,12 @@ export default function ManagerHome() {
             <View className="flex-row gap-2.5">
               <StatCard
                 loading={!statsReady}
-                value={String(stats.total)}
-                label="Turni"
-                hint={`${stats.done} svolti · ${stats.upcoming} da fare`}
-              />
-              <StatCard
-                loading={!statsReady}
                 value={String(stats.shortCount)}
                 label="Turni scoperti"
                 hint="solo quelli da fare"
                 tone={stats.shortCount > 0 ? "warning" : "normal"}
                 onPress={() => router.push("/(manager)/(tabs)/turni")}
               />
-            </View>
-            <View className="flex-row gap-2.5">
               <StatCard
                 loading={!statsReady}
                 value={String(stats.missingSlots)}
@@ -320,11 +305,6 @@ export default function ManagerHome() {
                 hint="persone che mancano"
                 tone={stats.missingSlots > 0 ? "warning" : "normal"}
                 onPress={() => router.push("/(manager)/(tabs)/turni")}
-              />
-              <StatCard
-                loading={!statsReady}
-                value={formatHours(stats.hours)}
-                label="Ore pianificate"
               />
             </View>
           </View>
@@ -420,13 +400,6 @@ export default function ManagerHome() {
                               .filter(Boolean)
                               .join(" · ")}
                           </Text>
-                        ) : null}
-                        {REVIEWS_ENABLED ? (
-                          <RatingBadge
-                            avg={w.ratingAvg}
-                            count={w.ratingCount}
-                            className="mt-1"
-                          />
                         ) : null}
                         {w.live ? (
                           <LiveClockLine

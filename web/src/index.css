@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Token AURA — stessi valori di src/global.css (app) e web-review/styles.css.
+ * Token AURA — stessi valori di src/global.css (app).
  * Differenza rispetto al mobile: qui i font sono famiglie web reali con i pesi
  * numerici, mentre in React Native il peso fa parte del nome della famiglia.
  */

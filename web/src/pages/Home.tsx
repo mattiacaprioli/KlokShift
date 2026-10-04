@@ -7,7 +7,6 @@ import {
   type LiveClockStatus,
 } from "@/features/clock/live";
 import { useSelfStaff } from "@/features/staff/self";
-import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import type { Shift } from "@/features/shifts/api";
 import {
   computeHomeStats,
@@ -27,7 +26,6 @@ import { userErrorMessage } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
 import {
   formatDate,
-  formatHours,
   formatShiftRange,
   formatTime,
   toDateString,
@@ -45,8 +43,6 @@ type Worker = {
   key: string;
   name: string;
   role: string | null;
-  ratingAvg: number | null;
-  ratingCount: number | null;
   /** Giorno del turno: serve a ordinare, e a segnalare chi è qui da ieri sera. */
   date: string;
   start: string;
@@ -95,7 +91,7 @@ export function HomePage() {
     () => computeHomeStats(periodQuery.data ?? []),
     [periodQuery.data],
   );
-  // Cambiare periodo cambia la chiave di cache: senza questo i quattro numeri
+  // Cambiare periodo cambia la chiave di cache: senza questo i due numeri
   // cadrebbero a zero per un istante prima di riempirsi, e uno zero è una
   // risposta — non un'attesa. Vale anche per l'errore: meglio un trattino che
   // "0 turni scoperti" quando la query non è mai tornata.
@@ -121,9 +117,6 @@ export function HomePage() {
           key: `asg-${a.id}`,
           name: a.staff_member?.display_name ?? "Staff",
           role: a.role?.name ?? null,
-          ratingAvg: a.staff_member?.waiter?.waiter_profile?.rating_avg ?? null,
-          ratingCount:
-            a.staff_member?.waiter?.waiter_profile?.rating_count ?? null,
           date: a.shift?.date ?? "",
           start: a.shift?.start_time ?? "",
           end: a.shift?.end_time ?? "",
@@ -156,7 +149,7 @@ export function HomePage() {
   if (venues.length === 0) {
     return (
       <>
-        <PageHeader title="Home" subtitle="Come sta andando la tua azienda" />
+        <PageHeader title="Home" />
         <NoVenues />
       </>
     );
@@ -164,14 +157,7 @@ export function HomePage() {
 
   return (
     <>
-      <PageHeader
-        title={isMultiVenue ? "Home" : venues[0].name}
-        subtitle={
-          isMultiVenue
-            ? `Come stanno andando le tue ${venues.length} sedi`
-            : "Come sta andando la sede"
-        }
-      />
+      <PageHeader title={isMultiVenue ? "Home" : venues[0].name} />
 
       {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non
           dice su quanto tempo, e la prima domanda di chi guarda è "in base a
@@ -198,13 +184,7 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-4 gap-3">
-        <Stat
-          loading={!statsReady}
-          value={stats.total}
-          label="turni"
-          hint={`${stats.done} svolti · ${stats.upcoming} da fare`}
-        />
+      <div className="mb-6 grid grid-cols-2 gap-3">
         <Stat
           loading={!statsReady}
           value={stats.shortCount}
@@ -220,11 +200,6 @@ export function HomePage() {
           hint="persone che mancano"
           tone={stats.missingSlots > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
-        />
-        <Stat
-          loading={!statsReady}
-          value={formatHours(stats.hours)}
-          label="ore pianificate"
         />
       </div>
 
@@ -261,11 +236,6 @@ export function HomePage() {
                       {[w.role ?? "Ruolo non indicato", w.venue]
                         .filter(Boolean)
                         .join(" · ")}
-                      {REVIEWS_ENABLED && w.ratingCount ? (
-                        <span className="ml-2 text-gold">
-                          ★ {w.ratingAvg?.toFixed(1)}
-                        </span>
-                      ) : null}
                       {/* Turno di ieri sera ancora in corso: senza questo
                           sembrerebbe uno che attacca oggi a quell'ora. */}
                       {w.date && w.date !== toDateString(new Date()) ? (

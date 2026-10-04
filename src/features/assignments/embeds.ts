@@ -31,9 +31,9 @@ export const VENUE_MEMBER_BY_ACCOUNT =
 export const VENUE_MEMBER_FULL =
   "venue_member:venue_members(id, venue_id, member_id, employment_type, clock_method, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url)), venue_member_roles(role:venue_roles(id, name, sort_order)))";
 
-/** Come `VENUE_MEMBER_FULL`, con anche la reputazione (home del gestore). */
-export const VENUE_MEMBER_WITH_RATING =
-  "venue_member:venue_members!inner(id, venue_id, member_id, employment_type, clock_method, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))))";
+/** Come `VENUE_MEMBER_FULL` senza mansioni, con un inner join (home del gestore). */
+export const VENUE_MEMBER_TODAY =
+  "venue_member:venue_members!inner(id, venue_id, member_id, employment_type, clock_method, left_at, created_at, member:workspace_members(display_name, user_id, phone, status, waiter:profiles(id, full_name, avatar_url)))";
 
 type RawWaiter = ProfileBrief | null;
 

@@ -9,7 +9,6 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { NavRow } from "@/components/ui/NavRow";
 import { StatCard } from "@/components/ui/StatCard";
-import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import { useViewMode } from "@/features/team/ViewMode";
@@ -325,28 +324,10 @@ export default function WaiterProfiloScreen() {
         </View>
       </View>
 
-      {/* Con le recensioni spente «Condividi profilo» non ha più un pubblico:
-          apriva il QR, che serviva a farsi recensire dai clienti. L'azione
-          principale del profilo diventa quella che c'è sempre stata sotto:
-          tenere i propri dati aggiornati. */}
-      {REVIEWS_ENABLED ? (
-        <View className="flex-row items-center gap-2.5">
-          <GoldButton
-            label="Condividi profilo"
-            onPress={() => router.push("/(waiter)/qr")}
-            className="flex-1"
-          />
-          <GhostButton
-            label="Modifica"
-            onPress={() => router.push("/(waiter)/profilo-edit")}
-          />
-        </View>
-      ) : (
-        <GoldButton
-          label="Modifica profilo"
-          onPress={() => router.push("/(waiter)/profilo-edit")}
-        />
-      )}
+      <GoldButton
+        label="Modifica profilo"
+        onPress={() => router.push("/(waiter)/profilo-edit")}
+      />
 
       {/* Le tue sedi (staff fisso/a chiamata) */}
       {employers.length > 0 ? (

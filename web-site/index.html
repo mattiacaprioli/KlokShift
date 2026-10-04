@@ -84,19 +84,6 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-
-    <script>
-      // Compatibilità con i QR di recensione già stampati: il loro URL è la
-      // radice con `?w=<id>`, che ora è la vetrina. Finché `web-review/` resta
-      // pubblicato sotto /recensioni/, si rimanda lì prima di caricare il
-      // bundle. Quando le recensioni verranno rimosse, sparisce anche questo.
-      (function () {
-        var q = window.location.search;
-        if (q.length > 1 && /(^|[?&])w=/.test(q)) {
-          window.location.replace("recensioni/" + q);
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -6,7 +6,9 @@ Tracker delle attività. Aggiornato: **2026-09-15**.
 
 > ⚠️ **2026-09-12 — il marketplace non esiste più.** Molte voci qui sotto lo danno per vivo: sono **storia**, non backlog. Vedi «Sessione 2026-09-12 — Rimozione marketplace».
 
-Modello di prodotto (deciso): il **sede** organizza i turni con il **proprio organico**; il **professionista** conferma i turni assegnati, tiene il conto delle ore e costruisce la propria reputazione. Il marketplace ("cerco un extra", candidature) è stato **rimosso** il 2026-09-12. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15, ancora valida: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — le recensioni restano gratuite.
+> ⚠️ **2026-10-04 — le recensioni non esistono più** (erano sospese dal 12/09). Le voci che parlano di recensioni, QR, rating, `web-review/` o `waiter_public_cards` sono **storia**. Vedi «Sessione 2026-10-04 — Rimozione recensioni».
+
+Modello di prodotto (deciso): il **sede** organizza i turni con il **proprio organico**; il **professionista** conferma i turni assegnati, tiene il conto delle ore. Il marketplace ("cerco un extra", candidature) è stato **rimosso** il 2026-09-12. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15, ancora valida: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — le recensioni restano gratuite.
 
 ---
 
@@ -391,6 +393,16 @@ Ora l'email porta un **token nostro** a `#/invito`, e l'account nasce lì con `c
 - Link valido **7 giorni** (GoTrue ne dava 24 ore, ma non ci vincola più: un invito mandato venerdì sera non deve morire nel weekend). «Rimanda l'invito» genera un token nuovo e fa morire il vecchio, senza più cancellare nessun utente.
 - Privacy riscritta: la riga «Inviti ai collaboratori» non descrive più un account creato in anticipo.
 
+### Sessione 2026-10-04 — Rimozione recensioni ✅ (1 migration DA APPLICARE)
+
+Le recensioni dei clienti erano spente dal 12/09 (`REVIEWS_ENABLED=false`). Ora sono rimosse del tutto, come il marketplace.
+
+- **DB** (`20261004000200_drop_reviews.sql`): via `reviews` (policy, trigger, indice), `sync_waiter_rating`, `get_rating_breakdown`, `waiter_profiles.rating_avg/rating_count` e la carta pubblica (`waiter_public_cards`, `get_waiter_public_card`, `private.waiter_public_cards_src`), che esisteva solo per il sito del QR. `delete_account` riscritta senza `delete from reviews`. Con lei cade l'ultima porta di `anon`: `050_surface` ora verifica che non legga tabelle, non esegua funzioni e non usi `private`.
+- **Client**: tolti `src/features/reviews/`, `web/src/reviews/`, le rotte `(waiter)/qr` e `(waiter)/recensioni`, `ReviewCard`/`RatingSummary`/`StarRating`/`RatingBadge`/`NoReviews`, `qk.reviews`, la media in «Chi lavora oggi» (app e web) e il campo rating dalla query di oggi (`VENUE_MEMBER_TODAY`).
+- **Sito**: via `web-review/`, la sua copia in `/recensioni/` nel deploy e lo shim `?w=<id>` di `web-site/index.html`: i QR già stampati ora aprono la vetrina.
+- **Copy**: benvenuto, scelta del profilo in registrazione e slide d'intro del gestore non promettono più recensioni né reputazione.
+- ⚠️ **Fuori dal repo**: togliere la env `EXPO_PUBLIC_REVIEW_SITE_URL` da EAS (dal `.env` è già tolta).
+
 ## 🔜 In sospeso — prossimi passi immediati
 
 - [ ] ⚠️ **ATTIVARE L'INVIO DELLE EMAIL** (verificato il 16/09: `invite-staff` e `accept-invite` rispondono **404 `NOT_FOUND`**, nessuna email è mai partita). Il codice c'è e la migration `20260917120000` è applicata; mancano solo servizio, secret e deploy. Supabase da solo spedisce **solo** le email di autenticazione, con un limite di **2 all'ora** e un mittente dichiarato «solo per test»: le email personalizzate (inviti) richiedono un SMTP esterno, e lo stesso SMTP va messo anche su Supabase Auth prima di avere utenti veri. Scelta: **Resend** (gratis 3.000/mese, max 100/giorno, regione EU; alternativa Brevo, 300/giorno). Passi, in ordine:
@@ -489,7 +501,6 @@ Le pagine ci sono tutte; quello che manca è ciò che rende la scrivania **più 
   - ⚠️ **DA FARE fuori dal repo**: nuova app Android `com.klokshift.app` su Firebase + nuovo `google-services.json` (senza, la build Android fallisce) e chiave FCM su EAS; `npx expo prebuild --clean` + rebuild dei dev client; DNS GoDaddy → GitHub Pages + custom domain; Supabase Auth (Site URL, Redirect URLs, template email); secret `SITE_URL`/`DASHBOARD_URL`/`SMTP_FROM` + deploy di `invite-staff`; `EXPO_PUBLIC_SITE_URL`/`EXPO_PUBLIC_REVIEW_SITE_URL` su EAS; casella `info@klokshift.com`; rigenerare `web-site/public/og.png` e `pitch/KlokShift.pptx`.
 
 - **Geolocalizzazione (futura, richiesta dall'utente 20/07 — "prima o poi")**: oggi la città è testo manuale, nessun GPS. Quando si aggiunge (es. `expo-location` per turni vicini / distanza): ⚠️ **aggiornare la privacy policy** (`web-review/privacy.html` dichiara "nessuna geolocalizzazione precisa") + permessi `NSLocationWhenInUse`/`ACCESS_FINE_LOCATION` in `app.json` + base giuridica consenso. La privacy policy è **documento vivo**: come le slide onboarding, va aggiornata quando cambia cosa raccoglie l'app.
-- **Recensioni**: verifica "via scontrino" (`verified`/`status`/`receipt_ref` predisposti) + moderazione; badge di eccellenza (da `reviews.tags`); statistiche/andamento rating.
 - **Parte economica** (futura, non MVP): **telaio Pro COSTRUITO** (19/07, vedi sotto) senza prezzi; manca solo il modello di monetizzazione + Stripe + flip del default `plan` a 'free'. ⚠️ **Due vincoli scoperti il 09/09-10/09, da risolvere PRIMA del flip** (oggi invisibili perché tutti sono 'pro', bloccanti nello stesso identico momento):
   1. **`profiles.plan` è scrivibile dall'utente stesso.** La policy `"profiles: own read/write"` è `ALL` con `USING (id = auth.uid())` e **nessuna restrizione di colonna** → chiunque può darsi `plan='pro'` dal client. Il commento della migration dice "il client non deve scriverlo", ma nulla lo impedisce. Serve un trigger `BEFORE UPDATE` che annulla la modifica se il chiamante non è `service_role`.
   2. **Un paywall con CTA "vai sul sito per attivare il Pro" fa rifiutare l'app in Italia.** Guideline App Store 3.1.3: CTA verso pagamenti esterni vietate *"except for apps on the United States storefront"*. Ma il Pro (gestione personale venduta al **sede** per i **suoi dipendenti**) rientra in **3.1.3(c) Enterprise Services** + **3.1.3(f) Free Stand-alone Apps** → commissione Apple **0%**, meglio sia dell'IAP (15–30%) sia dell'External Purchase Link Entitlement DMA (2% + 5–13% store services + 5% CTC). Condizione: nell'app **né acquisto né link** — il lucchetto dice solo "Incluso nel piano Pro" e l'attivazione si comunica **fuori** dall'app (la guideline lo consente esplicitamente). L'attuale `(manager)/pro.tsx` è già conforme.

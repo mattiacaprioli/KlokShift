@@ -65,8 +65,7 @@ coppia `VITE_*` da tenere allineata.
 ## Deploy
 
 Il job `client` di `.github/workflows/ci.yml` costruisce un unico artifact Pages:
-`web-site/dist` alla radice, `web/dist` sotto `/app/` e la superficie sospesa
-`web-review/` sotto `/recensioni/`. Il deploy riusabile parte soltanto dopo i
+`web-site/dist` alla radice e `web/dist` sotto `/app/`. Il deploy riusabile parte soltanto dopo i
 gate client, database ed Edge Function dello stesso SHA.
 
 Per questo il router è un **HashRouter**: Pages non fa fallback SPA. Quando la

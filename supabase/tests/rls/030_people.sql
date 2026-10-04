@@ -506,21 +506,11 @@ do $$
 begin
   perform tests.anon();
   perform tests.raises('select count(*) from public.waiter_profiles', 'permission denied', 'il profilo professionale non è pubblico');
-  perform tests.eq((select count(*) from public.waiter_public_cards), 0::bigint, 'nessuna carta senza un profilo professionale');
 
   perform tests.login('Emp');
   insert into public.waiter_profiles (id, primary_role, languages)
     values (tests.id('Emp'), 'Cameriere', array['Italiano', 'Inglese']);
-  perform tests.raises(format('update public.waiter_profiles set rating_avg = 5 where id = %L', tests.id('Emp')),
-    'permission denied', 'il rating non si scrive a mano');
-
-  perform tests.anon();
-  perform tests.eq((select count(*) from public.waiter_public_cards), 1::bigint, 'la carta pubblica c''è ora');
-  insert into public.reviews (waiter_id, rating, comment) values (tests.id('Emp'), 5, 'bravo');
-  perform tests.raises(format($f$insert into public.reviews (waiter_id, rating) values (%L, 5)$f$, tests.id('Emp2')),
-    'row-level security', 'non si recensisce chi non ha un profilo');
   perform tests.logout();
-  perform tests.eq((select rating_count from public.waiter_profiles where id = tests.id('Emp')), 1, 'il trigger aggiorna il rating');
 
   -- Le lingue le legge chi ha la persona in azienda: è il percorso su cui poggia
   -- la riga «Lingue» della scheda di organico, non una vetrina aperta a tutti.

@@ -46,7 +46,7 @@ jobs:
 
             for file in "${files[@]}"; do
               case "$file" in
-                web-site/*|web-review/*|web/*|src/*|package.json|yarn.lock|.github/workflows/ci.yml|.github/workflows/deploy-web.yml)
+                web-site/*|web/*|src/*|package.json|yarn.lock|.github/workflows/ci.yml|.github/workflows/deploy-web.yml)
                   pages=true
                   ;;
               esac
@@ -110,10 +110,9 @@ jobs:
       # gate, senza ricompilarlo in un workflow indipendente.
       - name: Assembla artifact Pages
         run: |
-          mkdir -p _site/app _site/recensioni
+          mkdir -p _site/app
           cp -r web-site/dist/. _site/
           cp -r web/dist/. _site/app/
-          cp -r web-review/. _site/recensioni/
 
       - uses: actions/upload-pages-artifact@v3
         with:

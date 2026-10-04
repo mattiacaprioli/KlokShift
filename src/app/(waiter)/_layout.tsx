@@ -17,14 +17,12 @@ export default function WaiterLayout() {
       <Stack.Screen name="documento/new" options={{ headerShown: false }} />
       <Stack.Screen name="assenze" options={{ headerShown: false }} />
       <Stack.Screen name="assenza/new" options={{ headerShown: false }} />
-      <Stack.Screen name="qr" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />
       <Stack.Screen name="tutorial" options={{ headerShown: false }} />
       <Stack.Screen
         name="impostazioni-notifiche"
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="recensioni" options={{ headerShown: false }} />
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
       <Stack.Screen name="inviti" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />

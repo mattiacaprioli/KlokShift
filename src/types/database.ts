@@ -438,73 +438,6 @@ export type Database = {
           },
         ]
       }
-      reviews: {
-        Row: {
-          comment: string | null
-          created_at: string
-          id: string
-          rating: number
-          receipt_ref: string | null
-          reviewer_name: string | null
-          shift_id: string | null
-          status: string
-          tags: string[]
-          venue_id: string | null
-          verified: boolean
-          waiter_id: string
-        }
-        Insert: {
-          comment?: string | null
-          created_at?: string
-          id?: string
-          rating: number
-          receipt_ref?: string | null
-          reviewer_name?: string | null
-          shift_id?: string | null
-          status?: string
-          tags?: string[]
-          venue_id?: string | null
-          verified?: boolean
-          waiter_id: string
-        }
-        Update: {
-          comment?: string | null
-          created_at?: string
-          id?: string
-          rating?: number
-          receipt_ref?: string | null
-          reviewer_name?: string | null
-          shift_id?: string | null
-          status?: string
-          tags?: string[]
-          venue_id?: string | null
-          verified?: boolean
-          waiter_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reviews_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "shifts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reviews_venue_id_fkey"
-            columns: ["venue_id"]
-            isOneToOne: false
-            referencedRelation: "venues"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reviews_waiter_id_fkey"
-            columns: ["waiter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       shift_assignments: {
         Row: {
           attendance_reviewed_at: string | null
@@ -1166,22 +1099,16 @@ export type Database = {
           id: string
           languages: string[]
           primary_role: string | null
-          rating_avg: number
-          rating_count: number
         }
         Insert: {
           id: string
           languages?: string[]
           primary_role?: string | null
-          rating_avg?: number
-          rating_count?: number
         }
         Update: {
           id?: string
           languages?: string[]
           primary_role?: string | null
-          rating_avg?: number
-          rating_count?: number
         }
         Relationships: [
           {
@@ -1311,18 +1238,7 @@ export type Database = {
       }
     }
     Views: {
-      waiter_public_cards: {
-        Row: {
-          avatar_url: string | null
-          city: string | null
-          full_name: string | null
-          id: string | null
-          primary_role: string | null
-          rating_avg: number | null
-          rating_count: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_member: {
@@ -1648,13 +1564,6 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      get_rating_breakdown: {
-        Args: { p_waiter: string }
-        Returns: {
-          cnt: number
-          rating: number
-        }[]
-      }
       get_staff_planning: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -1671,18 +1580,6 @@ export type Database = {
           venue_logo_url: string
           venue_member_id: string
           venue_name: string
-        }[]
-      }
-      get_waiter_public_card: {
-        Args: { p_waiter: string }
-        Returns: {
-          avatar_url: string
-          city: string
-          full_name: string
-          id: string
-          primary_role: string
-          rating_avg: number
-          rating_count: number
         }[]
       }
       get_workspace_absence_summary: {

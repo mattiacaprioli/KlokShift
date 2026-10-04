@@ -100,12 +100,7 @@ export default function OnboardingScreen() {
             Le sedi per cui lavori ti assegneranno i turni: li trovi tutti qui.
           </Text>
 
-          {/* QR e recensioni **non** compaiono qui di proposito: è la prima cosa
-              che si vede dopo la registrazione, e chi arriva su invito di un
-              sede deve capire che il prodotto sono i suoi turni. La
-              reputazione la scopre dal profilo, quando ha qualcosa da mostrare.
-
-              Niente chevron: queste righe non sono tappabili, e non possono
+          {/* Niente chevron: queste righe non sono tappabili, e non possono
               esserlo — finché non si tocca «Inizia» il profilo in memoria non è
               aggiornato e il guard tiene ancora l'utente in (onboarding). */}
           <View className="mt-8 w-full overflow-hidden rounded-3xl border border-border-2 bg-bg-card">

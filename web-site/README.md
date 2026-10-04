@@ -35,7 +35,7 @@ resta un `lang="it"` dimenticato nell'HTML.
 
 Il sito deve raccontare il prodotto che esiste oggi:
 
-- **niente recensioni, reputazione o QR** — sospesi (`src/features/reviews/config.ts`);
+- **niente recensioni, reputazione o QR** — rimossi il 2026-10-04;
 - **niente annunci o candidature** — il marketplace è stato rimosso il 2026-09-12;
 - **niente paghe o buste paga** — KlokShift conta ore, non soldi;
 - **niente referral** («un mese gratis a chi porti») — non esiste ancora nel prodotto;
@@ -120,12 +120,11 @@ il vecchio sito delle recensioni.
 ```
 /              ← web-site/dist
 /app/          ← web/dist
-/recensioni/   ← web-review/   (sospeso, in uscita)
 ```
 
-Finché `web-review/` esiste, `index.html` contiene uno shim: un ingresso con
-`?w=<id>` (i QR già stampati) viene rimandato a `/recensioni/?w=<id>`. Quando le
-recensioni verranno rimosse, si cancellano insieme cartella, riga di `cp` e shim.
+`web-review/` (le recensioni dei clienti, sotto `/recensioni/`) e lo shim che vi
+rimandava i QR già stampati (`?w=<id>`) sono stati rimossi il 2026-10-04: quei QR
+ora aprono la vetrina.
 
 SEO: `robots.txt`, `sitemap.xml`, canonical, Open Graph e JSON-LD sono nel
 `<head>` di `index.html` e in `public/`. Gli URL assoluti là dentro sono quelli

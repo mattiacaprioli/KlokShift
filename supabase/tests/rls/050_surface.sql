@@ -14,15 +14,14 @@ begin
     '', 'ogni tabella ha la RLS');
 
   -- 2. Nessuna policy di public interroga direttamente un'altra tabella (rischio
-  --    ricorsione 42P17): solo helper di `private`. Unica eccezione: la funzione
-  --    get_waiter_public_card nella policy di inserimento delle recensioni.
+  --    ricorsione 42P17): solo helper di `private`.
   perform tests.eq(
     (select coalesce(string_agg(policyname, ', ' order by policyname), '') from pg_policies
       where schemaname = 'public'
         and (coalesce(qual, '') ~* '\mfrom\M' or coalesce(with_check, '') ~* '\mfrom\M')),
-    'reviews: public insert', 'le policy non hanno subquery dirette sulle tabelle');
+    '', 'le policy non hanno subquery dirette sulle tabelle');
 
-  -- 3. anon non scrive niente e legge solo recensioni e carte pubbliche.
+  -- 3. anon non scrive e non legge niente.
   perform tests.eq(
     (select coalesce(string_agg(table_name || ':' || privilege_type, ', ' order by table_name, privilege_type), '')
        from information_schema.role_table_grants
@@ -33,7 +32,7 @@ begin
     (select coalesce(string_agg(table_name, ', ' order by table_name), '')
        from information_schema.role_table_grants
       where table_schema = 'public' and grantee = 'anon' and privilege_type = 'SELECT'),
-    'reviews, waiter_public_cards', 'anon legge solo recensioni e carte pubbliche');
+    '', 'anon non legge nessuna tabella');
 
   -- 4. Scritture di tabella per authenticated: solo dove la scrittura diretta è voluta.
   perform tests.eq(
@@ -58,7 +57,6 @@ begin
         group by table_name, privilege_type) t),
     'messages.INSERT(content,conversation_id,sender_id) | notifications.UPDATE(read_at) | profiles.INSERT(full_name,id) | '
     'profiles.UPDATE(avatar_url,birth_day,birth_month,city,full_name,intro_seen,notification_prefs,onboarding_complete,phone) | '
-    'reviews.INSERT(comment,rating,receipt_ref,reviewer_name,shift_id,tags,venue_id,waiter_id) | '
     'staff_documents.INSERT(expires_at,member_id,mime_type,name,size_bytes,storage_path) | staff_documents.UPDATE(expires_at,name) | '
     'venues.UPDATE(address,city,cuisine_type,description,logo_url,name,staff_sees_planning) | '
     'waiter_profiles.INSERT(id,languages,primary_role) | '
@@ -66,12 +64,13 @@ begin
     'workspaces.UPDATE(staff_can_chat)',
     'scritture dirette per authenticated (livello colonna)');
 
-  -- 6. Funzioni: anon ne esegue tre, le riservate alla service role non sono di authenticated,
+  -- 6. Funzioni: anon non ne esegue nessuna, le riservate alla service role non sono di authenticated,
   --    e nessuna funzione-trigger è eseguibile dal client.
   perform tests.eq(
-    (select string_agg(p.proname, ', ' order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname in ('public', 'private') and has_function_privilege('anon', p.oid, 'EXECUTE')),
-    'get_rating_breakdown, get_waiter_public_card, waiter_public_cards_src', 'anon esegue solo le funzioni delle carte pubbliche');
+    '', 'anon non esegue nessuna funzione');
+  perform tests.eq(has_schema_privilege('anon', 'private', 'USAGE'), false, 'anon non usa lo schema private');
   perform tests.eq(
     (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'

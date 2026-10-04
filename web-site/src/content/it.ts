@@ -14,7 +14,7 @@ import type { Content } from "./types";
  * «professionista»); il luogo resta «sede».
  *
  * ⚠️ Cosa NON si può scrivere qui, e perché:
- *   - recensioni / reputazione / QR → sospesi (`src/features/reviews/config.ts`)
+ *   - recensioni / reputazione / QR → rimossi il 2026-10-04
  *   - annunci / candidature / marketplace → rimossi dal codice il 2026-09-12
  *   - paghe, buste paga, compensi → KlokShift conta ore, non soldi
  *   - referral / mese regalato → non esiste ancora nel prodotto

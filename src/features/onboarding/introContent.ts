@@ -49,7 +49,7 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
     {
       icon: "sparkle",
       title: "Tutto sotto controllo",
-      body: "Ore, copertura, chat e reputazione del tuo staff in un posto solo.",
+      body: "Ore, copertura, chat e documenti del tuo staff in un posto solo.",
     },
   ],
 };

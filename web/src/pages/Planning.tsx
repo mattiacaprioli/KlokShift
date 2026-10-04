@@ -1,24 +1,26 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { userErrorMessage } from "@/lib/errors";
-import { useAuth } from "@/lib/auth";
-import { useSearchParams } from "react-router-dom";
-import {
-  useMoveShiftToDate,
-  useShift,
-  useOwnerShiftsRange,
-} from "@/features/shifts/hooks";
-import {
-  useMoveAssignment,
-  useReassignShiftAssignment,
-} from "@/features/assignments/hooks";
 import type { AbsenceAvailability } from "@/features/absences/api";
 import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceWarning } from "@/features/absences/labels";
 import {
-  reassignNotifyPlan,
-  type ReassignNotifyPlan,
-} from "@/features/shifts/notify";
+  shiftCounts,
+  shiftCoverage,
+  shiftTone,
+} from "@/features/assignments/coverage";
+import {
+  useMoveAssignment,
+  useReassignShiftAssignment,
+} from "@/features/assignments/hooks";
+import {
+  clockAttentionItems,
+  type ClockAttentionKind,
+} from "@/features/clock/attention";
+import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
+import {
+  useMoveShiftToDate,
+  useOwnerShiftsRange,
+  useShift,
+} from "@/features/shifts/hooks";
 import {
   assigneesOf,
   hasMoveImpact,
@@ -26,27 +28,28 @@ import {
   MOVE_IMPACT_UNAVAILABLE,
   moveHeadline,
   moveImpactCandidates,
-  moveImpactWindow,
   moveImpactLines,
+  moveImpactWindow,
   shiftMoveImpact,
   type MoveImpact,
 } from "@/features/shifts/moveImpact";
+import {
+  reassignNotifyPlan,
+  type ReassignNotifyPlan,
+} from "@/features/shifts/notify";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { venueAccent } from "@/features/venues/venueColor";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
+import { userErrorMessage } from "@/lib/errors";
 import {
   formatDate,
   formatShiftRange,
   formatTime,
   isOvernightShift,
 } from "@/lib/format";
-import { cn } from "@/lib/cn";
-import {
-  shiftCoverage,
-  shiftCounts,
-  shiftTone,
-} from "@/features/assignments/coverage";
-import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
-import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { venueAccent } from "@/features/venues/venueColor";
-import { NoVenues } from "../venues/NoVenues";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   addDays,
   addMonths,
@@ -59,29 +62,11 @@ import {
   PAST_DAY_REASON,
   startOfMonth,
   startOfWeek,
+  WEEKDAY_NAMES,
   weekDays,
   weekLabel,
-  WEEKDAY_NAMES,
 } from "../lib/week";
-import {
-  Button,
-  PageHeader,
-  Pill,
-  QueryError,
-  Select,
-  Spinner,
-} from "../ui/primitives";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { useToast } from "../ui/Toast";
-import { ShiftPanel } from "../shifts/ShiftPanel";
-import { PeopleWeek } from "../shifts/PeopleWeek";
-import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
-import { MovePersonDialog } from "../shifts/MovePersonDialog";
 import { ClockAttentionBanner } from "../shifts/ClockAttentionBanner";
-import {
-  clockAttentionItems,
-  type ClockAttentionKind,
-} from "@/features/clock/attention";
 import { CoverageLegend, TONE_BORDER } from "../shifts/CoverageLegend";
 import {
   dropClass,
@@ -91,6 +76,21 @@ import {
   type PersonDragPayload,
   type ReassignTarget,
 } from "../shifts/dragContext";
+import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
+import { MovePersonDialog } from "../shifts/MovePersonDialog";
+import { PeopleWeek } from "../shifts/PeopleWeek";
+import { ShiftPanel } from "../shifts/ShiftPanel";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
+import {
+  Button,
+  PageHeader,
+  Pill,
+  QueryError,
+  Select,
+  Spinner,
+} from "../ui/primitives";
+import { useToast } from "../ui/Toast";
+import { NoVenues } from "../venues/NoVenues";
 
 const VIEWS = ["settimana", "mese", "persone"] as const;
 type View = (typeof VIEWS)[number];
@@ -145,20 +145,24 @@ export function PlanningPage() {
         ? undefined
         : { name: venues[i].name, accent: venueAccent(i) };
     },
-    [venues, isMultiVenue]
+    [venues, isMultiVenue],
   );
   const [view, setView] = useState<View>(storedView);
+  /** Il posto nell'intestazione dove PeopleWeek mette totale e legenda. */
+  const [legendEl, setLegendEl] = useState<HTMLElement | null>(null);
   const [venueFilter, setVenueFilter] = useState<string | null>(storedVenue);
   // Il filtro salvato può puntare a una sede chiusa, o a quella di un altro
   // account sullo stesso browser: si valida contro le sedi vere, altrimenti il
   // planning resterebbe vuoto senza dire perché.
   const activeVenueId =
-    venueFilter && venues.some((v) => v.id === venueFilter) ? venueFilter : null;
+    venueFilter && venues.some((v) => v.id === venueFilter)
+      ? venueFilter
+      : null;
   const activeVenueName = venues.find((v) => v.id === activeVenueId)?.name;
   /** Le sedi da interrogare: una sola se il filtro è attivo, sennò tutte. */
   const scopedIds = useMemo(
     () => (activeVenueId ? [activeVenueId] : venueIds),
-    [activeVenueId, venueIds]
+    [activeVenueId, venueIds],
   );
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -193,7 +197,7 @@ export function PlanningPage() {
   const isWeekly = view !== "mese";
   const days = useMemo(
     () => (isWeekly ? weekDays(monday) : monthGridDays(month)),
-    [isWeekly, monday, month]
+    [isWeekly, monday, month],
   );
 
   // Il filtro per sede è **del server**: cambia l'insieme di `venue_id`
@@ -202,7 +206,7 @@ export function PlanningPage() {
   const { data, isPending, isError, error } = useOwnerShiftsRange(
     days[0],
     days[days.length - 1],
-    scopedIds
+    scopedIds,
   );
 
   // Il calendario continua a mostrare soltanto `days` e lo scope selezionato.
@@ -214,7 +218,7 @@ export function PlanningPage() {
   };
   const impactShiftsQuery = useOwnerShiftsRange(
     impactRange.from,
-    impactRange.to
+    impactRange.to,
   );
 
   const byDay = useMemo(() => {
@@ -226,7 +230,7 @@ export function PlanningPage() {
 
   const byId = useMemo(
     () => new Map((data ?? []).map((s) => [s.id, s])),
-    [data]
+    [data],
   );
 
   // Quante persone mancano sul periodo che si ha davanti. Era il sottotitolo di
@@ -241,16 +245,17 @@ export function PlanningPage() {
           const { filled, total } = shiftCounts(s);
           return sum + Math.max(0, total - filled);
         }, 0),
-    [data]
+    [data],
   );
 
   const clockItems = useMemo(
     () =>
-      clockAttentionItems(data ?? []).filter((item) =>
-        can(item.shift.venue_id, "can_view_hours") &&
-        (isWeekly || isSameMonth(item.shift.date, month))
+      clockAttentionItems(data ?? []).filter(
+        (item) =>
+          can(item.shift.venue_id, "can_view_hours") &&
+          (isWeekly || isSameMonth(item.shift.date, month)),
       ),
-    [data, can, isWeekly, month]
+    [data, can, isWeekly, month],
   );
   const clockKindsByShift = useMemo(() => {
     const map = new Map<string, ClockAttentionKind[]>();
@@ -264,9 +269,9 @@ export function PlanningPage() {
   const clockKindByAssignment = useMemo(
     () =>
       new Map(
-        clockItems.map((item) => [item.assignmentId, item.kind] as const)
+        clockItems.map((item) => [item.assignmentId, item.kind] as const),
       ),
-    [clockItems]
+    [clockItems],
   );
 
   /**
@@ -280,14 +285,14 @@ export function PlanningPage() {
       isWeekly
         ? (data ?? [])
         : (data ?? []).filter((s) => isSameMonth(s.date, month)),
-    [data, isWeekly, month]
+    [data, isWeekly, month],
   );
 
   // Chi non c'è nel periodo visibile, senza il perché. Serve alla vista per
   // persona e all'avviso quando si passa un turno a qualcuno assente.
   const impactAbsencesQuery = useAbsenceAvailability(
     impactRange.from,
-    impactRange.to
+    impactRange.to,
   );
   const absences = impactAbsencesQuery.data ?? [];
 
@@ -308,7 +313,7 @@ export function PlanningPage() {
       {
         onSuccess: () => toast.show(`Turno spostato a ${formatDate(toDate)}`),
         onError: (e) => toast.show(userErrorMessage(e), "error"),
-      }
+      },
     );
   }
 
@@ -338,10 +343,7 @@ export function PlanningPage() {
       },
       myWaiterId: session?.user.id,
       absences,
-      dayShifts: moveImpactCandidates(
-        impactShiftsQuery.data ?? [],
-        toDate
-      ),
+      dayShifts: moveImpactCandidates(impactShiftsQuery.data ?? [], toDate),
     });
     if (!hasMoveImpact(impact)) {
       runMove(payload, toDate);
@@ -368,7 +370,7 @@ export function PlanningPage() {
       {
         onSuccess: () => toast.show(`Turno passato a ${to.display_name}`),
         onError: (e) => toast.show(userErrorMessage(e), "error"),
-      }
+      },
     );
   }
 
@@ -382,7 +384,7 @@ export function PlanningPage() {
     }
     const shift = byId.get(payload.shiftId);
     const from = shift?.shift_assignments.find(
-      (a) => a.id === payload.assignmentId
+      (a) => a.id === payload.assignmentId,
     );
     const plan = reassignNotifyPlan({
       shiftDate: payload.date,
@@ -398,7 +400,7 @@ export function PlanningPage() {
     const absence = shift
       ? absenceForShift(
           shift,
-          absences.filter((a) => a.member_id === to.person_id)
+          absences.filter((a) => a.member_id === to.person_id),
         )
       : null;
     if (!plan.notifiesFrom && !plan.notifiesTo && !absence) {
@@ -430,8 +432,8 @@ export function PlanningPage() {
           s.status !== "cancelled" &&
           payload.personVenueIds.includes(s.venue_id) &&
           !s.shift_assignments.some(
-            (a) => a.staff_member?.person_id === payload.personId
-          )
+            (a) => a.staff_member?.person_id === payload.personId,
+          ),
       ),
       absences: absences.filter((a) => a.member_id === payload.personId),
     });
@@ -440,7 +442,7 @@ export function PlanningPage() {
   function runMovePerson(
     payload: PersonDragPayload,
     to: { shiftId: string } | { date: string },
-    toDate: string
+    toDate: string,
   ) {
     setPendingDrop(null);
     movePerson.mutate(
@@ -448,10 +450,10 @@ export function PlanningPage() {
       {
         onSuccess: () =>
           toast.show(
-            `${payload.fromStaffName}: turno spostato a ${formatDate(toDate)}`
+            `${payload.fromStaffName}: turno spostato a ${formatDate(toDate)}`,
           ),
         onError: (e) => toast.show(userErrorMessage(e), "error"),
-      }
+      },
     );
   }
 
@@ -482,7 +484,9 @@ export function PlanningPage() {
             {missing > 0 ? (
               <span className="text-warning">
                 {" · "}
-                {missing === 1 ? "Manca 1 persona" : `Mancano ${missing} persone`}
+                {missing === 1
+                  ? "Manca 1 persona"
+                  : `Mancano ${missing} persone`}
                 {isWeekly ? " questa settimana" : " questo mese"}
               </span>
             ) : null}
@@ -529,7 +533,7 @@ export function PlanningPage() {
                     "focus-gold px-3 py-2 text-sm font-semibold capitalize transition",
                     view === v
                       ? "bg-gold text-gold-ink"
-                      : "bg-bg-2 text-t2 hover:bg-bg-3"
+                      : "bg-bg-2 text-t2 hover:bg-bg-3",
                   )}
                 >
                   {v}
@@ -559,11 +563,16 @@ export function PlanningPage() {
         }
       />
 
+      {/* Totale e legenda della vista per persona, attaccati al periodo: li
+          scrive PeopleWeek. Fuori dall'intestazione, perché lì dentro
+          allargherebbero il titolo e manderebbero a capo i comandi. */}
+      {view === "persone" ? (
+        <div ref={setLegendEl} className="mb-5 print:-mt-2" />
+      ) : null}
+
       {isError || impactShiftsQuery.isError || impactAbsencesQuery.isError ? (
         <QueryError
-          error={
-            error ?? impactShiftsQuery.error ?? impactAbsencesQuery.error
-          }
+          error={error ?? impactShiftsQuery.error ?? impactAbsencesQuery.error}
         />
       ) : null}
       {isPending ? <Spinner /> : null}
@@ -574,15 +583,6 @@ export function PlanningPage() {
           setPanel({ date: item.shift.date, shift: item.shift })
         }
       />
-
-      {/* La regola in una riga: un turno si sposta nel tempo, una persona si
-          sposta fra turni. Nella vista per persona il chip è una persona su un
-          turno, quindi fa entrambe le cose a seconda della direzione. */}
-      <p className="mb-3 text-xs text-t4 print:hidden">
-        {view === "persone"
-          ? "Trascina un turno su un'altra riga per cambiare persona, o su un altro giorno per spostare solo quella persona."
-          : "Trascina un turno su un altro giorno per spostarlo."}
-      </p>
 
       <ShiftDragProvider>
         {view === "settimana" ? (
@@ -608,6 +608,7 @@ export function PlanningPage() {
             }
             onReassign={requestReassign}
             onMovePerson={requestMovePerson}
+            legendTarget={legendEl}
           />
         ) : (
           <MonthGrid
@@ -671,8 +672,14 @@ export function PlanningPage() {
           message={[
             moveHeadline(
               pendingDrop.payload.title,
-              { ...byId.get(pendingDrop.payload.shiftId)!, date: pendingDrop.payload.sourceDate },
-              { ...byId.get(pendingDrop.payload.shiftId)!, date: pendingDrop.toDate }
+              {
+                ...byId.get(pendingDrop.payload.shiftId)!,
+                date: pendingDrop.payload.sourceDate,
+              },
+              {
+                ...byId.get(pendingDrop.payload.shiftId)!,
+                date: pendingDrop.toDate,
+              },
             ),
             ...moveImpactLines(pendingDrop.impact),
           ].join(" ")}
@@ -714,7 +721,7 @@ export function PlanningPage() {
             reassignMessage(
               pendingDrop.payload,
               pendingDrop.to,
-              pendingDrop.plan
+              pendingDrop.plan,
             ),
           ]
             .filter(Boolean)
@@ -760,18 +767,20 @@ type PendingDrop =
       absences: AbsenceAvailability[];
     };
 
-const SKIP_REASON: Record<NonNullable<ReassignNotifyPlan["fromSkip"]>, string> =
-  {
-    declined: "aveva già rifiutato il turno",
-    "no-account": "non ha un account collegato",
-    past: "il turno è già passato",
-    cancelled: "il turno è annullato",
-  };
+const SKIP_REASON: Record<
+  NonNullable<ReassignNotifyPlan["fromSkip"]>,
+  string
+> = {
+  declined: "aveva già rifiutato il turno",
+  "no-account": "non ha un account collegato",
+  past: "il turno è già passato",
+  cancelled: "il turno è annullato",
+};
 
 function reassignMessage(
   payload: PersonDragPayload,
   to: ReassignTarget,
-  plan: ReassignNotifyPlan
+  plan: ReassignNotifyPlan,
 ): string {
   const head = `«${payload.title}» del ${formatDate(payload.date)} passa da ${payload.fromStaffName} a ${to.display_name}.`;
   // Si arriva qui senza nessuno da avvisare solo per l'avviso di assenza.
@@ -837,14 +846,14 @@ function WeekGrid({
               className={cn(
                 "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
                 isToday(day) ? "border-border-gold" : "border-border-2",
-                dropClass(state)
+                dropClass(state),
               )}
             >
               <header className="mb-2 flex items-baseline justify-between px-1">
                 <span
                   className={cn(
                     "text-xs font-semibold uppercase tracking-wider",
-                    isToday(day) ? "text-gold" : "text-t3"
+                    isToday(day) ? "text-gold" : "text-t3",
                   )}
                 >
                   {name}
@@ -957,14 +966,14 @@ function MonthGrid({
                 // I giorni fuori mese restano visibili ma arretrano: servono a
                 // completare le settimane, non a essere letti.
                 !inMonth && "opacity-40",
-                dropClass(state)
+                dropClass(state),
               )}
             >
               <header className="mb-1 flex items-center justify-between px-0.5">
                 <span
                   className={cn(
                     "font-mono text-xs",
-                    today ? "font-bold text-gold" : "text-t3"
+                    today ? "font-bold text-gold" : "text-t3",
                   )}
                 >
                   {day.slice(8)}
@@ -1003,7 +1012,7 @@ function MonthGrid({
                               title: shift.title,
                               sourceDate: shift.date,
                             },
-                            shift.title
+                            shift.title,
                           ))}
                       title={
                         cancelled
@@ -1011,7 +1020,10 @@ function MonthGrid({
                           : [
                               venueOf(shift.venue_id)?.name,
                               shift.title,
-                              formatShiftRange(shift.start_time, shift.end_time),
+                              formatShiftRange(
+                                shift.start_time,
+                                shift.end_time,
+                              ),
                               `${counts.filled}/${counts.total}`,
                             ]
                               .filter(Boolean)
@@ -1023,7 +1035,7 @@ function MonthGrid({
                         cancelled
                           ? "opacity-50"
                           : "cursor-grab active:cursor-grabbing",
-                        dnd.isSource(shift.id) && "opacity-40"
+                        dnd.isSource(shift.id) && "opacity-40",
                       )}
                     >
                       {/* Il bordo sinistro qui dice già la copertura: la sede
@@ -1062,7 +1074,7 @@ function MonthGrid({
                       <span
                         className={cn(
                           "truncate text-[11px] text-t1",
-                          cancelled && "line-through"
+                          cancelled && "line-through",
                         )}
                       >
                         {shift.title}
@@ -1143,7 +1155,7 @@ function ShiftCell({
               title: shift.title,
               sourceDate: shift.date,
             },
-            shift.title
+            shift.title,
           ))}
       title={hint}
       // Il bordo sinistro dice la **copertura**, come nella vista mese: è la cosa
@@ -1161,13 +1173,13 @@ function ShiftCell({
           : "cursor-grab border-border-2 bg-bg-1 hover:bg-bg-2 active:cursor-grabbing",
         // Dopo il colore di bordo generico, sennò `cn()` lo considera vinto.
         TONE_BORDER[tone],
-        dnd.isSource(shift.id) && "opacity-40"
+        dnd.isSource(shift.id) && "opacity-40",
       )}
     >
       <p
         className={cn(
           "truncate text-xs font-semibold text-t1",
-          cancelled && "line-through"
+          cancelled && "line-through",
         )}
       >
         {shift.title}

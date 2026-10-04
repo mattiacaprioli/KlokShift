@@ -1,4 +1,5 @@
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   computeWeekLoad,
   type PersonShift,
@@ -61,6 +62,7 @@ export function PeopleWeek({
   onCreate,
   onReassign,
   onMovePerson,
+  legendTarget,
 }: {
   days: string[];
   shifts: ShiftWithAssignees[];
@@ -94,6 +96,11 @@ export function PeopleWeek({
   /** Turno trascinato su un altro giorno della **stessa** riga: si sposta solo
    *  quella persona, i colleghi restano dov'erano. */
   onMovePerson: (payload: PersonDragPayload, toDate: string) => void;
+  /**
+   * Dove mettere totale e legenda: il Planning li vuole sotto il periodo,
+   * nell'intestazione. Senza (o finché non è montato), restano sotto la griglia.
+   */
+  legendTarget?: HTMLElement | null;
 }) {
   const { ownerId, venues, isMultiVenue, can } = useOwnerVenues();
   const peopleQuery = useOwnerPeople(ownerId);
@@ -213,9 +220,6 @@ export function PeopleWeek({
 
   const totalHours = rows.reduce((s, r) => s + r.hours, 0);
   const working = rows.filter((r) => r.hours > 0).length;
-  // Quante righe restano senza metro: senza questo numero la legenda promette
-  // colori che su metà della griglia non compaiono, e sembra un guasto.
-  const noContract = rows.filter((r) => !r.contract).length;
 
   return (
     <div>
@@ -470,7 +474,8 @@ export function PeopleWeek({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-t4">
+      {renderLegend(
+        <span className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-t4">
         <span>
           <b className="font-mono text-t2">{formatHours(totalHours)}</b>{" "}
           programmate in totale · {working} di {rows.length}{" "}
@@ -486,50 +491,31 @@ export function PeopleWeek({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-4 rounded border border-warning/60 bg-warning/5" />
-          orari sovrapposti (contati una volta)
+          orari sovrapposti
         </span>
         <span className="flex items-center gap-1.5">
           <span
             className="h-3 w-4 rounded border border-dashed border-warning/50"
             style={absenceCellStyle({ status: "approved" })}
           />{" "}
-          non disponibile (tratteggio leggero: assenza da decidere)
+          assente
         </span>
-      </div>
+        </span>,
+        legendTarget,
+      )}
 
-      <p className="mt-2 text-xs leading-5 text-t4">
-        Il totale principale mostra le ore <b>programmate</b>, calcolate dagli orari dei turni: chi ha
-        rifiutato o è stato segnato assente non le somma e gli intervalli
-        sovrapposti si contano una volta sola. Sui turni conclusi, il consuntivo
-        confronta le ore effettive o proposte con gli stessi turni programmati;
-        la pagina Ore resta il riepilogo definitivo per il commercialista.
-        {isMultiVenue && !filtered ? (
-          <>
-            {" "}
-            Le ore sono <b>della persona</b>: i turni di tutte le tue sedi sono
-            già contati qui, e un turno si può passare solo a chi lavora nella sua
-            stessa sede.
-          </>
-        ) : null}
-        {filtered ? (
-          <>
-            {" "}
-            Stai guardando <b>una sede sola</b>: le ore qui sotto sono quelle di
-            questa sede, non il totale della persona. Il contratto è della
-            persona — per confrontarlo con tutte le sue ore, togli il filtro.
-          </>
-        ) : null}{" "}
-        Il confronto compare per chi ha le <b>ore da contratto</b> sulla scheda:
-        le imposti da Staff, aprendo la persona.{" "}
-        {noContract > 0 ? (
-          <>
-            Adesso {noContract === 1 ? "manca a 1 persona" : `mancano a ${noContract} persone`}
-            .
-          </>
-        ) : null}
-      </p>
+      {/* L'unica avvertenza che resta: col filtro i numeri cambiano significato. */}
+      {filtered ? (
+        <p className="mt-2 text-xs text-t4">
+          Ore di questa sede sola, non il totale della persona.
+        </p>
+      ) : null}
     </div>
   );
+}
+
+function renderLegend(legend: ReactNode, target?: HTMLElement | null) {
+  return target ? createPortal(legend, target) : legend;
 }
 
 /**

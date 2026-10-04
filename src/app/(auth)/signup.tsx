@@ -21,8 +21,8 @@ const ROLES: {
     value: "waiter",
     icon: "user",
     title: "Sono un professionista",
-    sub: "Sala, bar, cucina, accoglienza. Conferma i turni e costruisci la tua reputazione.",
-    chips: ["TURNI", "ORE", "RECENSIONI"],
+    sub: "Sala, bar, cucina, accoglienza. Conferma i turni e tieni il conto delle tue ore.",
+    chips: ["TURNI", "ORE", "CHAT"],
   },
   {
     value: "manager",

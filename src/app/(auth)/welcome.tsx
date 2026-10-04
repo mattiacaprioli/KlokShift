@@ -21,15 +21,15 @@ export default function Welcome() {
         className="mt-6 text-center text-[34px]"
         style={{ lineHeight: 40 }}
       >
-        La reputazione diventa il tuo{" "}
+        I tuoi turni, finalmente in{" "}
         <Text className="text-gold" style={{ fontFamily: FontFamily.serifItalic }}>
-          capitale.
+          ordine.
         </Text>
       </Display>
 
       <Text className="mt-7 max-w-[320px] text-center font-sans text-base leading-7 text-t2">
-        Turni sempre in tasca, ore sotto controllo e le recensioni dei clienti
-        che ti seguono di sede in sede.
+        Turni sempre in tasca, ore sotto controllo e la chat col tuo team, per
+        chi organizza e per chi lavora.
       </Text>
 
       <GoldButton

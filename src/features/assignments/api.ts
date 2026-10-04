@@ -21,7 +21,7 @@ import {
   toStaffMember,
   VENUE_MEMBER_BY_ACCOUNT,
   VENUE_MEMBER_FULL,
-  VENUE_MEMBER_WITH_RATING,
+  VENUE_MEMBER_TODAY,
 } from "./embeds";
 
 export type Assignment = Tables<"shift_assignments">;
@@ -68,7 +68,7 @@ export type AssignmentWithStaff = Assignment & {
     | null;
 };
 
-/** Today's internal-shift assignment, with staff + rating + shift slot (home). */
+/** Today's internal-shift assignment, with staff + shift slot (home). */
 export type TodayAssignmentRow = Assignment & {
   /** Il ruolo di quel giorno: è la risposta alla domanda che la card pone. */
   role: { id: string; name: string } | null;
@@ -77,14 +77,7 @@ export type TodayAssignmentRow = Assignment & {
     | (StaffMember & {
         /** Null = eredita il metodo della sede. */
         clock_method: Enums<"clock_method"> | null;
-        waiter:
-          | (WaiterMini & {
-              waiter_profile: {
-                rating_avg: number;
-                rating_count: number;
-              } | null;
-            })
-          | null;
+        waiter: WaiterMini | null;
       })
     | null;
   shift: Pick<
@@ -736,7 +729,7 @@ export async function getOwnerTodayAssignments(
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      `*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_WITH_RATING}, shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)`
+      `*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_TODAY}, shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)`
     )
     // `venue_id` resta nel select del sub-embed: serve al badge della sede.
     .in("shift.venue_id", venueIds)
