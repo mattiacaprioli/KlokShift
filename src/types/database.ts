@@ -1634,16 +1634,24 @@ export type Database = {
           rating_count: number
         }[]
       }
+      get_absence_hour_credits: {
+        Args: { p_absence: string }
+        Returns: { date: string; minutes: number; conflict: boolean }[]
+      }
       get_workspace_absence_summary: {
         Args: { p_from: string; p_to: string; p_workspace: string }
         Returns: {
           ferie_days: number
+          ferie_hours: number
+          conflict_hours: number
           inps_protocols: string
           malattia_days: number
+          malattia_hours: number
           member_id: string
           member_name: string
           permesso_days: number
           permesso_hours: number
+          permesso_recognized_hours: number
         }[]
       }
       get_workspace_contacts: {
@@ -1667,6 +1675,7 @@ export type Database = {
           member_id: string
           member_name: string
           proposed_hours: number
+          untracked_hours: number
           roles: string
           shifts_count: number
           to_review_count: number
@@ -1814,6 +1823,10 @@ export type Database = {
       }
       respond_to_invite: {
         Args: { p_accept: boolean; p_member: string }
+        Returns: undefined
+      }
+      set_absence_hour_credit: {
+        Args: { p_absence: string; p_date: string; p_minutes?: number | null }
         Returns: undefined
       }
       set_absence_inps_protocol: {

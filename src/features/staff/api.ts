@@ -732,6 +732,8 @@ export type MyEmployer = Pick<
     city: string | null;
     logo_url: string | null;
     workspace_id: string;
+    /** Il titolare condivide il planning della sede con l'organico. */
+    staff_sees_planning: boolean;
   } | null;
 };
 
@@ -752,7 +754,7 @@ export async function getMyEmployers(userId: string): Promise<MyEmployer[]> {
   const select: string =
     "id, venue_id, member_id, workspace_id, employment_type, left_at, created_at, " +
     "workspace_members!venue_members_member_id_workspace_id_fkey!inner(status, user_id), " +
-    "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, logo_url, workspace_id)";
+    "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, logo_url, workspace_id, staff_sees_planning)";
   const { data, error } = await supabase
     .from("venue_members")
     .select(select)

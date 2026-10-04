@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueCard } from "../venues/VenueCard";
 import { ClockMethodCard } from "../venues/ClockMethodCard";
+import { PlanningVisibilityCard } from "../venues/PlanningVisibilityCard";
 import {
   Button,
   PageHeader,
@@ -67,6 +68,7 @@ export function SedeDettaglioPage() {
       {!editable && clockEditable ? (
         <ClockMethodCard venue={venue} />
       ) : null}
+      {editable ? <PlanningVisibilityCard venue={venue} /> : null}
     </>
   );
 }

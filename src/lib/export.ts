@@ -46,9 +46,10 @@ export async function exportHoursPdf(
 export async function exportHoursCsv(
   companyName: string,
   monthLabel: string,
-  people: PersonHours[]
+  people: PersonHours[],
+  absences: AbsenceSummaryRow[] = []
 ): Promise<void> {
-  const csv = buildHoursCsv(people);
+  const csv = buildHoursCsv(people, absences);
   const uri = `${FileSystem.cacheDirectory}${hoursFileName(companyName, monthLabel, "csv")}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,

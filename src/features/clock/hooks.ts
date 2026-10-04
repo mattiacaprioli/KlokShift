@@ -12,6 +12,8 @@ import {
 function invalidateClockViews(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: qk.assignments.all });
   qc.invalidateQueries({ queryKey: qk.staff.all });
+  qc.invalidateQueries({ queryKey: qk.absences.summaryAll });
+  qc.invalidateQueries({ queryKey: qk.absences.creditsAll });
   // Planning e storico incorporano lo stato minimo delle timbrature per
   // segnalare le anomalie: un'uscita/correzione/approvazione deve spegnere
   // subito il badge.

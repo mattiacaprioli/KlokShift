@@ -10,6 +10,27 @@ export type Absence = Tables<"staff_absences">;
 export type AbsenceKind = Enums<"absence_kind">;
 export type AbsenceStatus = Enums<"absence_status">;
 
+export type AbsenceHourCredit = { date: string; minutes: number; conflict: boolean };
+
+export async function getAbsenceHourCredits(absenceId: string): Promise<AbsenceHourCredit[]> {
+  const { data, error } = await supabase.rpc("get_absence_hour_credits", { p_absence: absenceId });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function setAbsenceHourCredit(args: {
+  absenceId: string;
+  date: string;
+  minutes: number | null;
+}): Promise<void> {
+  const { error } = await supabase.rpc("set_absence_hour_credit", {
+    p_absence: args.absenceId,
+    p_date: args.date,
+    p_minutes: args.minutes,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export const ABSENCES_PAGE_SIZE = 20;
 
 export type RemoveFromShiftsResult = {
@@ -487,6 +508,10 @@ export async function getOwnerAbsenceSummary(
     // `numeric` arriva come stringa o numero a seconda del valore.
     permesso_hours: Number(r.permesso_hours),
     malattia_days: r.malattia_days,
+    ferie_hours: Number(r.ferie_hours),
+    malattia_hours: Number(r.malattia_hours),
+    permesso_recognized_hours: Number(r.permesso_recognized_hours),
+    conflict_hours: Number(r.conflict_hours),
     // Il generatore lo dà `not null`, ma è null se non ci sono malattie.
     inps_protocols: (r.inps_protocols as string | null) ?? null,
   }));

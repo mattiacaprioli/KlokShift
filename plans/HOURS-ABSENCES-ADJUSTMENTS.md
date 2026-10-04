@@ -1,10 +1,19 @@
 # Ore, assenze riconosciute e maggiorazioni
 
-> **Decisione di prodotto — 2026-09-24. Non ancora implementata.**
+> **Decisione di prodotto — 2026-09-24. Implementazione parziale dal 2026-10-04.**
 >
 > Questo documento completa `CLOCK_IN_OUT.md`. Le timbrature stabiliscono
 > quando una persona ha lavorato; questo documento stabilisce come presentare
 > lavoro, assenze e maggiorazioni nel consuntivo.
+
+Il consuntivo mensile ora separa lavoro timbrato e approvato, ore di assenza
+riconosciute e totale retribuibile. I crediti giornalieri sono manuali; un
+conflitto con lavoro timbrato approvato li esclude dal totale e li segnala da
+verificare. Mancano ancora le maggiorazioni e il calendario contrattuale.
+Il CSV usa `MAL` come etichetta della malattia (codice evento UniEmens INPS),
+ma non genera un flusso UniEmens: il consulente deve mappare le colonne ai codici
+del proprio gestionale. Le ore lavorate restano senza classificazione
+ordinario/straordinario finché non esiste la relativa regola aziendale.
 
 ## Obiettivo
 

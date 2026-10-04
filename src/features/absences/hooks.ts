@@ -11,6 +11,7 @@ import { absenceConflicts, type AbsenceWindow } from "./conflicts";
 import { invalidateAfterShiftRemoval } from "./removal";
 import {
   getAbsence,
+  getAbsenceHourCredits,
   getAbsenceAvailability,
   getPersonShiftsInRange,
   removeFromShifts,
@@ -26,8 +27,28 @@ import {
   requestAbsence,
   resolveAbsence,
   setAbsenceInpsProtocol,
+  setAbsenceHourCredit,
   withdrawAbsence,
 } from "./api";
+
+export function useAbsenceHourCredits(absenceId: string | undefined) {
+  return useQuery({
+    queryKey: qk.absences.credits(absenceId ?? ""),
+    queryFn: () => getAbsenceHourCredits(absenceId as string),
+    enabled: !!absenceId,
+  });
+}
+
+export function useSetAbsenceHourCredit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: setAbsenceHourCredit,
+    onSuccess: (_, args) => {
+      qc.invalidateQueries({ queryKey: qk.absences.credits(args.absenceId) });
+      qc.invalidateQueries({ queryKey: qk.absences.summaryAll });
+    },
+  });
+}
 
 /**
  * L'assenza letta per id, per la card nel thread.

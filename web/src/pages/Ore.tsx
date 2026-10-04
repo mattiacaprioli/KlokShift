@@ -4,6 +4,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
+import { monthlyReportRows } from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import { ABSENCE_SUMMARY_NOTE } from "@/features/absences/summary";
 import {
@@ -63,12 +64,16 @@ export function OrePage() {
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const toReview = people.reduce((s, p) => s + p.to_review_count, 0);
   const proposedHours = people.reduce((s, p) => s + p.proposed_hours, 0);
-  const maxHours = Math.max(1, ...people.map((p) => p.hours));
   const label = monthLabel(month);
   const company = companyName(venues, profile?.full_name);
-  // Ferie, permessi e malattia del mese: tabella e CSV a parte.
+  // Ferie, permessi e malattia del mese: ore nel consuntivo, giorni nel dettaglio.
   const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
   const absences = absenceQuery.data ?? [];
+  const report = monthlyReportRows(people, absences);
+  const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
+  const totalRetribuibile = report.reduce((s, p) => s + p.total_retribuibile, 0);
+  const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
+  const totalUntracked = report.reduce((s, p) => s + p.untracked_hours, 0);
 
   function download(content: string, fileName: string) {
     // Stesse funzioni pure dell'app: i file devono coincidere.
@@ -82,7 +87,7 @@ export function OrePage() {
   }
 
   function downloadCsv() {
-    download(buildHoursCsv(people), hoursFileName(company, label, "csv"));
+    download(buildHoursCsv(people, absences), hoursFileName(company, label, "csv"));
   }
 
   function downloadAbsencesCsv() {
@@ -108,7 +113,7 @@ export function OrePage() {
       <StickyHeader>
         <PageHeader
           title="Ore"
-          subtitle={`${label} · ${formatHours(totalHours)} approvate${toReview > 0 ? ` · ${toReview} da verificare` : ""}`}
+          subtitle={`${label} · ${formatHours(totalHours)} lavorate effettive${toReview > 0 ? ` · ${toReview} turni da verificare` : ""}`}
         />
 
         {/* Una riga sotto il titolo, come i filtri dello Storico. Niente
@@ -147,19 +152,19 @@ export function OrePage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={downloadCsv} disabled={people.length === 0}>
-              CSV ore
+            <Button onClick={downloadCsv} disabled={report.length === 0 || absenceQuery.isPending || absenceQuery.isError}>
+              CSV mensile
             </Button>
             <Button
               onClick={downloadAbsencesCsv}
-              disabled={absences.length === 0}
+              disabled={absences.length === 0 || absenceQuery.isPending || absenceQuery.isError}
             >
               CSV assenze
             </Button>
             <Button
               variant="gold"
               onClick={printPdf}
-              disabled={people.length === 0 && absences.length === 0}
+              disabled={report.length === 0 || isPending || isError || absenceQuery.isPending || absenceQuery.isError}
             >
               Stampa / PDF
             </Button>
@@ -168,10 +173,13 @@ export function OrePage() {
       </StickyHeader>
 
       {isError ? <QueryError error={error} /> : null}
-      {isPending ? <Spinner /> : null}
+      {absenceQuery.isError ? <QueryError error={absenceQuery.error} /> : null}
+      {isPending || absenceQuery.isPending ? <Spinner /> : null}
 
       {!isPending &&
       !absenceQuery.isPending &&
+      !isError &&
+      !absenceQuery.isError &&
       people.length === 0 &&
       absences.length === 0 ? (
         <Placeholder
@@ -180,7 +188,7 @@ export function OrePage() {
         />
       ) : null}
 
-      {people.length > 0 ? (
+      {report.length > 0 && !isPending && !absenceQuery.isPending && !isError && !absenceQuery.isError ? (
         <>
         {toReview > 0 ? (
           <Card className="mb-4 border-gold/40 bg-gold/5">
@@ -192,20 +200,28 @@ export function OrePage() {
             </p>
           </Card>
         ) : null}
-        <Card className="p-0">
+        <Card className="mb-4 grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
+          <div><p className="text-xs text-t3">Ore Lavorate Effettive</p><p className="font-mono text-xl text-t1">{formatHours(totalHours)}</p></div>
+          <div><p className="text-xs text-t3">Ore di Assenza Giustificata</p><p className="font-mono text-xl text-t1">{formatHours(totalJustified)}</p></div>
+          <div><p className="text-xs text-t3">Totale Retribuibile</p><p className="font-mono text-xl text-gold">{formatHours(totalRetribuibile)}</p></div>
+          {totalConflicts > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</p> : null}
+          {totalUntracked > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dalle ore lavorate effettive.</p> : null}
+        </Card>
+        <Card className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-2 text-left text-[11px] uppercase tracking-wider text-t3">
                 <th className="px-5 py-3 font-semibold">Nome</th>
                 <th className="px-5 py-3 font-semibold">Ruolo</th>
                 <th className="px-5 py-3 text-right font-semibold">Turni</th>
-                <th className="px-5 py-3 text-right font-semibold">Ore approvate</th>
+                <th className="px-5 py-3 text-right font-semibold">Ore Lavorate Effettive</th>
+                <th className="px-5 py-3 text-right font-semibold">Ore di Assenza Giustificata</th>
+                <th className="px-5 py-3 text-right font-semibold">Totale Retribuibile</th>
                 <th className="px-5 py-3 text-right font-semibold">Da verificare</th>
-                <th className="w-1/3 px-5 py-3 font-semibold">Ripartizione</th>
               </tr>
             </thead>
             <tbody>
-              {people.map((p) => (
+              {report.map((p) => (
                 <tr
                   key={p.person_id}
                   className="border-b border-border last:border-0"
@@ -216,18 +232,16 @@ export function OrePage() {
                     {p.shifts_count}
                   </td>
                   <td className="px-5 py-2.5 text-right font-mono text-t1">
-                    {formatHours(p.hours)}
+                    {formatHours(p.worked_hours)}
                   </td>
+                  <td className="px-5 py-2.5 text-right font-mono text-t2">{formatHours(p.justified_hours)}</td>
+                  <td className="px-5 py-2.5 text-right font-mono text-gold">{formatHours(p.total_retribuibile)}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">
-                    {p.to_review_count || "—"}
-                  </td>
-                  <td className="px-5 py-2.5">
-                    <div className="h-1.5 w-full rounded-full bg-bg-2">
-                      <div
-                        className="h-1.5 rounded-full bg-gold"
-                        style={{ width: `${(p.hours / maxHours) * 100}%` }}
-                      />
-                    </div>
+                    {[
+                      p.conflict_hours > 0 ? `${formatHours(p.conflict_hours)} assenza` : null,
+                      p.untracked_hours > 0 ? `${formatHours(p.untracked_hours)} senza timbratura` : null,
+                      p.to_review_count > 0 ? `${p.to_review_count} timbrature` : null,
+                    ].filter(Boolean).join(" · ") || "—"}
                   </td>
                 </tr>
               ))}
@@ -237,15 +251,20 @@ export function OrePage() {
                 <td className="px-5 py-3 font-semibold text-t1">Totale</td>
                 <td />
                 <td className="px-5 py-3 text-right font-mono text-t2">
-                  {people.reduce((s, p) => s + p.shifts_count, 0)}
+                  {report.reduce((s, p) => s + p.shifts_count, 0)}
                 </td>
                 <td className="px-5 py-3 text-right font-mono font-semibold text-gold">
                   {formatHours(totalHours)}
                 </td>
+                <td className="px-5 py-3 text-right font-mono text-t2">{formatHours(totalJustified)}</td>
+                <td className="px-5 py-3 text-right font-mono font-semibold text-gold">{formatHours(totalRetribuibile)}</td>
                 <td className="px-5 py-3 text-right font-mono text-t2">
-                  {toReview || "—"}
+                  {[
+                    totalConflicts > 0 ? `${formatHours(totalConflicts)} assenza` : null,
+                    totalUntracked > 0 ? `${formatHours(totalUntracked)} senza timbratura` : null,
+                    toReview > 0 ? `${toReview} timbrature` : null,
+                  ].filter(Boolean).join(" · ") || "—"}
                 </td>
-                <td />
               </tr>
             </tfoot>
           </table>

@@ -6,6 +6,7 @@
 // Il rendering nativo sta in `src/lib/export.ts`, che importa da qui.
 
 import type { PersonHours } from "@/features/assignments/hoursSummary";
+import { monthlyReportRows } from "@/features/assignments/monthlyReport";
 import {
   ABSENCE_SUMMARY_NOTE,
   type AbsenceSummaryRow,
@@ -22,6 +23,14 @@ function escapeHtml(s: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function reviewCell(conflictHours: number, untrackedHours: number): string {
+  const parts = [
+    conflictHours > 0 ? `${hoursNumber(conflictHours)} h assenza` : null,
+    untrackedHours > 0 ? `${hoursNumber(untrackedHours)} h senza timbratura` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
 /**
@@ -41,15 +50,21 @@ export function buildHoursHtml(
   /** Ferie, permessi e malattia del mese: una seconda tabella, se ce ne sono. */
   absences: AbsenceSummaryRow[] = []
 ): string {
-  const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
+  const rows = monthlyReportRows(people, absences);
+  const totalShifts = rows.reduce((s, p) => s + p.shifts_count, 0);
+  const totalJustified = rows.reduce((s, p) => s + p.justified_hours, 0);
+  const totalRetribuibile = rows.reduce((s, p) => s + p.total_retribuibile, 0);
 
-  const body = people
+  const body = rows
     .map(
       (p) =>
         `<tr><td>${escapeHtml(p.person_name)}</td>` +
         `<td>${escapeHtml(p.roles ?? "—")}</td>` +
         `<td class="n">${p.shifts_count}</td>` +
-        `<td class="n">${hoursNumber(p.hours)}</td></tr>`
+        `<td class="n">${hoursNumber(p.worked_hours)}</td>` +
+        `<td class="n">${hoursNumber(p.justified_hours)}</td>` +
+        `<td class="n">${hoursNumber(p.total_retribuibile)}</td>` +
+        `<td class="n">${reviewCell(p.conflict_hours, p.untracked_hours)}</td></tr>`
     )
     .join("");
 
@@ -58,6 +73,7 @@ export function buildHoursHtml(
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     * { box-sizing: border-box; }
     body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1a1206; margin: 32px; }
+    @page { size: A4 landscape; }
     h1 { font-size: 22px; margin: 0 0 2px; }
     .sub { color: #6a6358; font-size: 13px; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -74,14 +90,12 @@ export function buildHoursHtml(
     <h1>Ore tracciate</h1>
     <div class="sub">${sub}</div>
     <table>
-      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore lavorate effettive</th><th class="n">Ore di assenza giustificata</th><th class="n">Totale retribuibile</th><th class="n">Da verificare</th></tr></thead>
       <tbody>${body}</tbody>
-      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(
-        totalHours
-      )}</td></tr></tfoot>
+      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(totalHours)}</td><td class="n">${hoursNumber(totalJustified)}</td><td class="n">${hoursNumber(totalRetribuibile)}</td><td></td></tr></tfoot>
     </table>
     ${absences.length > 0 ? absencesHtmlSection(absences) : ""}
-    <div class="foot">Documento generato da KlokShift · riepilogo ore/presenze del personale interno.</div>
+    <div class="foot">Documento generato da KlokShift · Le ore da verificare sono escluse dal totale. I codici evento del CSV vanno confermati con il consulente in base al contratto applicato.</div>
   </body></html>`;
 }
 
@@ -127,17 +141,24 @@ function csvCell(v: string): string {
  * Mattia, non in quale delle tre sedi le ha fatte: è una busta paga sola. Lo split
  * per sede serve al titolare per allocare i costi, e sta nella pagina Ore e nel PDF.
  *
- * Lo schema non cambia mai — `Nome;Ruolo;Turni;Ore` con una sede come con tre —
- * così un foglio o una macro che legge questo file continua a funzionare.
+ * Le colonne evento sono distinte: nessuna assenza entra nelle ore ordinarie.
  */
-export function buildHoursCsv(people: PersonHours[]): string {
-  const header = "Nome;Ruolo;Turni;Ore";
-  const lines = people.map((p) =>
+export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow[] = []): string {
+  const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale retribuibile;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
+  const lines = monthlyReportRows(people, absences).map((p) =>
     [
       p.person_name,
       p.roles ?? "",
       String(p.shifts_count),
-      hoursNumber(p.hours),
+      hoursNumber(p.worked_hours),
+      hoursNumber(p.ferie_hours),
+      hoursNumber(p.malattia_hours),
+      hoursNumber(p.permesso_hours),
+      hoursNumber(p.justified_hours),
+      hoursNumber(p.total_retribuibile),
+      hoursNumber(p.conflict_hours),
+      hoursNumber(p.untracked_hours),
+      p.conflict_hours > 0 || p.untracked_hours > 0 || p.to_review_count > 0 ? "Da verificare" : "",
     ]
       .map(csvCell)
       .join(";")

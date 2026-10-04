@@ -21,7 +21,7 @@ import { TeamAvatars, TeamRow } from "./TeamRow";
  * ogni tocco sul selettore.
  *
  * Le differenze sono due, e dicono entrambe qualcosa:
- *   · la barra a sinistra è oro solo sui **propri** turni, così scorrendo la
+ *   · la barra a sinistra è verde solo sui **propri** turni, così scorrendo la
  *     settimana della sede si ritrova la propria dentro;
  *   · niente bottoni di conferma: il turno di un collega non si conferma.
  *
@@ -58,7 +58,7 @@ export function PlanningShiftCard({
         <View
           className={cn(
             "w-1 rounded-full",
-            shift.includesMe ? "bg-gold" : "bg-border-2"
+            shift.includesMe ? "bg-success" : "bg-border-2"
           )}
         />
 

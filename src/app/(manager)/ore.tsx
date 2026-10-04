@@ -23,6 +23,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
+import { monthlyReportRows } from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import {
   ABSENCE_SUMMARY_NOTE,
@@ -80,11 +81,16 @@ export default function VenueHoursScreen() {
   // la busta paga è una, e quante ore di quel totale siano state fatte a Roma
   // invece che a Milano non è una domanda che questa pagina deve rispondere.
   const people = groupHoursByPerson(rows);
-  // Ferie, permessi e malattia del mese: una sezione e un CSV a parte.
+  // Ferie, permessi e malattia del mese: ore nel consuntivo, giorni nel dettaglio.
   const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
   const absences = absenceQuery.data ?? [];
+  const report = monthlyReportRows(people, absences);
 
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
+  const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
+  const totalRetribuibile = report.reduce((s, p) => s + p.total_retribuibile, 0);
+  const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
+  const totalUntracked = report.reduce((s, p) => s + p.untracked_hours, 0);
   const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
   const maxHours = people.reduce((m, p) => Math.max(m, p.hours), 0);
   const label = monthLabel(month);
@@ -95,7 +101,7 @@ export default function VenueHoursScreen() {
       if (kind === "pdf") {
         await exportHoursPdf(company, label, people, totalHours, absences);
       } else if (kind === "csv") {
-        await exportHoursCsv(company, label, people);
+        await exportHoursCsv(company, label, people, absences);
       } else {
         await exportAbsencesCsv(company, label, absences);
       }
@@ -158,24 +164,25 @@ export default function VenueHoursScreen() {
         />
       ) : (
         <>
-          {people.length > 0 ? (
+          {report.length > 0 ? (
             <>
               <Card className="rounded-3xl border-border-2 px-5 py-4">
-                <Mono>Totale mese</Mono>
-                <Text
-                  className="mt-1 text-3xl font-sans-bold text-t1"
-                  style={{ letterSpacing: -0.5 }}
-                >
-                  {formatHours(totalHours)}
-                </Text>
+                <Mono>Riepilogo mese</Mono>
+                <View className="mt-3 flex-row flex-wrap gap-4">
+                  <View><Text className="text-xs text-t3">Ore Lavorate Effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
+                  <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
+                  <View><Text className="text-xs text-t3">Totale Retribuibile</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalRetribuibile)}</Text></View>
+                </View>
+                {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
+                {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo.</Text> : null}
                 <Text className="text-xs text-t3">
-                  {totalShifts} turni · {people.length}{" "}
-                  {people.length === 1 ? "persona" : "persone"}
+                  {totalShifts} turni · {report.length}{" "}
+                  {report.length === 1 ? "persona" : "persone"}
                 </Text>
               </Card>
 
               <View className="gap-4">
-                {people.map((p) => (
+                {report.map((p) => (
                   <View key={p.person_id} className="gap-2">
                     <View className="flex-row items-center justify-between">
                       <View className="flex-1">
@@ -187,11 +194,13 @@ export default function VenueHoursScreen() {
                         </Text>
                       </View>
                       <Text className="text-sm font-sans-bold text-gold">
-                        {formatHours(p.hours)}
+                        {formatHours(p.worked_hours)}
                       </Text>
                     </View>
-
-                    <ProgressBar progress={maxHours > 0 ? p.hours / maxHours : 0} />
+                    <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale retribuibile {formatHours(p.total_retribuibile)}</Text>
+                    {p.conflict_hours > 0 ? <Text className="text-xs text-warning">Da verificare: {formatHours(p.conflict_hours)} di assenza</Text> : null}
+                    {p.untracked_hours > 0 ? <Text className="text-xs text-warning">Senza timbratura: {formatHours(p.untracked_hours)} escluse</Text> : null}
+                    <ProgressBar progress={maxHours > 0 ? p.worked_hours / maxHours : 0} />
                   </View>
                 ))}
               </View>
@@ -244,9 +253,9 @@ export default function VenueHoursScreen() {
 
           <View className="mt-2 gap-2.5">
             <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
-            {people.length > 0 ? (
+            {report.length > 0 ? (
               <GhostButton
-                label="Esporta CSV ore"
+                label="Esporta CSV mensile"
                 onPress={() => onExport("csv")}
               />
             ) : null}

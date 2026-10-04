@@ -14,11 +14,13 @@ import {
 } from "@/features/absences/labels";
 import { userErrorMessage } from "@/lib/errors";
 import { todayString } from "@/lib/format";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
 import { useToast } from "../ui/Toast";
 import { Button, Card, Field, Input, Pill, Spinner } from "../ui/primitives";
 import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
+import { AbsenceHourCredits } from "./AbsenceHourCredits";
 
 /**
  * Ferie, permessi e malattie di una persona, nella scheda della dashboard:
@@ -81,6 +83,7 @@ export function AbsenceRow({
   /** In testa alla riga, nelle liste con più persone. */
   personName?: string | null;
 }) {
+  const { canAny, isOwner, myMemberId } = useOwnerVenues();
   const closed = a.status === "rejected" || a.status === "withdrawn";
   const sick = a.kind === "malattia";
   const days = absenceDays(a);
@@ -116,6 +119,7 @@ export function AbsenceRow({
         <ResolveAbsenceForm absence={a} className="mt-3" />
       ) : null}
       {sick && a.status === "approved" ? <ProtocolField absence={a} /> : null}
+      {a.status === "approved" && !a.start_time && canAny("can_view_hours") && (isOwner || a.member_id !== myMemberId) ? <AbsenceHourCredits absence={a} /> : null}
       {/* Su una assenza finita non c'è più niente da togliere, e ogni blocco è
           una query sui turni della persona. */}
       {a.end_date >= todayString() ? <AbsenceConflictsBlock absence={a} /> : null}

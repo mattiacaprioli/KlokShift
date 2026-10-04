@@ -21,6 +21,8 @@ export function shiftViewQueryKeys(
     qk.shifts.pastCountAll,
     qk.assignments.todayAll,
     qk.staff.all,
+    qk.absences.summaryAll,
+    qk.absences.creditsAll,
   ];
 }
 

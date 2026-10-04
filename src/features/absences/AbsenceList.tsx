@@ -7,8 +7,9 @@ import { Pill } from "@/components/ui/Pill";
 import { userErrorMessage } from "@/lib/errors";
 import { todayString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { Absence } from "./api";
-import { useSetAbsenceInpsProtocol, useWithdrawAbsence } from "./hooks";
+import { useAbsenceHourCredits, useSetAbsenceHourCredit, useSetAbsenceInpsProtocol, useWithdrawAbsence } from "./hooks";
 import {
   ABSENCE_KIND_LABEL,
   ABSENCE_STATUS_LABEL,
@@ -41,9 +42,11 @@ type Props = {
  */
 export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
   const toast = useToast();
+  const { canAny, isOwner, myMemberId } = useOwnerVenues();
   const withdraw = useWithdrawAbsence();
   const [resolving, setResolving] = useState<Absence | null>(null);
   const [protocolFor, setProtocolFor] = useState<Absence | null>(null);
+  const [creditFor, setCreditFor] = useState<Absence | null>(null);
   const today = todayString();
 
   function onWithdraw(a: Absence) {
@@ -79,6 +82,9 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
                 label={a.inps_protocol ? "Modifica riferimento" : "Aggiungi riferimento"}
                 onPress={() => setProtocolFor(a)}
               />
+            ) : null,
+            mode === "manager" && a.status === "approved" && !a.start_time && canAny("can_view_hours") && (isOwner || a.member_id !== myMemberId) ? (
+              <RowAction key="credit" label="Ore riconosciute" onPress={() => setCreditFor(a)} />
             ) : null,
             mode === "mine" && canWithdrawAbsence(a) ? (
               <RowAction
@@ -161,7 +167,50 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
           onClose={() => setProtocolFor(null)}
         />
       ) : null}
+      {creditFor ? <CreditModal absence={creditFor} onClose={() => setCreditFor(null)} /> : null}
     </>
+  );
+}
+
+function CreditModal({ absence, onClose }: { absence: Absence; onClose: () => void }) {
+  const toast = useToast();
+  const query = useAbsenceHourCredits(absence.id);
+  const save = useSetAbsenceHourCredit();
+  const [date, setDate] = useState(absence.start_date);
+  const [hours, setHours] = useState("");
+  const value = Number(hours.replace(",", "."));
+  const valid = date >= absence.start_date && date <= absence.end_date &&
+    Number.isFinite(value) && value > 0 && value <= 24 && Number.isInteger(value * 60);
+
+  function onSave() {
+    if (!valid) return;
+    save.mutate({ absenceId: absence.id, date, minutes: value * 60 }, {
+      onSuccess: () => { setHours(""); toast.show("Ore riconosciute salvate"); },
+      onError: (e) => toast.show(userErrorMessage(e, "Salvataggio non riuscito"), "error"),
+    });
+  }
+
+  return (
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} className="items-center justify-center px-6">
+        <Pressable onPress={() => {}} className="w-full rounded-3xl border border-border-2 bg-bg-card p-6">
+          <Text className="text-lg font-sans-bold text-t1">Ore di assenza riconosciute</Text>
+          <Text className="mt-1 text-xs text-t3">{formatAbsenceRange(absence)} · Indica le ore per singolo giorno. Nessuna conversione automatica.</Text>
+          <View className="mt-4 gap-2">
+            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-GG" autoCapitalize="none" />
+            <Input value={hours} onChangeText={setHours} placeholder="Ore, es. 8" keyboardType="decimal-pad" />
+            <GoldButton label={save.isPending ? "Salvataggio…" : "Salva ore"} disabled={!valid || save.isPending} onPress={onSave} />
+          </View>
+          {query.data?.map((c) => (
+            <View key={c.date} className="mt-3 flex-row items-center justify-between gap-2">
+              <Text className="text-xs text-t2">{c.date} · {(c.minutes / 60).toLocaleString("it-IT")} h{c.conflict ? " · Da verificare" : ""}</Text>
+              <Pressable disabled={save.isPending} onPress={() => save.mutate({ absenceId: absence.id, date: c.date, minutes: null })}><Text className="text-xs text-t4">Rimuovi</Text></Pressable>
+            </View>
+          ))}
+          <Pressable onPress={onClose} className="mt-4 items-center py-2"><Text className="text-sm text-t4">Chiudi</Text></Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 

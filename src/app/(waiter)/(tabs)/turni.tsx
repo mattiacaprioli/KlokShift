@@ -100,10 +100,11 @@ type Mode = (typeof MODES)[number]["id"];
  * domanda («cosa succede giovedì») e non la risposta. Per la stessa ragione le
  * due liste non tengono uno stato per uno: lo leggono da qui.
  *
- * Il selettore compare solo per chi è in organico da qualche parte
- * (`useMyEmployers`): a chi non lo è, la seconda vista non avrebbe niente da
- * mostrare e un selettore con metà dei tocchi inerti è peggio di nessun
- * selettore.
+ * Il selettore compare solo se almeno una delle sedi in cui si è in organico
+ * condivide il planning (`venues.staff_sees_planning`, che il titolare
+ * comanda dalla scheda della sede): altrimenti la seconda vista non avrebbe
+ * niente da mostrare, e un selettore con metà dei tocchi inerti è peggio di
+ * nessun selettore.
  */
 export default function WaiterShiftsScreen() {
   const router = useRouter();
@@ -116,7 +117,7 @@ export default function WaiterShiftsScreen() {
   const respond = useRespondToAssignment();
 
   const today = todayString();
-  const [mode, setMode] = useState<Mode>("mine");
+  const [chosenMode, setMode] = useState<Mode>("mine");
   const [declining, setDeclining] = useState<string | null>(null);
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
   const [anchorDay, setAnchorDay] = useState(today);
@@ -140,6 +141,18 @@ export default function WaiterShiftsScreen() {
   );
   const daConfermare = items.filter((a) => a.status === "assigned");
 
+  // Chi è in organico da qualche parte: decide se il selettore ha senso, e se
+  // sulle card serve il nome della sede.
+  const employers = useMyEmployers(waiterId);
+  // La vista «La sede» esiste solo se almeno una sede condivide il planning
+  // (`venues.staff_sees_planning`, l'interruttore del titolare): altrimenti la
+  // seconda lista sarebbe vuota per decisione, e il selettore sparisce.
+  const sharesPlanning = (employers.data ?? []).some(
+    (e) => e.venue?.staff_sees_planning
+  );
+  // Se il titolare lo spegne mentre si guarda la sede, si torna ai propri turni.
+  const mode: Mode = sharesPlanning ? chosenMode : "mine";
+
   // Il planning della sede: una finestra che parte dal giorno da cui parte
   // l'agenda, così scegliere una data lontana va a prendersi il periodo giusto
   // invece di mostrare un vuoto. Il server filtra già da `anchorDay` in avanti,
@@ -150,10 +163,6 @@ export default function WaiterShiftsScreen() {
     () => groupByDay(planning.data ?? [], (s) => s.date),
     [planning.data]
   );
-
-  // Chi è in organico da qualche parte: decide se il selettore ha senso, e se
-  // sulle card serve il nome della sede.
-  const employers = useMyEmployers(waiterId);
 
   // Le proprie assenze approvate: un turno che ci cade dentro dice «Sei in
   // ferie». Solo quelle dello **stesso** titolare del turno — le ferie chieste a
@@ -284,7 +293,7 @@ export default function WaiterShiftsScreen() {
               </Pressable>
             ) : null}
           </View>
-          {venueCount > 0 ? (
+          {sharesPlanning ? (
             <Segmented
               className="mt-4"
               options={MODES}

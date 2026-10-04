@@ -15,6 +15,12 @@ export type AbsenceSummaryRow = {
   /** Permessi a ore, in ore. */
   permesso_hours: number;
   malattia_days: number;
+  /** Crediti espliciti, al netto dei giorni con lavoro approvato. */
+  ferie_hours: number;
+  malattia_hours: number;
+  permesso_recognized_hours: number;
+  /** Crediti esclusi dai totali finché il conflitto non è risolto. */
+  conflict_hours: number;
   /** I riferimenti dei certificati medici, già uniti ("123, 456"). */
   inps_protocols: string | null;
 };
@@ -25,7 +31,7 @@ export type AbsenceSummaryRow = {
  * sembrerebbero la stessa cosa, e per la busta paga non lo sono.
  */
 export const ABSENCE_SUMMARY_NOTE =
-  "Giorni di calendario, compresi sabati, domeniche e festivi: il conteggio dei giorni lavorativi dipende dal contratto e lo fa il consulente del lavoro. Solo assenze approvate.";
+  "Giorni di calendario, compresi sabati, domeniche e festivi. Le ore riconosciute sono solo quelle indicate per giorno o per un permesso orario approvato; i giorni senza ore restano da quantificare. I crediti in conflitto con ore lavorate sono esclusi dal totale e segnalati da verificare.";
 
 /** "3 gg", "2,5 h", "—". */
 export function formatSummaryDays(days: number): string {
