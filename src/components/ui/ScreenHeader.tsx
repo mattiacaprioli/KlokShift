@@ -24,6 +24,7 @@ type Props = {
 /**
  * In-body screen header with the prototype's circular leading button + serif title.
  * Use on pushed screens with the native Stack header hidden (headerShown:false).
+ * Keep it outside ScrollView/FlatList so the header stays fixed while content scrolls.
  */
 export function ScreenHeader({
   eyebrow,

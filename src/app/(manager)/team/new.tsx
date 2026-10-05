@@ -111,93 +111,96 @@ export default function TeamNewScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 48,
-          gap: 20,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <ScreenHeader eyebrow="Collaboratori" title="Invita" />
+      <View className="flex-1 bg-bg-0">
+        <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
+          <ScreenHeader eyebrow="Collaboratori" title="Invita" />
+        </View>
 
-        <View className="gap-5">
-          <Input
-            label="Nome e cognome"
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Come lo chiami tu"
-          />
-
-          <View className="gap-2">
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 48,
+            gap: 20,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="gap-5">
             <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="nome@email.com"
+              label="Nome e cognome"
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Come lo chiami tu"
             />
-            <Text className="text-xs leading-4 text-t3">
-              Se ha già un account, trova l&apos;invito da accettare quando
-              entra. Altrimenti gli mandiamo un link: lo apre, sceglie una
-              password ed è dentro, senza registrarsi. Finché non lo apre non
-              esiste nessun account.
-            </Text>
-          </View>
 
-          <View className="gap-2">
-            <Mono>Cosa può fare</Mono>
-            <PermissionSwitches value={permissions} onChange={setPerm} />
-            <Text className="px-1 text-[12px] leading-4 text-t4">
-              Restano tuoi: aprire e chiudere sedi, invitare altri collaboratori
-              e l&apos;account. I permessi si cambiano dopo, dalla sua scheda.
-            </Text>
-          </View>
-
-          {isMultiVenue ? (
             <View className="gap-2">
-              <Mono>Dove</Mono>
-              <View className="flex-row flex-wrap gap-2">
-                {venues.map((v) => (
-                  <Chip
-                    key={v.id}
-                    label={v.name}
-                    gold
-                    active={picked.has(v.id)}
-                    onPress={() => toggleVenue(v.id)}
-                  />
-                ))}
-              </View>
-              <Text className="px-1 text-[12px] leading-4 text-t4">
-                {allVenues
-                  ? "Nessuna scelta: vale su tutte le sedi, anche quelle che aprirai."
-                  : "Vale solo sulle sedi scelte."}
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="nome@email.com"
+              />
+              <Text className="text-xs leading-4 text-t3">
+                Se ha già un account, trova l&apos;invito da accettare quando
+                entra. Altrimenti gli mandiamo un link: lo apre, sceglie una
+                password ed è dentro, senza registrarsi. Finché non lo apre non
+                esiste nessun account.
               </Text>
             </View>
-          ) : null}
 
-          <GoldButton
-            className="mt-1"
-            label={add.isPending ? "Invio…" : "Invita"}
-            disabled={
-              add.isPending ||
-              !fullName.trim() ||
-              !email.trim() ||
-              noPermissions
-            }
-            onPress={submit}
-          />
-          {noPermissions ? (
-            <Text className="text-center text-[12px] text-t4">
-              Scegli almeno un permesso.
-            </Text>
-          ) : null}
-        </View>
-      </ScrollView>
+            <View className="gap-2">
+              <Mono>Cosa può fare</Mono>
+              <PermissionSwitches value={permissions} onChange={setPerm} />
+              <Text className="px-1 text-[12px] leading-4 text-t4">
+                Restano tuoi: aprire e chiudere sedi, invitare altri collaboratori
+                e l&apos;account. I permessi si cambiano dopo, dalla sua scheda.
+              </Text>
+            </View>
+
+            {isMultiVenue ? (
+              <View className="gap-2">
+                <Mono>Dove</Mono>
+                <View className="flex-row flex-wrap gap-2">
+                  {venues.map((v) => (
+                    <Chip
+                      key={v.id}
+                      label={v.name}
+                      gold
+                      active={picked.has(v.id)}
+                      onPress={() => toggleVenue(v.id)}
+                    />
+                  ))}
+                </View>
+                <Text className="px-1 text-[12px] leading-4 text-t4">
+                  {allVenues
+                    ? "Nessuna scelta: vale su tutte le sedi, anche quelle che aprirai."
+                    : "Vale solo sulle sedi scelte."}
+                </Text>
+              </View>
+            ) : null}
+
+            <GoldButton
+              className="mt-1"
+              label={add.isPending ? "Invio…" : "Invita"}
+              disabled={
+                add.isPending ||
+                !fullName.trim() ||
+                !email.trim() ||
+                noPermissions
+              }
+              onPress={submit}
+            />
+            {noPermissions ? (
+              <Text className="text-center text-[12px] text-t4">
+                Scegli almeno un permesso.
+              </Text>
+            ) : null}
+          </View>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }

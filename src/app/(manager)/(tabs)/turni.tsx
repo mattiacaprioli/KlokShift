@@ -304,24 +304,27 @@ export default function ManagerShiftsScreen() {
   // Senza nessuna sede non c'è niente da organizzare.
   if (venueQuery.isLoading || venueQuery.isError || venues.length === 0) {
     return (
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 12,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 96,
-          gap: 16,
-        }}
-      >
-        {title}
-        {venueQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" style={{ marginTop: 64 }} />
-        ) : venueQuery.isError ? (
-          <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-        ) : (
-          <NoVenuesState subtitle="Ti serve una sede prima di organizzare i turni." />
-        )}
-      </ScrollView>
+      <View className="flex-1 bg-bg-0">
+        <View className="shrink-0 px-5 pb-4" style={{ paddingTop: insets.top + 12 }}>
+          {title}
+        </View>
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 96,
+            gap: 16,
+          }}
+        >
+          {venueQuery.isLoading ? (
+            <ActivityIndicator color="#EAB54C" style={{ marginTop: 64 }} />
+          ) : venueQuery.isError ? (
+            <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
+          ) : (
+            <NoVenuesState subtitle="Ti serve una sede prima di organizzare i turni." />
+          )}
+        </ScrollView>
+      </View>
     );
   }
 

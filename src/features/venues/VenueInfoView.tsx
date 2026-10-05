@@ -31,50 +31,53 @@ export function VenueInfoView({
   const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 8,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 48,
-        gap: 24,
-      }}
-    >
-      <ScreenHeader eyebrow="Sede" title={venue.name} />
-
-      <View className="items-center gap-3">
-        <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={96} />
-        <Display className="text-3xl">{venue.name}</Display>
-        <Text className="text-xs text-t3">
-          I dati della sede li cambia il titolare.
-        </Text>
+    <View className="flex-1 bg-bg-0">
+      <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
+        <ScreenHeader eyebrow="Sede" title={venue.name} />
       </View>
 
-      <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-        {venue.city ? (
-          <View className="gap-0.5">
-            <Mono>Città</Mono>
-            <Text className="text-sm text-t2">{venue.city}</Text>
-          </View>
-        ) : null}
-        {venue.address ? (
-          <View className="gap-0.5">
-            <Mono>Indirizzo</Mono>
-            <Text className="text-sm text-t2">{venue.address}</Text>
-          </View>
-        ) : null}
-        {venue.cuisine_type ? (
-          <View className="gap-0.5">
-            <Mono>Tipo di sede</Mono>
-            <Text className="text-sm text-t2">{venue.cuisine_type}</Text>
-          </View>
-        ) : null}
-        {venue.description ? (
-          <Text className="text-sm leading-5 text-t2">{venue.description}</Text>
-        ) : null}
-      </View>
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+          gap: 24,
+        }}
+      >
+        <View className="items-center gap-3">
+          <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={96} />
+          <Display className="text-3xl">{venue.name}</Display>
+          <Text className="text-xs text-t3">
+            I dati della sede li cambia il titolare.
+          </Text>
+        </View>
 
-      {footer}
-    </ScrollView>
+        <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
+          {venue.city ? (
+            <View className="gap-0.5">
+              <Mono>Città</Mono>
+              <Text className="text-sm text-t2">{venue.city}</Text>
+            </View>
+          ) : null}
+          {venue.address ? (
+            <View className="gap-0.5">
+              <Mono>Indirizzo</Mono>
+              <Text className="text-sm text-t2">{venue.address}</Text>
+            </View>
+          ) : null}
+          {venue.cuisine_type ? (
+            <View className="gap-0.5">
+              <Mono>Tipo di sede</Mono>
+              <Text className="text-sm text-t2">{venue.cuisine_type}</Text>
+            </View>
+          ) : null}
+          {venue.description ? (
+            <Text className="text-sm leading-5 text-t2">{venue.description}</Text>
+          ) : null}
+        </View>
+
+        {footer}
+      </ScrollView>
+    </View>
   );
 }

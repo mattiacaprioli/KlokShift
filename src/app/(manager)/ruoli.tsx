@@ -146,94 +146,97 @@ export default function VenueRolesScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 48,
-          gap: 20,
-        }}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            tintColor="#EAB54C"
-            refreshing={pull.refreshing}
-            onRefresh={pull.onRefresh}
+      <View className="flex-1 bg-bg-0">
+        <View className="shrink-0 px-5 pb-2" style={{ paddingTop: insets.top + 8 }}>
+          <ScreenHeader eyebrow="Organico" title="Ruoli" />
+        </View>
+
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 48,
+            gap: 20,
+          }}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              tintColor="#EAB54C"
+              refreshing={pull.refreshing}
+              onRefresh={pull.onRefresh}
+            />
+          }
+        >
+          <Text className="text-[13px] leading-5 text-t3">
+            Le mansioni che assegni al tuo staff e che chiedi sui turni. Scrivi
+            quelle che usi davvero: ogni sede ha le sue
+            {isMultiVenue && venue ? `, e queste sono quelle di ${venue.name}` : ""}.
+          </Text>
+
+          {/* Ogni sede ha il suo elenco: qui si sceglie di quale. */}
+          <VenuePicker
+            perm="can_manage_venue"
+            value={venueId}
+            onChange={choose}
+            label="Ruoli di quale sede"
+            className="-mt-1"
           />
-        }
-      >
-        <ScreenHeader eyebrow="Organico" title="Ruoli" />
 
-        <Text className="-mt-3 text-[13px] leading-5 text-t3">
-          Le mansioni che assegni al tuo staff e che chiedi sui turni. Scrivi
-          quelle che usi davvero: ogni sede ha le sue
-          {isMultiVenue && venue ? `, e queste sono quelle di ${venue.name}` : ""}.
-        </Text>
-
-        {/* Ogni sede ha il suo elenco: qui si sceglie di quale. */}
-        <VenuePicker
-          perm="can_manage_venue"
-          value={venueId}
-          onChange={choose}
-          label="Ruoli di quale sede"
-          className="-mt-1"
-        />
-
-        {venueQuery.isLoading || rolesQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-10" />
-        ) : rolesQuery.isError ? (
-          <QueryError className="mt-6" onRetry={() => rolesQuery.refetch()} />
-        ) : venues.length === 0 ? (
-          <NoVenuesState subtitle="Ti serve una sede prima di definirne i ruoli." />
-        ) : (
-          <>
-            <View className="gap-2">
-              <Input
-                label="Aggiungi un ruolo"
-                value={draft}
-                onChangeText={setDraft}
-                placeholder="Es. Pizzaiolo"
-                returnKeyType="done"
-                onSubmitEditing={() => add(draft)}
-              />
-              <GoldButton
-                label={create.isPending ? "Aggiungo…" : "Aggiungi"}
-                disabled={create.isPending || !draft.trim()}
-                onPress={() => add(draft)}
-              />
-            </View>
-
-            {suggestions.length > 0 ? (
+          {venueQuery.isLoading || rolesQuery.isLoading ? (
+            <ActivityIndicator color="#EAB54C" className="mt-10" />
+          ) : rolesQuery.isError ? (
+            <QueryError className="mt-6" onRetry={() => rolesQuery.refetch()} />
+          ) : venues.length === 0 ? (
+            <NoVenuesState subtitle="Ti serve una sede prima di definirne i ruoli." />
+          ) : (
+            <>
               <View className="gap-2">
-                <Mono>Esempi</Mono>
-                <View className="flex-row flex-wrap gap-2">
-                  {suggestions.map((s) => (
-                    <Chip key={s} label={`+ ${s}`} onPress={() => add(s)} />
+                <Input
+                  label="Aggiungi un ruolo"
+                  value={draft}
+                  onChangeText={setDraft}
+                  placeholder="Es. Pizzaiolo"
+                  returnKeyType="done"
+                  onSubmitEditing={() => add(draft)}
+                />
+                <GoldButton
+                  label={create.isPending ? "Aggiungo…" : "Aggiungi"}
+                  disabled={create.isPending || !draft.trim()}
+                  onPress={() => add(draft)}
+                />
+              </View>
+
+              {suggestions.length > 0 ? (
+                <View className="gap-2">
+                  <Mono>Esempi</Mono>
+                  <View className="flex-row flex-wrap gap-2">
+                    {suggestions.map((s) => (
+                      <Chip key={s} label={`+ ${s}`} onPress={() => add(s)} />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              {roles.length === 0 ? (
+                <EmptyState
+                  title="Nessun ruolo"
+                  subtitle="Aggiungi le mansioni della tua sede: potrai assegnarle allo staff e chiederle sui turni."
+                />
+              ) : (
+                <View className="gap-1 rounded-3xl border border-border-2 bg-bg-card px-4 py-2">
+                  {roles.map((r) => (
+                    <RoleRow
+                      key={r.id}
+                      role={r}
+                      onArchive={() => setToArchive(r)}
+                    />
                   ))}
                 </View>
-              </View>
-            ) : null}
-
-            {roles.length === 0 ? (
-              <EmptyState
-                title="Nessun ruolo"
-                subtitle="Aggiungi le mansioni della tua sede: potrai assegnarle allo staff e chiederle sui turni."
-              />
-            ) : (
-              <View className="gap-1 rounded-3xl border border-border-2 bg-bg-card px-4 py-2">
-                {roles.map((r) => (
-                  <RoleRow
-                    key={r.id}
-                    role={r}
-                    onArchive={() => setToArchive(r)}
-                  />
-                ))}
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
+              )}
+            </>
+          )}
+        </ScrollView>
+      </View>
 
       <ConfirmModal
         visible={!!toArchive}

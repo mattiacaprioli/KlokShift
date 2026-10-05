@@ -254,139 +254,142 @@ export default function StaffNewScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 48,
-          gap: 20,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <ScreenHeader eyebrow="Staff" title={isSelf ? "Sei tu" : "Aggiungi"} />
-
-        <View className="gap-5">
-          {isSelf ? (
-            <Text className="text-sm leading-5 text-t2">
-              Ti aggiungi al tuo organico: da qui in poi puoi assegnarti i turni
-              come a chiunque altro, e le tue ore entrano nel riepilogo e
-              nell&apos;export.
-            </Text>
-          ) : null}
-
-          {/* Il proprio nome non si scrive qui: è quello del profilo, e
-              scriverne un altro creerebbe due nomi per la stessa persona. */}
-          {isSelf ? (
-            <View className="gap-2">
-              <Mono>Nome</Mono>
-              <Card className="rounded-3xl border-border-2 px-4 py-3.5">
-                <Text className="text-base text-t1">
-                  {name || "Il tuo nome"}
-                </Text>
-              </Card>
-              <Text className="text-xs leading-4 text-t3">
-                Come compari nel tuo profilo. Si cambia da lì.
-              </Text>
-            </View>
-          ) : (
-            <Input
-              label="Nome"
-              value={name}
-              onChangeText={setName}
-              placeholder="Es. Marco Rossi"
-            />
-          )}
-
-          {/* Nessuna email in modalità «sono io»: non c'è nessun invito da
-              mandare e nessun account da agganciare — è già il mio. */}
-          {isSelf ? null : (
-            <View className="gap-2">
-              <Input
-                label="Email (facoltativa)"
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setAlready(null);
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder="nome@email.com"
-              />
-              <Text className="text-xs leading-4 text-t3">
-                Se ha già un account, gli arriva la richiesta nell&apos;app.
-                Altrimenti gli mandiamo un invito e, quando si registra con
-                questa email, lo colleghiamo a questa scheda.
-              </Text>
-            </View>
-          )}
-
-          {already ? (
-            <Card className="gap-4 rounded-3xl border-border-2 p-5">
-              <Text className="text-sm leading-5 text-t2">
-                Questa persona è già nel tuo organico. Aprila per aggiungerle una
-                sede o cambiarle i ruoli: anagrafica e documenti restano quelli
-                che ha già.
-              </Text>
-              <GoldButton
-                label="Apri la scheda"
-                onPress={() => router.replace(`/(manager)/staff/${already}`)}
-              />
-            </Card>
-          ) : null}
-
-          {isMultiVenue ? (
-            <VenueMultiSelect
-              venues={venues}
-              value={venueIds}
-              onToggle={toggleVenue}
-            />
-          ) : null}
-
-          {/* Solo con una sede sola: i ruoli appartengono alla sede, e
-              chiederli per tre sedi in un form di creazione lo renderebbe
-              illeggibile. Con più sedi si assegnano dalla scheda persona. */}
-          {singleVenue ? (
-            <RoleMultiSelect
-              venueId={singleVenue}
-              value={roleIds}
-              onChange={setRoleIds}
-            />
-          ) : (
-            <Text className="text-xs leading-4 text-t3">
-              I ruoli cambiano da una sede all&apos;altra: li assegnerai dalla
-              sua scheda, sede per sede.
-            </Text>
-          )}
-
-          <View className="gap-2">
-            <Mono>Tipo</Mono>
-            <TypeChips value={empType} onChange={setEmpType} />
-          </View>
-
-          <Input
-            label="Telefono (facoltativo)"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            placeholder="Es. 333 1234567"
-          />
-
-          <GoldButton
-            className="mt-1"
-            label={
-              pending
-                ? "Aggiunta…"
-                : isSelf
-                  ? "Mettimi in organico"
-                  : "Aggiungi allo staff"
-            }
-            disabled={pending || !name.trim() || venueIds.size === 0}
-            onPress={submit}
-          />
+      <View className="flex-1 bg-bg-0">
+        <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
+          <ScreenHeader eyebrow="Staff" title={isSelf ? "Sei tu" : "Aggiungi"} />
         </View>
-      </ScrollView>
+
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 48,
+            gap: 20,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="gap-5">
+            {isSelf ? (
+              <Text className="text-sm leading-5 text-t2">
+                Ti aggiungi al tuo organico: da qui in poi puoi assegnarti i turni
+                come a chiunque altro, e le tue ore entrano nel riepilogo e
+                nell&apos;export.
+              </Text>
+            ) : null}
+
+            {/* Il proprio nome non si scrive qui: è quello del profilo, e
+                scriverne un altro creerebbe due nomi per la stessa persona. */}
+            {isSelf ? (
+              <View className="gap-2">
+                <Mono>Nome</Mono>
+                <Card className="rounded-3xl border-border-2 px-4 py-3.5">
+                  <Text className="text-base text-t1">
+                    {name || "Il tuo nome"}
+                  </Text>
+                </Card>
+                <Text className="text-xs leading-4 text-t3">
+                  Come compari nel tuo profilo. Si cambia da lì.
+                </Text>
+              </View>
+            ) : (
+              <Input
+                label="Nome"
+                value={name}
+                onChangeText={setName}
+                placeholder="Es. Marco Rossi"
+              />
+            )}
+
+            {/* Nessuna email in modalità «sono io»: non c'è nessun invito da
+                mandare e nessun account da agganciare — è già il mio. */}
+            {isSelf ? null : (
+              <View className="gap-2">
+                <Input
+                  label="Email (facoltativa)"
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    setAlready(null);
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="nome@email.com"
+                />
+                <Text className="text-xs leading-4 text-t3">
+                  Se ha già un account, gli arriva la richiesta nell&apos;app.
+                  Altrimenti gli mandiamo un invito e, quando si registra con
+                  questa email, lo colleghiamo a questa scheda.
+                </Text>
+              </View>
+            )}
+
+            {already ? (
+              <Card className="gap-4 rounded-3xl border-border-2 p-5">
+                <Text className="text-sm leading-5 text-t2">
+                  Questa persona è già nel tuo organico. Aprila per aggiungerle una
+                  sede o cambiarle i ruoli: anagrafica e documenti restano quelli
+                  che ha già.
+                </Text>
+                <GoldButton
+                  label="Apri la scheda"
+                  onPress={() => router.replace(`/(manager)/staff/${already}`)}
+                />
+              </Card>
+            ) : null}
+
+            {isMultiVenue ? (
+              <VenueMultiSelect
+                venues={venues}
+                value={venueIds}
+                onToggle={toggleVenue}
+              />
+            ) : null}
+
+            {/* Solo con una sede sola: i ruoli appartengono alla sede, e
+                chiederli per tre sedi in un form di creazione lo renderebbe
+                illeggibile. Con più sedi si assegnano dalla scheda persona. */}
+            {singleVenue ? (
+              <RoleMultiSelect
+                venueId={singleVenue}
+                value={roleIds}
+                onChange={setRoleIds}
+              />
+            ) : (
+              <Text className="text-xs leading-4 text-t3">
+                I ruoli cambiano da una sede all&apos;altra: li assegnerai dalla
+                sua scheda, sede per sede.
+              </Text>
+            )}
+
+            <View className="gap-2">
+              <Mono>Tipo</Mono>
+              <TypeChips value={empType} onChange={setEmpType} />
+            </View>
+
+            <Input
+              label="Telefono (facoltativo)"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              placeholder="Es. 333 1234567"
+            />
+
+            <GoldButton
+              className="mt-1"
+              label={
+                pending
+                  ? "Aggiunta…"
+                  : isSelf
+                    ? "Mettimi in organico"
+                    : "Aggiungi allo staff"
+              }
+              disabled={pending || !name.trim() || venueIds.size === 0}
+              onPress={submit}
+            />
+          </View>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }

@@ -1,8 +1,8 @@
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, ScrollView, Text, View } from "@/tw";
-import { Display } from "@/components/ui/Display";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import type { ViewMode } from "@/features/team/viewModeStorage";
@@ -41,72 +41,68 @@ export default function SignupRole() {
     router.push({ pathname: "/(auth)/signup-account", params: { intent } });
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerClassName="flex-grow px-6 pb-10"
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={{ height: insets.top + 8 }} />
-      <Pressable
-        onPress={() => router.back()}
-        hitSlop={8}
-        className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-1"
-      >
-        <Icon name="chevL" size={18} color="#C2BBB0" />
-      </Pressable>
-
-      <Display className="mt-6 text-[28px]">Come userai KlokShift?</Display>
-      <Text className="mt-2 font-sans text-[13.5px] text-t3">
-        Scegli come vuoi iniziare. Potrai cambiare in seguito dalle impostazioni.
-      </Text>
-
-      <View className="mt-7 gap-3.5">
-        {ROLES.map((r) => (
-          <Pressable
-            key={r.value}
-            onPress={() => choose(r.value)}
-            className="gap-3.5 rounded-[22px] border border-border bg-bg-1 p-5"
-          >
-            <View className="flex-row items-center gap-3.5">
-              <View className="overflow-hidden rounded-[14px] border border-border-2">
-                <LinearGradient
-                  colors={["#362E24", "#1F1A13"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    width: 50,
-                    height: 50,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name={r.icon} size={24} color="#EAB54C" />
-                </LinearGradient>
-              </View>
-              <Text className="flex-1 font-sans-semibold text-[17px] text-t1">
-                {r.title}
-              </Text>
-              <Icon name="chevR" size={18} color="#8C857A" />
-            </View>
-            <Text className="font-sans text-[12.5px] leading-5 text-t3">
-              {r.sub}
-            </Text>
-            <View className="flex-row flex-wrap gap-1.5">
-              {r.chips.map((c) => (
-                <Chip key={c} label={c} />
-              ))}
-            </View>
-          </Pressable>
-        ))}
+    <View className="flex-1 bg-bg-0">
+      <View className="shrink-0 px-6 pb-3" style={{ paddingTop: insets.top + 8 }}>
+        <ScreenHeader eyebrow="Registrazione" title="Come userai KlokShift?" titleClassName="text-[28px]" />
       </View>
 
-      <Pressable
-        className="mt-8 flex-row justify-center gap-1"
-        onPress={() => router.push("/(auth)/login")}
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerClassName="flex-grow px-6 pb-10"
+        keyboardShouldPersistTaps="handled"
       >
-        <Text className="font-sans text-sm text-t2">Hai già un account?</Text>
-        <Text className="font-sans-semibold text-sm text-gold">Accedi</Text>
-      </Pressable>
-    </ScrollView>
+        <Text className="font-sans text-[13.5px] text-t3">
+          Scegli come vuoi iniziare. Potrai cambiare in seguito dalle impostazioni.
+        </Text>
+
+        <View className="mt-7 gap-3.5">
+          {ROLES.map((r) => (
+            <Pressable
+              key={r.value}
+              onPress={() => choose(r.value)}
+              className="gap-3.5 rounded-[22px] border border-border bg-bg-1 p-5"
+            >
+              <View className="flex-row items-center gap-3.5">
+                <View className="overflow-hidden rounded-[14px] border border-border-2">
+                  <LinearGradient
+                    colors={["#362E24", "#1F1A13"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: 50,
+                      height: 50,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon name={r.icon} size={24} color="#EAB54C" />
+                  </LinearGradient>
+                </View>
+                <Text className="flex-1 font-sans-semibold text-[17px] text-t1">
+                  {r.title}
+                </Text>
+                <Icon name="chevR" size={18} color="#8C857A" />
+              </View>
+              <Text className="font-sans text-[12.5px] leading-5 text-t3">
+                {r.sub}
+              </Text>
+              <View className="flex-row flex-wrap gap-1.5">
+                {r.chips.map((c) => (
+                  <Chip key={c} label={c} />
+                ))}
+              </View>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          className="mt-8 flex-row justify-center gap-1"
+          onPress={() => router.push("/(auth)/login")}
+        >
+          <Text className="font-sans text-sm text-t2">Hai già un account?</Text>
+          <Text className="font-sans-semibold text-sm text-gold">Accedi</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }

@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState } from "react";
 import { useForm, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,6 +19,7 @@ import {
 import { GhostButton } from "@/components/ui/GhostButton";
 
 export default function Login() {
+  const insets = useSafeAreaInsets();
   const { signIn, resetPassword } = useAuth();
   const router = useRouter();
   const toast = useToast();
@@ -61,68 +63,69 @@ export default function Login() {
       style={{ flex: 1 }}
       behavior="padding"
     >
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerClassName="flex-grow justify-center p-6"
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="items-center">
+      <View className="flex-1 bg-bg-0">
+        <View className="shrink-0 items-center px-6 pb-6" style={{ paddingTop: insets.top + 24 }}>
           <LogoBadge size={72} />
           <Display className="mt-5 text-[26px]">Bentornato</Display>
           <Text className="mt-1.5 font-sans text-sm text-t3">
             Accedi al tuo account
           </Text>
         </View>
-
-        <View className="mt-9 gap-4">
-          <ControlledInput
-            control={control}
-            name="email"
-            label="Email"
-            placeholder="nome@email.com"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            inputMode="email"
-          />
-          <ControlledInput
-            control={control}
-            name="password"
-            label="Password"
-            placeholder="••••••••"
-            secureTextEntry
-            autoCapitalize="none"
-          />
-
-          <Pressable className="self-end" onPress={onForgot}>
-            <Text className="font-sans text-xs text-gold">
-              Password dimenticata?
-            </Text>
-          </Pressable>
-
-          {apiError ? (
-            <Text className="font-sans text-sm text-error">{apiError}</Text>
-          ) : null}
-
-          {unconfirmed ? <ResendBlock control={control} /> : null}
-
-          <GoldButton
-            className="mt-2"
-            size="lg"
-            label={loading ? "Accesso…" : "Accedi"}
-            disabled={loading}
-            onPress={onSubmit}
-          />
-        </View>
-
-        <Pressable
-          className="mt-8 flex-row justify-center gap-1"
-          onPress={() => router.push("/(auth)/signup")}
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerClassName="flex-grow px-6 pb-6"
+          keyboardShouldPersistTaps="handled"
         >
-          <Text className="font-sans text-sm text-t2">Non hai un account?</Text>
-          <Text className="font-sans-semibold text-sm text-gold">Registrati</Text>
-        </Pressable>
-      </ScrollView>
+          <View className="gap-4">
+            <ControlledInput
+              control={control}
+              name="email"
+              label="Email"
+              placeholder="nome@email.com"
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              inputMode="email"
+            />
+            <ControlledInput
+              control={control}
+              name="password"
+              label="Password"
+              placeholder="••••••••"
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <Pressable className="self-end" onPress={onForgot}>
+              <Text className="font-sans text-xs text-gold">
+                Password dimenticata?
+              </Text>
+            </Pressable>
+
+            {apiError ? (
+              <Text className="font-sans text-sm text-error">{apiError}</Text>
+            ) : null}
+
+            {unconfirmed ? <ResendBlock control={control} /> : null}
+
+            <GoldButton
+              className="mt-2"
+              size="lg"
+              label={loading ? "Accesso…" : "Accedi"}
+              disabled={loading}
+              onPress={onSubmit}
+            />
+          </View>
+
+          <Pressable
+            className="mt-8 flex-row justify-center gap-1"
+            onPress={() => router.push("/(auth)/signup")}
+          >
+            <Text className="font-sans text-sm text-t2">Non hai un account?</Text>
+            <Text className="font-sans-semibold text-sm text-gold">Registrati</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }

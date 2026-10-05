@@ -97,11 +97,24 @@ export default function WaiterHomeScreen() {
   const openAgenda = () => router.push("/(waiter)/(tabs)/turni");
 
   return (
-    <>
+    <View className="flex-1 bg-bg-0">
+      <View
+        className="shrink-0 flex-row items-start justify-between gap-3 px-5 pb-5"
+        style={{ paddingTop: insets.top + 12 }}
+      >
+        <View className="flex-1">
+          <Mono gold>La tua area</Mono>
+          <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
+        </View>
+        <NotificationBell
+          count={unread}
+          onPress={() => router.push("/(waiter)/notifiche")}
+        />
+      </View>
+
       <ScrollView
         className="flex-1 bg-bg-0"
         contentContainerStyle={{
-          paddingTop: insets.top + 12,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 96,
           gap: 20,
@@ -114,17 +127,6 @@ export default function WaiterHomeScreen() {
           />
         }
       >
-        <View className="flex-row items-start justify-between gap-3">
-          <View className="flex-1">
-            <Mono gold>La tua area</Mono>
-            <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
-          </View>
-          <NotificationBell
-            count={unread}
-            onPress={() => router.push("/(waiter)/notifiche")}
-          />
-        </View>
-
         {pendingInvites.length > 0 ? (
           <AlertBanner
             icon="users"
@@ -214,6 +216,6 @@ export default function WaiterHomeScreen() {
         onConfirm={doDecline}
         onCancel={() => setDeclining(null)}
       />
-    </>
+    </View>
   );
 }

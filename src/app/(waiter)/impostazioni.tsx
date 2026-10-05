@@ -33,6 +33,30 @@ export default function WaiterSettingsScreen() {
         }}
       >
         <View className="gap-2">
+          <SectionHeader title="Account" />
+          <Card className="p-0">
+            <Pressable
+              onPress={() => router.push("/(waiter)/profilo-edit")}
+              accessibilityRole="button"
+              className="flex-row items-center gap-3 px-4 py-3.5"
+            >
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
+                <Icon name="pencil" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[15px] font-sans-semibold text-t1">
+                  Modifica profilo
+                </Text>
+                <Text className="mt-0.5 text-[13px] text-t3">
+                  Foto e dati personali
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#6A6358" />
+            </Pressable>
+          </Card>
+        </View>
+
+        <View className="gap-2">
           <SectionHeader title="Preferenze" />
           <Card className="p-0">
             <Pressable

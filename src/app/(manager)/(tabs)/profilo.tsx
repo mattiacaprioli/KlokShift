@@ -194,16 +194,11 @@ export default function ManagerProfiloScreen() {
   const canEditClock = !!venue && venueQuery.can(venue.id, "can_view_hours");
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 96,
-        gap: 24,
-      }}
-    >
-      <View className="flex-row items-center justify-between">
+    <View className="flex-1 bg-bg-0">
+      <View
+        className="shrink-0 flex-row items-center justify-between px-5 pb-6"
+        style={{ paddingTop: insets.top + 12 }}
+      >
         <Mono>Profilo · Sede</Mono>
         <Pressable
           onPress={() => router.push("/(manager)/impostazioni")}
@@ -214,102 +209,111 @@ export default function ManagerProfiloScreen() {
         </Pressable>
       </View>
 
-      {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
-          di chi sta guardando, e non dipende da quante sedi ha. */}
-      <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 96,
+          gap: 24,
+        }}
+      >
+        {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
+            di chi sta guardando, e non dipende da quante sedi ha. */}
+        <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
 
-      {venueQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-16" />
-      ) : venueQuery.isError ? (
-        <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-      ) : venues.length === 0 ? (
-        <NoVenuesState
-          className="mt-4"
-          subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni."
-        />
-      ) : !venue ? (
-        /* Più sedi: l'elenco è la pagina. */
-        <>
-          <VenuesCard
-            venues={venues}
-            onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
-            onAdd={isOwner ? () => router.push("/(manager)/venue/new") : undefined}
+        {venueQuery.isLoading ? (
+          <ActivityIndicator color="#EAB54C" className="mt-16" />
+        ) : venueQuery.isError ? (
+          <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
+        ) : venues.length === 0 ? (
+          <NoVenuesState
+            className="mt-4"
+            subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni."
           />
-          {isOwner ? <PlanCard /> : null}
-        </>
-      ) : (
-        <>
-          {/* Identità sede */}
-          <View className="items-center gap-4">
-            <View
-              className="rounded-full"
-              style={{
-                borderWidth: 2.5,
-                borderColor: "#EAB54C",
-                padding: 5,
-                shadowColor: "#EAB54C",
-                shadowOpacity: 0.2,
-                shadowRadius: 26,
-                shadowOffset: { width: 0, height: 6 },
-              }}
-            >
-              <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={104} />
-            </View>
-            <View className="items-center gap-1.5">
-              <Display className="text-4xl">{venue.name}</Display>
-              {venue.city ? (
-                <Text className="text-sm text-t2">{venue.city}</Text>
-              ) : null}
-            </View>
-          </View>
-
-          {canEditVenue || canEditClock ? (
-            <GoldButton
-              label={canEditVenue ? "Gestisci sede" : "Gestisci timbrature"}
-              onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
-            />
-          ) : null}
-
-          {/* Con una sede sola l'elenco ripete la scheda che sta qui sopra: al
-              titolare serve lo stesso — è da lì che se ne apre una seconda — a
-              un collaboratore no. */}
-          {isOwner ? (
+        ) : !venue ? (
+          /* Più sedi: l'elenco è la pagina. */
+          <>
             <VenuesCard
               venues={venues}
               onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
-              onAdd={() => router.push("/(manager)/venue/new")}
+              onAdd={isOwner ? () => router.push("/(manager)/venue/new") : undefined}
             />
-          ) : null}
-
-          {isOwner ? <PlanCard /> : null}
-
-          {/* Una checklist che non si può spuntare è solo un elenco di cose che
-              non vanno: fuori per chi non può modificare la sede. */}
-          {canEditVenue ? (
-            <CompletenessCard
-              venue={venue}
-              onEdit={() => router.push(`/(manager)/venue/${venue.id}`)}
-            />
-          ) : null}
-
-          {venue.cuisine_type || venue.address || venue.description ? (
-            <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-              <Mono>La tua sede</Mono>
-              {venue.cuisine_type ? (
-                <InfoLine label="Attività" value={venue.cuisine_type} />
-              ) : null}
-              {venue.address ? (
-                <InfoLine label="Indirizzo" value={venue.address} />
-              ) : null}
-              {venue.description ? (
-                <Text className="text-sm leading-5 text-t2">
-                  {venue.description}
-                </Text>
-              ) : null}
+            {isOwner ? <PlanCard /> : null}
+          </>
+        ) : (
+          <>
+            {/* Identità sede */}
+            <View className="items-center gap-4">
+              <View
+                className="rounded-full"
+                style={{
+                  borderWidth: 2.5,
+                  borderColor: "#EAB54C",
+                  padding: 5,
+                  shadowColor: "#EAB54C",
+                  shadowOpacity: 0.2,
+                  shadowRadius: 26,
+                  shadowOffset: { width: 0, height: 6 },
+                }}
+              >
+                <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={104} />
+              </View>
+              <View className="items-center gap-1.5">
+                <Display className="text-4xl">{venue.name}</Display>
+                {venue.city ? (
+                  <Text className="text-sm text-t2">{venue.city}</Text>
+                ) : null}
+              </View>
             </View>
-          ) : null}
-        </>
-      )}
-    </ScrollView>
+
+            {canEditVenue || canEditClock ? (
+              <GoldButton
+                label={canEditVenue ? "Gestisci sede" : "Gestisci timbrature"}
+                onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
+              />
+            ) : null}
+
+            {/* Con una sede sola l'elenco ripete la scheda che sta qui sopra: al
+                titolare serve lo stesso — è da lì che se ne apre una seconda — a
+                un collaboratore no. */}
+            {isOwner ? (
+              <VenuesCard
+                venues={venues}
+                onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
+                onAdd={() => router.push("/(manager)/venue/new")}
+              />
+            ) : null}
+
+            {isOwner ? <PlanCard /> : null}
+
+            {/* Una checklist che non si può spuntare è solo un elenco di cose che
+                non vanno: fuori per chi non può modificare la sede. */}
+            {canEditVenue ? (
+              <CompletenessCard
+                venue={venue}
+                onEdit={() => router.push(`/(manager)/venue/${venue.id}`)}
+              />
+            ) : null}
+
+            {venue.cuisine_type || venue.address || venue.description ? (
+              <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
+                <Mono>La tua sede</Mono>
+                {venue.cuisine_type ? (
+                  <InfoLine label="Attività" value={venue.cuisine_type} />
+                ) : null}
+                {venue.address ? (
+                  <InfoLine label="Indirizzo" value={venue.address} />
+                ) : null}
+                {venue.description ? (
+                  <Text className="text-sm leading-5 text-t2">
+                    {venue.description}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }

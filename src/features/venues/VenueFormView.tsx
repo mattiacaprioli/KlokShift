@@ -152,93 +152,96 @@ export function VenueFormView({
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 48,
-          gap: 16,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <ScreenHeader
-          eyebrow={eyebrow}
-          title={title ?? (venue ? venue.name : "Nuova sede")}
-        />
-
-        <Text className="text-base text-t2">
-          {intro ??
-            "Queste informazioni saranno visibili ai professionisti sui tuoi turni."}
-        </Text>
-
-        {/* Il logo si può caricare solo su una sede già creata: prima non c'è
-            una riga su cui scriverlo. Chi sta compilando il modulo per la prima
-            volta lo trova qui appena salva il nome. */}
-        {venue ? (
-          <AvatarPickerField
-            uri={venue.logo_url}
-            name={venue.name}
-            busy={logoBusy}
-            onPick={onLogo}
-            onRemove={onRemoveLogo}
-            addLabel="Aggiungi logo"
-            changeLabel="Cambia logo"
+      <View className="flex-1 bg-bg-0">
+        <View className="shrink-0 px-5 pb-4" style={{ paddingTop: insets.top + 8 }}>
+          <ScreenHeader
+            eyebrow={eyebrow}
+            title={title ?? (venue ? venue.name : "Nuova sede")}
           />
-        ) : null}
+        </View>
 
-        <ControlledInput
-          control={control}
-          name="name"
-          label="Nome della sede"
-          placeholder="Trattoria da Mario"
-        />
-        <ControlledInput
-          control={control}
-          name="city"
-          label="Città"
-          placeholder="Milano"
-        />
-        <ControlledInput
-          control={control}
-          name="address"
-          label="Indirizzo"
-          placeholder="Via Roma 1"
-        />
-        <ControlledInput
-          control={control}
-          name="cuisine_type"
-          // La colonna resta `cuisine_type` per non migrare il DB: l'etichetta
-          // è neutra perché un hotel o un'agenzia eventi non ha una "cucina".
-          label="Tipo di attività"
-          placeholder="Ristorante, hotel, catering, discoteca…"
-        />
-        <ControlledInput
-          control={control}
-          name="description"
-          label="Descrizione"
-          placeholder="Racconta la tua sede"
-          multiline
-          numberOfLines={4}
-          className="h-28"
-          textAlignVertical="top"
-        />
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 48,
+            gap: 16,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text className="text-base text-t2">
+            {intro ??
+              "Queste informazioni saranno visibili ai professionisti sui tuoi turni."}
+          </Text>
 
-        <GoldButton
-          className="mt-2"
-          label={
-            saving
-              ? "Salvataggio…"
-              : venue
-                ? "Salva sede"
-                : "Crea sede"
-          }
-          disabled={saving}
-          onPress={onSubmit}
-        />
+          {/* Il logo si può caricare solo su una sede già creata: prima non c'è
+              una riga su cui scriverlo. Chi sta compilando il modulo per la prima
+              volta lo trova qui appena salva il nome. */}
+          {venue ? (
+            <AvatarPickerField
+              uri={venue.logo_url}
+              name={venue.name}
+              busy={logoBusy}
+              onPick={onLogo}
+              onRemove={onRemoveLogo}
+              addLabel="Aggiungi logo"
+              changeLabel="Cambia logo"
+            />
+          ) : null}
 
-        {footer ? <View className="mt-4">{footer}</View> : null}
-      </ScrollView>
+          <ControlledInput
+            control={control}
+            name="name"
+            label="Nome della sede"
+            placeholder="Trattoria da Mario"
+          />
+          <ControlledInput
+            control={control}
+            name="city"
+            label="Città"
+            placeholder="Milano"
+          />
+          <ControlledInput
+            control={control}
+            name="address"
+            label="Indirizzo"
+            placeholder="Via Roma 1"
+          />
+          <ControlledInput
+            control={control}
+            name="cuisine_type"
+            // La colonna resta `cuisine_type` per non migrare il DB: l'etichetta
+            // è neutra perché un hotel o un'agenzia eventi non ha una "cucina".
+            label="Tipo di attività"
+            placeholder="Ristorante, hotel, catering, discoteca…"
+          />
+          <ControlledInput
+            control={control}
+            name="description"
+            label="Descrizione"
+            placeholder="Racconta la tua sede"
+            multiline
+            numberOfLines={4}
+            className="h-28"
+            textAlignVertical="top"
+          />
+
+          <GoldButton
+            className="mt-2"
+            label={
+              saving
+                ? "Salvataggio…"
+                : venue
+                  ? "Salva sede"
+                  : "Crea sede"
+            }
+            disabled={saving}
+            onPress={onSubmit}
+          />
+
+          {footer ? <View className="mt-4">{footer}</View> : null}
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }

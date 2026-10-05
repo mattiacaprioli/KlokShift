@@ -4,7 +4,6 @@ import { Chip } from "@/components/ui/Chip";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { GhostButton } from "@/components/ui/GhostButton";
-import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { NavRow } from "@/components/ui/NavRow";
@@ -269,20 +268,17 @@ export default function WaiterProfiloScreen() {
   const subtitle = [role, city].filter(Boolean).join(" · ");
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 96,
-        gap: 24,
-      }}
-    >
+    <View className="flex-1 bg-bg-0">
       {/* Barra: occhiello + impostazioni */}
-      <View className="flex-row items-center justify-between">
+      <View
+        className="shrink-0 flex-row items-center justify-between px-5 pb-6"
+        style={{ paddingTop: insets.top + 12 }}
+      >
         <Mono>Profilo</Mono>
         <Pressable
           onPress={() => router.push("/(waiter)/impostazioni")}
+          accessibilityRole="button"
+          accessibilityLabel="Impostazioni"
           hitSlop={8}
           className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
@@ -290,108 +286,103 @@ export default function WaiterProfiloScreen() {
         </Pressable>
       </View>
 
-      {/* Identità */}
-      <View className="items-center gap-4">
-        <View
-          className="rounded-full"
-          style={{
-            borderWidth: 2.5,
-            borderColor: "#EAB54C",
-            padding: 5,
-            shadowColor: "#EAB54C",
-            shadowOpacity: 0.2,
-            shadowRadius: 26,
-            shadowOffset: { width: 0, height: 6 },
-          }}
-        >
-          <Avatar uri={profile?.avatar_url} name={name} size={104} />
-        </View>
-
-        <View className="items-center gap-1.5">
-          <View className="flex-row items-center gap-2">
-            <Display className="text-4xl">{name}</Display>
-            <Icon name="verified" size={22} color="#EAB54C" />
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 96,
+          gap: 24,
+        }}
+      >
+        {/* Identità */}
+        <View className="flex-row items-center gap-4">
+          <View className="shrink-0 rounded-full border-2 border-gold p-1">
+            <Avatar uri={profile?.avatar_url} name={name} size={72} />
           </View>
-          {subtitle ? (
-            <Text className="text-sm text-t2">{subtitle}</Text>
-          ) : null}
-          {/* Le lingue restano qui, sotto al nome, e non in una scheda «il tuo
-              profilo»: sono l'unica cosa che sopravvive al CV, e un dato che
-              scrivi senza rivederlo mai è un dato che smetti di aggiornare. */}
-          {languages.length > 0 ? (
-            <Text className="text-xs text-t3">{languages.join(" · ")}</Text>
-          ) : null}
+
+          <View className="min-w-0 flex-1 gap-1.5">
+            <View className="flex-row items-center gap-2">
+              <Display className="shrink text-2xl">{name}</Display>
+              <View className="shrink-0">
+                <Icon name="verified" size={18} color="#EAB54C" />
+              </View>
+            </View>
+            {subtitle ? (
+              <Text className="text-sm text-t2">{subtitle}</Text>
+            ) : null}
+            {/* Le lingue restano qui, sotto al nome, e non in una scheda «il tuo
+                profilo»: sono l'unica cosa che sopravvive al CV, e un dato che
+                scrivi senza rivederlo mai è un dato che smetti di aggiornare. */}
+            {languages.length > 0 ? (
+              <Text className="text-xs text-t3">{languages.join(" · ")}</Text>
+            ) : null}
+          </View>
         </View>
-      </View>
 
-      <GoldButton
-        label="Modifica profilo"
-        onPress={() => router.push("/(waiter)/profilo-edit")}
-      />
-
-      {/* Le tue sedi (staff fisso/a chiamata) */}
-      {employers.length > 0 ? (
-        <View className="gap-3">
-          <Mono>Le tue sedi</Mono>
-          {groupByEmployer(employers).map((group) => (
-            <EmployerGroupCard key={group[0].id} venues={group} />
-          ))}
-        </View>
-      ) : null}
-
-      {/* Il secondo cappello, per chi ce l'ha: una sede gli ha dato la gestione
-          di una sede. Non è un'altra app e non è un altro account — è lo stesso
-          profilo visto dall'altra parte del bancone. */}
-      <ManagerSwitchRow />
-
-      {/* I documenti li vede solo l'azienda a cui li carichi. */}
-      <NavRow
-        icon="clipboard"
-        title="I tuoi documenti"
-        subtitle="HACCP, contratti, attestati · privati"
-        onPress={() => router.push("/(waiter)/documenti")}
-      />
-      <NavRow
-        icon="calendar"
-        title="Ferie, permessi e malattia"
-        subtitle="Chiedi un'assenza o comunicala al titolare"
-        onPress={() => router.push("/(waiter)/assenze")}
-      />
-
-      {/* Il lavoro fatto nel periodo, fra tutte le aziende. Il periodo sta sopra
-          i numeri che qualifica, come nella home del titolare. */}
-      <View className="gap-3">
-        <View className="flex-row items-center justify-between gap-3">
-          <Mono className="flex-1">{periodLabel(period)}</Mono>
-          <View className="flex-row gap-1.5">
-            {STATS_PERIODS.map((p) => (
-              <Chip
-                key={p.value}
-                label={p.label}
-                gold
-                active={period === p.value}
-                onPress={() => setPeriod(p.value)}
-              />
+        {/* Le tue sedi (staff fisso/a chiamata) */}
+        {employers.length > 0 ? (
+          <View className="gap-3">
+            <Mono>Le tue sedi</Mono>
+            {groupByEmployer(employers).map((group) => (
+              <EmployerGroupCard key={group[0].id} venues={group} />
             ))}
           </View>
-        </View>
-        <View className="flex-row gap-2.5">
-          <StatCard
-            loading={work.isLoading}
-            value={String(work.count)}
-            label="Turni svolti"
-          />
-          <StatCard
-            loading={work.isLoading}
-            value={formatHours(work.totalHours)}
-            label="Ore lavorate"
-          />
-        </View>
-        <GhostButton
-          label="Vedi storico turni"
-          onPress={() => router.push("/(waiter)/storico")}
+        ) : null}
+
+        {/* Il secondo cappello, per chi ce l'ha: una sede gli ha dato la gestione
+            di una sede. Non è un'altra app e non è un altro account — è lo stesso
+            profilo visto dall'altra parte del bancone. */}
+        <ManagerSwitchRow />
+
+        {/* I documenti li vede solo l'azienda a cui li carichi. */}
+        <NavRow
+          icon="clipboard"
+          title="I tuoi documenti"
+          subtitle="HACCP, contratti, attestati · privati"
+          onPress={() => router.push("/(waiter)/documenti")}
         />
-      </View>
-    </ScrollView>
+        <NavRow
+          icon="calendar"
+          title="Ferie, permessi e malattia"
+          subtitle="Chiedi un'assenza o comunicala al titolare"
+          onPress={() => router.push("/(waiter)/assenze")}
+        />
+
+        {/* Il lavoro fatto nel periodo, fra tutte le aziende. Il periodo sta sopra
+            i numeri che qualifica, come nella home del titolare. */}
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between gap-3">
+            <Mono className="flex-1">{periodLabel(period)}</Mono>
+            <View className="flex-row gap-1.5">
+              {STATS_PERIODS.map((p) => (
+                <Chip
+                  key={p.value}
+                  label={p.label}
+                  gold
+                  active={period === p.value}
+                  onPress={() => setPeriod(p.value)}
+                />
+              ))}
+            </View>
+          </View>
+          <View className="flex-row gap-2.5">
+            <StatCard
+              loading={work.isLoading}
+              value={String(work.count)}
+              label="Turni svolti"
+            />
+            <StatCard
+              loading={work.isLoading}
+              value={formatHours(work.totalHours)}
+              label="Ore lavorate"
+            />
+          </View>
+          <GhostButton
+            label="Vedi storico turni"
+            onPress={() => router.push("/(waiter)/storico")}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }

@@ -131,23 +131,11 @@ export default function ManagerStaffScreen() {
   const pull = usePullToRefresh(peopleQuery.refetch);
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 96,
-        gap: 16,
-      }}
-      refreshControl={
-        <RefreshControl
-          tintColor="#EAB54C"
-          refreshing={pull.refreshing}
-          onRefresh={pull.onRefresh}
-        />
-      }
-    >
-      <View>
+    <View className="flex-1 bg-bg-0">
+      <View
+        className="shrink-0 px-5 pb-4"
+        style={{ paddingTop: insets.top + 12 }}
+      >
         <Mono gold>Organico</Mono>
         <Display className="mt-1 text-4xl">Il mio staff</Display>
         {isMultiVenue && people.length > 0 ? (
@@ -160,149 +148,165 @@ export default function ManagerStaffScreen() {
         ) : null}
       </View>
 
-      {venueQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-16" />
-      ) : venueQuery.isError ? (
-        <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-      ) : venues.length === 0 ? (
-        <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
-      ) : (
-        <>
-          {canStaff ? (
-            <GoldButton
-              label="Aggiungi allo staff"
-              onPress={() => router.push("/(manager)/staff/new")}
-            />
-          ) : null}
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 96,
+          gap: 16,
+        }}
+        refreshControl={
+          <RefreshControl
+            tintColor="#EAB54C"
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
+          />
+        }
+      >
+        {venueQuery.isLoading ? (
+          <ActivityIndicator color="#EAB54C" className="mt-16" />
+        ) : venueQuery.isError ? (
+          <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
+        ) : venues.length === 0 ? (
+          <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
+        ) : (
+          <>
+            {canStaff ? (
+              <GoldButton
+                label="Aggiungi allo staff"
+                onPress={() => router.push("/(manager)/staff/new")}
+              />
+            ) : null}
 
-          {/* Anche chi organizza i turni li lavora. Finché la scheda non c'è le
-              sue ore non esistono da nessuna parte: né nel planning, né in
-              «Ore del mese», né nell'export. Sparisce appena si è dentro. */}
-          {canStaff && !self.isPending && !self.hasCard ? (
+            {/* Anche chi organizza i turni li lavora. Finché la scheda non c'è le
+                sue ore non esistono da nessuna parte: né nel planning, né in
+                «Ore del mese», né nell'export. Sparisce appena si è dentro. */}
+            {canStaff && !self.isPending && !self.hasCard ? (
+              <Card
+                className="rounded-3xl border-border-2 p-4"
+                onPress={() => router.push("/(manager)/staff/new?self=1")}
+              >
+                <View className="flex-row items-center gap-3">
+                  <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                    <Icon name="user" size={18} color="#EAB54C" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-sans-bold text-t1">
+                      Metti te stesso in organico
+                    </Text>
+                    <Text className="text-xs text-t3">
+                      Per assegnarti i turni e contare le tue ore
+                    </Text>
+                  </View>
+                  <Icon name="chevR" size={18} color="#8c857a" />
+                </View>
+              </Card>
+            ) : null}
+
+            {canHours ? (
             <Card
               className="rounded-3xl border-border-2 p-4"
-              onPress={() => router.push("/(manager)/staff/new?self=1")}
+              onPress={gate(() => router.push("/(manager)/ore"))}
             >
               <View className="flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                  <Icon name="user" size={18} color="#EAB54C" />
+                  <Icon name="clock" size={18} color="#EAB54C" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-sans-bold text-t1">
-                    Metti te stesso in organico
+                    Ore del mese
                   </Text>
                   <Text className="text-xs text-t3">
-                    Per assegnarti i turni e contare le tue ore
+                    {isMultiVenue
+                      ? "Ore di tutte le tue sedi, per persona"
+                      : "Riepilogo ore e export per il commercialista"}
+                  </Text>
+                </View>
+                {isPro ? (
+                  <Icon name="chevR" size={18} color="#8c857a" />
+                ) : (
+                  <ProBadge />
+                )}
+              </View>
+            </Card>
+            ) : null}
+
+            {/* Una pagina e non una tab: vedi `(manager)/assenze.tsx`. */}
+            {canStaff ? (
+            <Card
+              className="rounded-3xl border-border-2 p-4"
+              onPress={() => router.push("/(manager)/assenze")}
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                  <Icon name="calendar" size={18} color="#EAB54C" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-sans-bold text-t1">Assenze</Text>
+                  <Text className="text-xs text-t3">
+                    Ferie, permessi e malattia di tutto lo staff
+                  </Text>
+                </View>
+                {pendingAbsences > 0 ? (
+                  <Pill label={`${pendingAbsences} da decidere`} variant="pending" />
+                ) : null}
+                <Icon name="chevR" size={18} color="#8c857a" />
+              </View>
+            </Card>
+            ) : null}
+
+            {/* Non è una funzione Pro: senza ruoli non si aggiunge nemmeno una
+                persona all'organico. */}
+            {canVenue ? (
+            <Card
+              className="rounded-3xl border-border-2 p-4"
+              onPress={() => router.push("/(manager)/ruoli")}
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                  <Icon name="clipboard" size={18} color="#EAB54C" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-sans-bold text-t1">Ruoli</Text>
+                  <Text className="text-xs text-t3">
+                    {isMultiVenue
+                      ? "Le mansioni di ogni tua sede"
+                      : "Le mansioni che assegni allo staff e chiedi sui turni"}
                   </Text>
                 </View>
                 <Icon name="chevR" size={18} color="#8c857a" />
               </View>
             </Card>
-          ) : null}
+            ) : null}
 
-          {canHours ? (
-          <Card
-            className="rounded-3xl border-border-2 p-4"
-            onPress={gate(() => router.push("/(manager)/ore"))}
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                <Icon name="clock" size={18} color="#EAB54C" />
+            {peopleQuery.isLoading ? (
+              <ActivityIndicator color="#EAB54C" className="mt-6" />
+            ) : peopleQuery.isError ? (
+              <QueryError
+                onRetry={() => peopleQuery.refetch()}
+                subtitle="Non siamo riusciti a caricare l'organico. Riprova."
+              />
+            ) : people.length === 0 ? (
+              <EmptyState
+                title="Nessuno nello staff"
+                subtitle="Aggiungi il tuo personale per assegnarlo ai turni."
+              />
+            ) : (
+              <View className="gap-3">
+                {people.map((person) => (
+                  <PersonRow
+                    key={person.id}
+                    person={person}
+                    venueNames={isMultiVenue ? personVenueNames(person) : []}
+                    isMe={self.isSelf(person.waiter_id)}
+                    onPress={() => router.push(`/(manager)/staff/${person.id}`)}
+                  />
+                ))}
               </View>
-              <View className="flex-1">
-                <Text className="text-base font-sans-bold text-t1">
-                  Ore del mese
-                </Text>
-                <Text className="text-xs text-t3">
-                  {isMultiVenue
-                    ? "Ore di tutte le tue sedi, per persona"
-                    : "Riepilogo ore e export per il commercialista"}
-                </Text>
-              </View>
-              {isPro ? (
-                <Icon name="chevR" size={18} color="#8c857a" />
-              ) : (
-                <ProBadge />
-              )}
-            </View>
-          </Card>
-          ) : null}
-
-          {/* Una pagina e non una tab: vedi `(manager)/assenze.tsx`. */}
-          {canStaff ? (
-          <Card
-            className="rounded-3xl border-border-2 p-4"
-            onPress={() => router.push("/(manager)/assenze")}
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                <Icon name="calendar" size={18} color="#EAB54C" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-sans-bold text-t1">Assenze</Text>
-                <Text className="text-xs text-t3">
-                  Ferie, permessi e malattia di tutto lo staff
-                </Text>
-              </View>
-              {pendingAbsences > 0 ? (
-                <Pill label={`${pendingAbsences} da decidere`} variant="pending" />
-              ) : null}
-              <Icon name="chevR" size={18} color="#8c857a" />
-            </View>
-          </Card>
-          ) : null}
-
-          {/* Non è una funzione Pro: senza ruoli non si aggiunge nemmeno una
-              persona all'organico. */}
-          {canVenue ? (
-          <Card
-            className="rounded-3xl border-border-2 p-4"
-            onPress={() => router.push("/(manager)/ruoli")}
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                <Icon name="clipboard" size={18} color="#EAB54C" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-sans-bold text-t1">Ruoli</Text>
-                <Text className="text-xs text-t3">
-                  {isMultiVenue
-                    ? "Le mansioni di ogni tua sede"
-                    : "Le mansioni che assegni allo staff e chiedi sui turni"}
-                </Text>
-              </View>
-              <Icon name="chevR" size={18} color="#8c857a" />
-            </View>
-          </Card>
-          ) : null}
-
-          {peopleQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-6" />
-          ) : peopleQuery.isError ? (
-            <QueryError
-              onRetry={() => peopleQuery.refetch()}
-              subtitle="Non siamo riusciti a caricare l'organico. Riprova."
-            />
-          ) : people.length === 0 ? (
-            <EmptyState
-              title="Nessuno nello staff"
-              subtitle="Aggiungi il tuo personale per assegnarlo ai turni."
-            />
-          ) : (
-            <View className="gap-3">
-              {people.map((person) => (
-                <PersonRow
-                  key={person.id}
-                  person={person}
-                  venueNames={isMultiVenue ? personVenueNames(person) : []}
-                  isMe={self.isSelf(person.waiter_id)}
-                  onPress={() => router.push(`/(manager)/staff/${person.id}`)}
-                />
-              ))}
-            </View>
-          )}
-        </>
-      )}
-    </ScrollView>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }

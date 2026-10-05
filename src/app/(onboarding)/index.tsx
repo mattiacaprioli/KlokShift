@@ -138,23 +138,22 @@ export default function OnboardingScreen() {
       behavior="padding"
     >
       <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 24 }}>
+        <View className="shrink-0 px-6 pt-4 pb-6">
+          <Mono gold>Il tuo profilo</Mono>
+          <Display className="mt-2 text-[32px]">Chi sei?</Display>
+          <Text className="mt-2 font-sans text-[13.5px] leading-5 text-t3">
+            Le vede chi ti mette in turno, per sapere chi sta chiamando.
+          </Text>
+        </View>
         <ScrollView
           className="flex-1"
           contentContainerStyle={{
             paddingHorizontal: 24,
-            paddingTop: 16,
             paddingBottom: 24,
             gap: 24,
           }}
           keyboardShouldPersistTaps="handled"
         >
-          <View>
-            <Mono gold>Il tuo profilo</Mono>
-            <Display className="mt-2 text-[32px]">Chi sei?</Display>
-            <Text className="mt-2 font-sans text-[13.5px] leading-5 text-t3">
-              Le vede chi ti mette in turno, per sapere chi sta chiamando.
-            </Text>
-          </View>
           <ControlledInput
             control={control}
             name="full_name"

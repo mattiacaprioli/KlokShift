@@ -29,54 +29,57 @@ export default function WaiterDocumentsScreen() {
   const active = memberships.filter((m) => m.status === "active");
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 8,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 48,
-        gap: 24,
-      }}
-      refreshControl={
-        <RefreshControl
-          tintColor="#EAB54C"
-          refreshing={pull.refreshing}
-          onRefresh={pull.onRefresh}
-        />
-      }
-    >
-      <ScreenHeader eyebrow="Profilo · Privato" title="I tuoi documenti" />
+    <View className="flex-1 bg-bg-0">
+      <View className="shrink-0 px-5 pb-2" style={{ paddingTop: insets.top + 8 }}>
+        <ScreenHeader eyebrow="Profilo · Privato" title="I tuoi documenti" />
+      </View>
 
-      <Text className="-mt-4 text-[13px] leading-5 text-t3">
-        HACCP, contratti, attestati. Li carichi una volta per azienda e valgono
-        per tutte le sue sedi. Li vede solo lei, e li puoi aggiornare quando
-        vuoi.
-      </Text>
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+          gap: 24,
+        }}
+        refreshControl={
+          <RefreshControl
+            tintColor="#EAB54C"
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
+          />
+        }
+      >
+        <Text className="text-[13px] leading-5 text-t3">
+          HACCP, contratti, attestati. Li carichi una volta per azienda e valgono
+          per tutte le sue sedi. Li vede solo lei, e li puoi aggiornare quando
+          vuoi.
+        </Text>
 
-      {isPending ? null : isError ? (
-        <QueryError onRetry={() => refetch()} />
-      ) : active.length === 0 ? (
-        <EmptyState
-          title="Non fai ancora parte di un'azienda"
-          subtitle="I documenti si caricano sull'anagrafica che l'azienda ha di te: appena entri in un organico, li trovi qui."
-        />
-      ) : (
-        active.map((m) => (
-          <View key={m.member_id} className="gap-2">
-            <Mono gold>{m.workspace_name}</Mono>
-            <DocumentsSection
-              memberId={m.member_id}
-              title="Documenti"
-              onAdd={() =>
-                router.push({
-                  pathname: "/(waiter)/documento/new",
-                  params: { memberId: m.member_id },
-                })
-              }
-            />
-          </View>
-        ))
-      )}
-    </ScrollView>
+        {isPending ? null : isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : active.length === 0 ? (
+          <EmptyState
+            title="Non fai ancora parte di un'azienda"
+            subtitle="I documenti si caricano sull'anagrafica che l'azienda ha di te: appena entri in un organico, li trovi qui."
+          />
+        ) : (
+          active.map((m) => (
+            <View key={m.member_id} className="gap-2">
+              <Mono gold>{m.workspace_name}</Mono>
+              <DocumentsSection
+                memberId={m.member_id}
+                title="Documenti"
+                onAdd={() =>
+                  router.push({
+                    pathname: "/(waiter)/documento/new",
+                    params: { memberId: m.member_id },
+                  })
+                }
+              />
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 }

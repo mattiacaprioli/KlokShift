@@ -118,166 +118,169 @@ export default function VenueHoursScreen() {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 8,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 48,
-        gap: 20,
-      }}
-    >
-      <ScreenHeader eyebrow="Organico" title="Ore del mese" />
-
-      {/* Selettore mese — pillola unica per non confondersi col back */}
-      <View className="self-center flex-row items-center rounded-full border border-border-2 bg-bg-1">
-        <Pressable
-          onPress={() => setMonth((m) => shiftMonth(m, -1))}
-          hitSlop={8}
-          className="px-4 py-2.5"
-        >
-          <Icon name="chevL" size={18} color="#EAB54C" />
-        </Pressable>
-        <Text
-          className="text-center text-base font-sans-semibold text-t1"
-          style={{ minWidth: 150 }}
-        >
-          {label}
-        </Text>
-        <Pressable
-          disabled={atCurrentMonth}
-          onPress={() => setMonth((m) => shiftMonth(m, 1))}
-          hitSlop={8}
-          className="px-4 py-2.5"
-          style={atCurrentMonth ? { opacity: 0.3 } : undefined}
-        >
-          <Icon name="chevR" size={18} color="#EAB54C" />
-        </Pressable>
+    <View className="flex-1 bg-bg-0">
+      <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
+        <ScreenHeader eyebrow="Organico" title="Ore del mese" />
       </View>
 
-      {query.isLoading || absenceQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-10" />
-      ) : query.isError || absenceQuery.isError ? (
-        <QueryError
-          onRetry={() => {
-            query.refetch();
-            absenceQuery.refetch();
-          }}
-        />
-      ) : people.length === 0 && absences.length === 0 ? (
-        <EmptyState
-          title="Nessuna ora registrata"
-          subtitle="Senza timbratura, le ore compaiono dopo la fine del turno. Le timbrature richiedono approvazione."
-        />
-      ) : (
-        <>
-          {report.length > 0 ? (
-            <>
-              <Card className="rounded-3xl border-border-2 px-5 py-4">
-                <Mono>Riepilogo mese</Mono>
-                <View className="mt-3 flex-row flex-wrap gap-4">
-                  <View><Text className="text-xs text-t3">Ore Lavorate Effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
-                  <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
-                  <View><Text className="text-xs text-t3">Totale ore coperte</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalCoveredHours)}</Text></View>
-                </View>
-                <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
-                {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
-                {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo.</Text> : null}
-                <Text className="text-xs text-t3">
-                  {totalShifts} turni · {report.length}{" "}
-                  {report.length === 1 ? "persona" : "persone"}
-                </Text>
-              </Card>
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+          gap: 20,
+        }}
+      >
+        {/* Selettore mese — pillola unica per non confondersi col back */}
+        <View className="self-center flex-row items-center rounded-full border border-border-2 bg-bg-1">
+          <Pressable
+            onPress={() => setMonth((m) => shiftMonth(m, -1))}
+            hitSlop={8}
+            className="px-4 py-2.5"
+          >
+            <Icon name="chevL" size={18} color="#EAB54C" />
+          </Pressable>
+          <Text
+            className="text-center text-base font-sans-semibold text-t1"
+            style={{ minWidth: 150 }}
+          >
+            {label}
+          </Text>
+          <Pressable
+            disabled={atCurrentMonth}
+            onPress={() => setMonth((m) => shiftMonth(m, 1))}
+            hitSlop={8}
+            className="px-4 py-2.5"
+            style={atCurrentMonth ? { opacity: 0.3 } : undefined}
+          >
+            <Icon name="chevR" size={18} color="#EAB54C" />
+          </Pressable>
+        </View>
 
-              <View className="gap-4">
-                {report.map((p) => (
-                  <View key={p.person_id} className="gap-2">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <Text className="text-sm font-sans-semibold text-t1">
-                          {p.person_name}
-                        </Text>
-                        <Text className="text-xs text-t3">
-                          {p.roles ?? "—"} · {p.shifts_count} turni
+        {query.isLoading || absenceQuery.isLoading ? (
+          <ActivityIndicator color="#EAB54C" className="mt-10" />
+        ) : query.isError || absenceQuery.isError ? (
+          <QueryError
+            onRetry={() => {
+              query.refetch();
+              absenceQuery.refetch();
+            }}
+          />
+        ) : people.length === 0 && absences.length === 0 ? (
+          <EmptyState
+            title="Nessuna ora registrata"
+            subtitle="Senza timbratura, le ore compaiono dopo la fine del turno. Le timbrature richiedono approvazione."
+          />
+        ) : (
+          <>
+            {report.length > 0 ? (
+              <>
+                <Card className="rounded-3xl border-border-2 px-5 py-4">
+                  <Mono>Riepilogo mese</Mono>
+                  <View className="mt-3 flex-row flex-wrap gap-4">
+                    <View><Text className="text-xs text-t3">Ore Lavorate Effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
+                    <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
+                    <View><Text className="text-xs text-t3">Totale ore coperte</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalCoveredHours)}</Text></View>
+                  </View>
+                  <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
+                  {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
+                  {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo.</Text> : null}
+                  <Text className="text-xs text-t3">
+                    {totalShifts} turni · {report.length}{" "}
+                    {report.length === 1 ? "persona" : "persone"}
+                  </Text>
+                </Card>
+
+                <View className="gap-4">
+                  {report.map((p) => (
+                    <View key={p.person_id} className="gap-2">
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-1">
+                          <Text className="text-sm font-sans-semibold text-t1">
+                            {p.person_name}
+                          </Text>
+                          <Text className="text-xs text-t3">
+                            {p.roles ?? "—"} · {p.shifts_count} turni
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-sans-bold text-gold">
+                          {formatHours(p.worked_hours)}
                         </Text>
                       </View>
-                      <Text className="text-sm font-sans-bold text-gold">
-                        {formatHours(p.worked_hours)}
-                      </Text>
+                      <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale ore coperte {formatHours(p.covered_hours)}</Text>
+                      {p.conflict_hours > 0 ? <Text className="text-xs text-warning">Da verificare: {formatHours(p.conflict_hours)} di assenza</Text> : null}
+                      {p.untracked_hours > 0 ? <Text className="text-xs text-warning">Senza timbratura: {formatHours(p.untracked_hours)} escluse</Text> : null}
+                      <ProgressBar progress={maxHours > 0 ? p.worked_hours / maxHours : 0} />
                     </View>
-                    <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale ore coperte {formatHours(p.covered_hours)}</Text>
-                    {p.conflict_hours > 0 ? <Text className="text-xs text-warning">Da verificare: {formatHours(p.conflict_hours)} di assenza</Text> : null}
-                    {p.untracked_hours > 0 ? <Text className="text-xs text-warning">Senza timbratura: {formatHours(p.untracked_hours)} escluse</Text> : null}
-                    <ProgressBar progress={maxHours > 0 ? p.worked_hours / maxHours : 0} />
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : null}
-
-          {absences.length > 0 ? (
-            <View className="gap-3">
-              <View>
-                <Mono gold>Assenze del mese</Mono>
-                <Text className="mt-1 text-xs leading-4 text-t3">
-                  {ABSENCE_SUMMARY_NOTE}
-                </Text>
-              </View>
-              {absences.map((a) => (
-                <Card
-                  key={a.person_id}
-                  className="gap-1 rounded-2xl border-border-2 px-4 py-3"
-                >
-                  <Text className="text-sm font-sans-semibold text-t1">
-                    {a.person_name}
-                  </Text>
-                  <Text className="text-xs text-t2">
-                    {[
-                      a.ferie_days > 0
-                        ? `Ferie ${formatSummaryDays(a.ferie_days)}`
-                        : null,
-                      a.permesso_days > 0
-                        ? `Permessi ${formatSummaryDays(a.permesso_days)}`
-                        : null,
-                      a.permesso_hours > 0
-                        ? `Permessi ${formatHours(a.permesso_hours)}`
-                        : null,
-                      a.malattia_days > 0
-                        ? `Malattia ${formatSummaryDays(a.malattia_days)}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </Text>
-                  {a.inps_protocols ? (
-                    <Text className="text-xs text-t3">
-                      Certificati medici: {a.inps_protocols}
-                    </Text>
-                  ) : null}
-                </Card>
-              ))}
-            </View>
-          ) : null}
-
-          <View className="mt-2 gap-2.5">
-            {canExport.monthly ? (
-              <>
-                <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
-                <GhostButton
-                  label="Esporta CSV mensile"
-                  onPress={() => onExport("csv")}
-                />
+                  ))}
+                </View>
               </>
             ) : null}
-            {canExport.absences ? (
-              <GhostButton
-                label="Esporta CSV assenze"
-                onPress={() => onExport("absences")}
-              />
+
+            {absences.length > 0 ? (
+              <View className="gap-3">
+                <View>
+                  <Mono gold>Assenze del mese</Mono>
+                  <Text className="mt-1 text-xs leading-4 text-t3">
+                    {ABSENCE_SUMMARY_NOTE}
+                  </Text>
+                </View>
+                {absences.map((a) => (
+                  <Card
+                    key={a.person_id}
+                    className="gap-1 rounded-2xl border-border-2 px-4 py-3"
+                  >
+                    <Text className="text-sm font-sans-semibold text-t1">
+                      {a.person_name}
+                    </Text>
+                    <Text className="text-xs text-t2">
+                      {[
+                        a.ferie_days > 0
+                          ? `Ferie ${formatSummaryDays(a.ferie_days)}`
+                          : null,
+                        a.permesso_days > 0
+                          ? `Permessi ${formatSummaryDays(a.permesso_days)}`
+                          : null,
+                        a.permesso_hours > 0
+                          ? `Permessi ${formatHours(a.permesso_hours)}`
+                          : null,
+                        a.malattia_days > 0
+                          ? `Malattia ${formatSummaryDays(a.malattia_days)}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </Text>
+                    {a.inps_protocols ? (
+                      <Text className="text-xs text-t3">
+                        Certificati medici: {a.inps_protocols}
+                      </Text>
+                    ) : null}
+                  </Card>
+                ))}
+              </View>
             ) : null}
-          </View>
-        </>
-      )}
-    </ScrollView>
+
+            <View className="mt-2 gap-2.5">
+              {canExport.monthly ? (
+                <>
+                  <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
+                  <GhostButton
+                    label="Esporta CSV mensile"
+                    onPress={() => onExport("csv")}
+                  />
+                </>
+              ) : null}
+              {canExport.absences ? (
+                <GhostButton
+                  label="Esporta CSV assenze"
+                  onPress={() => onExport("absences")}
+                />
+              ) : null}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }

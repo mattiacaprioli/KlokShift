@@ -211,15 +211,8 @@ export default function WaiterShiftDetailScreen() {
   const clockWindowOpen = isClockWindowOpen(shift);
 
   return (
-    <>
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 48,
-        }}
-      >
+    <View className="flex-1 bg-bg-0">
+      <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
@@ -244,8 +237,16 @@ export default function WaiterShiftDetailScreen() {
             <Text className="mt-0.5 text-sm text-t3">{shift.title}</Text>
           </View>
         </View>
+      </View>
 
-        <Card className="mt-6 rounded-3xl border-border-2 px-5 py-1">
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+        }}
+      >
+        <Card className="rounded-3xl border-border-2 px-5 py-1">
           <InfoRow
             first
             label="Quando"
@@ -462,6 +463,6 @@ export default function WaiterShiftDetailScreen() {
           onClose={() => setRequestVisible(false)}
         />
       ) : null}
-    </>
+    </View>
   );
 }

@@ -513,250 +513,251 @@ export default function ShiftDetailScreen() {
   );
 
   return (
-    <>
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 8,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 48,
-      }}
-    >
-      <ScreenHeader
-        eyebrow="Turno"
-        title={shift.title}
-        right={
-          <Pill
-            label={SHIFT_STATUS_LABEL[shift.status]}
-            variant={shift.status}
+    <View className="flex-1 bg-bg-0">
+      <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
+        <ScreenHeader
+          eyebrow="Turno"
+          title={shift.title}
+          right={
+            <Pill
+              label={SHIFT_STATUS_LABEL[shift.status]}
+              variant={shift.status}
+            />
+          }
+        />
+      </View>
+
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+        }}
+      >
+        <Card className="rounded-3xl border-border-2 px-5 py-1">
+          <InfoRow
+            first
+            label="Quando"
+            value={`${formatDate(shift.date)} · ${formatShiftRange(
+              shift.start_time,
+              shift.end_time
+            )}`}
           />
-        }
-      />
+          <InfoRow
+            label="Staff"
+            value={`${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`}
+          />
+        </Card>
 
-      <Card className="mt-6 rounded-3xl border-border-2 px-5 py-1">
-        <InfoRow
-          first
-          label="Quando"
-          value={`${formatDate(shift.date)} · ${formatShiftRange(
-            shift.start_time,
-            shift.end_time
-          )}`}
-        />
-        <InfoRow
-          label="Staff"
-          value={`${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`}
-        />
-      </Card>
+        {shift.description ? (
+          <View className="mt-6">
+            <Mono className="mb-2">Descrizione</Mono>
+            <Text className="text-sm leading-5 text-t2">{shift.description}</Text>
+          </View>
+        ) : null}
 
-      {shift.description ? (
-        <View className="mt-6">
-          <Mono className="mb-2">Descrizione</Mono>
-          <Text className="text-sm leading-5 text-t2">{shift.description}</Text>
-        </View>
-      ) : null}
-
-      {/* Azioni turno */}
-      <View className="mt-6 gap-2.5">
-        {shift.status === "open" ? (
-          <View className="flex-row gap-2.5">
+        {/* Azioni turno */}
+        <View className="mt-6 gap-2.5">
+          {shift.status === "open" ? (
+            <View className="flex-row gap-2.5">
+              <Pressable
+                disabled={busy}
+                onPress={() => onChangeShiftStatus("closed")}
+                className="flex-1 items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+              >
+                <Text className="text-sm font-sans-semibold text-t1">
+                  Chiudi turno
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={busy}
+                onPress={() => setCancelVisible(true)}
+                className="flex-1 items-center rounded-2xl border border-border-2 py-3.5"
+              >
+                <Text className="text-sm font-sans-semibold text-error">
+                  Annulla
+                </Text>
+              </Pressable>
+            </View>
+          ) : shift.status === "closed" ? (
             <Pressable
               disabled={busy}
-              onPress={() => onChangeShiftStatus("closed")}
-              className="flex-1 items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+              onPress={() => onChangeShiftStatus("open")}
+              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
             >
               <Text className="text-sm font-sans-semibold text-t1">
-                Chiudi turno
+                Riapri turno
               </Text>
             </Pressable>
+          ) : (
+            /* Annullato: senza questo, un tocco sbagliato costava il turno — si
+               poteva solo ricrearlo da zero e riassegnare tutti. */
             <Pressable
               disabled={busy}
-              onPress={() => setCancelVisible(true)}
-              className="flex-1 items-center rounded-2xl border border-border-2 py-3.5"
+              onPress={() => setRestoreVisible(true)}
+              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
             >
-              <Text className="text-sm font-sans-semibold text-error">
-                Annulla
+              <Text className="text-sm font-sans-semibold text-gold">
+                Ripristina turno
               </Text>
             </Pressable>
-          </View>
-        ) : shift.status === "closed" ? (
-          <Pressable
-            disabled={busy}
-            onPress={() => onChangeShiftStatus("open")}
-            className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-          >
-            <Text className="text-sm font-sans-semibold text-t1">
-              Riapri turno
-            </Text>
-          </Pressable>
-        ) : (
-          /* Annullato: senza questo, un tocco sbagliato costava il turno — si
-             poteva solo ricrearlo da zero e riassegnare tutti. */
-          <Pressable
-            disabled={busy}
-            onPress={() => setRestoreVisible(true)}
-            className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-          >
-            <Text className="text-sm font-sans-semibold text-gold">
-              Ripristina turno
-            </Text>
-          </Pressable>
-        )}
+          )}
 
-        {!isPast && shift.status !== "cancelled" ? (
-          <Pressable
-            disabled={busy}
-            onPress={() => router.push(`/(manager)/shift/edit/${id}`)}
-            className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-          >
-            <Text className="text-sm font-sans-semibold text-gold">
-              Modifica turno
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {roleRequirements.length > 0 ? (
-        <View className="mt-8 gap-3">
-          <Mono>Copertura</Mono>
-          {roleCoverage.rows.map((row) => {
-            const short = row.required - row.covered;
-            return (
-              <View
-                key={row.role}
-                className="gap-2 rounded-2xl border border-border bg-bg-card px-4 py-3"
-              >
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-sm font-sans-semibold text-t1">
-                    {row.role}
-                  </Text>
-                  {short > 0 ? (
-                    <Pill label={`manca ${short}`} variant="pending" icon="alert" />
-                  ) : (
-                    <Text className="text-sm font-sans-semibold text-success">
-                      Completo
-                    </Text>
-                  )}
-                </View>
-                <ProgressBar
-                  progress={
-                    row.required > 0
-                      ? Math.min(1, row.covered / row.required)
-                      : 0
-                  }
-                />
-                <Text className="text-xs text-t3">
-                  {row.covered}/{row.required} coperti
-                </Text>
-              </View>
-            );
-          })}
+          {!isPast && shift.status !== "cancelled" ? (
+            <Pressable
+              disabled={busy}
+              onPress={() => router.push(`/(manager)/shift/edit/${id}`)}
+              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-gold">
+                Modifica turno
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
-      ) : null}
 
-      <View className="mt-8 gap-3">
-        <Mono>{isPast ? "Presenze" : "Staff assegnato"}</Mono>
-          {isPast ? (
-            <Text className="-mt-1 text-xs text-t3">
-              Segna chi ha svolto il turno e correggi le ore se serve.
-            </Text>
-          ) : null}
-          {showApproveRegular ? (
-            <GoldButton
-              label={
-                approveRegular.isPending
-                  ? "Attendere…"
-                  : `Approva le timbrature in orario (${regularClocks.length})`
-              }
-              size="sm"
-              disabled={approveRegular.isPending}
-              onPress={onApproveRegular}
-            />
-          ) : null}
-          {assignmentsQuery.isError ? (
-            <QueryError
-              onRetry={() => assignmentsQuery.refetch()}
-              subtitle="Non siamo riusciti a caricare lo staff. Riprova."
-            />
-          ) : staffRows.length === 0 ? (
-            <EmptyState
-              title={isPast ? "Nessuna presenza" : "Nessuno assegnato"}
-              subtitle={
-                isPast
-                  ? "Chi era assegnato ha rifiutato il turno."
-                  : "Questo turno non ha ancora nessuno dello staff."
-              }
-            />
-          ) : isPast ? (
-            presenceRows.map((a) => (
-              <PresenceRow
-                key={a.id}
-                assignment={a}
-                plannedHours={plannedHours}
-                shiftId={id}
-                scheduledOutAt={shiftEndsAt(
-                  shift.date,
-                  shift.start_time,
-                  shift.end_time
-                )}
-                locked={isPresenceLocked(a)}
-              />
-            ))
-          ) : (
-            assignments.map((a) => {
-              // La scheda di organico si apre per chiunque, anche per sé; la
-              // chat con sé stessi no, ed è l'unica cosa per cui serve ancora
-              // sapere se la riga è mia.
-              const waiterId = myRoster.has(a.venue_member_id)
-                ? null
-                : (a.staff_member?.waiter_id ?? null);
-              const memberId = a.staff_member?.person_id;
+        {roleRequirements.length > 0 ? (
+          <View className="mt-8 gap-3">
+            <Mono>Copertura</Mono>
+            {roleCoverage.rows.map((row) => {
+              const short = row.required - row.covered;
               return (
-                <AssignedRow
+                <View
+                  key={row.role}
+                  className="gap-2 rounded-2xl border border-border bg-bg-card px-4 py-3"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-sm font-sans-semibold text-t1">
+                      {row.role}
+                    </Text>
+                    {short > 0 ? (
+                      <Pill label={`manca ${short}`} variant="pending" icon="alert" />
+                    ) : (
+                      <Text className="text-sm font-sans-semibold text-success">
+                        Completo
+                      </Text>
+                    )}
+                  </View>
+                  <ProgressBar
+                    progress={
+                      row.required > 0
+                        ? Math.min(1, row.covered / row.required)
+                        : 0
+                    }
+                  />
+                  <Text className="text-xs text-t3">
+                    {row.covered}/{row.required} coperti
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
+        <View className="mt-8 gap-3">
+          <Mono>{isPast ? "Presenze" : "Staff assegnato"}</Mono>
+            {isPast ? (
+              <Text className="-mt-1 text-xs text-t3">
+                Segna chi ha svolto il turno e correggi le ore se serve.
+              </Text>
+            ) : null}
+            {showApproveRegular ? (
+              <GoldButton
+                label={
+                  approveRegular.isPending
+                    ? "Attendere…"
+                    : `Approva le timbrature in orario (${regularClocks.length})`
+                }
+                size="sm"
+                disabled={approveRegular.isPending}
+                onPress={onApproveRegular}
+              />
+            ) : null}
+            {assignmentsQuery.isError ? (
+              <QueryError
+                onRetry={() => assignmentsQuery.refetch()}
+                subtitle="Non siamo riusciti a caricare lo staff. Riprova."
+              />
+            ) : staffRows.length === 0 ? (
+              <EmptyState
+                title={isPast ? "Nessuna presenza" : "Nessuno assegnato"}
+                subtitle={
+                  isPast
+                    ? "Chi era assegnato ha rifiutato il turno."
+                    : "Questo turno non ha ancora nessuno dello staff."
+                }
+              />
+            ) : isPast ? (
+              presenceRows.map((a) => (
+                <PresenceRow
                   key={a.id}
                   assignment={a}
-                  onPress={
-                    memberId
-                      ? () => router.push(`/(manager)/staff/${memberId}`)
-                      : undefined
-                  }
-                  onMessage={
-                    waiterId && memberId ? () => onMessage(memberId) : undefined
-                  }
-                  changeRequested={requestedByAssignment.get(a.id)}
-                  live={
-                    showLiveClock
-                      ? liveClockStatusIn(venues, shift, a, now)
-                      : null
-                  }
+                  plannedHours={plannedHours}
+                  shiftId={id}
+                  scheduledOutAt={shiftEndsAt(
+                    shift.date,
+                    shift.start_time,
+                    shift.end_time
+                  )}
+                  locked={isPresenceLocked(a)}
                 />
-              );
-            })
-          )}
-      </View>
-    </ScrollView>
+              ))
+            ) : (
+              assignments.map((a) => {
+                // La scheda di organico si apre per chiunque, anche per sé; la
+                // chat con sé stessi no, ed è l'unica cosa per cui serve ancora
+                // sapere se la riga è mia.
+                const waiterId = myRoster.has(a.venue_member_id)
+                  ? null
+                  : (a.staff_member?.waiter_id ?? null);
+                const memberId = a.staff_member?.person_id;
+                return (
+                  <AssignedRow
+                    key={a.id}
+                    assignment={a}
+                    onPress={
+                      memberId
+                        ? () => router.push(`/(manager)/staff/${memberId}`)
+                        : undefined
+                    }
+                    onMessage={
+                      waiterId && memberId ? () => onMessage(memberId) : undefined
+                    }
+                    changeRequested={requestedByAssignment.get(a.id)}
+                    live={
+                      showLiveClock
+                        ? liveClockStatusIn(venues, shift, a, now)
+                        : null
+                    }
+                  />
+                );
+              })
+            )}
+        </View>
+      </ScrollView>
 
-    <ConfirmModal
-      visible={cancelVisible}
-      title="Annullare il turno?"
-      message="I professionisti coinvolti ricevono una notifica e il turno sparisce dalle loro viste. Potrai ripristinarlo da qui."
-      confirmLabel="Annulla turno"
-      cancelLabel="Indietro"
-      destructive
-      pending={statusMutation.isPending}
-      onConfirm={onCancelShift}
-      onCancel={() => setCancelVisible(false)}
-    />
+      <ConfirmModal
+        visible={cancelVisible}
+        title="Annullare il turno?"
+        message="I professionisti coinvolti ricevono una notifica e il turno sparisce dalle loro viste. Potrai ripristinarlo da qui."
+        confirmLabel="Annulla turno"
+        cancelLabel="Indietro"
+        destructive
+        pending={statusMutation.isPending}
+        onConfirm={onCancelShift}
+        onCancel={() => setCancelVisible(false)}
+      />
 
-    <ConfirmModal
-      visible={restoreVisible}
-      title="Ripristinare il turno?"
-      message="Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
-      confirmLabel="Ripristina turno"
-      cancelLabel="Indietro"
-      pending={statusMutation.isPending}
-      onConfirm={onRestoreShift}
-      onCancel={() => setRestoreVisible(false)}
-    />
-    </>
+      <ConfirmModal
+        visible={restoreVisible}
+        title="Ripristinare il turno?"
+        message="Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
+        confirmLabel="Ripristina turno"
+        cancelLabel="Indietro"
+        pending={statusMutation.isPending}
+        onConfirm={onRestoreShift}
+        onCancel={() => setRestoreVisible(false)}
+      />
+    </View>
   );
 }

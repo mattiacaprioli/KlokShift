@@ -220,23 +220,11 @@ export default function ManagerHome() {
   );
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 96,
-        gap: 24,
-      }}
-      refreshControl={
-        <RefreshControl
-          tintColor="#EAB54C"
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-        />
-      }
-    >
-      <View className="flex-row items-start justify-between gap-3">
+    <View className="flex-1 bg-bg-0">
+      <View
+        className="shrink-0 flex-row items-start justify-between gap-3 px-5 pb-6"
+        style={{ paddingTop: insets.top + 12 }}
+      >
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
           <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
@@ -264,221 +252,237 @@ export default function ManagerHome() {
         />
       </View>
 
-      {venueQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-16" />
-      ) : venueQuery.isError ? (
-        <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-      ) : shiftsQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-10" />
-      ) : (
-        <>
-          {/* A colpo d'occhio. Il periodo sta **sopra i numeri che qualifica**:
-              senza, "31 turni" non dice su quanto tempo. */}
-          <View className="gap-2.5">
-            <View className="flex-row items-center justify-between gap-3">
-              <Mono className="flex-1">{periodLabel(period)}</Mono>
-              <View className="flex-row gap-1.5">
-                {STATS_PERIODS.map((p) => (
-                  <Chip
-                    key={p.value}
-                    label={p.label}
-                    gold
-                    active={period === p.value}
-                    onPress={() => setPeriod(p.value)}
-                  />
-                ))}
-              </View>
-            </View>
-            <View className="flex-row gap-2.5">
-              <StatCard
-                loading={!statsReady}
-                value={String(stats.shortCount)}
-                label="Turni scoperti"
-                hint="solo quelli da fare"
-                tone={stats.shortCount > 0 ? "warning" : "normal"}
-                onPress={() => router.push("/(manager)/(tabs)/turni")}
-              />
-              <StatCard
-                loading={!statsReady}
-                value={String(stats.missingSlots)}
-                label="Posti da coprire"
-                hint="persone che mancano"
-                tone={stats.missingSlots > 0 ? "warning" : "normal"}
-                onPress={() => router.push("/(manager)/(tabs)/turni")}
-              />
-            </View>
-          </View>
-
-          {/* Ferie e permessi da decidere, malattie appena comunicate. */}
-          <AbsencesToHandle
-            enabled={canAny("can_manage_staff")}
-            onOpenPerson={(personId) =>
-              router.push(`/(manager)/staff/${personId}`)
-            }
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 96,
+          gap: 24,
+        }}
+        refreshControl={
+          <RefreshControl
+            tintColor="#EAB54C"
+            refreshing={refreshing}
+            onRefresh={onRefresh}
           />
-
-          {/* Chi non ha ancora una sede vede i KPI a zero e questo invito, non
-              un muro al posto della home: la prima schermata dell'app deve
-              somigliare a quella che userà tutti i giorni. */}
-          {venues.length === 0 ? (
-            <NoVenuesState subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni." />
-          ) : null}
-
-          {/* Upsell Pro — visibile solo agli utenti Free */}
-          <ProUpsellCard />
-
-          {/* Il proprio turno prima di quelli degli altri: chi organizza i
-              turni e ci lavora apre l'app anche per sapere quando attacca. */}
-          {myNextShift ? (
+        }
+      >
+        {venueQuery.isLoading ? (
+          <ActivityIndicator color="#EAB54C" className="mt-16" />
+        ) : venueQuery.isError ? (
+          <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
+        ) : shiftsQuery.isLoading ? (
+          <ActivityIndicator color="#EAB54C" className="mt-10" />
+        ) : (
+          <>
+            {/* A colpo d'occhio. Il periodo sta **sopra i numeri che qualifica**:
+                senza, "31 turni" non dice su quanto tempo. */}
             <View className="gap-2.5">
-              <Mono>I tuoi turni</Mono>
-              <Card
-                className="rounded-3xl border-border-gold p-5"
-                onPress={() =>
-                  router.push(`/(manager)/shift/${myNextShift.id}`)
-                }
-              >
-                <Mono gold>
-                  {formatRelativeStart(
-                    myNextShift.date,
-                    myNextShift.start_time,
-                  )}
-                </Mono>
-                <Text
-                  className="mt-2 text-2xl font-sans-bold text-t1"
-                  style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
-                >
-                  {formatShiftRange(
-                    myNextShift.start_time,
-                    myNextShift.end_time,
-                  )}
-                </Text>
-                <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
-                  {[
-                    "Il tuo turno",
-                    myNextShift.title,
-                    venueBadge(myNextShift.venue_id)?.name,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </Text>
-              </Card>
-            </View>
-          ) : null}
-
-          {/* Chi lavora oggi */}
-          {workers.length > 0 ? (
-            <View className="gap-3">
-              <View>
-                <Mono gold>
-                  Oggi in sede · {workers.length}
-                  {liveSummary ? ` · ${liveSummary}` : ""}
-                </Mono>
-                <Display className="mt-0.5 text-2xl">Chi lavora oggi</Display>
+              <View className="flex-row items-center justify-between gap-3">
+                <Mono className="flex-1">{periodLabel(period)}</Mono>
+                <View className="flex-row gap-1.5">
+                  {STATS_PERIODS.map((p) => (
+                    <Chip
+                      key={p.value}
+                      label={p.label}
+                      gold
+                      active={period === p.value}
+                      onPress={() => setPeriod(p.value)}
+                    />
+                  ))}
+                </View>
               </View>
-              <View className="gap-3">
-                {workers.map((w) => (
-                  <Card
-                    key={w.key}
-                    className="rounded-3xl border-border-2 p-4"
-                    onPress={w.onPress}
+              <View className="flex-row gap-2.5">
+                <StatCard
+                  loading={!statsReady}
+                  value={String(stats.shortCount)}
+                  label="Turni scoperti"
+                  hint="solo quelli da fare"
+                  tone={stats.shortCount > 0 ? "warning" : "normal"}
+                  onPress={() => router.push("/(manager)/(tabs)/turni")}
+                />
+                <StatCard
+                  loading={!statsReady}
+                  value={String(stats.missingSlots)}
+                  label="Posti da coprire"
+                  hint="persone che mancano"
+                  tone={stats.missingSlots > 0 ? "warning" : "normal"}
+                  onPress={() => router.push("/(manager)/(tabs)/turni")}
+                />
+              </View>
+            </View>
+
+            {/* Ferie e permessi da decidere, malattie appena comunicate. */}
+            <AbsencesToHandle
+              enabled={canAny("can_manage_staff")}
+              onOpenPerson={(personId) =>
+                router.push(`/(manager)/staff/${personId}`)
+              }
+            />
+
+            {/* Chi non ha ancora una sede vede i KPI a zero e questo invito, non
+                un muro al posto della home: la prima schermata dell'app deve
+                somigliare a quella che userà tutti i giorni. */}
+            {venues.length === 0 ? (
+              <NoVenuesState subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni." />
+            ) : null}
+
+            {/* Upsell Pro — visibile solo agli utenti Free */}
+            <ProUpsellCard />
+
+            {/* Il proprio turno prima di quelli degli altri: chi organizza i
+                turni e ci lavora apre l'app anche per sapere quando attacca. */}
+            {myNextShift ? (
+              <View className="gap-2.5">
+                <Mono>I tuoi turni</Mono>
+                <Card
+                  className="rounded-3xl border-border-gold p-5"
+                  onPress={() =>
+                    router.push(`/(manager)/shift/${myNextShift.id}`)
+                  }
+                >
+                  <Mono gold>
+                    {formatRelativeStart(
+                      myNextShift.date,
+                      myNextShift.start_time,
+                    )}
+                  </Mono>
+                  <Text
+                    className="mt-2 text-2xl font-sans-bold text-t1"
+                    style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
                   >
-                    <View className="flex-row items-center gap-3">
-                      <Avatar uri={w.avatarUri} name={w.name} size={44} />
-                      <View className="flex-1">
-                        <View className="flex-row items-center gap-1.5">
-                          <Text className="text-base font-sans-bold text-t1">
-                            {w.name}
-                          </Text>
-                          {w.isMe ? <Pill label="Tu" variant="tag" /> : null}
-                        </View>
-                        {/* Con più sedi il ruolo da solo non basta: «Barman»
-                            non dice in quale sala si presenta stasera. */}
-                        {w.role || w.venue ? (
-                          <Text className="text-xs text-t3">
-                            {[w.role, w.venue?.name]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </Text>
-                        ) : null}
-                        {w.live ? (
-                          <LiveClockLine
-                            status={w.live}
-                            writing={startConversation.isPending}
-                            onWrite={
-                              w.memberId
-                                ? () => onWrite(w.memberId as string)
-                                : undefined
-                            }
-                          />
-                        ) : null}
-                      </View>
-                      {w.start && w.end ? (
-                        <View className="items-end gap-1">
+                    {formatShiftRange(
+                      myNextShift.start_time,
+                      myNextShift.end_time,
+                    )}
+                  </Text>
+                  <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
+                    {[
+                      "Il tuo turno",
+                      myNextShift.title,
+                      venueBadge(myNextShift.venue_id)?.name,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Text>
+                </Card>
+              </View>
+            ) : null}
+
+            {/* Chi lavora oggi */}
+            {workers.length > 0 ? (
+              <View className="gap-3">
+                <View>
+                  <Mono gold>
+                    Oggi in sede · {workers.length}
+                    {liveSummary ? ` · ${liveSummary}` : ""}
+                  </Mono>
+                  <Display className="mt-0.5 text-2xl">Chi lavora oggi</Display>
+                </View>
+                <View className="gap-3">
+                  {workers.map((w) => (
+                    <Card
+                      key={w.key}
+                      className="rounded-3xl border-border-2 p-4"
+                      onPress={w.onPress}
+                    >
+                      <View className="flex-row items-center gap-3">
+                        <Avatar uri={w.avatarUri} name={w.name} size={44} />
+                        <View className="flex-1">
                           <View className="flex-row items-center gap-1.5">
-                            <Icon name="clock" size={14} color="#8c857a" />
-                            <Text className="text-sm text-t2">
-                              {formatShiftRange(w.start, w.end)}
+                            <Text className="text-base font-sans-bold text-t1">
+                              {w.name}
                             </Text>
+                            {w.isMe ? <Pill label="Tu" variant="tag" /> : null}
                           </View>
-                          {/* Turno di ieri sera ancora in corso: senza questo
-                              sembrerebbe uno che attacca oggi a quell'ora. */}
-                          {w.date && w.date !== todayString() ? (
-                            <Pill label="Da ieri" variant="pending" />
+                          {/* Con più sedi il ruolo da solo non basta: «Barman»
+                              non dice in quale sala si presenta stasera. */}
+                          {w.role || w.venue ? (
+                            <Text className="text-xs text-t3">
+                              {[w.role, w.venue?.name]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </Text>
+                          ) : null}
+                          {w.live ? (
+                            <LiveClockLine
+                              status={w.live}
+                              writing={startConversation.isPending}
+                              onWrite={
+                                w.memberId
+                                  ? () => onWrite(w.memberId as string)
+                                  : undefined
+                              }
+                            />
                           ) : null}
                         </View>
-                      ) : null}
-                    </View>
-                  </Card>
-                ))}
+                        {w.start && w.end ? (
+                          <View className="items-end gap-1">
+                            <View className="flex-row items-center gap-1.5">
+                              <Icon name="clock" size={14} color="#8c857a" />
+                              <Text className="text-sm text-t2">
+                                {formatShiftRange(w.start, w.end)}
+                              </Text>
+                            </View>
+                            {/* Turno di ieri sera ancora in corso: senza questo
+                                sembrerebbe uno che attacca oggi a quell'ora. */}
+                            {w.date && w.date !== todayString() ? (
+                              <Pill label="Da ieri" variant="pending" />
+                            ) : null}
+                          </View>
+                        ) : null}
+                      </View>
+                    </Card>
+                  ))}
+                </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {/* Prossimi turni */}
-          <View className="gap-3">
-            <View className="flex-row items-end justify-between gap-3">
-              <View className="flex-1">
-                <Display className="mt-0.5 text-2xl">Prossimi turni</Display>
+            {/* Prossimi turni */}
+            <View className="gap-3">
+              <View className="flex-row items-end justify-between gap-3">
+                <View className="flex-1">
+                  <Display className="mt-0.5 text-2xl">Prossimi turni</Display>
+                </View>
+                {shifts.length > 0 ? (
+                  <Pressable
+                    onPress={() => router.push("/(manager)/(tabs)/turni")}
+                    hitSlop={8}
+                  >
+                    <Text className="text-sm font-sans-semibold text-gold">
+                      Vedi tutti
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
-              {shifts.length > 0 ? (
-                <Pressable
-                  onPress={() => router.push("/(manager)/(tabs)/turni")}
-                  hitSlop={8}
-                >
-                  <Text className="text-sm font-sans-semibold text-gold">
-                    Vedi tutti
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
 
-            {shiftsQuery.isError ? (
-              <QueryError
-                onRetry={() => shiftsQuery.refetch()}
-                subtitle="Non siamo riusciti a caricare i turni. Riprova."
-              />
-            ) : upcoming.length === 0 ? (
-              <EmptyState
-                title="Nessun turno in programma"
-                subtitle="Crea un turno dalla scheda «Turni»."
-              />
-            ) : (
-              <View className="gap-3">
-                {upcoming.slice(0, PREVIEW_COUNT).map((shift) => (
-                  <ManagerShiftCard
-                    key={shift.id}
-                    variant="compact"
-                    shift={shift}
-                    venue={venueBadge(shift.venue_id)}
-                    onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        </>
-      )}
-    </ScrollView>
+              {shiftsQuery.isError ? (
+                <QueryError
+                  onRetry={() => shiftsQuery.refetch()}
+                  subtitle="Non siamo riusciti a caricare i turni. Riprova."
+                />
+              ) : upcoming.length === 0 ? (
+                <EmptyState
+                  title="Nessun turno in programma"
+                  subtitle="Crea un turno dalla scheda «Turni»."
+                />
+              ) : (
+                <View className="gap-3">
+                  {upcoming.slice(0, PREVIEW_COUNT).map((shift) => (
+                    <ManagerShiftCard
+                      key={shift.id}
+                      variant="compact"
+                      shift={shift}
+                      venue={venueBadge(shift.venue_id)}
+                      onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
