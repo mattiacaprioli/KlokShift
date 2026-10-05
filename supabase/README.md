@@ -129,6 +129,14 @@ puntare questi comandi a un progetto remoto o a un database condiviso. Il gate
 completo eseguito dalla CI è `up` → `reset` → `test`; dopo una modifica SQL si
 eseguono anche `gen-types.sh`, `yarn typecheck` e `yarn web:typecheck`.
 
+L'avvio usa Postgres `17.6.1.127` dai mirror ufficiali Supabase: prima GHCR,
+poi ECR Public. Riutilizza il container o un'immagine locale della stessa
+versione; se deve scaricare, esegue fino a tre tentativi per registry, con
+attese di 5 e 10 secondi. Se entrambi i registry falliscono, il gate resta
+bloccato. Il database è dichiarato pronto soltanto quando `pg_isready`
+risponde: dopo 60 secondi senza risposta, lo script fallisce e mostra i log.
+La CI limita il passo di avvio a cinque minuti, inclusi i download.
+
 - `tests/bootstrap.sql` allinea il Postgres locale al progetto reale (`auth.uid()`
   che legge `request.jwt.claims`, storage, publication). Non è una migration.
 - `tests/seed.sql` costruisce sei attori passando dalle RPC: `Ow` (titolare, in

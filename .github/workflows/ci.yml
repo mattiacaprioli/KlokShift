@@ -139,6 +139,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Avvia Postgres di test
+        timeout-minutes: 5
         run: supabase/tests/run.sh up
 
       - name: Replay completo delle migration
