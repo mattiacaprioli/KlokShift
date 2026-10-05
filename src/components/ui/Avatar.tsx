@@ -1,6 +1,7 @@
 import { Image } from "@/tw/image";
 import { Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { useState } from "react";
 
 type Props = {
   uri?: string | null;
@@ -28,10 +29,13 @@ function colorFor(name?: string | null) {
 }
 
 export function Avatar({ uri, name, size = 48, className }: Props) {
-  if (uri) {
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  if (uri && uri !== failedUri) {
     return (
       <Image
         source={uri}
+        onError={() => setFailedUri(uri)}
+        recyclingKey={uri}
         style={{ width: size, height: size, borderRadius: size / 2 }}
         className={className}
       />

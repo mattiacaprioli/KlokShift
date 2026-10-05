@@ -2,10 +2,11 @@ import { ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { timeAgo } from "@/lib/format";
 import type { Enums } from "@/types/database";
-import type { Notification } from "./api";
+import type { Notification, NotificationWithPerson } from "./api";
 
 const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   new_message: "message",
@@ -29,7 +30,7 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
 };
 
 type Props = {
-  notifications: Notification[];
+  notifications: NotificationWithPerson[];
   refreshing?: boolean;
   onRefresh?: () => void;
   onOpen: (n: Notification) => void;
@@ -62,7 +63,7 @@ export function NotificationList({
   ) : null;
 
   return (
-    <FlatList
+    <FlatList<NotificationWithPerson>
       className="flex-1 bg-bg-0"
       data={notifications}
       keyExtractor={(n) => n.id}
@@ -96,14 +97,23 @@ export function NotificationList({
             key={n.id}
             onPress={() => onOpen(n)}
             className={cn(
-              "flex-row gap-3 rounded-2xl border p-4",
+              "flex-row items-center gap-3 rounded-2xl border p-4",
               unread ? "border-border-2 bg-bg-1" : "border-border bg-bg-0"
             )}
           >
-            <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-              <Icon name={TYPE_ICON[n.type]} size={18} color="#EAB54C" />
-            </View>
-            <View className="flex-1">
+            {n.person ? (
+              <Avatar
+                uri={n.person.profile?.avatar_url}
+                name={n.person.display_name}
+                size={36}
+                className="shrink-0"
+              />
+            ) : (
+              <View className="h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-2">
+                <Icon name={TYPE_ICON[n.type]} size={18} color="#EAB54C" />
+              </View>
+            )}
+            <View className="min-w-0 flex-1">
               <Text className="font-sans-bold text-sm text-t1">{n.title}</Text>
               <Text className="mt-0.5 font-sans text-sm text-t2">{n.body}</Text>
               <Text className="mt-1 font-sans text-xs text-t3">
@@ -111,7 +121,7 @@ export function NotificationList({
               </Text>
             </View>
             {unread ? (
-              <View className="mt-1 h-2 w-2 rounded-full bg-gold" />
+              <View className="mt-1 h-2 w-2 shrink-0 self-start rounded-full bg-gold" />
             ) : null}
           </Pressable>
         );

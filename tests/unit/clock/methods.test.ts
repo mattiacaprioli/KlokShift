@@ -31,10 +31,10 @@ describe("clockMethodChoice", () => {
 
 describe("clockMethodLabel", () => {
   it("ha un'etichetta per ogni metodo persistibile", () => {
-    expect(clockMethodLabel("manual")).toBe("Manuale");
-    expect(clockMethodLabel("app")).toBe("App");
-    expect(clockMethodLabel("qr")).toBe("QR");
-    expect(clockMethodLabel("geolocation")).toBe("Posizione");
+    expect(clockMethodLabel("manual")).toBe("Nessuna timbratura");
+    expect(clockMethodLabel("app")).toBe("Timbratura dall’app");
+    expect(clockMethodLabel("qr")).toBe("Timbratura con QR");
+    expect(clockMethodLabel("geolocation")).toBe("Timbratura con posizione");
   });
 });
 

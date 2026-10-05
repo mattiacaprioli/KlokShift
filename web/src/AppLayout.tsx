@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { TeamPermission } from "@/features/team/api";
@@ -7,13 +7,16 @@ import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { cn } from "@/lib/cn";
-import { Button, QueryError, Spinner } from "./ui/primitives";
+import { QueryError, Spinner } from "./ui/primitives";
 import { Avatar } from "./ui/Avatar";
 import { PersonAvatarProvider } from "./ui/PersonAvatar";
+import { SidebarIcon, type SidebarIconName } from "./ui/SidebarIcon";
 
 type NavItem = {
   to: string;
   label: string;
+  icon: SidebarIconName;
+  group: "Operatività" | "Persone" | "Gestione";
   badge?: "chat" | "notifiche" | "assenze";
   /**
    * Il permesso che serve per arrivarci. Assente = per tutti (il titolare li ha
@@ -29,26 +32,26 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Home" },
-  { to: "/planning", label: "Planning" },
-  { to: "/ore", label: "Ore", perm: "can_view_hours" },
-  { to: "/staff", label: "Staff", perm: "can_manage_staff" },
+  { to: "/", label: "Home", icon: "home", group: "Operatività" },
+  { to: "/planning", label: "Planning", icon: "planning", group: "Operatività" },
+  { to: "/ore", label: "Ore", icon: "hours", group: "Operatività", perm: "can_view_hours" },
+  { to: "/staff", label: "Staff", icon: "staff", group: "Persone", perm: "can_manage_staff" },
   // Stesso permesso di Staff: è quello che fa leggere e decidere le assenze.
   {
     to: "/assenze",
-    label: "Assenze",
+    label: "Assenze", icon: "absence", group: "Operatività",
     perm: "can_manage_staff",
     badge: "assenze",
   },
-  { to: "/storico", label: "Storico" },
+  { to: "/storico", label: "Storico", icon: "history", group: "Operatività" },
   // Per tutti: dal 20/09 una conversazione è fra due persone qualsiasi della
   // stessa azienda, e la RLS fa leggere a ciascuno solo le proprie. Chi può
   // scrivere a chi lo decidono la rubrica e `open_conversation`.
-  { to: "/chat", label: "Messaggi", badge: "chat" },
-  { to: "/notifiche", label: "Notifiche", badge: "notifiche" },
-  { to: "/sede", label: "Sede" },
-  { to: "/collaboratori", label: "Collaboratori", ownerOnly: true },
-  { to: "/impostazioni", label: "Impostazioni" },
+  { to: "/chat", label: "Messaggi", icon: "chat", group: "Persone", badge: "chat" },
+  { to: "/notifiche", label: "Notifiche", icon: "notifications", group: "Persone", badge: "notifiche" },
+  { to: "/sede", label: "Sede", icon: "venue", group: "Gestione" },
+  { to: "/collaboratori", label: "Collaboratori", icon: "team", group: "Gestione", ownerOnly: true },
+  { to: "/impostazioni", label: "Impostazioni", icon: "settings", group: "Gestione" },
 ];
 
 export function AppLayout() {
@@ -69,65 +72,83 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh">
-      {/* Navigazione: sul foglio non serve, e ruberebbe un quarto di pagina.
-          `sticky` + `h-dvh`: senza l'altezza esplicita la colonna si stira con
-          la pagina (è un flex item), e "Esci" — che sta in fondo con `mt-auto` —
-          finisce in fondo al *documento*, non della finestra. */}
-      <aside className="sticky top-0 flex h-dvh w-56 shrink-0 flex-col overflow-y-auto border-r border-border-2 bg-bg-card p-4 print:hidden">
-        <div className="mb-6 px-2">
-          <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
-          <p className="font-serif text-lg leading-tight text-t1">{company}</p>
-          <div className="mt-3 flex items-center gap-2">
-            <Avatar url={profile?.avatar_url} name={who ?? "Profilo"} size={28} />
-            <p className="min-w-0 truncate text-xs text-t4">
-              {venues.length > 1 ? `${venues.length} sedi · ${who}` : who}
-            </p>
-          </div>
+      {/* Intestazione e account restano visibili anche quando il menu scorre. */}
+      <aside className="sticky top-0 flex h-dvh w-60 shrink-0 flex-col border-r border-border-2 bg-bg-card print:hidden">
+        <div className="shrink-0 px-6 pb-5 pt-6">
+          <div className="mb-4 h-1 w-8 rounded-full bg-gold" />
+          <p className="break-words font-serif text-xl leading-tight text-t1">{company}</p>
+          <p className="mt-2 text-xs text-t2">
+            {venues.length > 1 ? `${venues.length} sedi` : "Gestione turni"}
+          </p>
         </div>
 
-        <nav className="flex flex-col gap-0.5">
-          {NAV.filter(
-            (item) =>
-              (!item.ownerOnly || isOwner) && (!item.perm || canAny(item.perm))
-          ).map((item) => {
-            const count =
-              item.badge === "chat"
-                ? chatUnread
-                : item.badge === "notifiche"
-                  ? notifUnread
-                  : item.badge === "assenze"
-                    ? absencesPending
-                    : 0;
+        <nav aria-label="Navigazione principale" className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 pb-6">
+          {(["Operatività", "Persone", "Gestione"] as const).map((group) => {
+            const items = NAV.filter(
+              (item) => item.group === group &&
+                (!item.ownerOnly || isOwner) && (!item.perm || canAny(item.perm))
+            );
+            if (items.length === 0) return null;
             return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                // `end` solo sulla Home: senza, "/" resterebbe attiva ovunque.
-                end={item.to === "/"}
-                className={({ isActive }) =>
-                  cn(
-                    "focus-gold flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition",
-                    isActive
-                      ? "bg-gold/15 text-gold"
-                      : "text-t2 hover:bg-bg-2 hover:text-t1"
-                  )
-                }
-              >
-                {item.label}
-                {count > 0 ? (
-                  <span className="rounded-full bg-gold px-1.5 text-[11px] font-bold text-gold-ink">
-                    {count > 9 ? "9+" : count}
-                  </span>
-                ) : null}
-              </NavLink>
+              <div key={group}>
+                <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-t3">
+                  {group}
+                </h2>
+                <div className="space-y-1">
+                  {items.map((item) => {
+                    const count =
+                      item.badge === "chat" ? chatUnread :
+                      item.badge === "notifiche" ? notifUnread :
+                      item.badge === "assenze" ? absencesPending : 0;
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.to === "/"}
+                        className={({ isActive }) => cn(
+                          "focus-gold flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
+                          isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1"
+                        )}
+                      >
+                        <SidebarIcon name={item.icon} />
+                        <span className="flex-1">{item.label}</span>
+                        {count > 0 ? (
+                          <span
+                            aria-label={`${count} ${item.badge === "assenze" ? "richieste da gestire" : item.badge === "chat" ? "messaggi non letti" : "notifiche non lette"}`}
+                            className="flex min-w-5 items-center justify-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-4 text-gold-ink"
+                          >
+                            {count > 99 ? "99+" : count}
+                          </span>
+                        ) : null}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>
 
-        <div className="mt-auto pt-4">
-          <Button className="w-full" onClick={() => void signOut()}>
+        <div className="shrink-0 border-t border-border-2 p-3">
+          <Link
+            to="/impostazioni"
+            aria-label="Apri le impostazioni del tuo account"
+            className="focus-gold flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-bg-2"
+          >
+            <Avatar url={profile?.avatar_url} name={who ?? "Profilo"} size={36} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-t1" title={who}>{who}</p>
+              <p className="mt-0.5 text-xs text-t3">Il tuo account</p>
+            </div>
+          </Link>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="focus-gold mt-1 flex min-h-9 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-xs text-t2 transition-colors hover:bg-bg-2 hover:text-t1"
+          >
+            <SidebarIcon name="logout" />
             Esci
-          </Button>
+          </button>
         </div>
       </aside>
 
