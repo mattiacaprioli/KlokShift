@@ -646,6 +646,28 @@ export async function getOwnerHoursSummary(
  * quello che sembra. Su insiemi già filtrati per data è irrilevante.
  */
 
+/** Le proprie assegnazioni col turno, la sede, il ruolo e la timbratura. */
+const MY_ASSIGNMENT_SELECT = `*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_BY_ACCOUNT}, shift:shifts!inner(*, venue:venues(*))`;
+
+function toMyAssignment({
+  venue_member,
+  clock,
+  ...row
+}: {
+  venue_member: { clock_method: Enums<"clock_method"> | null };
+  clock: unknown;
+}): AssignmentWithShift {
+  return {
+    ...row,
+    clock_method: venue_member.clock_method,
+    clock: activeClock(clock as ClockRecordWithCorrections[]),
+  } as AssignmentWithShift;
+}
+
+function bySchedule(a: AssignmentWithShift, b: AssignmentWithShift): number {
+  return shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!));
+}
+
 /**
  * Waiter side: i prossimi turni assegnati. Conserva anche un turno appena
  * concluso se ha ancora un'entrata aperta: deve restare raggiungibile dalla
@@ -656,28 +678,47 @@ export async function getMyAssignedUpcoming(
 ): Promise<AssignmentWithShift[]> {
   const { data, error } = await supabase
     .from("shift_assignments")
-    .select(
-      `*, role:venue_roles(id, name), ${CLOCK_EMBED}, ${VENUE_MEMBER_BY_ACCOUNT}, shift:shifts!inner(*, venue:venues(*))`
-    )
+    .select(MY_ASSIGNMENT_SELECT)
     .eq("venue_member.member.user_id", waiterId)
     .neq("status", "declined")
     // Da ieri: il turno che il professionista sta lavorando adesso non deve
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
     .gte("shift.date", addDaysToDate(todayString(), -1));
   if (error) throw new Error(error.message);
-  const rows = (data ?? []).map(({ venue_member, clock, ...row }) => ({
-    ...row,
-    clock_method: venue_member.clock_method,
-    clock: activeClock(clock as ClockRecordWithCorrections[]),
-  })) as AssignmentWithShift[];
-  return rows
+  return (data ?? [])
+    .map(toMyAssignment)
     .filter(
       (r) =>
         r.shift != null &&
         (!isShiftOver(r.shift) ||
           (r.clock != null && effectiveClockTimes(r.clock).outAt == null))
     )
-    .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
+    .sort(bySchedule);
+}
+
+/**
+ * Waiter side: le proprie assegnazioni fra `from` e `to` (inclusi), **anche
+ * quelle già concluse** — è la settimana a griglia oraria: lunedì passato resta
+ * al suo posto, come in qualunque calendario. I rifiutati restano fuori, come
+ * nei «prossimi».
+ */
+export async function getMyAssignmentsInRange(
+  waiterId: string,
+  from: string,
+  to: string
+): Promise<AssignmentWithShift[]> {
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(MY_ASSIGNMENT_SELECT)
+    .eq("venue_member.member.user_id", waiterId)
+    .neq("status", "declined")
+    .gte("shift.date", from)
+    .lte("shift.date", to);
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .map(toMyAssignment)
+    .filter((r) => r.shift != null)
+    .sort(bySchedule);
 }
 
 // Lo storico passato del professionista non si legge più da qui: è paginato da

@@ -142,6 +142,7 @@ export function WeekCalendar({
   expanded,
   onToggleExpand,
   right,
+  gutter = 0,
   className,
 }: {
   /** Il giorno attivo, "YYYY-MM-DD". */
@@ -169,6 +170,12 @@ export function WeekCalendar({
    * l'intestazione di ciò che segue.
    */
   right?: React.ReactNode;
+  /**
+   * Rientro a sinistra dei giorni (non del mese): sopra la griglia oraria le
+   * colonne devono cadere esattamente sopra le sue, al netto della colonna
+   * delle ore. Il calendario fa così da intestazione della griglia.
+   */
+  gutter?: number;
   className?: string;
 }) {
   const scrollRef = useRef<RNScrollView>(null);
@@ -177,7 +184,8 @@ export function WeekCalendar({
   // ciclo: la prima fine-scorrimento lo consuma, le successive appartengono
   // ancora allo stesso gesto (o al ricentraggio interno) e vanno ignorate.
   const swipeHandled = useRef(true);
-  const [width, setWidth] = useState(0);
+  const [outerWidth, setOuterWidth] = useState(0);
+  const width = Math.max(0, outerWidth - gutter);
   const today = todayString();
 
   // La pagina centrale è sempre quella del giorno attivo: non c'è un'ancora da
@@ -227,7 +235,7 @@ export function WeekCalendar({
   }
 
   return (
-    <View className={className} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
+    <View className={className} onLayout={(e: LayoutChangeEvent) => setOuterWidth(e.nativeEvent.layout.width)}>
       <Pressable
         onPress={onToggleExpand}
         className="mb-2 flex-row items-center gap-1.5 py-1"
@@ -245,7 +253,7 @@ export function WeekCalendar({
         {right ? <View className="flex-1 items-end">{right}</View> : null}
       </Pressable>
 
-      <View className="mb-1 flex-row">
+      <View className="mb-1 flex-row" style={{ marginLeft: gutter }}>
         {WEEKDAYS.map((d, i) => (
           <View key={`${d}-${i}`} className="flex-1 items-center">
             <Mono>{d}</Mono>
@@ -253,7 +261,9 @@ export function WeekCalendar({
         ))}
       </View>
 
-      <Animated.View style={[gridStyle, { overflow: "hidden" }]}>
+      <Animated.View
+        style={[gridStyle, { overflow: "hidden", marginLeft: gutter }]}
+      >
         {width > 0 ? (
           <RNScrollView
             ref={scrollRef}

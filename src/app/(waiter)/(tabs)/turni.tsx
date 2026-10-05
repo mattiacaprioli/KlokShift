@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -12,6 +12,7 @@ import { AlertBanner } from "@/components/ui/AlertBanner";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { Segmented } from "@/components/ui/Segmented";
@@ -28,10 +29,18 @@ import {
   withShift,
 } from "@/features/assignments/agenda";
 import {
+  type AgendaLayout,
+  loadAgendaLayout,
+  saveAgendaLayout,
+} from "@/features/assignments/agendaLayoutStorage";
+import {
   useMyAssignedUpcoming,
+  useMyAssignmentsInRange,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
+import { plannedHours } from "@/features/assignments/timeGrid";
+import { HOUR_GUTTER, WeekTimeGrid } from "@/features/assignments/WeekTimeGrid";
 import { useStaffPlanning } from "@/features/planning/hooks";
 import { VenuePlanningList } from "@/features/planning/VenuePlanningList";
 import type { ShiftWithVenue } from "@/features/shifts/types";
@@ -42,6 +51,8 @@ import { userErrorMessage } from "@/lib/errors";
 import {
   addDaysToDate,
   formatDayLabel,
+  formatHours,
+  startOfWeek,
   todayString,
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
@@ -105,6 +116,19 @@ type Mode = (typeof MODES)[number]["id"];
  * comanda dalla scheda della sede): altrimenti la seconda vista non avrebbe
  * niente da mostrare, e un selettore con metà dei tocchi inerti è peggio di
  * nessun selettore.
+ *
+ * ── Elenco / settimana ───────────────────────────────────────────────────
+ *
+ * «I miei» si guarda anche come la settimana di Google Calendar: sette
+ * colonne, le ore in verticale, un blocco per turno (`WeekTimeGrid`). L'elenco
+ * risponde a «cosa faccio», la griglia a «come è fatta la mia settimana» — e
+ * per chi ha già un calendario sul telefono è la forma che riconosce subito.
+ * La scelta si ricorda per account (`agendaLayoutStorage`). «La sede» resta un
+ * elenco: con una squadra intera sullo stesso turno, una colonna da 40pt non
+ * dice più niente.
+ *
+ * La griglia legge una finestra sua (`useMyAssignmentsInRange`) invece dei
+ * «prossimi»: lunedì passato deve restare dov'era, come in ogni calendario.
  */
 export default function WaiterShiftsScreen() {
   const router = useRouter();
@@ -124,6 +148,23 @@ export default function WaiterShiftsScreen() {
   /** Il giorno evidenziato: lo sposta anche lo scorrimento della lista. */
   const [visibleDay, setVisibleDay] = useState(today);
   const [expanded, setExpanded] = useState(false);
+  const [chosenLayout, setChosenLayout] = useState<AgendaLayout>("list");
+
+  useEffect(() => {
+    let alive = true;
+    loadAgendaLayout(waiterId).then((saved) => {
+      if (alive && saved) setChosenLayout(saved);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [waiterId]);
+
+  function toggleLayout() {
+    const next = chosenLayout === "week" ? "list" : "week";
+    setChosenLayout(next);
+    void saveAgendaLayout(waiterId, next);
+  }
 
   const listRef = useRef<SectionList<AgendaItem, AgendaSection>>(null);
   // Alza la mano subito dopo una scelta: la lista si sta ancora ricomponendo e
@@ -152,6 +193,25 @@ export default function WaiterShiftsScreen() {
   );
   // Se il titolare lo spegne mentre si guarda la sede, si torna ai propri turni.
   const mode: Mode = sharesPlanning ? chosenMode : "mine";
+  const layout: AgendaLayout = mode === "venue" ? "list" : chosenLayout;
+
+  // La griglia: le tre settimane del pager più la domenica prima, che può
+  // portare nel lunedì la coda di un notturno.
+  const monday = startOfWeek(visibleDay);
+  const weekQuery = useMyAssignmentsInRange(
+    waiterId,
+    addDaysToDate(monday, -8),
+    addDaysToDate(monday, 13),
+    layout === "week"
+  );
+  const weekItems = useMemo(
+    () => withShift(weekQuery.data ?? []),
+    [weekQuery.data]
+  );
+  const weekHours = plannedHours(
+    weekItems,
+    Array.from({ length: 7 }, (_, i) => addDaysToDate(monday, i))
+  );
 
   // Il planning della sede: una finestra che parte dal giorno da cui parte
   // l'agenda, così scegliere una data lontana va a prendersi il periodo giusto
@@ -196,13 +256,22 @@ export default function WaiterShiftsScreen() {
     () => new Set((planning.data ?? []).map((s) => s.date)),
     [planning.data]
   );
-  const marked = mode === "venue" ? planningDays : myDays;
+  // In griglia i pallini comprendono anche i giorni passati della finestra,
+  // che i «prossimi» non hanno più.
+  const weekDays = useMemo(
+    () => new Set([...myDays, ...daysWithShifts(weekItems)]),
+    [myDays, weekItems]
+  );
+  const marked =
+    mode === "venue" ? planningDays : layout === "week" ? weekDays : myDays;
 
   const pull = usePullToRefresh(() =>
     Promise.all(
       mode === "venue"
         ? [planning.refetch()]
-        : [assignedQuery.refetch()]
+        : layout === "week"
+          ? [assignedQuery.refetch(), weekQuery.refetch()]
+          : [assignedQuery.refetch()]
     )
   );
 
@@ -275,7 +344,11 @@ export default function WaiterShiftsScreen() {
                   ? `${planningSections.length} ${planningSections.length === 1 ? "giornata" : "giornate"}`
                   : daConfermare.length > 0
                     ? `${daConfermare.length} da confermare`
-                    : `${items.length} in programma`}
+                    : layout === "week"
+                      ? weekHours > 0
+                        ? `${formatHours(weekHours)} nella settimana`
+                        : "Nessun turno nella settimana"
+                      : `${items.length} in programma`}
               </Mono>
               <Display className="mt-1 text-3xl">
                 {mode === "venue" ? "Turni della sede" : "I miei turni"}
@@ -283,15 +356,35 @@ export default function WaiterShiftsScreen() {
             </View>
             {/* Il ritorno: una volta spostata l'ancora, "oggi" non è più a
                 portata di scorrimento e va rimesso a portata di tocco. */}
-            {away ? (
-              <Pressable
-                onPress={() => goToDay(today)}
-                className="rounded-full border border-border-gold bg-bg-2 px-3 py-1.5"
-                accessibilityRole="button"
-              >
-                <Mono gold>Oggi</Mono>
-              </Pressable>
-            ) : null}
+            <View className="flex-row items-center gap-2">
+              {away ? (
+                <Pressable
+                  onPress={() => goToDay(today)}
+                  className="rounded-full border border-border-gold bg-bg-2 px-3 py-1.5"
+                  accessibilityRole="button"
+                >
+                  <Mono gold>Oggi</Mono>
+                </Pressable>
+              ) : null}
+              {/* L'icona mostra la vista d'arrivo, come il selettore di vista
+                  dei calendari: si tocca ciò che si vuole vedere. */}
+              {mode === "mine" ? (
+                <Pressable
+                  onPress={toggleLayout}
+                  className="h-9 w-9 items-center justify-center rounded-full border border-border-gold bg-bg-2"
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    layout === "week" ? "Vista elenco" : "Vista settimana"
+                  }
+                >
+                  <Icon
+                    name={layout === "week" ? "list" : "columns"}
+                    size={18}
+                    color="#EAB54C"
+                  />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
           {sharesPlanning ? (
             <Segmented
@@ -308,6 +401,7 @@ export default function WaiterShiftsScreen() {
             marked={marked}
             expanded={expanded}
             onToggleExpand={() => setExpanded((v) => !v)}
+            gutter={layout === "week" ? HOUR_GUTTER : 0}
           />
         </View>
 
@@ -327,6 +421,46 @@ export default function WaiterShiftsScreen() {
             anchorDay={anchorDay}
             paddingBottom={insets.bottom + 96}
           />
+        ) : layout === "week" ? (
+          weekQuery.isLoading ? (
+            <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+          ) : weekQuery.isError ? (
+            <QueryError onRetry={() => weekQuery.refetch()} />
+          ) : (
+            <>
+              {daConfermare.length > 0 ? (
+                <View className="px-5 pt-2">
+                  <AlertBanner
+                    icon="alert"
+                    title={
+                      daConfermare.length === 1
+                        ? "1 turno da confermare"
+                        : `${daConfermare.length} turni da confermare`
+                    }
+                    subtitle="Tocca il blocco arancio per rispondere"
+                    onPress={() => goToDay(daConfermare[0].shift.date)}
+                  />
+                </View>
+              ) : null}
+              <WeekTimeGrid
+                selected={visibleDay}
+                onSelect={goToDay}
+                items={weekItems}
+                ready={weekQuery.isSuccess}
+                today={today}
+                onOpen={(item) => router.push(`/(waiter)/shift/${item.shift.id}`)}
+                absenceNoteFor={absenceNoteFor}
+                refreshControl={
+                  <RefreshControl
+                    tintColor="#EAB54C"
+                    refreshing={pull.refreshing}
+                    onRefresh={pull.onRefresh}
+                  />
+                }
+                paddingBottom={insets.bottom + 96}
+              />
+            </>
+          )
         ) : assignedQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
         ) : assignedQuery.isError ? (

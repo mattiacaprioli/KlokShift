@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -14,6 +19,7 @@ import {
   getInternalShiftPlans,
   moveAssignment,
   getMyAssignedUpcoming,
+  getMyAssignmentsInRange,
   getMyAssignmentForShift,
   getShiftAssignments,
   getShiftRoleRequirements,
@@ -33,6 +39,25 @@ export function useMyAssignedUpcoming(waiterId: string | undefined) {
     queryKey: qk.assignments.mineUpcoming(waiterId ?? ""),
     queryFn: () => getMyAssignedUpcoming(waiterId as string),
     enabled: !!waiterId,
+  });
+}
+
+/**
+ * Le proprie assegnazioni fra `from` e `to`. Sfogliando le settimane la chiave
+ * cambia: si tengono i dati della finestra di prima finché arrivano i nuovi,
+ * così la griglia non lampeggia vuota a ogni swipe.
+ */
+export function useMyAssignmentsInRange(
+  waiterId: string | undefined,
+  from: string,
+  to: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: qk.assignments.mineRange(waiterId ?? "", from, to),
+    queryFn: () => getMyAssignmentsInRange(waiterId as string, from, to),
+    enabled: !!waiterId && enabled,
+    placeholderData: keepPreviousData,
   });
 }
 

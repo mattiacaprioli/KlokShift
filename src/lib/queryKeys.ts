@@ -163,6 +163,9 @@ export const qk = {
     todayAll: ["assignments", "today"] as const,
     mineUpcoming: (waiterId: string) =>
       ["assignments", "mineUpcoming", waiterId] as const,
+    /** Le proprie assegnazioni in un intervallo, passate comprese: la griglia. */
+    mineRange: (waiterId: string, from: string, to: string) =>
+      ["assignments", "mineRange", waiterId, from, to] as const,
     mineForShift: (shiftId: string, waiterId: string) =>
       ["assignments", "mineForShift", shiftId, waiterId] as const,
   },
