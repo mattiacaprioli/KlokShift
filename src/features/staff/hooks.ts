@@ -66,7 +66,10 @@ export function useAddStaff() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addStaff,
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
+    onSuccess: (_result, vars) => Promise.all([
+      qc.invalidateQueries({ queryKey: qk.staff.all }),
+      qc.invalidateQueries({ queryKey: qk.workspaceAccess.byWorkspace(vars.workspaceId) }),
+    ]),
   });
 }
 
@@ -80,10 +83,11 @@ export function useAddSelfToStaff() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addSelfToStaff,
-    onSuccess: () => {
+    onSuccess: (_result, vars) => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.shifts.all });
       qc.invalidateQueries({ queryKey: qk.context.mine });
+      qc.invalidateQueries({ queryKey: qk.workspaceAccess.byWorkspace(vars.workspaceId) });
     },
   });
 }
@@ -109,6 +113,7 @@ export function useAddPersonToVenue() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.context.mine });
+      qc.invalidateQueries({ queryKey: qk.workspaceAccess.all });
     },
   });
 }
@@ -135,6 +140,8 @@ export function useUpdateStaffMember() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.roles.all });
+      // `set_member_venue` può anche ripristinare una riga uscita dall'organico.
+      qc.invalidateQueries({ queryKey: qk.workspaceAccess.all });
     },
   });
 }
@@ -146,6 +153,7 @@ export function useRemoveStaffMember() {
     mutationFn: (vars: { memberId: string; venueId?: string }) =>
       removeStaffMember(vars),
     onSuccess: () => {
+      void qc.resetQueries({ queryKey: qk.workspaceAccess.all });
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.context.mine });
       // L'uscita libera i turni futuri e il trigger aggiorna i coperti: senza
@@ -181,6 +189,7 @@ export function useLeaveVenue() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.context.mine });
+      qc.invalidateQueries({ queryKey: qk.workspaceAccess.all });
       // I turni futuri di quella sede sono stati tolti: l'agenda del
       // professionista li mostrerebbe ancora, e il trigger dei coperti ha
       // aggiornato i turni dall'altra parte.

@@ -46,6 +46,22 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Solo il titolare può farlo.",
   },
   {
+    match: ["workspace_access_invalid"],
+    message: "Non riusciamo a verificare l'accesso di questa azienda. Riprova.",
+  },
+  {
+    match: ["commercial_migration_required"],
+    message: "L'accesso di questa azienda deve essere verificato. Contatta l'assistenza.",
+  },
+  {
+    match: ["trial_requires_open_venue"],
+    message: "Prepara una sede aperta prima di avviare la prova gratuita.",
+  },
+  {
+    match: ["trial_already_used"],
+    message: "Questa azienda ha già utilizzato la prova gratuita.",
+  },
+  {
     match: ["chat_disabled"],
     message:
       "In questa azienda la chat fra colleghi è disattivata. Puoi comunque scrivere a chi gestisce.",

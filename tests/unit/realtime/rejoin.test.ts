@@ -1,7 +1,10 @@
 import { RealtimeClient } from "@supabase/realtime-js";
+import { QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import { watchRejoin } from "@/features/realtime/rejoin";
+import { qk } from "@/lib/queryKeys";
+import { controlledPromise, createTestQueryClient } from "../../helpers/async";
 
 describe("watchRejoin (B10)", () => {
   it("non recupera al primo ingresso, recupera a ogni rientro", () => {
@@ -29,6 +32,57 @@ describe("watchRejoin (B10)", () => {
     watcher.stop();
     watcher.onStatus("SUBSCRIBED");
     expect(recover).not.toHaveBeenCalled();
+  });
+});
+
+describe("accesso aziendale dopo un cambio di appartenenza", () => {
+  it("al rientro toglie gli aggregati vecchi anche alla query montata, fino alla verifica", async () => {
+    type Snapshot = { usage: { people: number; venues: number } | null };
+    const client = createTestQueryClient();
+    const keyA = qk.workspaceAccess.byWorkspace("workspace-a");
+    const keyB = qk.workspaceAccess.byWorkspace("workspace-b");
+    const oldAccess: Snapshot = { usage: { people: 12, venues: 2 } };
+    client.setQueryData(keyA, oldAccess);
+    client.setQueryData(keyB, { usage: { people: 4, venues: 1 } });
+    const fresh = controlledPromise<Snapshot>();
+    const observer = new QueryObserver(client, {
+      queryKey: keyA,
+      queryFn: () => fresh.promise,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    const watcher = watchRejoin(() => {
+      void client.resetQueries({ queryKey: keyA });
+    });
+
+    watcher.onStatus("SUBSCRIBED");
+    expect(observer.getCurrentResult().data).toEqual(oldAccess);
+    watcher.onStatus("CLOSED");
+    watcher.onStatus("SUBSCRIBED");
+    expect(client.getQueryData(keyA)).toBeUndefined();
+    expect(observer.getCurrentResult().data).toBeUndefined();
+    expect(observer.getCurrentResult().isPending).toBe(true);
+    expect(client.getQueryData(keyB)).toEqual({ usage: { people: 4, venues: 1 } });
+
+    // La nuova authority non consente più di leggere i conteggi globali.
+    fresh.resolve({ usage: null });
+    await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual({ usage: null }));
+    watcher.stop();
+    unsubscribe();
+    client.clear();
+  });
+
+  it("senza azienda identificabile il reset del prefisso toglie entrambe le cache", async () => {
+    const client = createTestQueryClient();
+    const keyA = qk.workspaceAccess.byWorkspace("workspace-a");
+    const keyB = qk.workspaceAccess.byWorkspace("workspace-b");
+    client.setQueryData(keyA, { usage: { people: 12, venues: 2 } });
+    client.setQueryData(keyB, { usage: { people: 4, venues: 1 } });
+
+    await client.resetQueries({ queryKey: qk.workspaceAccess.all });
+    expect(client.getQueryData(keyA)).toBeUndefined();
+    expect(client.getQueryData(keyB)).toBeUndefined();
+    client.clear();
   });
 });
 

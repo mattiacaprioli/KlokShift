@@ -1130,6 +1130,85 @@ export type Database = {
           },
         ]
       }
+      workspace_access_periods: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          id: string
+          kind: string
+          plan: string
+          reason: string
+          revoked_at: string | null
+          starts_at: string
+          venue_limit: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          kind: string
+          plan: string
+          reason: string
+          revoked_at?: string | null
+          starts_at: string
+          venue_limit: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          plan?: string
+          reason?: string
+          revoked_at?: string | null
+          starts_at?: string
+          venue_limit?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_access_periods_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_commercial_state: {
+        Row: {
+          created_at: string
+          migration_review_required: boolean
+          trial_started_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          migration_review_required?: boolean
+          trial_started_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          migration_review_required?: boolean
+          trial_started_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_commercial_state_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           authority: Database["public"]["Enums"]["member_authority"]
@@ -1608,6 +1687,7 @@ export type Database = {
           permesso_recognized_hours: number
         }[]
       }
+      get_workspace_access: { Args: { p_workspace: string }; Returns: Json }
       get_workspace_contacts: {
         Args: never
         Returns: {
@@ -1637,6 +1717,18 @@ export type Database = {
           venue_id: string
           venue_name: string
         }[]
+      }
+      grant_workspace_access: {
+        Args: {
+          p_ends_at: string
+          p_kind: string
+          p_plan: string
+          p_reason: string
+          p_starts_at: string
+          p_venue_limit: number
+          p_workspace: string
+        }
+        Returns: string
       }
       leave: {
         Args: { p_member: string; p_venue?: string }
@@ -1883,6 +1975,7 @@ export type Database = {
         Args: { p_date: string; p_end: string; p_start: string }
         Returns: string
       }
+      start_workspace_trial: { Args: { p_workspace: string }; Returns: string }
       transfer_ownership: {
         Args: { p_member: string; p_workspace: string }
         Returns: undefined

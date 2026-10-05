@@ -74,6 +74,28 @@ hook di feature. Le funzioni grezze stanno in `features/*/api.ts`.
 - **Crash reporting**: Sentry, no-op finché non viene impostato
   `EXPO_PUBLIC_SENTRY_DSN`.
 
+## Monetizzazione e dashboard del fondatore: sviluppo previsto
+
+Requisiti correnti: [MONETIZATION.md](docs/MONETIZATION.md) e
+[FOUNDER-DASHBOARD.md](docs/FOUNDER-DASHBOARD.md). Ordine e verifiche:
+[piano M01–M11](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md). Sono decisioni e
+specifiche da implementare; **Paddle** è il provider scelto, con approvazione
+account, configurazione e integrazione ancora da completare.
+
+La fondazione additiva M03a introduce il motore commerciale nel DB e
+`src/features/workspace/access.ts`, con API/hook condivisi e risposte validate.
+Il read model rimane distinto dai gate storici: applicazione dei limiti alle
+scritture, esperienza archivio e rollout non sono ancora attivi. Le aziende
+preesistenti sono da classificare, senza concessioni dedotte da `free/pro`.
+
+Riutilizzare `web/` e il data layer per gestione commerciale del cliente e area
+del fondatore, con layout/query distinti e autorizzazioni server dedicate. Il
+piano appartiene all'azienda; authority e organico rimangono indipendenti dai
+diritti commerciali. L'app nativa mostra stato e azioni consentite, senza prezzi
+o checkout. Capacità, scadenze, concessioni e conferme finanziarie sono validate
+nel backend; ogni intervento amministrativo ha una traccia. Le chiavi riservate
+restano nelle funzioni server, senza creare un client privilegiato nel browser.
+
 ## Aggiungere una feature (slice verticale)
 
 Pianifica per **slice verticali** (una funzione utente end-to-end), non orizzontali

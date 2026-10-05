@@ -40,6 +40,8 @@ export function useMemberAccess(memberId: string | undefined) {
 function useTeamInvalidation() {
   const qc = useQueryClient();
   return () => {
+    // Promozione/revoca può cambiare anche quali aggregati si possono leggere.
+    void qc.resetQueries({ queryKey: qk.workspaceAccess.all });
     qc.invalidateQueries({ queryKey: qk.team.all });
     qc.invalidateQueries({ queryKey: qk.context.mine });
     qc.invalidateQueries({ queryKey: qk.venues.mine });

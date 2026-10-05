@@ -41,9 +41,10 @@ Il sito deve raccontare il prodotto che esiste oggi:
 - **niente referral** («un mese gratis a chi porti») — non esiste ancora nel prodotto;
 - **niente numeri di tempo risparmiato né testimonianze** finché non sono veri.
 
-Il **listino definitivo** è pubblico soltanto qui, mai nell'app:
+Il **listino pubblico** è qui; riepiloghi contrattuali e acquisti saranno sul
+web. L'app nativa non mostra prezzi:
 
-- fino a 30 dipendenti: 29 € al mese oppure 290 € all'anno;
+- fino a 30 dipendenti unici nell'intera azienda: 29 € al mese oppure 290 € all'anno;
 - dipendenti illimitati: 49 € al mese oppure 490 € all'anno;
 - sede aggiuntiva: 15 € al mese oppure 150 € all'anno;
 - IVA esclusa e 30 giorni di prova senza carta.
@@ -51,6 +52,28 @@ Il **listino definitivo** è pubblico soltanto qui, mai nell'app:
 Con la fatturazione annuale si pagano 10 mensilità invece di 12: sono quindi
 inclusi **due mesi gratuiti**. Se cambia un importo, aggiornare insieme
 `src/content/it.ts` e l'`offers` JSON-LD in `index.html`.
+
+## Regole commerciali approvate, da implementare
+
+Fonte delle decisioni: [MONETIZATION.md](../docs/MONETIZATION.md). Le attività
+sono in [MONETIZATION-AND-FOUNDER-DASHBOARD.md](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md);
+la dashboard personale in [FOUNDER-DASHBOARD.md](../docs/FOUNDER-DASHBOARD.md).
+
+I due piani includono le stesse funzioni, con capacità distinta. La prova è di
+30 giorni senza carta per tutte le nuove aziende. Sono previste gratuità a
+vita assegnate dal fondatore, pausa mensile a fine periodo pagato, annuale senza
+congelamento e 12 mesi gratuiti di consultazione/export da fine operatività.
+Le altre regole approvate riguardano tolleranza di 7 giorni sugli insoluti,
+rettifiche pregresse, upgrade/downgrade espliciti, preavviso prezzi di 60 giorni,
+rimborsi, spazio documenti e assistenza. La quota complessiva iniziale di circa
+2 GB documenti per azienda va calibrata sui tester prima di pubblicarla.
+
+Questa documentazione non attiva i flussi nel prodotto. Copy, FAQ, CTA,
+metadata/JSON-LD e condizioni devono essere allineati quando il servizio sarà
+realmente disponibile. Non pubblicare come già attivi checkout, pausa, archivio,
+tempi di ripristino o assistenza non ancora predisposti. I tester gratuiti a
+vita non costituiscono un freemium aperto al pubblico. La dicitura IVA attuale
+e i documenti fiscali vanno verificati sul canale di vendita scelto.
 
 Il pubblico è **qualunque azienda con personale a turni**, non solo
 l'ospitalità: sul sito le persone sono «team» / «dipendenti», il luogo «sede».
@@ -100,6 +123,14 @@ Il testo è allineato al comportamento di cancellazione implementato il 23/09:
 la scheda dell'organico resta nominativa e scollegata dall'account, mentre i file
 caricati dall'account vengono rimossi prima di eliminare le credenziali. Recapito
 privacy e dati fiscali restano da confermare prima della messa in esercizio.
+
+Il nuovo ciclo commerciale richiede inoltre condizioni del servizio e accordo
+sul trattamento dei dati coerenti con prova, pagamenti, archivio e cancellazione.
+La durata di 12 mesi è una scelta commerciale: l'EDPB non stabilisce un termine
+universale. Validare finalità, necessità e tempi per categoria, incluse copie e
+backup. Le pagine pubbliche attuali descrivono il comportamento esistente e
+andranno aggiornate con il rilascio effettivo; la promessa di eliminazione dei
+backup entro 30 giorni va verificata sulla configurazione reale.
 
 ## Variabili d'ambiente
 

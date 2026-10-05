@@ -96,5 +96,20 @@ leggi, in quest'ordine:
 - `supabase/README.md`: schema, RLS, migrazioni e banco di prova;
 - `web/README.md` e `web-site/README.md`: dashboard e sito pubblico.
 
-Le attività di consolidamento e le relative prove sono tracciate in
-`plans/AUDIT-2026-09-22.md`.
+## Decisioni di prodotto e piani
+
+- [Documentazione dedicata](docs/README.md): indice delle decisioni correnti.
+- [Monetizzazione](docs/MONETIZATION.md): regole approvate per listino,
+  prova gratuita, gratuità a vita, rinnovi, pause, archivio, rimborsi e assistenza.
+- [Dashboard personale del fondatore](docs/FOUNDER-DASHBOARD.md): requisiti
+  della gestione di aziende, utenti, incassi, spese, capacità e scadenze.
+- [Piano di implementazione](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md):
+  inventario, dipendenze, blocchi M01–M11 e verifiche.
+- [Audit corrente](plans/AUDIT-2026-10-04.md): consolidamento del prodotto;
+  [audit precedente](plans/AUDIT-2026-09-22.md) per il contesto storico.
+
+Pagamenti automatici dal web e dashboard essenziale sono requisiti per il
+lancio pagante, ancora da implementare. **Paddle** è scelto; approvazione
+account, procedura fiscale della partita IVA forfettaria dichiarata e
+validazione privacy restano da completare. Le scelte documentate non attestano
+una funzione già live.

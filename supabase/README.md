@@ -56,6 +56,62 @@ Le RPC `claim_invite_send`, `peek_invite`, `consume_invite`, `delete_account` so
 **solo service role** (le chiamano le Edge Function): il token d'invito non deve
 mai arrivare a chi invita.
 
+## Monetizzazione e amministrazione: requisiti da implementare
+
+Le regole approvate sono in [MONETIZATION.md](../docs/MONETIZATION.md),
+l'amministrazione globale in
+[FOUNDER-DASHBOARD.md](../docs/FOUNDER-DASHBOARD.md), il piano e le verifiche in
+[MONETIZATION-AND-FOUNDER-DASHBOARD.md](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
+
+Il campo corrente `workspaces.plan` (`free/pro`, default `pro`) è il modello
+storico; non contiene pagamenti, scadenze, capacità acquistata o concessioni
+permanenti. Non è modificabile dal client. Il nuovo modello resta aziendale e
+separa contratto, periodo/concessione, capacità e permessi del membro.
+
+### Fondazione commerciale M03a nel codice
+
+La migration [20261005000100_workspace_access.sql](migrations/20261005000100_workspace_access.sql)
+aggiunge `workspace_commercial_state` e `workspace_access_periods`, con RLS e
+senza privilegi diretti per i client. `get_workspace_access` restituisce stato,
+date e capacità solo a un membro attivo; i conteggi aziendali sono riservati ai
+gestori e non dipendono dall'ambito delle sedi visibili.
+
+`start_workspace_trial` richiede il titolare e una sede aperta: attiva una volta
+sola Team/una sede/30 giorni dal server e restituisce lo stesso periodo ai
+retry. `grant_workspace_access` è eseguibile solo dal servizio fidato: concede
+periodi gratuiti o di transizione espliciti, mai pagamenti presunti. Il read
+model distingue setup, operatività, archivio, scadenza e revisione migrazione;
+deriva dodici mesi di archivio in Europe/Rome e una finestra distinta di sette
+giorni per rettifiche. Questi flag non autorizzano ancora scritture pregresse:
+servono i controlli per record nelle RPC operative.
+
+Il backfill registra solo le aziende da classificare, senza assegnare prove,
+pagamenti o gratuità a vita. Questo blocco è **additivo**: mantiene il campo
+storico per compatibilità e non modifica ancora le RPC operative o Storage.
+Applicazione completa dei limiti, interfacce, rollout, periodi Paddle e
+cancellazione dell'archivio richiedono i passaggi successivi del piano. La
+presenza della migration nella repo non attesta un'applicazione sul remoto.
+
+Le scritture operative e Storage devono verificare accesso/capacità nel server,
+anche per inviti, ripristini e riaperture concorrenti. La sola lettura conserva
+lettura/export nei permessi effettivi, azioni di sicurezza e revoca accessi;
+rettifiche pregresse e chiusura timbrature richiedono eccezioni limitate.
+Date server e fine operatività governano i 12 mesi di archivio: login, rettifiche
+e retry non riavviano la finestra.
+
+`delete_account` non è una pausa commerciale: elimina credenziali/file e può
+chiudere l'azienda quando manca un altro titolare. Servono stati commerciali
+distinti, scope storico per sedi chiuse ed export dei periodi conservati.
+La cancellazione operativa deve essere verificabile su DB, Storage e copie;
+un ripristino non deve ripubblicare dati già cancellati. I backup del database
+non comprendono gli oggetti Storage: prevedere copie/ripristino dei file separati.
+
+Eventi provider firmati, idempotenza e riconciliazione governano i diritti
+paganti. Allowlist amministrativa, MFA e autorizzazione server proteggono le
+query globali e ogni mutazione del fondatore, con traccia degli interventi.
+`authority = owner` vale nell'azienda e non concede amministrazione di KlokShift.
+Nomi/tabelle/helper proposti nel piano non attestano schema già esistente.
+
 ## Banco di prova locale
 
 Non c'è la CLI Supabase in questa repo: `supabase/tests/run.sh` fa da `db reset`

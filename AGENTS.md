@@ -6,7 +6,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 
 # KlokShift
 
-Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. Le **sedi** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore. Niente Stripe nel MVP.
+Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. Le **sedi** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore. Pagamenti automatici dal web e dashboard personale del fondatore devono essere pronti prima dei primi clienti paganti; **Paddle** è il provider scelto, approvazione account e integrazione da completare.
 
 > Il marketplace (professionisti che cercano turni e si candidano ad annunci) è stato rimosso dal codice il 2026-09-12 e dal DB il 2026-09-20 (`applications`, `shift_kind`, i `notification_type` `application_*` e i campi da annuncio dei turni non esistono più): non va riesumato senza una decisione di prodotto.
 >
@@ -97,6 +97,39 @@ cumulabilità e maggiorazioni dipendono dal contratto applicato. Un conflitto fr
 assenza riconosciuta e lavoro effettivo deve risultare **da verificare**, non
 essere contato due volte in silenzio.
 
+## Monetizzazione e dashboard personale (2026-10-05)
+
+Le regole approvate sono in [docs/MONETIZATION.md](docs/MONETIZATION.md);
+la dashboard del fondatore in
+[docs/FOUNDER-DASHBOARD.md](docs/FOUNDER-DASHBOARD.md). Il piano di esecuzione è
+[plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
+La documentazione descrive decisioni e requisiti: pagamenti, nuovi limiti,
+archivio e amministrazione globale devono ancora essere implementati.
+
+- Il piano è aziendale; i due piani hanno le stesse funzioni e capacità diversa.
+  Il limite di 30 riguarda persone uniche nell'intera azienda, non per sede.
+- Prova di 30 giorni senza carta per tutte le nuove aziende. Gratuità a vita
+  assegnata dal fondatore per azienda, con piano e sedi concessi individualmente.
+- Pausa mensile a fine periodo pagato; annuale senza congelamento automatico.
+  Archivio gratuito di 12 mesi da fine operatività, con consultazione/export,
+  revoca accessi e percorso di cancellazione dedicato. Pausa, disdetta,
+  cancellazione account e cancellazione dati sono operazioni distinte.
+- Insoluto di rinnovo: 7 giorni di tolleranza; rettifiche pregresse: finestra
+  separata di 7 giorni senza nuova operatività. Entrambe richiedono controlli
+  server, senza reset dell'archivio per login, retry o rettifiche.
+- Capacità, concessioni, eventi finanziari e date si verificano nel backend;
+  non trasformare il vecchio `free/pro` in un freemium pubblico e non sbloccare
+  un diritto commerciale perché il suo dato manca.
+- Prezzi e acquisti sul sito e nei flussi commerciali web; l'app nativa non
+  mostra prezzi o checkout. Il provider scelto è **Paddle (MoR)**; account,
+  configurazione, procedura fiscale e integrazione non sono già completati.
+- Il fondatore dichiara partita IVA già attiva in forfettario e attività di
+  frontend developer; codice ATECO da recuperare e compatibilità da verificare
+  prima degli incassi. Non presumere che «licenza» o il regime fiscale bastino
+  a convalidare inquadramento, payout o dicitura IVA del checkout Paddle.
+- L'area del fondatore richiede autorizzazione server distinta dai permessi
+  di titolare cliente. L'accesso globale non deriva da `authority = owner`.
+
 ## Stack
 | Categoria | Tecnologia |
 |-----------|-----------|
@@ -146,11 +179,12 @@ web-site/   # sito vetrina pubblico + pagine legali (radice su Pages)
 ```
 
 ⚠️ Il copy del sito vetrina sta tutto in `web-site/src/content/it.ts` e non può
-nominare recensioni, candidature o paghe. Il listino è invece definitivo e può
-comparire soltanto sul sito: 29 €/mese o 290 €/anno fino a 30 dipendenti,
+nominare recensioni, candidature o paghe. Il listino pubblico è sul sito e i
+riepiloghi/acquisti contrattuali sono sul web: 29 €/mese o 290 €/anno fino a 30 dipendenti unici nell'azienda,
 49 €/mese o 490 €/anno senza limite, sede aggiuntiva 15 €/mese o 150 €/anno,
 IVA esclusa; l'annuale equivale a 10 mensilità, quindi offre 2 mesi gratuiti.
-L'app non mostra prezzi. Vedi `web-site/README.md`.
+L'app nativa non mostra prezzi. La procedura fiscale effettiva del provider
+resta da validare. Vedi `web-site/README.md` e `docs/MONETIZATION.md`.
 
 ## Path alias
 `@/` → `src/`. Es. `import { cn } from "@/lib/cn"`, `import { View, Text } from "@/tw"`.

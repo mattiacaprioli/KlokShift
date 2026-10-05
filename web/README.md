@@ -10,6 +10,28 @@ policy dedicate al web. L'accesso del gestore deriva da `workspace_members`:
 authority e permessi stabiliscono cosa può fare, mentre `member_scope` limita le
 sedi su cui può farlo. `venues` non contiene un `owner_id`.
 
+## Gestione commerciale e dashboard personale: sviluppo previsto
+
+Le regole sono in [MONETIZATION.md](../docs/MONETIZATION.md), i requisiti della
+dashboard del fondatore in
+[FOUNDER-DASHBOARD.md](../docs/FOUNDER-DASHBOARD.md), gli step in
+[MONETIZATION-AND-FOUNDER-DASHBOARD.md](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
+Queste parti sono da implementare; non sono funzioni già disponibili.
+
+La gestione commerciale del cliente vive sul web: acquisto, riepilogo prezzo,
+upgrade/downgrade, disdetta, pausa e ripartenza. Le azioni sono riservate ai
+titolari autorizzati e rispettano capacità aziendale, periodo acquistato ed
+eventi verificati del provider. Durante l'archivio devono rimanere accessibili
+storico/export e revoca degli accessi, comprese sedi chiuse e periodi conservati
+più vecchi di dodici mesi; il selettore attuale delle Ore va esteso.
+
+La dashboard personale del fondatore è un'area distinta dalla dashboard
+aziendale, con autorizzazione server dedicata, MFA e query amministrative
+separate. Il percorso inizialmente proposto è `#/amministrazione`, compatibile
+con l'HashRouter; non esiste ancora. Il possesso di un'azienda cliente non
+concede accesso globale, e le credenziali del provider/service role restano sul
+server. Riutilizzare lo stack e il data layer, senza fetch nei componenti.
+
 ## Comandi (dalla root del repo)
 
 ```bash

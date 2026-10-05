@@ -13,6 +13,12 @@ export const qk = {
     staffCanChat: (workspaceId: string) =>
       ["context", "staffCanChat", workspaceId] as const,
   },
+  /** Diritto commerciale distinto da identità, permessi e vecchio Free/Pro. */
+  workspaceAccess: {
+    all: ["workspaceAccess"] as const,
+    byWorkspace: (workspaceId: string) =>
+      ["workspaceAccess", "byWorkspace", workspaceId] as const,
+  },
   venues: {
     all: ["venues"] as const,
     /**

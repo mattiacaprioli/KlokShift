@@ -47,6 +47,7 @@ function useInvalidateVenues(workspaceId: string) {
       qc.invalidateQueries({ queryKey: qk.context.mine }),
       qc.invalidateQueries({ queryKey: qk.venues.mine }),
       qc.invalidateQueries({ queryKey: qk.venues.closed(workspaceId) }),
+      qc.invalidateQueries({ queryKey: qk.workspaceAccess.byWorkspace(workspaceId) }),
     ]);
 }
 

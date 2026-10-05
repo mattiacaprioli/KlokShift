@@ -1,5 +1,31 @@
 import { supabase } from "@/lib/supabase";
+import { parseWorkspaceAccess, type WorkspaceAccess } from "./access";
 import type { MyContext } from "./types";
+
+/** Stato/capacità dell'azienda; la RPC verifica appartenenza e dati condivisibili. */
+export async function getWorkspaceAccess(workspaceId: string): Promise<WorkspaceAccess> {
+  if (!workspaceId.trim()) throw new Error("workspace_access_invalid");
+  const { data, error } = await supabase.rpc("get_workspace_access", {
+    p_workspace: workspaceId,
+  });
+  if (error) throw new Error(error.message);
+  const access = parseWorkspaceAccess(data);
+  if (access.workspace_id !== workspaceId) throw new Error("workspace_access_invalid");
+  return access;
+}
+
+/** Avvio esplicito del titolare; date e idempotenza appartengono al server. */
+export async function startWorkspaceTrial(workspaceId: string): Promise<string> {
+  if (!workspaceId.trim()) throw new Error("workspace_access_invalid");
+  const { data, error } = await supabase.rpc("start_workspace_trial", {
+    p_workspace: workspaceId,
+  });
+  if (error) throw new Error(error.message);
+  if (typeof data !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(data)) {
+    throw new Error("workspace_access_invalid");
+  }
+  return data;
+}
 
 /**
  * Il contesto dell'account: le sue appartenenze (anche quelle da accettare), le

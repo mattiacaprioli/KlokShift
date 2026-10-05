@@ -162,6 +162,7 @@ export function RealtimeSync({
         qk.staff.all,
         qk.roles.all,
         qk.team.all,
+        qk.workspaceAccess.byWorkspace(workspaceId),
         qk.chat.conversationsAll,
         qk.chat.unreadAll,
       ]) {
@@ -189,6 +190,7 @@ export function RealtimeSync({
         { event: "*", schema: "public", table: "venue_members", filter },
         () => {
           invalidate(qk.staff.all);
+          invalidate(qk.workspaceAccess.byWorkspace(workspaceId));
         }
       );
       channel.on(
@@ -247,6 +249,7 @@ export function RealtimeSync({
       () => {
         invalidate(qk.staff.all);
         invalidate(qk.team.all);
+        invalidate(qk.workspaceAccess.byWorkspace(workspaceId));
         // Il permesso «Ore» decide anche chi legge riepilogo e crediti.
         invalidate(qk.absences.summaryAll);
         invalidate(qk.absences.creditsAll);
@@ -276,6 +279,10 @@ export function RealtimeSync({
   // gli eventi che arrivano sono solo le mie righe.
   useEffect(() => {
     const rejoin = watchRejoin(() => {
+      // Durante la caduta potrei essere passato da gestore a dipendente.
+      // Reset, non sola invalidazione: gli aggregati precedenti non rimangono
+      // visibili mentre si verifica la nuova appartenenza.
+      void qc.resetQueries({ queryKey: qk.workspaceAccess.all });
       invalidate(qk.context.mine);
       invalidate(qk.venues.mine);
     });
@@ -289,7 +296,14 @@ export function RealtimeSync({
           table: "workspace_members",
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
+          const changedWorkspace = idOf(rowOf(payload), "workspace_id");
+          // Il DELETE può avere soltanto l'id: in quel caso resetta il prefisso.
+          void qc.resetQueries({
+            queryKey: changedWorkspace
+              ? qk.workspaceAccess.byWorkspace(changedWorkspace)
+              : qk.workspaceAccess.all,
+          });
           invalidate(qk.context.mine);
           invalidate(qk.venues.mine);
         }
@@ -300,7 +314,7 @@ export function RealtimeSync({
       rejoin.stop();
       supabase.removeChannel(channel);
     };
-  }, [userId, invalidate]);
+  }, [userId, invalidate, qc]);
 
   useEffect(() => {
     if (isManager) return;
