@@ -13,9 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
-import { ProBadge } from "@/features/plan/ProLock";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
-import { useProGate } from "@/features/plan/hooks";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -111,10 +109,9 @@ function PersonRow({
 export default function ManagerStaffScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isPro, gate } = useProGate();
 
   const venueQuery = useOwnerVenues();
-  const { venues, isMultiVenue, canAny } = venueQuery;
+  const { venues, isMultiVenue, canAny, canUseOperations } = venueQuery;
   // Un collaboratore vede questa scheda solo per ciò che il titolare gli ha
   // dato. Nascondere i pulsanti non è la difesa — quella è la RLS
   // (`my_venue_ids('staff')`) — ma un bottone che porta a una schermata vuota è
@@ -172,7 +169,7 @@ export default function ManagerStaffScreen() {
           <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
         ) : (
           <>
-            {canStaff ? (
+            {canStaff && canUseOperations ? (
               <GoldButton
                 label="Aggiungi allo staff"
                 onPress={() => router.push("/(manager)/staff/new")}
@@ -182,7 +179,7 @@ export default function ManagerStaffScreen() {
             {/* Anche chi organizza i turni li lavora. Finché la scheda non c'è le
                 sue ore non esistono da nessuna parte: né nel planning, né in
                 «Ore del mese», né nell'export. Sparisce appena si è dentro. */}
-            {canStaff && !self.isPending && !self.hasCard ? (
+            {canStaff && canUseOperations && !self.isPending && !self.hasCard ? (
               <Card
                 className="rounded-3xl border-border-2 p-4"
                 onPress={() => router.push("/(manager)/staff/new?self=1")}
@@ -207,7 +204,7 @@ export default function ManagerStaffScreen() {
             {canHours ? (
             <Card
               className="rounded-3xl border-border-2 p-4"
-              onPress={gate(() => router.push("/(manager)/ore"))}
+              onPress={() => router.push("/(manager)/ore")}
             >
               <View className="flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
@@ -223,11 +220,7 @@ export default function ManagerStaffScreen() {
                       : "Riepilogo ore e export per il commercialista"}
                   </Text>
                 </View>
-                {isPro ? (
-                  <Icon name="chevR" size={18} color="#8c857a" />
-                ) : (
-                  <ProBadge />
-                )}
+                <Icon name="chevR" size={18} color="#8c857a" />
               </View>
             </Card>
             ) : null}

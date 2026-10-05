@@ -103,8 +103,12 @@ Le regole approvate sono in [docs/MONETIZATION.md](docs/MONETIZATION.md);
 la dashboard del fondatore in
 [docs/FOUNDER-DASHBOARD.md](docs/FOUNDER-DASHBOARD.md). Il piano di esecuzione è
 [plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
-La documentazione descrive decisioni e requisiti: pagamenti, nuovi limiti,
-archivio e amministrazione globale devono ancora essere implementati.
+M03a/M03b implementano modello, accesso/capacità server e collegamento iniziale
+app/dashboard, verificati in locale. `migration_pending` conserva esplicitamente
+le operazioni precedenti, senza concessioni inventate; il dato mancante non
+sblocca. Pagamenti, amministrazione globale, quote/downgrade, rollout reale e
+completamento archivio/cancellazione restano da implementare. Procedura dev:
+[docs/TEST-MONETIZATION-M03B.md](docs/TEST-MONETIZATION-M03B.md).
 
 - Il piano è aziendale; i due piani hanno le stesse funzioni e capacità diversa.
   Il limite di 30 riguarda persone uniche nell'intera azienda, non per sede.

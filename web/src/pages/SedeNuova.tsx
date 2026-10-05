@@ -12,11 +12,10 @@ import { PageHeader, Placeholder } from "../ui/primitives";
  * dopo il salvataggio: la sede nuova entra in `venues` e compare da sé nel
  * planning, nell'organico e nel picker del form turno.
  *
- * `plan` si legge dal provider invece che da `usePlan()` perché quell'hook
- * importa `expo-router`, che qui non esiste. È il piano dell'**azienda**.
+ * Il gate legge la capacità aziendale restituita dal server.
  */
 export function SedeNuovaPage() {
-  const { venues, isOwner, plan } = useOwnerVenues();
+  const { venues, isOwner, access } = useOwnerVenues();
   const navigate = useNavigate();
 
   // Aprire una sede è del titolare e non si delega: `VenuesCard` già non mostra
@@ -36,15 +35,14 @@ export function SedeNuovaPage() {
   }
 
   const gate = canCreateVenue({
-    venueCount: venues.length,
-    plan,
+    access,
   });
 
   if (!gate.allowed) {
     return (
       <>
         <PageHeader title="Nuova sede" />
-        <Placeholder title="Più sedi è una funzione Pro" detail={gate.reason} />
+        <Placeholder title="Nuova sede non disponibile" detail={gate.reason} />
       </>
     );
   }

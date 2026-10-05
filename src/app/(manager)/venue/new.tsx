@@ -1,11 +1,9 @@
 import { useRouter } from "expo-router";
 import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GoldButton } from "@/components/ui/GoldButton";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueFormView } from "@/features/venues/VenueFormView";
 import { canCreateVenue } from "@/features/venues/gate";
-import { usePlan, PAYWALL_ROUTE } from "@/features/plan/hooks";
 
 /**
  * Creazione di una sede: la prima, o la terza.
@@ -19,20 +17,14 @@ import { usePlan, PAYWALL_ROUTE } from "@/features/plan/hooks";
  */
 export default function VenueNewScreen() {
   const router = useRouter();
-  const { venues, workspaceId } = useOwnerVenues();
-  const plan = usePlan();
+  const { venues, workspaceId, access, isPending } = useOwnerVenues();
 
-  const gate = canCreateVenue({ venueCount: venues.length, plan });
+  const gate = canCreateVenue({ access, firstWorkspace: !workspaceId && !isPending });
 
   if (!gate.allowed) {
     return (
       <View className="flex-1 justify-center bg-bg-0 px-6">
-        <EmptyState title="Più sedi è una funzione Pro" subtitle={gate.reason} />
-        <GoldButton
-          className="mt-6"
-          label="Scopri Pro"
-          onPress={() => router.replace(PAYWALL_ROUTE)}
-        />
+        <EmptyState title="Nuova sede non disponibile" subtitle={gate.reason} />
       </View>
     );
   }

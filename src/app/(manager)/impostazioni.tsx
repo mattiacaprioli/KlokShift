@@ -6,7 +6,6 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
 import { LegalLinks } from "@/features/account/LegalLinks";
-import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -174,7 +173,6 @@ export default function ManagerSettingsScreen() {
           </View>
         ) : null}
 
-        <DevPlanToggle />
         <LegalLinks />
 
         <DevIntroReset />

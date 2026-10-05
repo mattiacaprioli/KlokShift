@@ -1,9 +1,11 @@
-import type { PropsWithChildren } from "react";
+import { useEffect, type PropsWithChildren } from "react";
+import { AppState } from "react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "react-error-boundary";
 import * as Sentry from "@sentry/react-native";
 import { queryClient } from "@/lib/queryClient";
+import { qk } from "@/lib/queryKeys";
 import { AuthProvider } from "@/lib/auth";
 import { OwnerVenuesProvider } from "@/features/venues/OwnerVenues";
 import { ViewModeProvider } from "@/features/team/ViewMode";
@@ -22,6 +24,12 @@ import { ErrorFallback } from "@/providers/ErrorFallback";
  * fallback can still use the providers above.
  */
 export function AppProviders({ children }: PropsWithChildren) {
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state === "active") void queryClient.invalidateQueries({ queryKey: qk.workspaceAccess.all });
+    });
+    return () => listener.remove();
+  }, []);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

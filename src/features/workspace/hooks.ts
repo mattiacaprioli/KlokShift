@@ -10,7 +10,7 @@ import {
   startWorkspaceTrial,
   transferOwnership,
 } from "./api";
-import { workspaceAccessRefetchDelay } from "./access";
+import { canUseWorkspaceOperations, workspaceAccessRefetchDelay } from "./access";
 
 /**
  * Cache per azienda; quella dell'account si svuota al cambio di sessione.
@@ -28,7 +28,10 @@ export function useWorkspaceAccess(workspaceId: string | undefined) {
     refetchOnReconnect: true,
     refetchInterval: (current) => current.state.status === "error"
       ? false
-      : workspaceAccessRefetchDelay(current.state.data),
+      : workspaceAccessRefetchDelay(current.state.data, Date.now(), current.state.dataUpdatedAt),
+    // Cambi riservati al servizio non emettono realtime pubblico. Rileggere
+    // al focus/reconnect anche per le concessioni permanenti.
+    staleTime: 0,
   });
   const access = enabled && !query.isError ? query.data : undefined;
   return {
@@ -36,6 +39,7 @@ export function useWorkspaceAccess(workspaceId: string | undefined) {
     access,
     isAccessPending: enabled && query.isPending,
     canOperate: access?.can_operate ?? false,
+    canUseOperations: canUseWorkspaceOperations(access),
     canRead: access?.can_read ?? false,
     canCompleteAttendance: access?.can_complete_attendance ?? false,
   };

@@ -24,6 +24,8 @@ const setup = {
   can_complete_attendance: false,
   limits: { people: null, venues: null },
   usage: { people: 0, venues: 0 },
+  server_now: null,
+  next_change_at: null,
 };
 
 describe("API commerciale per azienda", () => {

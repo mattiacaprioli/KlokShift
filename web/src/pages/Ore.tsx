@@ -1,6 +1,6 @@
 import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
@@ -24,17 +24,8 @@ import {
   PageHeader,
   Placeholder,
   QueryError,
-  Select,
   StickyHeader,
 } from "../ui/primitives";
-
-/** Ultimi 12 mesi, dal più recente: copre ogni esigenza del commercialista. */
-function recentMonths(): string[] {
-  const now = new Date();
-  return Array.from({ length: 12 }, (_, i) =>
-    monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1))
-  );
-}
 
 /**
  * Le ore del mese di **tutta l'azienda**, una riga per persona.
@@ -47,11 +38,12 @@ function recentMonths(): string[] {
  */
 export function OrePage() {
   const { profile } = useAuth();
-  const { workspaceId, venues } = useOwnerVenues();
-  const months = useMemo(() => recentMonths(), []);
-  const [month, setMonth] = useState(months[0]);
-  // `months` va dal più recente: +1 è il mese prima.
-  const monthIndex = months.indexOf(month);
+  const { workspaceId, venues, historyVenues } = useOwnerVenues();
+  const [month, setMonth] = useState(monthKey(new Date()));
+  const adjacentMonth = (offset: number) => {
+    const [year, number] = month.split("-").map(Number);
+    return monthKey(new Date(year, number - 1 + offset, 1));
+  };
   const { data, isPending, isError, error } = useOwnerHoursSummary(
     workspaceId,
     month
@@ -66,7 +58,7 @@ export function OrePage() {
   const toReview = people.reduce((s, p) => s + p.to_review_count, 0);
   const proposedHours = people.reduce((s, p) => s + p.proposed_hours, 0);
   const label = monthLabel(month);
-  const company = companyName(venues, profile?.full_name);
+  const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
   // Ferie, permessi e malattia del mese: ore nel consuntivo, giorni nel dettaglio.
   const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
   const absences = absenceQuery.data ?? [];
@@ -135,27 +127,22 @@ export function OrePage() {
           <div className="flex gap-2">
             <Button
               aria-label="Mese precedente"
-              onClick={() => setMonth(months[monthIndex + 1])}
-              disabled={monthIndex === months.length - 1}
+              onClick={() => setMonth(adjacentMonth(-1))}
             >
               ←
             </Button>
-            <Select
+            <input
+              type="month"
               aria-label="Mese"
               value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="w-auto"
-            >
-              {months.map((m) => (
-                <option key={m} value={m}>
-                  {monthLabel(m)}
-                </option>
-              ))}
-            </Select>
+              max={monthKey(new Date())}
+              onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setMonth(e.target.value); }}
+              className="rounded-xl border border-border-2 bg-bg-card px-3 text-sm text-t1"
+            />
             <Button
               aria-label="Mese successivo"
-              onClick={() => setMonth(months[monthIndex - 1])}
-              disabled={monthIndex === 0}
+              onClick={() => setMonth(adjacentMonth(1))}
+              disabled={month >= monthKey(new Date())}
             >
               →
             </Button>

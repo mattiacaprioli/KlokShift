@@ -26,7 +26,6 @@ export default function ManagerLayout() {
       <Stack.Screen name="ore" options={{ headerShown: false }} />
       <Stack.Screen name="assenze" options={{ headerShown: false }} />
       <Stack.Screen name="storico" options={{ headerShown: false }} />
-      <Stack.Screen name="pro" options={{ headerShown: false }} />
       <Stack.Screen name="ruoli" options={{ headerShown: false }} />
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
       <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />

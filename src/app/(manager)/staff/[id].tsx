@@ -46,7 +46,6 @@ import {
   useUpdateStaffPerson,
 } from "@/features/staff/hooks";
 import { PersonThisMonthSection } from "@/features/assignments/PersonThisMonthSection";
-import { useIsPro } from "@/features/plan/hooks";
 import { PersonAbsencesSection } from "@/features/absences/PersonAbsencesSection";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -1003,7 +1002,6 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const managerId = session!.user.id;
-  const isPro = useIsPro();
   const remove = useRemoveStaffMember();
   const startConversation = useStartConversation();
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -1246,7 +1244,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
             <PersonIdentitySection person={person} />
             {/* Dietro il permesso Ore: senza, la RPC torna zero righe e uno
                 «0 h» sembrerebbe un dato. */}
-            {canAny("can_view_hours") && isPro ? (
+            {canAny("can_view_hours") ? (
               <PersonThisMonthSection person={person} />
             ) : null}
             {/* Le ore da contratto sono un accordo fra la persona e l'azienda,

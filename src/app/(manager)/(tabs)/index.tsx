@@ -21,7 +21,7 @@ import {
   liveClockSummary,
   type LiveClockStatus,
 } from "@/features/clock/live";
-import { ProUpsellCard } from "@/features/plan/ProLock";
+import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import {
   computeHomeStats,
   periodLabel,
@@ -330,8 +330,8 @@ export default function ManagerHome() {
               <NoVenuesState subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni." />
             ) : null}
 
-            {/* Upsell Pro — visibile solo agli utenti Free */}
-            <ProUpsellCard />
+            {/* Stato e date dell’azienda */}
+            <WorkspaceAccessCard />
 
             {/* Il proprio turno prima di quelli degli altri: chi organizza i
                 turni e ci lavora apre l'app anche per sapere quando attacca. */}

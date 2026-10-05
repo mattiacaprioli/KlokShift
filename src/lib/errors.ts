@@ -25,6 +25,11 @@ export class UserFacingError extends Error {
 }
 
 const PATTERNS: { match: string[]; message: string }[] = [
+  { match: ["workspace_read_only"], message: "L'azienda non ha accesso operativo. Puoi consultare ed esportare lo storico." },
+  { match: ["workspace_people_capacity"], message: "La capacità di persone dell'azienda è raggiunta. Il lavoro esistente continua." },
+  { match: ["workspace_venue_capacity"], message: "La capacità di sedi aperte dell'azienda è raggiunta. Chiudere una sede conserva lo storico." },
+  { match: ["attendance_window_closed"], message: "La rettifica non rientra nella finestra per le presenze pregresse. Contatta l'assistenza." },
+  { match: ["workspace_access_unavailable"], message: "Lo stato dell'azienda non è disponibile. Aggiorna e riprova." },
   {
     // Il browser e React Native usano parole diverse per la stessa cosa.
     match: ["failed to fetch", "network request failed", "load failed"],

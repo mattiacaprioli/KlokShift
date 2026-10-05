@@ -1,6 +1,6 @@
 # Dashboard personale del fondatore
 
-**Stato:** specifica da implementare. Regole commerciali approvate il 2026-10-05; nessuna funzionalità amministrativa descritta qui è dichiarata già disponibile.
+**Stato:** specifica da implementare. Regole commerciali approvate il 2026-10-05; M03a/M03b forniscono il modello e i controlli server locali; nessuna area amministrativa globale/MFA/audit descritta qui è dichiarata già disponibile. Il prossimo blocco della sequenza rimane M05, poi concessioni M06.
 
 Questo documento è la fonte dedicata per requisiti, dati, autorizzazioni e verifiche della dashboard personale di Alisher. Le regole commerciali complete sono in [MONETIZATION.md](MONETIZATION.md); dipendenze e sequenza di lavoro sono nel [piano di monetizzazione](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
 

@@ -11,7 +11,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
-import { PlanCard } from "@/features/plan/ProLock";
+import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
@@ -220,6 +220,7 @@ export default function ManagerProfiloScreen() {
         {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
             di chi sta guardando, e non dipende da quante sedi ha. */}
         <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
+        {isOwner ? <WorkspaceAccessCard /> : null}
 
         {venueQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" className="mt-16" />
@@ -238,7 +239,6 @@ export default function ManagerProfiloScreen() {
               onEdit={(id) => router.push(`/(manager)/venue/${id}`)}
               onAdd={isOwner ? () => router.push("/(manager)/venue/new") : undefined}
             />
-            {isOwner ? <PlanCard /> : null}
           </>
         ) : (
           <>
@@ -283,8 +283,6 @@ export default function ManagerProfiloScreen() {
                 onAdd={() => router.push("/(manager)/venue/new")}
               />
             ) : null}
-
-            {isOwner ? <PlanCard /> : null}
 
             {/* Una checklist che non si può spuntare è solo un elenco di cose che
                 non vanno: fuori per chi non può modificare la sede. */}

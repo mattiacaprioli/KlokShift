@@ -6,7 +6,8 @@ import {
   type PropsWithChildren,
 } from "react";
 import { useAuth } from "@/lib/auth";
-import { useMyContext } from "@/features/workspace/hooks";
+import { useMyContext, useWorkspaceAccess } from "@/features/workspace/hooks";
+import type { WorkspaceAccess } from "@/features/workspace/access";
 import {
   PERM_OF,
   type TeamPermission,
@@ -15,6 +16,7 @@ import {
   isManagerMembership,
   type Authority,
   type Membership,
+  type ContextVenue,
 } from "@/features/workspace/types";
 import { useMyVenues } from "./hooks";
 import type { Venue } from "./api";
@@ -55,7 +57,14 @@ export type OwnerVenuesState = {
   authority: Authority | undefined;
   workspaceName: string | undefined;
   /** Piano dell'azienda (chi paga), non di chi guarda. */
-  plan: "free" | "pro";
+  plan: "free" | "pro" | undefined;
+  access: WorkspaceAccess | undefined;
+  accessPending: boolean;
+  accessError: boolean;
+  canUseOperations: boolean;
+  historyVenueIds: string[];
+  historyVenues: ContextVenue[];
+  historyVenuesKey: string;
   /** Tutte le mie appartenenze non uscite, anche quelle da accettare. */
   memberships: Membership[];
   /** Gli inviti ricevuti e non ancora accettati. */
@@ -156,6 +165,7 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
     () => memberships.filter((m) => m.status === "invited"),
     [memberships]
   );
+  const commercial = useWorkspaceAccess(current?.workspace_id);
   const canManage = memberships.some(isManagerMembership);
   const canWork = memberships.some(
     (m) => m.status === "active" && (m.authority === "none" || m.works.length > 0)
@@ -206,9 +216,10 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
 
   const refetchVenues = venuesQuery.refetch;
   const refetchContext = contextQuery.refetch;
+  const refetchAccess = commercial.refetch;
   const refetch = useCallback(
-    () => Promise.all([refetchContext(), refetchVenues()]),
-    [refetchContext, refetchVenues]
+    () => Promise.all([refetchContext(), refetchVenues(), ...(current ? [refetchAccess()] : [])]),
+    [refetchContext, refetchVenues, refetchAccess, current]
   );
 
   const value = useMemo<OwnerVenuesState>(() => {
@@ -225,7 +236,14 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
       myMemberId: current?.member_id,
       authority: current?.authority,
       workspaceName: current?.workspace_name,
-      plan: current?.plan ?? "pro",
+      plan: current?.plan,
+      access: commercial.access,
+      accessPending: commercial.isAccessPending,
+      accessError: commercial.isError,
+      canUseOperations: commercial.canUseOperations,
+      historyVenueIds: (current?.venues ?? []).map((v) => v.id),
+      historyVenues: current?.venues ?? [],
+      historyVenuesKey: venuesKeyOf((current?.venues ?? []).map((v) => v.id)),
       memberships,
       pendingInvites,
       canManage,
@@ -237,7 +255,7 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
       isMultiVenue: venues.length > 1,
       isOwner,
       can,
-      canAny: (perm) => isOwner || venues.some((v) => can(v.id, perm)),
+      canAny: (perm) => isOwner || (current?.venues ?? []).some((v) => can(v.id, perm)),
       venuesWith,
       isPending: pending,
       isLoading: pending,
@@ -247,6 +265,10 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
     };
   }, [
     current,
+    commercial.access,
+    commercial.isAccessPending,
+    commercial.isError,
+    commercial.canUseOperations,
     memberships,
     pendingInvites,
     canManage,

@@ -2,7 +2,7 @@
 
 Aggiornato il **5 ottobre 2026**. Documento canonico delle decisioni commerciali e di prodotto approvate da Alisher; i dettagli ancora aperti sono indicati esplicitamente.
 
-**Stato dell'implementazione:** sviluppo avviato con la fondazione additiva M03a: motore server per stato/date/capacità, prova e concessioni, più data layer condiviso. Le verifiche e l'avanzamento sono nel piano. Oggi non esistono checkout, rinnovi, webhook commerciali, applicazione completa dei limiti o archivio commerciale in sola lettura. Il modello storico `workspaces.plan = free/pro` e i gate UI rimangono per compatibilità e non realizzano questa offerta. Nessun rilascio remoto o addebito è stato attivato.
+**Stato dell'implementazione:** M03a e blocco server M03b implementati e verificati in locale: accesso, capacità persone/sedi, blocco operativo su RPC/scritture dirette/upload, rettifiche limitate e consultazione storico. Collegamento iniziale app/dashboard: stato/date, prova esplicita, rimozione dei gate Pro sulle ore e scope storico delle sedi chiuse. Le aziende `migration_pending` conservano esplicitamente il funzionamento precedente finché vengono classificate, senza pagamenti/concessioni inventati. Il campo storico `workspaces.plan = free/pro` resta per compatibilità dello schema e non autorizza l'operatività. Restano dashboard del fondatore, quota aziendale, downgrade futuri, checkout/rinnovi/webhook Paddle e completamento di M11 (avvisi, restituzione completa e cancellazione). La procedura di test è in [TEST-MONETIZATION-M03B.md](TEST-MONETIZATION-M03B.md). Nessuna nuova migration remota o operazione finanziaria eseguita in questo blocco.
 
 La sequenza di lavoro, l'audit del codice e le verifiche sono nel [piano di implementazione](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md). La dashboard personale è descritta in [FOUNDER-DASHBOARD.md](FOUNDER-DASHBOARD.md).
 
@@ -117,7 +117,7 @@ Il calendario di retry e le fatture aperte devono essere coordinati con il provi
 
 ### Rettifiche pregresse: altri 7 giorni con finalità distinta
 
-Sono consentiti **7 giorni dopo fine operatività** per completare, approvare o rettificare presenze relative a lavoro svolto o iniziato entro quella data. La chiusura di una timbratura già aperta deve avere un limite coerente con il turno, da definire tecnicamente.
+Sono consentiti **7 giorni dopo fine operatività** per completare, approvare o rettificare presenze relative a lavoro svolto o iniziato entro quella data. Nel blocco M03b la chiusura di una timbratura già aperta è limitata anche a prima di fine turno + 24 ore, oltre alla finestra complessiva di sette giorni. Inizio reale e assegnazione devono precedere fine operatività; le correzioni non possono spostare lavoro oltre questi confini. È il limite tecnico locale da verificare nei flussi dev, non una nuova tolleranza finanziaria.
 
 L'eccezione è limitata ai record pertinenti, con permessi e audit: nessun nuovo turno, assegnazione, lavoro o upload operativo. Dopo la finestra resta il percorso assistito per rettifiche pregresse e richieste sui diritti. Questa finestra non prolunga l'operatività o l'archivio e non diventa una seconda tolleranza di pagamento.
 

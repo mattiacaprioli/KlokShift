@@ -87,7 +87,7 @@ export function useOwnerShiftsRange(
 export function useOwnerPastShifts(
   filters: PastShiftsFilters = NO_PAST_FILTERS
 ) {
-  const { venueIds, venuesKey } = useOwnerVenues();
+  const { historyVenueIds: venueIds, historyVenuesKey: venuesKey } = useOwnerVenues();
   return useInfiniteQuery({
     queryKey: qk.shifts.past(venuesKey, pastFiltersKey(filters)),
     queryFn: ({ pageParam }) =>
@@ -108,7 +108,7 @@ export function useOwnerPastShifts(
 export function useOwnerPastShiftsCount(
   filters: PastShiftsFilters = NO_PAST_FILTERS
 ) {
-  const { venueIds, venuesKey } = useOwnerVenues();
+  const { historyVenueIds: venueIds, historyVenuesKey: venuesKey } = useOwnerVenues();
   return useQuery({
     queryKey: qk.shifts.pastCount(venuesKey, pastFiltersKey(filters)),
     queryFn: () => getOwnerPastShiftsCount(venueIds, filters),

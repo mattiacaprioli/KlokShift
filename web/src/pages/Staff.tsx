@@ -32,7 +32,7 @@ import {
  * anche questa pagina: le sedi sono le etichette della persona.
  */
 export function StaffPage() {
-  const { ownerId, venues, isMultiVenue, canAny } = useOwnerVenues();
+  const { ownerId, venues, isMultiVenue, canAny, canUseOperations } = useOwnerVenues();
   // Un collaboratore può essere entrato per i soli turni: i pulsanti che
   // porterebbero a una schermata vuota non compaiono.
   const canStaff = canAny("can_manage_staff");
@@ -92,7 +92,7 @@ export function StaffPage() {
             ) : null}
             {/* Anche chi organizza i turni li lavora: finché non ha una scheda
                 le sue ore non entrano in nessun conto. Sparisce appena c'è. */}
-            {canStaff && !self.hasCard ? (
+            {canStaff && canUseOperations && !self.hasCard ? (
               <Button
                 onClick={() => {
                   setAddingSelf(true);
@@ -102,7 +102,7 @@ export function StaffPage() {
                 + Metti te stesso
               </Button>
             ) : null}
-            {canStaff ? (
+            {canStaff && canUseOperations ? (
               <Button
                 variant="gold"
                 onClick={() => {

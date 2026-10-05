@@ -45,7 +45,7 @@ const SEARCH_DEBOUNCE_MS = 350;
  * chiamerebbe quel risultato "lo storico".
  */
 export function StoricoPage() {
-  const { venues, can, canAny } = useOwnerVenues();
+  const { historyVenues: venues, can, canAny } = useOwnerVenues();
   // Ore e timbrature sono dati del permesso Ore, come nel Planning.
   const showHours = canAny("can_view_hours");
   // Il dettaglio si apre qui sopra, senza cambiare rotta: mandare l'utente sul

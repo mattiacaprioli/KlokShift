@@ -69,7 +69,7 @@ export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { profile } = useAuth();
-  const { workspaceId, venues } = useOwnerVenues();
+  const { workspaceId, venues, historyVenues } = useOwnerVenues();
 
   const [month, setMonth] = useState(currentMonth());
   const atCurrentMonth = month >= currentMonth();
@@ -103,7 +103,7 @@ export default function VenueHoursScreen() {
 
   async function onExport(kind: "pdf" | "csv" | "absences") {
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
-    const company = companyName(venues, profile?.full_name);
+      const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
         await exportHoursPdf(company, label, people, totalHours, absences);

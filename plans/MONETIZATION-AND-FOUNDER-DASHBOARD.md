@@ -2,7 +2,7 @@
 
 Data: **5 ottobre 2026**. Analisi del repository al commit `da956cb`.
 
-**Stato: regole commerciali approvate; implementazione avviata con la fondazione M03a.** Alisher ha confermato listino, 30 persone uniche per azienda, pagamenti automatici dal web al lancio, dashboard essenziale prima dei paganti, gratuità a vita con piano/sedi individuali, prova Team/una sede di 30 giorni e archivio di 12 mesi. Ha approvato anche le raccomandazioni sugli otto punti dopo il confronto con i concorrenti e ha scelto **Paddle**. Il fondatore dichiara una partita IVA già attiva in regime forfettario e attività di frontend developer; il codice ATECO esatto è da recuperare. Restano approvazione/configurazione Paddle, compatibilità ATECO e procedura fiscale, validazione privacy e dettagli tecnici esplicitamente aperti; la quota iniziale di spazio va calibrata sui tester. Il primo blocco implementa e verifica localmente il motore commerciale, senza migrazioni remote, checkout, addebiti o rollout dei blocchi operativi.
+**Stato: regole commerciali approvate; fondazione M03a e blocco M03b implementati localmente.** Alisher ha confermato listino, 30 persone uniche per azienda, pagamenti automatici dal web al lancio, dashboard essenziale prima dei paganti, gratuità a vita con piano/sedi individuali, prova Team/una sede di 30 giorni e archivio di 12 mesi. Ha approvato anche le raccomandazioni sugli otto punti dopo il confronto con i concorrenti e ha scelto **Paddle**. Il fondatore dichiara una partita IVA già attiva in regime forfettario e attività di frontend developer; il codice ATECO esatto è da recuperare. Restano approvazione/configurazione Paddle, compatibilità ATECO e procedura fiscale, validazione privacy e dettagli tecnici esplicitamente aperti; la quota iniziale di spazio va calibrata sui tester. M03b verifica localmente enforcement e collegamento minimo del client, senza nuove migration remote, checkout o addebiti. La classificazione/attivazione remota rimane separata.
 
 **Fonti correnti:** [MONETIZATION.md](../docs/MONETIZATION.md) per le regole e
 [FOUNDER-DASHBOARD.md](../docs/FOUNDER-DASHBOARD.md) per la dashboard personale.
@@ -32,9 +32,13 @@ Vincoli del prodotto da conservare:
 
 L'allegato riporta dicembre 2026 come obiettivo V1 e 3–5 beta tester gratuiti: sono riferimenti di pianificazione da confermare, non date di rilascio garantite.
 
-## 2. Cosa esiste oggi: mantenere, sostituire, eliminare
+## 2. Inventario iniziale: mantenere, sostituire, eliminare
 
-| Area verificata | Comportamento attuale | Intervento proposto |
+Fotografia precedente a M03a/M03b. Le righe con gate Pro, fallback, sedi
+illimitate e selettore di dodici mesi sono superate dall'implementazione
+descritta in §8; restano qui per documentare la superficie verificata.
+
+| Area verificata | Comportamento all'audit iniziale | Intervento previsto |
 |---|---|---|
 | `package.json`, `supabase/functions/` | Nessuna integrazione di pagamento trovata: niente SDK RevenueCat/Stripe, checkout o webhook commerciali | Nessuna integrazione da smontare; integrare Paddle dopo le verifiche |
 | `supabase/migrations/20260920000100_identity_tables.sql` | `workspaces.plan` è `free/pro`, default `pro`, non modificabile dal client | Conservare la titolarità del piano nell'azienda; sostituire gradualmente il modello binario |
@@ -226,7 +230,7 @@ La scadenza riguarda quell'azienda, non la sessione della persona. Si continuano
 
 La sola lettura deve bloccare le nuove attività operative e i relativi upload **nel backend**, non soltanto disabilitare pulsanti. Inventariare RPC, scritture dirette e policy Storage. I controlli di appartenenza/permesso restano necessari anche se il piano è attivo.
 
-Eccezione approvata: finestra separata di 7 giorni per completare/rettificare presenze relative a lavoro svolto o iniziato prima della fine operativa, senza nuovi turni, lavoro o proroga dell'archivio. Il limite per il clock-out di una registrazione già aperta resta da definire. Ogni eccezione va limitata per record, permesso e tempo e verificata; non lasciare una RPC genericamente scrivibile. Dopo la finestra restano il percorso assistito e le richieste sui diritti. Conferme di turni futuri e chat dopo scadenza sono dettagli ancora aperti.
+Eccezione approvata: finestra separata di 7 giorni per completare/rettificare presenze relative a lavoro svolto o iniziato prima della fine operativa, senza nuovi turni, lavoro o proroga dell'archivio. M03b applica localmente anche fine turno + 24 ore come limite tecnico del clock-out già aperto, da verificare nei flussi dev. Ogni eccezione è limitata per record, permesso e tempo. Dopo la finestra restano il percorso assistito e le richieste sui diritti. Il blocco locale nega conferme di turni futuri e richieste operative, conservando il testo della chat durante l'archivio; la procedura di assistenza completa resta M11.
 
 La conservazione non è automaticamente illimitata. Definire tempi, avvisi, export e cancellazione nei termini, distinguendo dati fiscali da dati operativi.
 
@@ -426,8 +430,8 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 |---|---|---|---|
 | M01 | Definire regole, conteggi e dettagli di lancio | Discussione con Alisher | IN CORSO: otto regole approvate; dettagli residui aperti |
 | M02 | Definire procedura fiscale e condizioni commerciali del canale iniziale | M01, commercialista | PROPOSTO |
-| M03 | Implementare accesso/capacità nel DB e concessioni gratuite a vita | Regole pertinenti M01 | IN CORSO: M03a completato e verificato localmente; enforcement e rollout successivi |
-| M04 | Rendere coerenti app, dashboard cliente e sito; eliminare Free/Pro obsoleto | M03 | PROPOSTO |
+| M03 | Implementare accesso/capacità nel DB e concessioni gratuite a vita | Regole pertinenti M01 | IN CORSO: M03a/M03b verificati localmente; quote, classificazione reale e rollout pendenti |
+| M04 | Rendere coerenti app, dashboard cliente e sito; eliminare Free/Pro obsoleto | M03 | IN CORSO: collegamento minimo e rimozione gate; flussi commerciali/sito pendenti |
 | M05 | Dashboard personale: accesso protetto, panorama, aziende e schede | M03; riuso stack web | PROPOSTO |
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | PROPOSTO |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
@@ -505,51 +509,73 @@ con il warning già presente in `web/src/shifts/ShiftPanel.tsx` sul metodo
 restituisce lo stesso periodo prova; trasferimento del titolare e retry dopo
 scadenza non ripartono da zero. Nessun deploy, migrazione remota o addebito.
 
-Prima di montare il nuovo hook nei flussi cliente: collegare refresh al ritorno
-in primo piano nell'app nativa, aggiornamenti del servizio e decorrenze future
-delle concessioni. Il read model attuale valuta soltanto `now()` e non espone
-il prossimo inizio futuro; il timer client non sostituisce l'orologio del DB.
-Verificare anche dispositivi con orologio disallineato, evitando retry continui.
-Le concessioni permanenti non richiedono polling continuo e le tabelle
-commerciali non vengono pubblicate ai client per ottenere realtime.
+**Secondo blocco M03b — DONE in locale:** nuove migration forward-only
+`20261005000200`–`20261005000500`. Guard RPC e scritture dirette, upload Storage,
+capacità persone/sedi serializzata sul lock aziendale, rettifiche per record e
+letture/report fino a fine archivio. Le aziende `migration_pending` conservano
+esplicitamente le operazioni precedenti senza inventare piano/date/periodi;
+il dato commerciale mancante è invece un errore. Nuove aziende: setup prima
+sede e pulsante di avvio prova esplicito, nessuna prova retroattiva.
 
-- [x] Inventariare RPC, scritture dirette e Storage che modificano operatività o capacità: matrice seguente; collegamento dei controlli ancora da implementare.
-- [ ] Aggiungere il minimo di contratto/periodi/concessioni e helper di accesso; proteggere date e capacità dal client. Supportare esplicitamente gratuità permanente e assenza di contratto pagante.
-- [ ] Implementare conteggio aziendale univoco e lock condiviso per aggiunte, riaperture e cambi contratto.
-- [ ] Se approvate, applicare quota documenti aziendale e capacità futura dei downgrade programmati nel backend; misurare i file reali e gestire upload concorrenti/orfani.
+Il collegamento minimo necessario alla verifica dev monta il read model su
+app/dashboard, mostra stati/date/capacità, rimuove gate Pro e override obsoleti,
+usa tutti gli id autorizzati (sedi chiuse comprese) per lo storico e permette
+mesi arbitrari nell'export web. Non completa M04 commerciale e non anticipa
+M05/M06: il prossimo blocco della sequenza è l'autorizzazione/admin del fondatore.
+
+Il refresh usa l'istante server e il prossimo inizio di concessione; focus,
+reconnect e primo piano nativo rileggono lo stato. Nessun polling permanente
+né realtime commerciale globale. Cambi del servizio su un client sempre
+visibile richiedono refresh: il controllo server sulle scritture è immediato.
+Clock-out pregresso prima di fine turno + 24 ore e entro sette giorni;
+conferme/richieste operative nuove negate in archivio, testo chat conservato,
+revoche/riduzioni e uscite disponibili. Conteggio: regola M03a mantenuta, non
+una dichiarazione di approvazione dei dettagli M01 ancora aperti.
+
+Procedura manuale completa: [TEST-MONETIZATION-M03B.md](../docs/TEST-MONETIZATION-M03B.md).
+SQL/RLS, concorrenza, test client/typecheck, lint, build web ed export iOS
+verificati nel banco locale (evidenze finali nel registro). Smoke visuale su
+backend dev isolato ancora da eseguire, con passaggi nella procedura.
+
+- [x] Inventariare e collegare RPC, scritture dirette e Storage che modificano operatività o capacità: matrice seguente, con residui distinti.
+- [x] Periodi/concessioni e helper di accesso protetti dal client; gratuità permanente e assenza di contratto pagante esplicite (M03a/M03b).
+- [ ] Contratto pagante e stati finanziari verificati: da collegare al provider in M09.
+- [x] Conteggio univoco e lock condiviso per aggiunte/riaperture e concessioni; il futuro flusso contratti deve usare lo stesso lock.
+- [ ] Applicare nel backend la quota iniziale documenti aziendale (2 GiB, da calibrare sui tester), misurando i file reali e gestendo upload concorrenti/orfani.
+- [ ] Proteggere la capacità futura dei downgrade programmati, quando il modello contratti/provider sarà disponibile.
 - [ ] Prevedere stati distinti per pausa/uscita/archivio e data di termine consultazione, senza usare cancellazione account o `deleted_at` come blocco commerciale.
-- [ ] Aggiornare creazione azienda senza accesso illimitato implicito; garantire il percorso di setup.
+- [x] Nuove aziende in setup, una sola prima sede; avvio esplicito della prova dal client, server idempotente.
 - [ ] Migrare le aziende esistenti con un elenco esplicito di gratuite a vita autorizzate, prove/beta temporanee, interne/test e reali: non trasformare automaticamente tutti i `pro` in paganti, permanenti o scaduti.
 - [ ] Introdurre una finestra di transizione con date dichiarate, verificare backfill e controlli prima di attivare i blocchi commerciali.
 - [x] Rigenerare `src/types/database.ts`, aggiungere errori a `src/lib/errors.ts` e stato di accesso nel data layer.
 
 **Uscita:** anche chiamando direttamente le API un cliente non modifica il proprio piano né supera i limiti; il setup e le aziende migrate hanno un percorso verificato.
 
-#### Superficie da collegare nell'enforcement successivo a M03a
+#### Superficie verificata nell'enforcement M03b
 
-Inventario del 2026-10-05. La prima fondazione non cambia ancora questi confini; i controlli vanno aggiunti con test delle chiamate dirette e delle operazioni concorrenti, mantenendo lettura/export e diritti amministrativi separati.
+Inventario iniziale del 2026-10-05. M03b collega accesso/capacità e conserva lettura/export e revoche. Quote aziendali, downgrade futuri, provider e restituzione completa/cancellazione restano nelle fasi pertinenti.
 
-| Superficie | Controllo da aggiungere e distinzione da preservare |
+| Superficie | Controllo implementato e residui |
 |---|---|
 | `create_workspace`, `create_venue`, `set_venue_closed` | Setup della prima sede distinto da operatività; capacità aziendale per nuove sedi/riaperture e persone che tornano a contare; chiusura senza cancellazione o stop implicito degli extra |
 | `add_member`, `set_member_venue`, `respond_to_invite`, aggancio inviti e merge delle schede | Lock comune per azienda; aggiunte/ripristini eccedenti rifiutati, accettazione di un posto già conteggiato senza doppio conteggio; merge migliorativo consentito |
 | `create_shifts`, `update_shift`, `move_assignment`, `assign`, `reassign` e altre mutazioni di assegnazione | Operatività richiesta per nuovo lavoro; non rendere genericamente scrivibile il passato durante la finestra di rettifica |
 | `clock_punch`, `record_attendance`, `correct_clock_record`, `void_clock_record`, `approve_clock_record` | Distinguere nuove timbrature da chiusura/approvazione/rettifica pregressa, con record e termini verificati dal server |
-| RPC assenze e cambi turno; `messages.INSERT` | Definire le azioni dopo scadenza prima di attivare i blocchi; comunicazioni, diritti e assistenza distinti da nuova operatività |
+| RPC assenze e cambi turno; `messages.INSERT` | Nuove richieste/conferme operative negate; testo chat disponibile durante l'archivio. Percorso assistito e richieste sui diritti restano M11 |
 | Scritture dirette `venue_roles`, `venues`, `workspaces.staff_can_chat`, `staff_documents` | Le RPC non coprono tutte le scritture: aggiornare anche policy/trigger, conservando revoca accessi, sicurezza e cancellazioni autorizzate |
-| Storage `staff documents: insert/delete`, avatar e loghi | Bloccare upload operativi e applicare quota aziendale senza bloccare download/export; cancellazione/diritti e file globali con regole separate |
+| Storage `staff documents: insert/delete`, avatar e loghi | Upload documenti operativi bloccati; download nei permessi fino a fine archivio, cancellazione autorizzata conservata. Quota aziendale ancora da implementare; avatar e loghi globali restano distinti |
 | `transfer_ownership`, `remove_member`, `leave`, `delete_account` | Recupero/revoca e uscita restano praticabili; eliminazione dell'ultimo titolare o dell'azienda deve coordinarsi con contratti, export e cancellazione |
 | Report ore, storico turni, sedi chiuse, documenti | Conservare le letture nei permessi del membro e recuperare tutto lo storico autorizzato; non usare un generico gate Pro/operatività per l'archivio |
 
 ### M04 — Ripulire l'esperienza del cliente
 
-- [ ] Rimuovere `useProGate` dalle ore e i lucchetti obsoleti, mantenendo tutti i permessi del membro.
-- [ ] Sostituire `PlanCard`, upsell, route `pro`, toggle dev e relativi chiamanti come da inventario.
-- [ ] Adattare gate sedi e conteggi senza usare soltanto le sedi visibili al collaboratore.
-- [ ] Mostrare stato/validità e comportamento a scadenza; le funzioni consultabili rimangono accessibili.
+- [x] Rimuovere `useProGate` dalle ore e i lucchetti obsoleti, mantenendo tutti i permessi del membro.
+- [x] Sostituire `PlanCard`, upsell, route `pro`, toggle dev e relativi chiamanti come da inventario.
+- [x] Adattare gate sedi e conteggi senza usare soltanto le sedi visibili al collaboratore.
+- [x] Mostrare stato/validità e comportamento a scadenza; le funzioni consultabili rimangono accessibili.
 - [ ] Implementare la gestione commerciale del titolare sul web; nell'app messaggi neutri e nessun prezzo/checkout.
 - [ ] Aggiornare `it.ts`, JSON-LD/meta di `index.html`, FAQ, CTA e documentazione. Il lancio pagante avrà un percorso web funzionante di prova/acquisto; eventuale beta anticipata ha una CTA reale di richiesta attivazione. Gratuità a vita per clienti selezionati non va presentata come freemium pubblico.
-- [ ] Aggiornare `AGENTS.md`, `web-site/README.md`, `supabase/README.md` e commenti obsoleti dopo la decisione finale.
+- [x] Aggiornare `AGENTS.md`, `web-site/README.md`, `supabase/README.md` e i commenti dei gate rimossi con lo stato M03b; ulteriori aggiornamenti seguiranno i flussi commerciali.
 
 **Uscita:** cliente e sito descrivono lo stesso servizio; nessuna funzione essenziale dipende da un tier Free/Pro inventato. Approvare il flusso store sul prodotto concreto.
 
@@ -636,23 +662,26 @@ Inventario del 2026-10-05. La prima fondazione non cambia ancora questi confini;
 
 ## 9. Verifiche richieste durante l'implementazione
 
-Queste verifiche sono da eseguire quando cambia il codice; **non sono state eseguite come parte di questa analisi documentale**.
+Verifiche inizialmente elencate nell'analisi documentale. Le voci spuntate
+indicano prove locali M03a/M03b; le voci che dipendono da admin/provider,
+rollout o smoke visuale restano aperte.
 
 ### Accesso e limiti
 
 - [ ] Cliente, collaboratore, professionista e `anon` non possono elevare accesso commerciale o leggere dati amministrativi globali.
-- [ ] Un piano attivo non concede permessi di gestione a un membro che non li ha.
-- [ ] Persona con due aziende: scadenza in una, operatività conservata nell'altra.
-- [ ] Persona in due sedi conteggiata una volta; scheda senza account conteggiata; gestore senza organico escluso.
+- [x] Un piano attivo non concede permessi di gestione a un membro che non li ha (suite RLS).
+- [x] Persona con due aziende: scadenza in una, operatività conservata nell'altra (080).
+- [x] Persona in due sedi conteggiata una volta; scheda senza account conteggiata; gestore senza organico escluso (070/080).
 - [ ] 30→31 posti, inviti, ripristino, auto-inserimento, riapertura e merge verificati, anche con collaboratore ad ambito ristretto.
-- [ ] Due aggiunte/riaperture contemporanee all'ultimo posto disponibile non eccedono capacità.
-- [ ] Scadenza effettiva senza cron, cache aggiornata dopo reconnect e nessun accesso concesso da dati ancora mancanti.
+- [x] Aggiunte e gara riapertura/aggiunta all'ultimo posto disponibile non eccedono capacità persone/sedi (concurrency/050).
+- [x] Scadenza server senza cron e nessun accesso concesso da dati mancanti; timer client calibrato sul server, incluso inizio futuro (080 e test client).
+- [ ] Smoke visuale di refresh/reconnect/background su backend dev isolato (procedura M03b).
 - [ ] Gratuità a vita valida oltre la fine della beta e dopo cambio listino; trasferimento titolarità conforme alle condizioni; nessuna estensione ad altre aziende dello stesso account.
 - [ ] Eventuale codice: doppio riscatto, destinatario errato e riscatto scaduto rifiutati; beneficio permanente conservato dopo scadenza del codice.
-- [ ] Sola lettura su RPC, scritture dirette e Storage, con eccezioni clock limitate e nessuna perdita di registrazioni aperte.
+- [x] Sola lettura su RPC, scritture dirette e Storage, con eccezioni clock per record limitate e conservazione della timbratura pregressa (080).
 - [ ] Primo mese gratuito una volta sola: non raddoppia con coupon, cambio piano, extra, ripartenza o annuale.
 - [ ] Pausa ferma tutti i rinnovi pertinenti alla data concordata; annuale mantiene durata originaria; nessuna ripresa a sorpresa.
-- [ ] Archivio accessibile senza cancellare account, anche con tutte le sedi chiuse; periodi più vecchi di 12 mesi esportabili se ancora conservati.
+- [x] Archivio accessibile senza cancellare account, anche con tutte le sedi chiuse; report di periodi più vecchi di 12 mesi disponibili se conservati (080). Export visuale da provare in dev.
 - [ ] Scadenza archivio indipendente dall'ultimo login; riattivazione concorrente alla cancellazione non perde dati; nessun vecchio webhook riapre un'azienda eliminata.
 - [ ] Cancellazione anticipata o programmata verificata su DB/Storage e copie applicative; altre aziende della persona e dati fiscali da conservare restano separati.
 
@@ -744,6 +773,8 @@ fiscale/privacy rimane separata dall'approvazione delle condizioni commerciali.
 | 2026-10-05 | Scelta Paddle e dichiarazione partita IVA forfettaria già attiva; attività frontend developer, codice ATECO non disponibile a memoria | Provider confermato; registrata intenzione di usare la partita IVA esistente. Compatibilità ATECO/procedura fiscale da verificare prima degli incassi, privacy e integrazione ancora da completare |
 | 2026-10-05 | Autorizzazione a iniziare lo sviluppo e conferma prova Team/una sede | Avviata fondazione additiva M03a: schema, RPC protette, read model e test locali; nessun rollout remoto o addebito |
 | 2026-10-05 | Completamento M03a e verifica coordinata locale | SQL/RLS/concorrenza superati; tipi rigenerati; 242 test client e typecheck app/web superati; lint senza errori con warning preesistente. Restano enforcement, interfacce, pagamenti e rollout |
+
+| 2026-10-05 | M03b e collegamento minimo client | Guard server/RLS/Storage, capacità con lock, compatibilità migration_pending, rettifiche limitate, storico sedi chiuse e mesi arbitrari. Verifica locale: 256 test client, typecheck app/web, lint (warning preesistente), build web/export iOS; suite SQL e concorrenza nel banco. Nessuna nuova migration remota o addebito. |
 
 Riferimenti interni da leggere prima di implementare: `AGENTS.md`, `ARCHITECTURE.md`, `supabase/README.md`, `web/README.md`, `web-site/README.md`, `CLOCK_IN_OUT.md`, `plans/HOURS-ABSENCES-ADJUSTMENTS.md` e stato corrente di `plans/AUDIT-2026-10-04.md`.
 

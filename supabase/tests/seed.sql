@@ -102,6 +102,9 @@ begin
   -- W1 e le sue sedi
   perform tests.login('Ow');
   w1 := public.create_workspace('W1');
+  perform tests.logout();
+  perform public.grant_workspace_access(w1,'complimentary_lifetime','team',10,now(),null,'Fixture locale dominio');
+  perform tests.login('Ow');
   v1 := public.create_venue(w1, 'V1', 'Via Uno 1', 'Milano');
   v2 := public.create_venue(w1, 'V2', 'Via Due 2', 'Milano');
   insert into tests.ids values ('W1', w1), ('V1', v1), ('V2', v2);
@@ -138,6 +141,9 @@ begin
   -- W2: Emp è titolare altrove.
   perform tests.login('Emp');
   w2 := public.create_workspace('W2');
+  perform tests.logout();
+  perform public.grant_workspace_access(w2,'complimentary_lifetime','team',10,now(),null,'Fixture locale dominio');
+  perform tests.login('Emp');
   v3 := public.create_venue(w2, 'V3');
   insert into tests.ids values ('W2', w2), ('V3', v3);
   insert into tests.ids select 'M_Emp_W2', m.id from public.workspace_members m

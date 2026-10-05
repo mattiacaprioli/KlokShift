@@ -60,7 +60,8 @@ const STATUS_OPTIONS: { id: PastShiftStatus; label: string }[] = [
 export default function ManagerHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { ownerId, venues, isMultiVenue, can } = useOwnerVenues();
+  const { ownerId, historyVenues: venues, can } = useOwnerVenues();
+  const isMultiVenue = venues.length > 1;
   const roles = groupRolesByName(useOwnerVenueRoles().data ?? []);
   const people = useOwnerPeople(ownerId).data ?? [];
 

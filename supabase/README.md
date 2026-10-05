@@ -82,22 +82,57 @@ retry. `grant_workspace_access` è eseguibile solo dal servizio fidato: concede
 periodi gratuiti o di transizione espliciti, mai pagamenti presunti. Il read
 model distingue setup, operatività, archivio, scadenza e revisione migrazione;
 deriva dodici mesi di archivio in Europe/Rome e una finestra distinta di sette
-giorni per rettifiche. Questi flag non autorizzano ancora scritture pregresse:
-servono i controlli per record nelle RPC operative.
+giorni per rettifiche. I guard M03b verificano anche il record e la data del turno prima di
+autorizzare una rettifica: il solo flag non rende il passato scrivibile.
 
-Il backfill registra solo le aziende da classificare, senza assegnare prove,
-pagamenti o gratuità a vita. Questo blocco è **additivo**: mantiene il campo
-storico per compatibilità e non modifica ancora le RPC operative o Storage.
-Applicazione completa dei limiti, interfacce, rollout, periodi Paddle e
-cancellazione dell'archivio richiedono i passaggi successivi del piano. La
-presenza della migration nella repo non attesta un'applicazione sul remoto.
+### Enforcement M03b e collegamento iniziale
 
-Le scritture operative e Storage devono verificare accesso/capacità nel server,
-anche per inviti, ripristini e riaperture concorrenti. La sola lettura conserva
-lettura/export nei permessi effettivi, azioni di sicurezza e revoca accessi;
-rettifiche pregresse e chiusura timbrature richiedono eccezioni limitate.
-Date server e fine operatività governano i 12 mesi di archivio: login, rettifiche
-e retry non riavviano la finestra.
+Le nuove migration `20261005000200`–`20261005000500` aggiungono controlli alle
+RPC, trigger sulle scritture dirette e capacità, policy Storage per upload e
+lettura, e lo stesso confine di consultazione ai report SECURITY DEFINER.
+`workspaces` è il lock comune prima delle righe figlie; capacità e conteggi
+restano quelli di M03a. Aggiungere una persona già conteggiata a una seconda
+sede non occupa un posto; riaprire verifica anche le persone che tornano a
+contare. Riduzioni e operatività esistente non sono fermate per il solo
+superamento della capacità. Inviti già riservati possono essere collegati e
+accettati senza un secondo conteggio, anche per consultare l'archivio.
+
+**`migration_pending` è un'eccezione di migrazione esplicita:** conserva le
+operazioni precedenti finché il fondatore classifica l'azienda; `can_operate`
+rimane falso nel read model e piano/capacità/date restano null. Non è una
+concessione. Una riga commerciale assente invece produce un errore, senza
+fallback. Il backfill aggiuntivo marca per revisione anche le aziende nate col
+vecchio client dopo M03a. Quelle create dopo M03b ricevono una riga di setup;
+il titolare prepara una sola sede e avvia esplicitamente la prova dal client.
+
+In archivio nessun nuovo lavoro/upload. `record_attendance`, approvazione,
+annullamento e correzione timbrature hanno guard su record/turno pregressi e
+finestra distinta di sette giorni. Clock-out: entrata entro fine operatività,
+chiusura prima di fine turno + 24 ore e comunque nella finestra di rettifica.
+Le nuove richieste di assenza/cambio turno sono bloccate; il testo della chat
+rimane possibile durante la consultazione. Revoca/riduzione permessi, chiusura
+sedi, uscite, trasferimento titolarità e cancellazione account restano distinti.
+L'eventuale storico preservato dalla vecchia cancellazione dell'ultimo titolare
+mantiene i permessi originari: `deleted_at` non viene introdotto come nuovo
+motivo per sottrarre dati di carriera conservati.
+
+Lettura/download/report continuano fino al termine dell'archivio, con gli scope
+originari, anche per sedi chiuse e dati precedenti all'ultimo anno. La scadenza
+nega nuove letture dei dati operativi; non esegue ancora la cancellazione M11.
+Gli URL Storage già firmati rimangono validi per il loro TTL. Cancellazioni
+richieste e restituzione completa seguono il percorso dedicato da completare.
+
+Il read model espone `server_now` e `next_change_at`: timer calibrato sul server,
+refresh per concessioni future, focus/reconnect e ritorno al primo piano nativo.
+Nessun realtime commerciale globale/polling continuo per gratuità permanente.
+Una variazione del servizio viene riletta al refresh; le scritture DB sono
+sempre controllate subito. App/dashboard mostrano stato/date/capacità; i vecchi
+gate Pro e il toggle sono rimossi. M04 commerciale, M05/M06, quote, capacità
+futura dei downgrade, grazia di rinnovo e Paddle restano da completare.
+
+Verifiche e procedura: [TEST-MONETIZATION-M03B.md](../docs/TEST-MONETIZATION-M03B.md).
+Questo blocco è verificato nel banco locale; non attestare un rollout remoto
+per la sola presenza delle migration nel repository.
 
 `delete_account` non è una pausa commerciale: elimina credenziali/file e può
 chiudere l'azienda quando manca un altro titolare. Servono stati commerciali

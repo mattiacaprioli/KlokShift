@@ -68,7 +68,8 @@ rettifiche pregresse, upgrade/downgrade espliciti, preavviso prezzi di 60 giorni
 rimborsi, spazio documenti e assistenza. La quota complessiva iniziale di circa
 2 GB documenti per azienda va calibrata sui tester prima di pubblicarla.
 
-Questa documentazione non attiva i flussi nel prodotto. Copy, FAQ, CTA,
+M03a/M03b forniscono modello, controlli server e collegamento iniziale del
+client, verificati in locale; non attivano un flusso commerciale pubblico. Copy, FAQ, CTA,
 metadata/JSON-LD e condizioni devono essere allineati quando il servizio sarà
 realmente disponibile. Non pubblicare come già attivi checkout, pausa, archivio,
 tempi di ripristino o assistenza non ancora predisposti. I tester gratuiti a

@@ -88,7 +88,8 @@ begin
 
   perform tests.login('Ow');
   perform public.start_workspace_trial(ws);
-  perform public.create_venue(ws, 'Seconda sede: nessun reset');
+  perform tests.raises(format('select public.create_venue(%L,''Seconda sede: nessun reset'')', ws),
+    'workspace_venue_capacity', 'la prova non concede una seconda sede');
   perform public.start_workspace_trial(ws);
   perform tests.logout();
   perform tests.eq((select trial_started_at from public.workspace_commercial_state where workspace_id = ws),
@@ -138,7 +139,7 @@ begin
   perform public.create_venue(pending_ws, 'Sede da revisionare');
   perform tests.logout();
   insert into public.workspace_commercial_state (workspace_id, migration_review_required)
-    values (pending_ws, true);
+    values (pending_ws, true) on conflict (workspace_id) do update set migration_review_required = true;
   perform tests.login('Ow');
   r := public.get_workspace_access(pending_ws);
   perform tests.eq(r ->> 'state', 'migration_pending', 'revisione commerciale distinguibile');
@@ -297,8 +298,10 @@ begin
   perform tests.login('Emp');
   perform tests.eq(public.get_workspace_access(tests.id('W2')) ->> 'state', 'operational',
     'l''azienda gratuita a vita è operativa');
-  perform tests.eq(public.get_workspace_access(tests.id('W1')) ->> 'state', 'setup',
+  perform tests.eq(public.get_workspace_access(tests.id('W1')) ->> 'state', 'operational',
     'la gratuità W2 non passa all''altra azienda dello stesso account');
+  perform tests.eq(public.get_workspace_access(tests.id('W1')) ->> 'plan', 'team',
+    'W1 conserva la propria concessione fixture indipendente dal Base di W2');
   perform tests.logout();
 end $$;
 

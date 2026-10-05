@@ -79,7 +79,7 @@ export default function ManagerShiftsScreen() {
   // Un collaboratore può essere entrato per *guardare* l'agenda: senza il
   // permesso sui turni la RLS rifiuterebbe l'insert, e il form si chiuderebbe
   // con un errore che non spiega niente.
-  const canCreateShift = venueQuery.canAny("can_manage_shifts");
+  const canCreateShift = venueQuery.canUseOperations && venueQuery.canAny("can_manage_shifts");
   const upcomingQuery = useOwnerShifts();
 
   const today = todayString();

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   parseWorkspaceAccess,
   workspaceAccessRefetchDelay,
+  canUseWorkspaceOperations,
 } from "@/features/workspace/access";
+import { canCreateVenue } from "@/features/venues/gate";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 
@@ -25,6 +27,37 @@ function trial() {
 }
 
 describe("accesso commerciale aziendale", () => {
+  it("calibra la scadenza sull'istante server anche con orologio locale avanti", () => {
+    const access = parseWorkspaceAccess({ ...trial(), server_now: "2026-11-04T09:59:00Z" });
+    const local = Date.parse("2027-01-01T10:00:00Z");
+    expect(workspaceAccessRefetchDelay(access, local, local)).toBe(60_250);
+    expect(workspaceAccessRefetchDelay(access, local + 10_000, local)).toBe(50_250);
+  });
+
+  it("programma il refresh per una concessione futura anche in setup", () => {
+    const access = parseWorkspaceAccess({ ...trial(), state: "setup", source: null, plan: null,
+      operational_from: null, operational_until: null, archive_until: null, attendance_until: null,
+      can_operate: false, can_complete_attendance: false, limits: { people: null, venues: null },
+      server_now: "2026-10-05T09:00:00Z", next_change_at: "2026-10-05T10:00:00Z" });
+    expect(workspaceAccessRefetchDelay(access, 100, 100)).toBe(3_600_250);
+  });
+
+  it("distingue la compatibilità di migrazione dall'assenza di dati", () => {
+    const access = parseWorkspaceAccess({ ...trial(), state: "migration_pending", source: null, plan: null,
+      operational_from: null, operational_until: null, archive_until: null, attendance_until: null,
+      can_operate: false, can_complete_attendance: false, limits: { people: null, venues: null } });
+    expect(canUseWorkspaceOperations(access)).toBe(true);
+    expect(access.can_operate).toBe(false);
+    expect(canUseWorkspaceOperations(undefined)).toBe(false);
+    expect(canCreateVenue({ access }).allowed).toBe(true);
+    expect(canCreateVenue({ access: undefined }).allowed).toBe(false);
+  });
+
+  it("il gate sedi usa l'uso aziendale e non le sedi visibili", () => {
+    expect(canCreateVenue({ access: parseWorkspaceAccess(trial()) }).allowed).toBe(false);
+    expect(canCreateVenue({ access: parseWorkspaceAccess({ ...trial(), limits: { people: null, venues: 2 } }) }).allowed).toBe(true);
+    expect(canCreateVenue({ access: parseWorkspaceAccess({ ...trial(), state: "archive", can_operate: false }) }).allowed).toBe(false);
+  });
   it("riconosce la prova Team senza confonderla con una capacità mancante", () => {
     const access = parseWorkspaceAccess(trial());
     expect(access.plan).toBe("team");

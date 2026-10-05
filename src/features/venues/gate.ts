@@ -1,45 +1,22 @@
-import type { PlanTier } from "@/features/plan/devOverride";
-
-/**
- * **Unico punto di gate della seconda sede.**
- *
- * Oggi non c'è alcun limite: un titolare può aprire tutte le sedi che vuole. Il
- * file esiste perché il giorno in cui il limite arriverà, il diff sia questo e
- * nient'altro — i due chiamanti (`(manager)/venue/new.tsx` e la pagina web
- * `/sede/nuovo`) non cambieranno di una riga.
- *
- * Puro di proposito: nessun router, nessun Expo, nessun hook. È la ragione per
- * cui la dashboard web lo importa verbatim.
- *
- * ⚠️ Due cose da ricordare quando il limite diventerà reale:
- *
- *  1. Il piano è dell'azienda (`workspaces.plan`, `useOwnerVenues().plan`) e un
- *     gate solo qui sarebbe cosmetico: la creazione passa dalla RPC
- *     `create_venue`, ed è lì che il limite andrà messo davvero.
- *  2. `venueCount` conta solo le sedi **aperte** (`getMyVenues` filtra
- *     `closed_at is null`). Chiudere e riaprire non deve diventare il modo di
- *     aggirare il limite: quando esisterà, anche la riapertura dovrà passare da
- *     qui.
- */
-export const VENUE_LIMIT: Record<PlanTier, number> = {
-  free: Number.POSITIVE_INFINITY,
-  pro: Number.POSITIVE_INFINITY,
-};
+import type { WorkspaceAccess } from "@/features/workspace/access";
 
 export type VenueGate = { allowed: true } | { allowed: false; reason: string };
 
+/** Usa l'aggregato aziendale del server, anche con un ambito ristretto. */
 export function canCreateVenue(args: {
-  /** Quante sedi **aperte** ha già. */
-  venueCount: number;
-  plan: PlanTier;
+  access: WorkspaceAccess | undefined;
+  firstWorkspace?: boolean;
 }): VenueGate {
-  const limit = VENUE_LIMIT[args.plan];
-  if (args.venueCount < limit) return { allowed: true };
-  return {
-    allowed: false,
-    reason:
-      limit === 1
-        ? "Il tuo piano include una sola sede. Passa a Pro per aggiungerne altre."
-        : `Il tuo piano include ${limit} sedi. Passa a Pro per aggiungerne altre.`,
-  };
+  const { access, firstWorkspace } = args;
+  if (firstWorkspace) return { allowed: true };
+  if (!access) return { allowed: false, reason: "Aggiorna lo stato dell'azienda prima di aggiungere una sede." };
+  if (access.state === "migration_pending") return { allowed: true };
+  if (access.state === "setup" && access.usage?.venues === 0) return { allowed: true };
+  if (!access.can_operate) return { allowed: false, reason: "L'azienda non ha accesso operativo. Puoi consultare lo storico." };
+  if (access.usage === null || access.limits.venues === null) {
+    return { allowed: false, reason: "Capacità delle sedi non disponibile. Aggiorna lo stato dell'azienda." };
+  }
+  return access.usage.venues < access.limits.venues
+    ? { allowed: true }
+    : { allowed: false, reason: `La capacità dell'azienda è di ${access.limits.venues} sedi aperte. Le sedi chiuse conservano lo storico.` };
 }

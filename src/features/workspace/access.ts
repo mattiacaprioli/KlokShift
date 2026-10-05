@@ -38,6 +38,9 @@ export type WorkspaceAccess = {
   limits: { people: number | null; venues: number | null };
   /** I dipendenti non ricevono gli aggregati dell'intera azienda. */
   usage: { people: number; venues: number } | null;
+  /** Compatibilità col read model M03a; non sono diritti aggiuntivi. */
+  server_now?: string | null;
+  next_change_at?: string | null;
 };
 
 function invalidAccess(): never {
@@ -112,6 +115,8 @@ export function parseWorkspaceAccess(value: unknown): WorkspaceAccess {
       venues: limits.venues === null ? null : count(limits.venues),
     },
     usage: usage === null ? null : { people: count(usage.people), venues: count(usage.venues) },
+    server_now: raw.server_now === undefined ? null : timestamp(raw.server_now),
+    next_change_at: raw.next_change_at === undefined ? null : timestamp(raw.next_change_at),
   };
 
   if (
@@ -171,9 +176,13 @@ export function parseWorkspaceAccess(value: unknown): WorkspaceAccess {
 /** Un solo prossimo confine; nessun polling per concessioni permanenti. */
 export function workspaceAccessRefetchDelay(
   access: WorkspaceAccess | undefined,
-  now: number = Date.now()
+  now: number = Date.now(),
+  fetchedAt?: number
 ): number | false {
   if (!access) return false;
+  if (access.server_now && fetchedAt !== undefined) {
+    now = Date.parse(access.server_now) + Math.max(0, now - fetchedAt);
+  }
   // Un dato rientrato dalla cache può aver superato il suo confine mentre la
   // schermata non era montata. Non aspettare il focus per correggere i diritti.
   if (
@@ -187,11 +196,12 @@ export function workspaceAccessRefetchDelay(
   ) {
     return 1_000;
   }
-  const dates = access.state === "operational"
+  const boundaries = access.state === "operational"
     ? [access.operational_until]
     : access.state === "archive"
       ? [access.attendance_until, access.archive_until]
       : [];
+  const dates = [...boundaries, access.next_change_at ?? null];
   const next = dates
     .filter((date): date is string => date !== null)
     .map((date) => Date.parse(date))
@@ -200,4 +210,26 @@ export function workspaceAccessRefetchDelay(
   if (next === undefined) return false;
   // Limite del timer JS: evita che una scadenza a mesi diventi un loop a 1 ms.
   return Math.min(2_147_483_647, Math.max(1_000, next - now + 250));
+}
+
+/** Eccezione di migrazione esplicita; non assegna un piano o una capacità. */
+export function canUseWorkspaceOperations(access: WorkspaceAccess | undefined): boolean {
+  return access?.can_operate === true || access?.state === "migration_pending";
+}
+
+export function workspaceAccessMessage(access: WorkspaceAccess | undefined): string {
+  if (!access) return "Stato dell'azienda non disponibile. Riprova l'aggiornamento.";
+  switch (access.state) {
+    case "migration_pending": return "La configurazione dell'azienda è in verifica. Puoi continuare a lavorare.";
+    case "setup": return "Prepara la prima sede e avvia la prova di 30 giorni senza carta.";
+    case "archive": return access.can_complete_attendance
+      ? "Puoi consultare ed esportare lo storico e completare le presenze pregresse entro il termine indicato."
+      : "L'accesso operativo è terminato. Puoi consultare ed esportare lo storico.";
+    case "expired": return "Il periodo di consultazione dell'archivio è terminato. Contatta l'assistenza per le richieste sui tuoi dati.";
+    case "operational": return access.source === "trial"
+      ? "Prova di 30 giorni attiva."
+      : access.source === "complimentary_lifetime"
+        ? "Accesso gratuito permanente attivo, entro la capacità concessa."
+        : "Accesso operativo attivo.";
+  }
 }

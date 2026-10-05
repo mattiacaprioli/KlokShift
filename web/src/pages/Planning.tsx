@@ -131,13 +131,13 @@ function storedVenue(): string | null {
  * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
-  const { venues, venueIds, isMultiVenue, can, canAny } = useOwnerVenues();
+  const { venues, venueIds, isMultiVenue, can, canAny, canUseOperations } = useOwnerVenues();
   // Chi gestisce può essere in turno: il trigger non avvisa chi sta spostando,
   // e la finestra di conferma non deve promettere un avviso in più.
   const { session } = useAuth();
   // Duplicare un periodo crea turni: stesso permesso che serve a crearne uno
   // (`ShiftPanel` filtra già le sedi con `venuesWith("can_manage_shifts")`).
-  const canCreateShift = canAny("can_manage_shifts");
+  const canCreateShift = canUseOperations && canAny("can_manage_shifts");
   /** La sede di un turno: nome e colore. `undefined` con una sede sola. */
   const venueOf = useCallback(
     (venueId: string) => {
