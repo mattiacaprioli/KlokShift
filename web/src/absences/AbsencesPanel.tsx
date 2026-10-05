@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { Absence, AbsenceKind } from "@/features/absences/api";
 import { canCreditAbsence, creditSummary } from "@/features/absences/credits";
@@ -144,14 +145,15 @@ export function AbsenceRow({
     <li className="px-4 py-3">
       <div
         className={cn(
-          "grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-6 gap-y-1",
+          "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1",
           personName && "md:grid-cols-[10rem_minmax(0,1fr)_auto]"
         )}
       >
         {personName ? (
-          <p className="col-span-2 truncate text-sm font-semibold text-t1 md:col-span-1">
-            {personName}
-          </p>
+          <div className="col-span-2 flex min-w-0 items-center gap-2 text-sm font-semibold text-t1 md:col-span-1">
+            <PersonAvatar personId={a.member_id} name={personName} size={28} />
+            <span className="truncate">{personName}</span>
+          </div>
         ) : null}
 
         <div className={cn("min-w-0", closed && "opacity-60")}>

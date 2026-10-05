@@ -2,6 +2,13 @@ import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
 
 export type Notification = Tables<"notifications">;
+export type NotificationWithPerson = Notification & {
+  person: {
+    id: string;
+    display_name: string;
+    profile: { avatar_url: string | null } | null;
+  } | null;
+};
 export const NOTIFICATIONS_PAGE_SIZE = 30;
 export type NotificationCursor = { created_at: string; id: string };
 
@@ -9,10 +16,10 @@ export type NotificationCursor = { created_at: string; id: string };
 export async function getNotificationsPage(
   userId: string,
   cursor: NotificationCursor | null
-): Promise<Notification[]> {
+): Promise<NotificationWithPerson[]> {
   let query = supabase
     .from("notifications")
-    .select("*")
+    .select("*, person:workspace_members!notifications_person_id_fkey(id, display_name, profile:profiles!workspace_members_user_id_fkey(avatar_url))")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })

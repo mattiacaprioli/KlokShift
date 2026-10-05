@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
@@ -42,6 +43,7 @@ import { NoVenues } from "../venues/NoVenues";
 type Worker = {
   key: string;
   name: string;
+  personId: string | null;
   role: string | null;
   /** Giorno del turno: serve a ordinare, e a segnalare chi è qui da ieri sera. */
   date: string;
@@ -117,6 +119,7 @@ export function HomePage() {
         .map((a) => ({
           key: `asg-${a.id}`,
           name: a.staff_member?.display_name ?? "Staff",
+          personId: a.staff_member?.person_id ?? null,
           role: a.role?.name ?? null,
           date: a.shift?.date ?? "",
           start: a.shift?.start_time ?? "",
@@ -229,7 +232,8 @@ export function HomePage() {
                   key={w.key}
                   className="flex items-center justify-between gap-3 p-3"
                 >
-                  <div className="min-w-0">
+                  <PersonAvatar personId={w.personId} name={w.name} />
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-t1">
                       {w.name}
                     </p>

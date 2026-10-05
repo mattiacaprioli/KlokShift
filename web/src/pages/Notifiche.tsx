@@ -9,6 +9,8 @@ import {
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { webRouteForNotification } from "../lib/notificationRoute";
+import { Avatar } from "../ui/Avatar";
+import { NotificationIcon } from "../ui/NotificationIcon";
 import {
   Button,
   PageHeader,
@@ -65,29 +67,36 @@ export function NotifichePage() {
                   if (route) navigate(route);
                 }}
                 className={cn(
-                  "focus-gold rounded-2xl border p-4 text-left transition",
+                  "focus-gold flex items-center gap-3 rounded-2xl border p-4 text-left transition",
                   isUnread
                     ? "border-border-gold bg-gold/5"
                     : "border-border-2 bg-bg-card",
                   route ? "hover:bg-bg-1" : "cursor-default"
                 )}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <p
-                    className={cn(
-                      "text-sm",
-                      isUnread ? "font-semibold text-t1" : "text-t2"
-                    )}
-                  >
-                    {n.title}
-                  </p>
-                  <span className="shrink-0 text-xs text-t4">
-                    {timeAgo(n.created_at)}
-                  </span>
+                {n.person ? (
+                  <Avatar url={n.person.profile?.avatar_url} name={n.person.display_name} size={40} />
+                ) : (
+                  <NotificationIcon type={n.type} />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p
+                      className={cn(
+                        "text-sm",
+                        isUnread ? "font-semibold text-t1" : "text-t2"
+                      )}
+                    >
+                      {n.title}
+                    </p>
+                    <span className="shrink-0 text-xs text-t4">
+                      {timeAgo(n.created_at)}
+                    </span>
+                  </div>
+                  {n.body ? (
+                    <p className="mt-1 text-xs leading-5 text-t3">{n.body}</p>
+                  ) : null}
                 </div>
-                {n.body ? (
-                  <p className="mt-1 text-xs leading-5 text-t3">{n.body}</p>
-                ) : null}
               </button>
             );
           })}

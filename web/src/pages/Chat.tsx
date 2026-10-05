@@ -90,40 +90,43 @@ export function ChatPage() {
                   key={c.id}
                   onClick={() => navigate(`/chat/${c.id}`)}
                   className={cn(
-                    "focus-gold shrink-0 rounded-2xl border p-3 text-left transition",
+                    "focus-gold flex shrink-0 items-center gap-3 rounded-2xl border p-3 text-left transition",
                     active
                       ? "border-border-gold bg-gold/10"
                       : "border-border-2 bg-bg-card hover:bg-bg-1"
                   )}
                 >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="flex min-w-0 items-baseline gap-1.5">
-                      <span className="truncate text-sm font-semibold text-t1">
-                        {c.other.name}
+                  <Avatar url={c.other.avatarUrl} name={c.other.name} size={36} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="flex min-w-0 items-baseline gap-1.5">
+                        <span className="truncate text-sm font-semibold text-t1">
+                          {c.other.name}
+                        </span>
+                        {c.other.subtitle ? (
+                          <span className="truncate text-[11px] text-t4">
+                            · {c.other.subtitle}
+                          </span>
+                        ) : null}
                       </span>
-                      {c.other.subtitle ? (
-                        <span className="truncate text-[11px] text-t4">
-                          · {c.other.subtitle}
+                      {c.lastMessage ? (
+                        <span className="shrink-0 text-[11px] text-t4">
+                          {timeAgo(c.lastMessage.created_at)}
                         </span>
                       ) : null}
-                    </span>
-                    {c.lastMessage ? (
-                      <span className="shrink-0 text-[11px] text-t4">
-                        {timeAgo(c.lastMessage.created_at)}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="truncate text-xs text-t3">
+                        {c.lastMessage
+                          ? `${mine ? "Tu: " : ""}${c.lastMessage.content}`
+                          : "Nessun messaggio"}
                       </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="truncate text-xs text-t3">
-                      {c.lastMessage
-                        ? `${mine ? "Tu: " : ""}${c.lastMessage.content}`
-                        : "Nessun messaggio"}
-                    </span>
-                    {c.unreadCount > 0 ? (
-                      <span className="shrink-0 rounded-full bg-gold px-1.5 text-[11px] font-bold text-gold-ink">
-                        {c.unreadCount > 9 ? "9+" : c.unreadCount}
-                      </span>
-                    ) : null}
+                      {c.unreadCount > 0 ? (
+                        <span className="shrink-0 rounded-full bg-gold px-1.5 text-[11px] font-bold text-gold-ink">
+                          {c.unreadCount > 9 ? "9+" : c.unreadCount}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </button>
               );
@@ -321,13 +324,16 @@ function Thread({
 
   return (
     <div className="flex min-h-0 flex-col rounded-2xl border border-border-2 bg-bg-card">
-      <header className="border-b border-border px-5 py-3">
-        <p className="text-sm font-semibold text-t1">
-          {other?.name ?? " "}
-        </p>
-        {other?.subtitle ? (
-          <p className="text-xs text-t4">{other.subtitle}</p>
-        ) : null}
+      <header className="flex items-center gap-3 border-b border-border px-5 py-3">
+        {other ? <Avatar url={other.avatarUrl} name={other.name} size={36} /> : null}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-t1">
+            {other?.name ?? " "}
+          </p>
+          {other?.subtitle ? (
+            <p className="text-xs text-t4">{other.subtitle}</p>
+          ) : null}
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 py-4">

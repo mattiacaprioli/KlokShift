@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useNavigate } from "react-router-dom";
@@ -243,7 +244,8 @@ function PersonPanel({
     <UnsavedEdits.Provider value={reportUnsaved}>
     <PersonModalShell label={person.full_name} onClose={requestClose}>
         <header className="flex items-start justify-between gap-4 px-6 pt-6">
-          <div className="min-w-0">
+          <PersonAvatar personId={person.id} name={person.full_name} size={56} />
+          <div className="min-w-0 flex-1">
             <h2 className="truncate font-serif text-xl text-t1">
               {person.full_name}
             </h2>

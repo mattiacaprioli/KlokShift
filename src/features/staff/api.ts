@@ -16,6 +16,16 @@ import {
   type StaffRoleRef,
 } from "./types";
 
+/** Foto per gli elenchi: nessun dato HR, anche per chi gestisce solo turni o ore. */
+export async function getWorkspaceAvatars(workspaceId: string) {
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .select("id, user_id, waiter:profiles!workspace_members_user_id_fkey(avatar_url)")
+    .eq("workspace_id", workspaceId);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 /**
  * L'organico dell'azienda, dal DB nuovo ai tipi di sempre.
  *

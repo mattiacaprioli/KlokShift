@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -236,7 +237,12 @@ export function OrePage() {
                   key={p.person_id}
                   className="border-b border-border last:border-0"
                 >
-                  <td className="px-5 py-2.5 text-t1">{p.person_name}</td>
+                  <td className="px-5 py-2.5 text-t1">
+                    <span className="flex items-center gap-2">
+                      <PersonAvatar personId={p.person_id} name={p.person_name} className="print:hidden" />
+                      {p.person_name}
+                    </span>
+                  </td>
                   <td className="px-5 py-2.5 text-t3">{p.roles ?? "—"}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">
                     {p.shifts_count}
@@ -308,7 +314,12 @@ export function OrePage() {
                     key={a.person_id}
                     className="border-b border-border last:border-0"
                   >
-                    <td className="px-5 py-2.5 text-t1">{a.person_name}</td>
+                    <td className="px-5 py-2.5 text-t1">
+                      <span className="flex items-center gap-2">
+                        <PersonAvatar personId={a.person_id} name={a.person_name} className="print:hidden" />
+                        {a.person_name}
+                      </span>
+                    </td>
                     <td className="px-5 py-2.5 text-right font-mono text-t2">
                       {a.ferie_days || "—"}
                     </td>

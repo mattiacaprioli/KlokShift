@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { useState } from "react";
 
 /**
  * Foto profilo, con le iniziali come ripiego: un cerchio vuoto sembrerebbe
@@ -16,13 +17,16 @@ export function Avatar({
   size?: number;
   className?: string;
 }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const style = { width: size, height: size };
 
-  if (url) {
+  if (url && url !== failedUrl) {
     return (
       <img
         src={url}
         alt=""
+        draggable={false}
+        onError={() => setFailedUrl(url)}
         style={style}
         className={cn("shrink-0 rounded-full object-cover", className)}
       />
@@ -38,6 +42,7 @@ export function Avatar({
 
   return (
     <span
+      aria-hidden="true"
       style={{ ...style, fontSize: Math.round(size / 3) }}
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full border border-border-gold bg-gold/10 font-serif text-gold",

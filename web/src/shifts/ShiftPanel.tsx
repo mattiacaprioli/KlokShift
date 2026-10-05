@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { absencesOnDates } from "@/features/absences/conflicts";
@@ -846,7 +847,8 @@ function InternalForm({
                             !on && "border-border-2 bg-bg-1 hover:bg-bg-2"
                           )}
                         >
-                          <span className="min-w-0">
+                          <PersonAvatar personId={member.person_id} name={member.display_name} />
+                          <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm text-t1">
                               {member.display_name}
                             </span>

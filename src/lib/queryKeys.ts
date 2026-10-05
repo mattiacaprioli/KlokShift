@@ -109,6 +109,8 @@ export const qk = {
   },
   staff: {
     all: ["staff"] as const,
+    avatars: (workspaceId: string, scope: string) =>
+      ["staff", "avatars", workspaceId, scope] as const,
     byVenue: (venueId: string) => ["staff", "byVenue", venueId] as const,
     /**
      * Le persone del titolare, attraverso le sedi. Sotto il prefisso `staff.all`,

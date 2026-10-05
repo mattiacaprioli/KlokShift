@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -256,8 +257,9 @@ export function PeopleWeek({
                 className="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_9rem] items-stretch gap-1.5 print:break-inside-avoid"
               >
                 <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border-2 bg-bg-card px-3 py-2">
-                  <span className="truncate text-sm text-t1">
-                    {person.name}
+                  <span className="flex min-w-0 items-center gap-2 text-sm text-t1">
+                    <PersonAvatar personId={person.personId} name={person.name} size={28} />
+                    <span className="truncate">{person.name}</span>
                     {/* Il confronto è sull'id della **persona**: `PersonLoad`
                         non porta il `waiter_id`, e chi gestisce può stare in
                         organico. */}

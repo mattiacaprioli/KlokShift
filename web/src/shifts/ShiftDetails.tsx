@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { absenceForShift } from "@/features/absences/conflicts";
@@ -225,7 +226,8 @@ export function ShiftDetails({
                         key={a.id}
                         className="flex items-center justify-between gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2"
                       >
-                        <span className="min-w-0">
+                        <PersonAvatar personId={personId} name={a.staff_member?.display_name ?? "Professionista"} />
+                        <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm text-t1">
                             {a.staff_member?.display_name ?? "—"}
                           </span>

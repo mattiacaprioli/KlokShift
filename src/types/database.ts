@@ -325,6 +325,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          person_id: string | null
           read_at: string | null
           related_id: string | null
           title: string
@@ -335,6 +336,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          person_id?: string | null
           read_at?: string | null
           related_id?: string | null
           title: string
@@ -345,6 +347,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          person_id?: string | null
           read_at?: string | null
           related_id?: string | null
           title?: string
@@ -352,6 +355,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]

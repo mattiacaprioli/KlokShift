@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
 import { useAbsencesToHandle } from "@/features/absences/hooks";
 import {
@@ -34,7 +35,8 @@ export function AbsencesToHandle({ enabled }: { enabled: boolean }) {
           return (
             <Card key={a.id} className="p-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+                <PersonAvatar personId={a.member_id} name={a.person?.full_name ?? "Persona"} />
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-t1">
                     {a.person?.full_name ?? "Persona"}
                   </p>

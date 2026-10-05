@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useOwnerPeople } from "@/features/staff/hooks";
@@ -142,7 +143,8 @@ export function StaffPage() {
                   onClick={() => setSelectedPersonId(person.id)}
                   className="focus-gold flex min-w-0 flex-1 items-center gap-4 text-left"
                 >
-                  <span className="min-w-40 flex-1">
+                  <PersonAvatar personId={person.id} name={person.full_name} size={40} />
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-t1">
                       {person.full_name}
                       {self.isSelf(person.waiter_id) ? (

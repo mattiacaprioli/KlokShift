@@ -1,3 +1,5 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
+import { isActiveAssignment } from "@/features/assignments/status";
 import type { AbsenceAvailability } from "@/features/absences/api";
 import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
@@ -1126,6 +1128,9 @@ function ShiftCell({
   const cancelled = shift.status === "cancelled";
   const tone = shiftTone(shift);
   const { filled, total, short } = shiftCounts(shift);
+  const people = shift.shift_assignments.filter((a) =>
+    isActiveAssignment(a.status)
+  );
 
   // Il dettaglio per ruolo sta nel tooltip: in una cella larga un settimo di
   // schermo non ci sta, ma è quello che dice *chi* manca — ed è l'unica cosa
@@ -1199,6 +1204,31 @@ function ShiftCell({
           />
           <span className="truncate text-[10px] text-t4">{venueName}</span>
         </p>
+      ) : null}
+      {!cancelled && people.length > 0 ? (
+        <div className="mt-2 flex flex-col gap-1">
+          {people.slice(0, 2).map((a) => (
+            <span
+              key={a.id}
+              className="flex min-w-0 items-center gap-1.5"
+              title={a.staff_member?.display_name}
+            >
+              <PersonAvatar
+                personId={a.staff_member?.person_id}
+                name={a.staff_member?.display_name ?? "Professionista"}
+                size={20}
+              />
+              <span className="truncate text-[11px] text-t2">
+                {a.staff_member?.display_name ?? "Professionista"}
+              </span>
+            </span>
+          ))}
+          {people.length > 2 ? (
+            <span className="text-[10px] text-t4">
+              +{people.length - 2} altre persone
+            </span>
+          ) : null}
+        </div>
       ) : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
         {cancelled ? (

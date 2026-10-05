@@ -1,3 +1,4 @@
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
 import {
   useSetAssignmentPresence,
@@ -386,6 +387,7 @@ export function PresenceSection({
               className="rounded-xl border border-border-2 bg-bg-1 px-3 py-2"
             >
               <div className="flex items-center gap-2">
+              <PersonAvatar personId={a.staff_member?.person_id} name={a.staff_member?.display_name ?? "Professionista"} size={28} />
               <span className="min-w-0 flex-1 truncate text-sm text-t1">
                 {a.staff_member?.display_name ?? "—"}
                 {self.isSelf(a.staff_member?.waiter_id) ? (

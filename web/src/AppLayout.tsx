@@ -8,6 +8,8 @@ import { useUnreadCount } from "@/features/notifications/hooks";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { cn } from "@/lib/cn";
 import { Button, QueryError, Spinner } from "./ui/primitives";
+import { Avatar } from "./ui/Avatar";
+import { PersonAvatarProvider } from "./ui/PersonAvatar";
 
 type NavItem = {
   to: string;
@@ -75,9 +77,12 @@ export function AppLayout() {
         <div className="mb-6 px-2">
           <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
           <p className="font-serif text-lg leading-tight text-t1">{company}</p>
-          <p className="mt-0.5 truncate text-xs text-t4">
-            {venues.length > 1 ? `${venues.length} sedi · ${who}` : who}
-          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <Avatar url={profile?.avatar_url} name={who ?? "Profilo"} size={28} />
+            <p className="min-w-0 truncate text-xs text-t4">
+              {venues.length > 1 ? `${venues.length} sedi · ${who}` : who}
+            </p>
+          </div>
         </div>
 
         <nav className="flex flex-col gap-0.5">
@@ -144,7 +149,7 @@ export function AppLayout() {
                 stampato il {new Date().toLocaleDateString("it-IT")}
               </span>
             </div>
-            <Outlet />
+            <PersonAvatarProvider><Outlet /></PersonAvatarProvider>
           </>
         )}
       </main>
