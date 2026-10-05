@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { Skeleton, SkeletonGroup } from "./Skeleton";
 
 /**
  * Compact metric cell (value + label). Used in the home stat strip and profile stats.
@@ -22,7 +23,7 @@ export function StatCard({
   hint?: string;
   /** `warning` per i numeri che chiedono un intervento (posti scoperti). */
   tone?: "normal" | "warning";
-  /** Dato non ancora disponibile: un trattino, non uno zero. */
+  /** Dato in caricamento: mantiene lo spazio del numero. */
   loading?: boolean;
   /** Rende la cella toccabile: per i numeri su cui c'è qualcosa da fare. */
   onPress?: () => void;
@@ -37,17 +38,23 @@ export function StatCard({
         className
       )}
     >
-      <Text
-        className={cn(
-          "text-2xl font-sans-bold",
-          loading ? "text-t4" : tone === "warning" ? "text-warning" : "text-t1"
-        )}
-        style={{ letterSpacing: -0.5 }}
-      >
-        {loading ? "—" : value}
-      </Text>
+      {loading ? (
+        <SkeletonGroup label={`Caricamento ${label.toLowerCase()}…`}>
+          <Skeleton className="h-8 w-12" />
+        </SkeletonGroup>
+      ) : (
+        <Text
+          className={cn(
+            "text-2xl font-sans-bold",
+            tone === "warning" ? "text-warning" : "text-t1"
+          )}
+          style={{ letterSpacing: -0.5 }}
+        >
+          {value}
+        </Text>
+      )}
       <Text className="mt-1 text-sm font-sans-semibold text-t2">{label}</Text>
-      {hint && !loading ? (
+      {hint ? (
         <Text className="mt-0.5 text-xs text-t3">{hint}</Text>
       ) : null}
     </Root>

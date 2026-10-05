@@ -1,5 +1,6 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -70,7 +71,7 @@ export default function WaiterAbsencesScreen() {
         </Text>
 
         {loading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-10" />
+          <ListSkeleton label="Caricamento delle tue assenze…" />
         ) : query.isError || employersQuery.isError ? (
           <QueryError
             onRetry={() => {

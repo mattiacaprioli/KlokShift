@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { Absence, AbsenceKind } from "@/features/absences/api";
@@ -21,7 +22,7 @@ import { todayString } from "@/lib/format";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
 import { useToast } from "../ui/Toast";
-import { Button, Field, Input, Pill, Spinner } from "../ui/primitives";
+import { Button, Field, Input, Pill } from "../ui/primitives";
 import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
 import { AbsenceHourCredits } from "./AbsenceHourCredits";
@@ -50,7 +51,7 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
           Assenze
         </h3>
         {isPending ? (
-          <Spinner />
+          <ListSkeleton rows={3} label="Caricamento assenze…" />
         ) : absences.length === 0 ? (
           <p className="text-sm text-t4">
             Nessuna assenza. Le richieste di ferie e permessi arrivano in chat.

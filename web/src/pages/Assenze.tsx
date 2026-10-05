@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { useMemo, useState, type ReactNode } from "react";
 import { COMPANY_ABSENCES_DAYS_BACK } from "@/features/absences/api";
 import {
@@ -21,7 +22,6 @@ import {
   Placeholder,
   QueryError,
   Select,
-  Spinner,
 } from "../ui/primitives";
 
 /**
@@ -76,7 +76,7 @@ export function AssenzePage() {
     <>
       <PageHeader title="Assenze" subtitle={subtitle} />
       {query.isPending ? (
-        <Spinner />
+        <ListSkeleton avatar label="Caricamento assenze…" className="max-w-5xl" />
       ) : query.isError ? (
         <QueryError error={query.error} />
       ) : (rows ?? []).length === 0 ? (

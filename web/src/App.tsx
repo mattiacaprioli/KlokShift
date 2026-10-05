@@ -1,3 +1,4 @@
+import { DashboardSkeleton } from "./ui/Skeleton";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { RealtimeSync } from "@/features/realtime/RealtimeSync";
@@ -116,7 +117,7 @@ function Dashboard({ userId }: { userId: string }) {
   // Prima di sapere se gestisce qualcosa non si può rispondere: mostrargli
   // `NotForWaitersPage` e poi sostituirla con la dashboard sarebbe peggio di
   // un attimo di attesa.
-  if (isPending) return <Spinner label="Caricamento…" />;
+  if (isPending) return <DashboardSkeleton />;
 
   if (isError) {
     return (

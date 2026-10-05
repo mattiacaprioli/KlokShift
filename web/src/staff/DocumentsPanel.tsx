@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { useRef, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import {
@@ -13,7 +14,7 @@ import {
 } from "@/features/documents/hooks";
 import { documentStatus, documentStatusLabel } from "@/features/documents/status";
 import { useToast } from "../ui/Toast";
-import { Button, Card, Input, Pill, Spinner } from "../ui/primitives";
+import { Button, Card, Input, Pill } from "../ui/primitives";
 
 /** Nessun browser renderizza l'HEIC: per quelli si offre solo il download. */
 function canPreview(mime: string | null): boolean {
@@ -94,7 +95,7 @@ export function DocumentsPanel({ personId }: { personId: string }) {
     );
   }
 
-  if (isPending) return <Spinner />;
+  if (isPending) return <ListSkeleton rows={3} label="Caricamento documenti…" />;
 
   return (
     <section className="flex flex-col gap-3">

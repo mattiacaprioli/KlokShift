@@ -1,5 +1,6 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, RefreshControl } from "react-native";
+import { FlatList, RefreshControl } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
@@ -146,7 +147,7 @@ export function PeopleWeekList({
   };
 
   if (shiftsQuery.isPending || peopleQuery.isPending) {
-    return <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />;
+    return <ListSkeleton variant="person" className="px-5 pt-2" label="Caricamento carico della settimana…" />;
   }
 
   if (shiftsQuery.isError || peopleQuery.isError) {

@@ -1,5 +1,5 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useState } from "react";
-import { ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
@@ -158,7 +158,7 @@ export default function VenueHoursScreen() {
         </View>
 
         {query.isLoading || absenceQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-10" />
+          <ListSkeleton variant="person" label="Caricamento ore…" />
         ) : query.isError || absenceQuery.isError ? (
           <QueryError
             onRetry={() => {

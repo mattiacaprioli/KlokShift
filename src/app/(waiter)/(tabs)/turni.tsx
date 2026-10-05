@@ -1,7 +1,7 @@
+import { ListSkeleton, WeekSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import {
-  ActivityIndicator,
   RefreshControl,
   SectionList,
   type ViewToken,
@@ -423,7 +423,7 @@ export default function WaiterShiftsScreen() {
           />
         ) : layout === "week" ? (
           weekQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+            <WeekSkeleton className="px-5 pt-2" />
           ) : weekQuery.isError ? (
             <QueryError onRetry={() => weekQuery.refetch()} />
           ) : (
@@ -462,7 +462,7 @@ export default function WaiterShiftsScreen() {
             </>
           )
         ) : assignedQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+          <ListSkeleton className="px-5 pt-2" label="Caricamento dei tuoi turni…" />
         ) : assignedQuery.isError ? (
           <QueryError onRetry={() => assignedQuery.refetch()} />
         ) : (

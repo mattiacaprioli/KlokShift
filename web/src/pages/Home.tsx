@@ -36,7 +36,8 @@ import { useNavigate } from "react-router-dom";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
 import { LiveClockLine } from "../shifts/LiveClockLine";
 import { ShiftPanel } from "../shifts/ShiftPanel";
-import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
+import { Card, PageHeader, Pill, Placeholder, QueryError } from "../ui/primitives";
+import { ListSkeleton, LoadingRegion, Skeleton } from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
 
@@ -102,8 +103,10 @@ export function HomePage() {
   // `getOwnerShifts` è la lista dei prossimi turni **senza** limite superiore, e
   // resta tale: "Prossimi turni" deve mostrare cosa viene dopo anche di domenica
   // sera, quando il periodo scelto è ormai finito.
-  const shifts = useOwnerShifts().data ?? [];
-  const todayData = useOwnerTodayAssignments().data;
+  const shiftsQuery = useOwnerShifts();
+  const shifts = shiftsQuery.data ?? [];
+  const todayQuery = useOwnerTodayAssignments();
+  const todayData = todayQuery.data;
   const todayAssignments = useMemo(() => todayData ?? [], [todayData]);
 
   // Gli annullati non hanno posti da coprire: fuori anche dall'elenco.
@@ -190,22 +193,26 @@ export function HomePage() {
 
       <div className="mb-6 grid grid-cols-2 gap-3">
         <Stat
-          loading={!statsReady}
-          value={stats.shortCount}
+          loading={periodQuery.isPending}
+          value={statsReady ? stats.shortCount : "—"}
           label="turni scoperti"
           hint="solo quelli ancora da fare"
           tone={stats.shortCount > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
         />
         <Stat
-          loading={!statsReady}
-          value={stats.missingSlots}
+          loading={periodQuery.isPending}
+          value={statsReady ? stats.missingSlots : "—"}
           label="posti da coprire"
           hint="persone che mancano"
           tone={stats.missingSlots > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
         />
       </div>
+
+      {periodQuery.isError ? (
+        <div className="mb-6"><QueryError error={periodQuery.error} /></div>
+      ) : null}
 
       <AbsencesToHandle enabled={canAny("can_manage_staff")} />
 
@@ -220,7 +227,11 @@ export function HomePage() {
               </span>
             ) : null}
           </h2>
-          {workers.length === 0 ? (
+          {todayQuery.isPending ? (
+            <ListSkeleton avatar label="Caricamento di chi lavora oggi…" />
+          ) : todayQuery.isError ? (
+            <QueryError error={todayQuery.error} />
+          ) : workers.length === 0 ? (
             <Placeholder
               title="Oggi non lavora nessuno"
               detail="Nessun turno assegnato per la giornata di oggi."
@@ -271,7 +282,11 @@ export function HomePage() {
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
             Prossimi turni
           </h2>
-          {nextShifts.length === 0 ? (
+          {shiftsQuery.isPending ? (
+            <ListSkeleton rows={5} label="Caricamento prossimi turni…" />
+          ) : shiftsQuery.isError ? (
+            <QueryError error={shiftsQuery.error} />
+          ) : nextShifts.length === 0 ? (
             <Placeholder
               title="Nessun turno in programma"
               detail="Crea il primo turno dal Planning."
@@ -352,7 +367,7 @@ function Stat({
   /** La riga sotto l'etichetta: cosa il numero conta, quando non è ovvio. */
   hint?: string;
   tone?: "normal" | "gold" | "warning";
-  /** Dato non ancora disponibile: un trattino, non uno zero. */
+  /** Lo skeleton occupa lo stesso spazio del numero. */
   loading?: boolean;
   onClick?: () => void;
 }) {
@@ -365,19 +380,24 @@ function Stat({
         onClick && "focus-gold transition hover:border-border-gold",
       )}
     >
-      <p
-        className={cn(
-          "font-mono text-3xl",
-          loading && "text-t4",
-          !loading && tone === "gold" && "text-gold",
-          !loading && tone === "warning" && "text-warning",
-          !loading && tone === "normal" && "text-t1",
-        )}
-      >
-        {loading ? "—" : value}
-      </p>
+      {loading ? (
+        <LoadingRegion label={`Caricamento ${label}…`}>
+          <Skeleton className="h-9 w-12" />
+        </LoadingRegion>
+      ) : (
+        <p
+          className={cn(
+            "font-mono text-3xl",
+            tone === "gold" && "text-gold",
+            tone === "warning" && "text-warning",
+            tone === "normal" && "text-t1",
+          )}
+        >
+          {value}
+        </p>
+      )}
       <p className="mt-1 text-xs text-t3">{label}</p>
-      {hint && !loading ? (
+      {hint ? (
         <p className="mt-0.5 text-[11px] text-t4">{hint}</p>
       ) : null}
     </Tag>

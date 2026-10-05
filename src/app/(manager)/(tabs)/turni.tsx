@@ -1,7 +1,7 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import {
-  ActivityIndicator,
   RefreshControl,
   SectionList,
   type ViewToken,
@@ -317,7 +317,7 @@ export default function ManagerShiftsScreen() {
           }}
         >
           {venueQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" style={{ marginTop: 64 }} />
+            <ListSkeleton label="Caricamento turni…" />
           ) : venueQuery.isError ? (
             <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
           ) : (
@@ -508,7 +508,7 @@ export default function ManagerShiftsScreen() {
           paddingBottom={insets.bottom + 96}
         />
       ) : upcomingQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+        <ListSkeleton className="px-5 pt-2" label="Caricamento turni…" />
       ) : upcomingQuery.isError ? (
         <QueryError
           onRetry={() => upcomingQuery.refetch()}

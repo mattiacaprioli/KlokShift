@@ -1,3 +1,4 @@
+import { PlanningSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { isActiveAssignment } from "@/features/assignments/status";
 import type { AbsenceAvailability } from "@/features/absences/api";
@@ -89,7 +90,6 @@ import {
   Pill,
   QueryError,
   Select,
-  Spinner,
 } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
@@ -577,7 +577,6 @@ export function PlanningPage() {
           error={error ?? impactShiftsQuery.error ?? impactAbsencesQuery.error}
         />
       ) : null}
-      {isPending ? <Spinner /> : null}
 
       <ClockAttentionBanner
         items={clockItems}
@@ -586,49 +585,53 @@ export function PlanningPage() {
         }
       />
 
-      <ShiftDragProvider>
-        {view === "settimana" ? (
-          <WeekGrid
-            days={days}
-            byDay={byDay}
-            clockKindsByShift={clockKindsByShift}
-            venueOf={venueOf}
-            onCreate={(day) => setPanel({ date: day })}
-            onOpen={(day, shift) => setPanel({ date: day, shift })}
-            onMove={requestMove}
-          />
-        ) : view === "persone" ? (
-          <PeopleWeek
-            days={days}
-            shifts={data ?? []}
-            clockKindByAssignment={clockKindByAssignment}
-            venueIds={scopedIds}
-            absences={absences}
-            onOpen={(shift) => setPanel({ date: shift.date, shift })}
-            onCreate={(day, personId) =>
-              setPanel({ date: day, personIds: [personId] })
-            }
-            onReassign={requestReassign}
-            onMovePerson={requestMovePerson}
-            legendTarget={legendEl}
-          />
-        ) : (
-          <MonthGrid
-            days={days}
-            month={month}
-            byDay={byDay}
-            clockKindsByShift={clockKindsByShift}
-            venueOf={venueOf}
-            onCreate={(day) => setPanel({ date: day })}
-            onOpen={(day, shift) => setPanel({ date: day, shift })}
-            onOpenDay={(day) => {
-              setMonday(startOfWeek(new Date(`${day}T00:00:00`)));
-              setView("settimana");
-            }}
-            onMove={requestMove}
-          />
-        )}
-      </ShiftDragProvider>
+      {isPending ? (
+        <PlanningSkeleton view={view} days={days.length} />
+      ) : (
+        <ShiftDragProvider>
+          {view === "settimana" ? (
+            <WeekGrid
+              days={days}
+              byDay={byDay}
+              clockKindsByShift={clockKindsByShift}
+              venueOf={venueOf}
+              onCreate={(day) => setPanel({ date: day })}
+              onOpen={(day, shift) => setPanel({ date: day, shift })}
+              onMove={requestMove}
+            />
+          ) : view === "persone" ? (
+            <PeopleWeek
+              days={days}
+              shifts={data ?? []}
+              clockKindByAssignment={clockKindByAssignment}
+              venueIds={scopedIds}
+              absences={absences}
+              onOpen={(shift) => setPanel({ date: shift.date, shift })}
+              onCreate={(day, personId) =>
+                setPanel({ date: day, personIds: [personId] })
+              }
+              onReassign={requestReassign}
+              onMovePerson={requestMovePerson}
+              legendTarget={legendEl}
+            />
+          ) : (
+            <MonthGrid
+              days={days}
+              month={month}
+              byDay={byDay}
+              clockKindsByShift={clockKindsByShift}
+              venueOf={venueOf}
+              onCreate={(day) => setPanel({ date: day })}
+              onOpen={(day, shift) => setPanel({ date: day, shift })}
+              onOpenDay={(day) => {
+                setMonday(startOfWeek(new Date(`${day}T00:00:00`)));
+                setView("settimana");
+              }}
+              onMove={requestMove}
+            />
+          )}
+        </ShiftDragProvider>
+      )}
 
       {deepLinkId ? (
         <DeepLinkedShift

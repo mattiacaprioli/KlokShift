@@ -1,5 +1,6 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -103,7 +104,7 @@ export default function ManagerAbsencesScreen() {
             subtitle="Le assenze le vede chi ha il permesso sull'organico. Nel planning trovi comunque chi non è disponibile."
           />
         ) : query.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-10" />
+          <ListSkeleton variant="person" label="Caricamento assenze…" />
         ) : query.isError ? (
           <QueryError onRetry={() => query.refetch()} />
         ) : (rows ?? []).length === 0 ? (

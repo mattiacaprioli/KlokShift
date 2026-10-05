@@ -4,6 +4,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { CountBadge } from "@/components/ui/CountBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
+import { ConversationListSkeleton } from "@/components/ui/Skeleton";
 import { timeAgo } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import type { ConversationListItem } from "./api";
@@ -84,7 +85,7 @@ export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
   }
 
   if (query.isLoading) {
-    return <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />;
+    return <ConversationListSkeleton />;
   }
 
   return (

@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -19,7 +20,6 @@ import {
   Pill,
   Placeholder,
   QueryError,
-  Spinner,
 } from "../ui/primitives";
 
 /**
@@ -55,7 +55,14 @@ export function StaffPage() {
     );
   }
 
-  if (isPending) return <Spinner />;
+  if (isPending) {
+    return (
+      <>
+        <PageHeader title="Staff" />
+        <ListSkeleton avatar label="Caricamento organico…" />
+      </>
+    );
+  }
   if (isError) return <QueryError error={error} />;
 
   const people = data ?? [];

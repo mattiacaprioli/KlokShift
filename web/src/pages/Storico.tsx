@@ -1,3 +1,4 @@
+import { TableSkeleton } from "../ui/Skeleton";
 import { useEffect, useState } from "react";
 import {
   useOwnerPastShifts,
@@ -28,7 +29,6 @@ import {
   Pill,
   Placeholder,
   QueryError,
-  Spinner,
   StickyHeader,
 } from "../ui/primitives";
 
@@ -104,7 +104,7 @@ export function StoricoPage() {
       </StickyHeader>
 
       {isPending ? (
-        <Spinner />
+        <TableSkeleton columns={6} label="Caricamento storico…" />
       ) : isError ? (
         <QueryError error={error} />
       ) : shifts.length === 0 ? (

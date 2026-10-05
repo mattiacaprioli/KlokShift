@@ -1,3 +1,4 @@
+import { HomeSkeleton, ListSkeleton } from "@/components/ui/Skeleton";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -47,7 +48,7 @@ import { useToast } from "@/providers/Toast";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PREVIEW_COUNT = 3;
@@ -268,11 +269,9 @@ export default function ManagerHome() {
         }
       >
         {venueQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-16" />
+          <HomeSkeleton />
         ) : venueQuery.isError ? (
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
-        ) : shiftsQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-10" />
         ) : (
           <>
             {/* A colpo d'occhio. Il periodo sta **sopra i numeri che qualifica**:
@@ -294,16 +293,16 @@ export default function ManagerHome() {
               </View>
               <View className="flex-row gap-2.5">
                 <StatCard
-                  loading={!statsReady}
-                  value={String(stats.shortCount)}
+                  loading={periodQuery.isPending}
+                  value={statsReady ? String(stats.shortCount) : "—"}
                   label="Turni scoperti"
                   hint="solo quelli da fare"
                   tone={stats.shortCount > 0 ? "warning" : "normal"}
                   onPress={() => router.push("/(manager)/(tabs)/turni")}
                 />
                 <StatCard
-                  loading={!statsReady}
-                  value={String(stats.missingSlots)}
+                  loading={periodQuery.isPending}
+                  value={statsReady ? String(stats.missingSlots) : "—"}
                   label="Posti da coprire"
                   hint="persone che mancano"
                   tone={stats.missingSlots > 0 ? "warning" : "normal"}
@@ -311,6 +310,10 @@ export default function ManagerHome() {
                 />
               </View>
             </View>
+
+            {periodQuery.isError ? (
+              <QueryError onRetry={() => periodQuery.refetch()} />
+            ) : null}
 
             {/* Ferie e permessi da decidere, malattie appena comunicate. */}
             <AbsencesToHandle
@@ -370,7 +373,14 @@ export default function ManagerHome() {
             ) : null}
 
             {/* Chi lavora oggi */}
-            {workers.length > 0 ? (
+            {assignQuery.isLoading ? (
+              <View className="gap-3">
+                <Display className="text-2xl">Chi lavora oggi</Display>
+                <ListSkeleton variant="person" label="Caricamento di chi lavora oggi…" />
+              </View>
+            ) : assignQuery.isError ? (
+              <QueryError onRetry={() => assignQuery.refetch()} />
+            ) : workers.length > 0 ? (
               <View className="gap-3">
                 <View>
                   <Mono gold>
@@ -456,7 +466,9 @@ export default function ManagerHome() {
                 ) : null}
               </View>
 
-              {shiftsQuery.isError ? (
+              {shiftsQuery.isLoading ? (
+                <ListSkeleton label="Caricamento prossimi turni…" />
+              ) : shiftsQuery.isError ? (
                 <QueryError
                   onRetry={() => shiftsQuery.refetch()}
                   subtitle="Non siamo riusciti a caricare i turni. Riprova."

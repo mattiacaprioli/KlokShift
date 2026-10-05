@@ -1,3 +1,4 @@
+import { DetailSkeleton } from "./ui/Skeleton";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -7,7 +8,7 @@ import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { cn } from "@/lib/cn";
-import { QueryError, Spinner } from "./ui/primitives";
+import { QueryError } from "./ui/primitives";
 import { Avatar } from "./ui/Avatar";
 import { PersonAvatarProvider } from "./ui/PersonAvatar";
 import { SidebarIcon, type SidebarIconName } from "./ui/SidebarIcon";
@@ -156,7 +157,7 @@ export function AppLayout() {
         {/* Niente più gate "serve una sede": ogni pagina mostra il proprio stato
             vuoto (`NoVenues`), perché nessuna è più ancorata a una sede sola. */}
         {isPending ? (
-          <Spinner />
+          <DetailSkeleton />
         ) : isError ? (
           <QueryError error={error} />
         ) : (

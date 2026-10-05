@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { QueryError } from "@/components/ui/QueryError";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import type { ChatContact } from "./api";
@@ -89,7 +90,7 @@ export function ContactPicker({
   }
 
   if (query.isLoading) {
-    return <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />;
+    return <ListSkeleton variant="person" className="px-5 pt-2" label="Caricamento contatti…" />;
   }
 
   return (

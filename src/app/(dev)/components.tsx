@@ -7,6 +7,15 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ShimmerText } from "@/components/ui/ShimmerText";
+import {
+  ChatHeaderSkeleton,
+  ConversationListSkeleton,
+  ListSkeleton,
+  MessageSkeleton,
+  NextShiftSkeleton,
+  WeekSkeleton,
+} from "@/components/ui/Skeleton";
+import { StatCard } from "@/components/ui/StatCard";
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -24,6 +33,38 @@ export default function ComponentsScreen() {
   if (!__DEV__) return null;
   return (
     <ScrollView className="flex-1 bg-bg-1" contentContainerClassName="p-5">
+      <Block title="Skeleton — riepilogo e prossimo turno">
+        <View className="gap-3">
+          <View className="flex-row gap-2.5">
+            <StatCard loading value="" label="Turni scoperti" hint="solo quelli da fare" />
+            <StatCard loading value="" label="Posti da coprire" hint="persone che mancano" />
+          </View>
+          <NextShiftSkeleton />
+        </View>
+      </Block>
+
+      <Block title="Skeleton — turni e organico">
+        <View className="gap-3">
+          <ListSkeleton rows={2} label="Caricamento turni…" />
+          <ListSkeleton rows={2} variant="person" label="Caricamento organico…" />
+        </View>
+      </Block>
+
+      <Block title="Skeleton — settimana">
+        <WeekSkeleton />
+      </Block>
+
+      <Block title="Skeleton — messaggi">
+        <ConversationListSkeleton />
+      </Block>
+
+      <Block title="Skeleton — chat">
+        <View className="h-96 gap-3">
+          <View className="flex-row"><ChatHeaderSkeleton /></View>
+          <MessageSkeleton />
+        </View>
+      </Block>
+
       <Block title="ShimmerText">
         <ShimmerText fontSize={36}>KlokShift</ShimmerText>
       </Block>

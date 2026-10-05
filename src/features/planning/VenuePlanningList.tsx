@@ -1,5 +1,6 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useState } from "react";
-import { ActivityIndicator, RefreshControl, SectionList, type ViewToken } from "react-native";
+import { RefreshControl, SectionList, type ViewToken } from "react-native";
 import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Mono } from "@/components/ui/Mono";
@@ -60,7 +61,7 @@ export function VenuePlanningList({
   const [openId, setOpenId] = useState<string | null>(null);
 
   if (isLoading) {
-    return <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />;
+    return <ListSkeleton className="px-5 pt-2" label="Caricamento turni delle sedi…" />;
   }
   if (isError) return <QueryError onRetry={onRetry} />;
 

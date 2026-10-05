@@ -1,3 +1,4 @@
+import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
 import {
@@ -13,7 +14,7 @@ import {
   shiftDurationHours,
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { Button, Input, Select, Spinner } from "../ui/primitives";
+import { Button, Input, Select } from "../ui/primitives";
 import {
   useApproveClockRecord,
   useApproveClockRecords,
@@ -350,7 +351,7 @@ export function PresenceSection({
   const regular = approvable.filter((a) => isRegularPendingClock(times, a));
   const showApproveRegular = regular.length > 0 && approvable.length > 1;
 
-  if (isPending) return <Spinner label="Caricamento presenze…" />;
+  if (isPending) return <TableSkeleton columns={4} rows={3} label="Caricamento presenze…" />;
   if (rows.length === 0) return null;
 
   return (

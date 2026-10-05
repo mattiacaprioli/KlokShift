@@ -1,6 +1,7 @@
+import { NextShiftSkeleton } from "@/components/ui/Skeleton";
 import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, View } from "@/tw";
 import { AlertBanner } from "@/components/ui/AlertBanner";
@@ -171,7 +172,7 @@ export default function WaiterHomeScreen() {
             onAction={openAgenda}
           />
           {assignedQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-4" />
+            <NextShiftSkeleton />
           ) : assignedQuery.isError ? (
             <QueryError onRetry={() => assignedQuery.refetch()} />
           ) : next == null ? (

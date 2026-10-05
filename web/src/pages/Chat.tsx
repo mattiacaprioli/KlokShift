@@ -1,3 +1,4 @@
+import { ChatSkeleton, ListSkeleton, MessageSkeleton } from "../ui/Skeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
@@ -22,7 +23,6 @@ import {
   Pill,
   Placeholder,
   QueryError,
-  Spinner,
 } from "../ui/primitives";
 
 /**
@@ -38,7 +38,14 @@ export function ChatPage() {
   const [picking, setPicking] = useState(false);
   const query = useConversations(userId);
 
-  if (query.isPending) return <Spinner />;
+  if (query.isPending) {
+    return (
+      <>
+        <PageHeader title="Messaggi" />
+        <ChatSkeleton />
+      </>
+    );
+  }
   if (query.isError) return <QueryError error={query.error} />;
 
   const conversations = query.data ?? [];
@@ -210,7 +217,7 @@ function ContactPicker({
   return (
     <Card className="mb-6 flex flex-col gap-3 p-4">
       {isPending ? (
-        <Spinner />
+        <ListSkeleton avatar rows={3} label="Caricamento contatti…" />
       ) : isError ? (
         <QueryError error={error} />
       ) : contacts.length === 0 ? (
@@ -340,7 +347,7 @@ function Thread({
         {query.isError ? (
           <QueryError error={query.error} />
         ) : query.isLoading ? (
-          <Spinner />
+          <MessageSkeleton />
         ) : ordered.length === 0 ? (
           <p className="py-12 text-center text-sm text-t3">
             {other

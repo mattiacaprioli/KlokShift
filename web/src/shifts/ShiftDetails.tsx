@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
@@ -27,7 +28,7 @@ import {
   shiftStartsAt,
 } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
-import { Button, Pill, Spinner } from "../ui/primitives";
+import { Button, Pill } from "../ui/primitives";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { LiveClockLine } from "./LiveClockLine";
@@ -199,7 +200,7 @@ export function ShiftDetails({
                 Chi lavora ({workingCount})
               </span>
               {assignmentsQuery.isPending ? (
-                <Spinner />
+                <ListSkeleton avatar rows={3} label="Caricamento assegnazioni…" />
               ) : assignments.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
                   Nessuno assegnato a questo turno.

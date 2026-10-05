@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import type { VenueRole } from "@/features/roles/api";
 import {
   useArchiveVenueRole,
@@ -20,7 +21,6 @@ import {
   Placeholder,
   QueryError,
   Select,
-  Spinner,
 } from "../ui/primitives";
 import { NoVenues } from "../venues/NoVenues";
 
@@ -153,7 +153,14 @@ export function RuoliPage() {
     );
   }
 
-  if (isPending) return <Spinner />;
+  if (isPending) {
+    return (
+      <>
+        <PageHeader title="Ruoli" />
+        <ListSkeleton rows={3} label="Caricamento ruoli…" />
+      </>
+    );
+  }
   if (isError) return <QueryError error={error} />;
 
   const roles = data ?? [];

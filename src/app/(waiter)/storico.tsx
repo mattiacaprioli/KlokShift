@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { ActivityIndicator, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMemo, useState } from "react";
@@ -136,7 +137,7 @@ export default function WaiterHistoryScreen() {
       </View>
 
       {history.isLoading ? (
-        <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+        <ListSkeleton className="px-5 pt-2" label="Caricamento dei turni svolti…" />
       ) : history.isError ? (
         <View className="px-5">
           <QueryError onRetry={history.refetch} />

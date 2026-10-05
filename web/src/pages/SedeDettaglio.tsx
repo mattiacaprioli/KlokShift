@@ -1,3 +1,4 @@
+import { DetailSkeleton } from "../ui/Skeleton";
 import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueCard } from "../venues/VenueCard";
@@ -8,7 +9,6 @@ import {
   PageHeader,
   Placeholder,
   QueryError,
-  Spinner,
 } from "../ui/primitives";
 
 /**
@@ -27,7 +27,14 @@ export function SedeDettaglioPage() {
   // un link diretto o dopo un refresh, e lì «indietro» uscirebbe dall'app.
   const back = <Button onClick={() => navigate("/sede")}>← Sedi</Button>;
 
-  if (isPending) return <Spinner />;
+  if (isPending) {
+    return (
+      <>
+        <PageHeader title="Sede" />
+        <DetailSkeleton />
+      </>
+    );
+  }
   if (isError) return <QueryError error={error} />;
 
   if (!venue) {

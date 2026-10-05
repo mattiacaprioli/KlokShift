@@ -1,3 +1,4 @@
+import { PlanningSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -35,7 +36,7 @@ import { personRoleNames } from "@/features/staff/api";
 import type { ClockAttentionKind } from "@/features/clock/attention";
 import { actualChipText } from "@/features/clock/hours";
 import { dayLabel, isPastDay, isToday, PAST_DAY_REASON } from "../lib/week";
-import { Placeholder, Spinner } from "../ui/primitives";
+import { Placeholder } from "../ui/primitives";
 import {
   dropClass,
   useShiftDrag,
@@ -204,7 +205,7 @@ export function PeopleWeek({
     return computeWeekLoad(shifts, roster, { actualVenueIds });
   }, [shifts, peopleQuery.data, venueIds, actualVenueIds]);
 
-  if (peopleQuery.isPending) return <Spinner />;
+  if (peopleQuery.isPending) return <PlanningSkeleton view="persone" />;
 
   if (rows.length === 0) {
     return filtered ? (

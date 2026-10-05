@@ -1,5 +1,6 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -164,7 +165,7 @@ export default function ManagerStaffScreen() {
         }
       >
         {venueQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-16" />
+          <ListSkeleton variant="person" label="Caricamento organico…" />
         ) : venueQuery.isError ? (
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
         ) : venues.length === 0 ? (
@@ -280,7 +281,7 @@ export default function ManagerStaffScreen() {
             ) : null}
 
             {peopleQuery.isLoading ? (
-              <ActivityIndicator color="#EAB54C" className="mt-6" />
+              <ListSkeleton variant="person" label="Caricamento organico…" />
             ) : peopleQuery.isError ? (
               <QueryError
                 onRetry={() => peopleQuery.refetch()}

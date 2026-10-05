@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { cn } from "@/lib/cn";
@@ -32,7 +33,6 @@ import {
   Pill,
   Placeholder,
   QueryError,
-  Spinner,
 } from "../ui/primitives";
 
 /** Etichetta di gruppo con lo stile di `Field`, ma senza `<label>`: dentro ci
@@ -627,7 +627,7 @@ export function TeamPage() {
   const { workspaceId, isOwner, isLoading } = useOwnerVenues();
   const team = useTeam(isOwner ? (workspaceId ?? "") : "");
 
-  if (isLoading) return <Spinner label="Caricamento…" />;
+  if (isLoading) return <ListSkeleton avatar label="Caricamento collaboratori…" />;
   if (!isOwner) return <Navigate to="/" replace />;
   if (!workspaceId) return <NoVenues />;
 
@@ -657,7 +657,7 @@ export function TeamPage() {
       <div className="grid max-w-6xl items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="flex min-w-0 flex-col gap-3">
           {team.isPending ? (
-            <Spinner label="Caricamento…" />
+            <ListSkeleton avatar label="Caricamento collaboratori…" />
           ) : team.isError ? (
             <QueryError error={team.error} />
           ) : members.length === 0 ? (

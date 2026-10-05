@@ -1,3 +1,4 @@
+import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
@@ -24,7 +25,6 @@ import {
   Placeholder,
   QueryError,
   Select,
-  Spinner,
   StickyHeader,
 } from "../ui/primitives";
 
@@ -184,7 +184,7 @@ export function OrePage() {
 
       {isError ? <QueryError error={error} /> : null}
       {absenceQuery.isError ? <QueryError error={absenceQuery.error} /> : null}
-      {isPending || absenceQuery.isPending ? <Spinner /> : null}
+      {isPending || absenceQuery.isPending ? <TableSkeleton columns={7} label="Caricamento ore…" /> : null}
 
       {!isPending &&
       !absenceQuery.isPending &&

@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, RefreshControl } from "react-native";
@@ -258,7 +259,7 @@ export default function ManagerHistoryScreen() {
       </View>
 
       {listQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+        <ListSkeleton className="px-5 pt-2" label="Caricamento storico…" />
       ) : listQuery.isError ? (
         <View className="px-5">
           <QueryError

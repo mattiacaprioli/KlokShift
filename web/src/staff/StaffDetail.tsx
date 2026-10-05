@@ -1,3 +1,4 @@
+import { DetailSkeleton, ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { userErrorMessage } from "@/lib/errors";
@@ -53,7 +54,6 @@ import {
   Placeholder,
   QueryError,
   Select,
-  Spinner,
   Textarea,
 } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
@@ -99,7 +99,7 @@ export function StaffDetail({
           {isError ? (
             <QueryError error={error} />
           ) : isPending ? (
-            <Spinner />
+            <DetailSkeleton />
           ) : (
             <Placeholder
               title="Scheda non trovata"
@@ -1359,7 +1359,7 @@ function ThisMonth({ person }: { person: StaffPersonDetail }) {
   const perfQuery = usePersonPerformance(person.id);
   const lastQuery = usePersonWorkedShifts(person.id, 1);
 
-  if (perfQuery.isLoading || lastQuery.isLoading) return <Spinner />;
+  if (perfQuery.isLoading || lastQuery.isLoading) return <ListSkeleton rows={3} label="Caricamento attività…" />;
 
   const perf = perfQuery.data ?? null;
   const last = lastQuery.data?.[0] ?? null;

@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
+import { ChatHeaderSkeleton, MessageSkeleton } from "@/components/ui/Skeleton";
 import { toTimeString } from "@/lib/format";
 import { useKeyboardVisible } from "@/lib/useKeyboardVisible";
 import { useToast } from "@/providers/Toast";
@@ -56,7 +57,7 @@ export function ChatThread({ conversationId, userId }: Props) {
 
   // Messaggi, realtime, mark-read e validazione dell'invio stanno nell'hook
   // condiviso con la dashboard web: qui resta solo la UI.
-  const { query, messages, other, notFound, send, submit } = useChatThread(
+  const { conversation, query, messages, other, notFound, send, submit } = useChatThread(
     conversationId,
     userId
   );
@@ -125,6 +126,8 @@ export function ChatThread({ conversationId, userId }: Props) {
                 ) : null}
               </View>
             </>
+          ) : conversation.isLoading ? (
+            <ChatHeaderSkeleton />
           ) : (
             // Placeholder neutro finché non arriva la controparte (niente "?").
             <>
@@ -138,8 +141,8 @@ export function ChatThread({ conversationId, userId }: Props) {
           <View className="flex-1 justify-center px-6">
             <QueryError onRetry={() => query.refetch()} />
           </View>
-        ) : query.isLoading ? (
-          <ActivityIndicator color="#EAB54C" style={{ flex: 1 }} />
+        ) : query.isLoading || (conversation.isLoading && messages.length === 0) ? (
+          <MessageSkeleton />
         ) : (
           <FlatList
             // Inverted solo con dati: ListEmptyComponent altrimenti va a testa in giù.

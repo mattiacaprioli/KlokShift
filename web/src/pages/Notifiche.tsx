@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../ui/Skeleton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import {
@@ -16,7 +17,6 @@ import {
   PageHeader,
   Placeholder,
   QueryError,
-  Spinner,
 } from "../ui/primitives";
 
 export function NotifichePage() {
@@ -28,7 +28,14 @@ export function NotifichePage() {
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead(userId);
 
-  if (query.isPending) return <Spinner />;
+  if (query.isPending) {
+    return (
+      <>
+        <PageHeader title="Notifiche" />
+        <ListSkeleton avatar label="Caricamento notifiche…" className="max-w-3xl" />
+      </>
+    );
+  }
   if (query.isError) return <QueryError error={query.error} />;
 
   const items = query.data ?? [];
