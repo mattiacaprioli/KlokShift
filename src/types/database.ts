@@ -1342,6 +1342,41 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_get_account: {
+        Args: { p_account: string; p_offset?: number }
+        Returns: Json
+      }
+      admin_get_overview: { Args: never; Returns: Json }
+      admin_get_workspace: {
+        Args: {
+          p_members_offset?: number
+          p_periods_offset?: number
+          p_venues_offset?: number
+          p_workspace: string
+        }
+        Returns: Json
+      }
+      admin_list_accounts: {
+        Args: {
+          p_classification?: string
+          p_limit?: number
+          p_offset?: number
+          p_query?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      admin_list_workspaces: {
+        Args: {
+          p_classification?: string
+          p_limit?: number
+          p_offset?: number
+          p_plan?: string
+          p_query?: string
+          p_state?: string
+        }
+        Returns: Json
+      }
       approve_clock_record: {
         Args: { p_assignment: string }
         Returns: {
@@ -1653,6 +1688,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_platform_admin_access: { Args: never; Returns: Json }
       get_staff_planning: {
         Args: { p_from: string; p_to: string }
         Returns: {

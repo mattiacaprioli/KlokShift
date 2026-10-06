@@ -25,9 +25,22 @@ $$;
 alter table auth.users add column if not exists email_confirmed_at timestamptz;
 alter table auth.users add column if not exists deleted_at timestamptz;
 alter table auth.users add column if not exists is_anonymous boolean not null default false;
+alter table auth.users add column if not exists banned_until timestamptz;
+
+-- Il banco non esegue GoTrue: queste sole colonne riproducono le fonti live
+-- usate dal guard M05. Le fixture non provano il protocollo TOTP HTTP.
+create table if not exists auth.sessions (
+  id uuid primary key, user_id uuid not null references auth.users(id) on delete cascade,
+  not_after timestamptz
+);
+create table if not exists auth.mfa_factors (
+  id uuid primary key, user_id uuid not null references auth.users(id) on delete cascade,
+  factor_type text not null, status text not null
+);
 
 grant usage on schema auth to postgres;
 grant select, insert, update, delete on auth.users to postgres;
+grant select, insert, update, delete on auth.sessions, auth.mfa_factors to postgres;
 grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role, postgres;
 
 -- ---------------------------------------------------------------------------

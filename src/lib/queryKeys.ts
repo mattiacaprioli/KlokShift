@@ -3,6 +3,14 @@
  * stays consistent across features.
  */
 export const qk = {
+  /** Consultazione globale: namespace e identità separati dalla dashboard cliente. */
+  admin: {
+    all: ["admin"] as const,
+    access: (userId: string, sessionVersion: string) => ["admin", "access", userId, sessionVersion] as const,
+    data: (userId: string, resource: string, parameters: unknown = null) =>
+      ["admin", "data", userId, resource, parameters] as const,
+    privileged: ["admin", "data"] as const,
+  },
   /**
    * Chi sono e dove (`get_my_context`): le appartenenze, le sedi gestite con i
    * permessi, quelle in cui lavoro. Senza id: l'identità è la sessione.

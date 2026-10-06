@@ -25,6 +25,12 @@ export class UserFacingError extends Error {
 }
 
 const PATTERNS: { match: string[]; message: string }[] = [
+  { match: ["admin_not_allowed"], message: "L'accesso amministrativo non è autorizzato. Accedi con l'account abilitato." },
+  { match: ["admin_mfa_required"], message: "Completa la verifica con il secondo fattore per accedere." },
+  { match: ["admin_mfa_verification_failed"], message: "Verifica non riuscita. Controlla il codice e riprova." },
+  { match: ["admin_response_invalid"], message: "I dati amministrativi non sono verificabili. Riprova l'aggiornamento." },
+  { match: ["admin_invalid_filter"], message: "Controlla i filtri di ricerca e riprova." },
+  { match: ["admin_not_found"], message: "L'elemento richiesto non è disponibile." },
   { match: ["workspace_read_only"], message: "L'azienda non ha accesso operativo. Puoi consultare ed esportare lo storico." },
   { match: ["workspace_people_capacity"], message: "La capacità di persone dell'azienda è raggiunta. Il lavoro esistente continua." },
   { match: ["workspace_venue_capacity"], message: "La capacità di sedi aperte dell'azienda è raggiunta. Chiudere una sede conserva lo storico." },

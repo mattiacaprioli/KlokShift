@@ -432,7 +432,7 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M02 | Definire procedura fiscale e condizioni commerciali del canale iniziale | M01, commercialista | PROPOSTO |
 | M03 | Implementare accesso/capacità nel DB e concessioni gratuite a vita | Regole pertinenti M01 | IN CORSO: M03a/M03b verificati localmente; quote, classificazione reale e rollout pendenti |
 | M04 | Rendere coerenti app, dashboard cliente e sito; eliminare Free/Pro obsoleto | M03 | IN CORSO: collegamento minimo e rimozione gate; flussi commerciali/sito pendenti |
-| M05 | Dashboard personale: accesso protetto, panorama, aziende e schede | M03; riuso stack web | PROPOSTO |
+| M05 | Dashboard personale: accesso protetto, panorama, aziende e schede | M03; riuso stack web | IMPLEMENTATO/VERIFICATO LOCALE; smoke Auth reale/dev pendente |
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | PROPOSTO |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
 | M08 | Verifica account/contratto e prova sandbox Paddle, avviate presto | M01–M02 per chiusura; indagine indipendente avviabile prima | PROPOSTO: scelta Paddle confermata; verifiche da eseguire |
@@ -521,7 +521,8 @@ Il collegamento minimo necessario alla verifica dev monta il read model su
 app/dashboard, mostra stati/date/capacità, rimuove gate Pro e override obsoleti,
 usa tutti gli id autorizzati (sedi chiuse comprese) per lo storico e permette
 mesi arbitrari nell'export web. Non completa M04 commerciale e non anticipa
-M05/M06: il prossimo blocco della sequenza è l'autorizzazione/admin del fondatore.
+M05/M06: M05 aggiunge ora la consultazione amministrativa; il prossimo blocco
+funzionale è concessioni/audit M06, dopo lo smoke Auth reale/dev di M05.
 
 Il refresh usa l'istante server e il prossimo inizio di concessione; focus,
 reconnect e primo piano nativo rileggono lo stato. Nessun polling permanente
@@ -581,13 +582,33 @@ Inventario iniziale del 2026-10-05. M03b collega accesso/capacità e conserva le
 
 ### M05 — Dashboard personale di consultazione
 
-- [ ] Implementare allowlist, MFA e controllo server prima delle query globali.
-- [ ] Aggiungere layout amministrativo separato e data layer con query key dedicate.
-- [ ] Creare panorama, ricerca aziende paginata, scheda azienda e elenco account.
-- [ ] Separare account, persone, gestori, appartenenze e sedi; distinguere aziende interne/test.
-- [ ] Mostrare date disponibili e capacità/uso, con stati vuoto/caricamento/errore e fonti dei numeri.
-- [ ] Rendere visibili anomalie che richiedono azione e uso dello spazio; distinguere costo disponibile, stimato e non ancora misurabile per azienda.
-- [ ] Verificare che un titolare cliente e un collaboratore non leggano alcun riepilogo globale nemmeno tramite API.
+- [x] Implementare allowlist, MFA e controllo server prima delle query globali.
+- [x] Aggiungere layout amministrativo separato e data layer con query key dedicate.
+- [x] Creare panorama, ricerca aziende paginata, scheda azienda e elenco/dettaglio account.
+- [x] Separare account, persone, gestori, appartenenze e sedi; distinguere aziende interne/test tramite classificazione esplicita, senza dedurla dalla gratuità.
+- [x] Mostrare date disponibili e capacità/uso, con stati vuoto/caricamento/errore e fonti dei numeri.
+- [x] Rendere visibili anomalie disponibili e uso misurato dei documenti; costo non disponibile esplicito, nessuna ripartizione inventata.
+- [x] Test SQL: titolare cliente con MFA, collaboratore, professionista e anon non leggono riepiloghi globali; revoca/sessione/fattore/account verificati.
+- [ ] Smoke Auth/TOTP reale, visuale multiutente e revoca live su un Supabase dev completo isolato.
+- [ ] Provisioning deliberato del solo fondatore reale e rollout dopo le verifiche dev.
+
+**Evidenze locali del 2026-10-06:** nuova migration forward-only
+`20261006000100_platform_admin_reads.sql`, allowlist inizialmente vuota,
+nessun ampliamento RLS cliente. Cinque RPC globali e una lettura del solo
+stato amministrativo del chiamante. Account Auth distinti da schede/profili,
+ricerca/paginazione server, classificazioni private motivate, periodi/date
+autorevoli, misure `storage.objects.metadata.size` con sconosciuti/non
+attribuiti; nessun file/chat/HR aperto. `migration_pending` rimane visibile
+senza concessioni inventate; consultazione senza reset archivio.
+
+14 file SQL/RLS e 5 concorrenti passati; 38 file / **272 test client**;
+tipi DB rigenerati dal banco, typecheck app/web/sito, lint senza errori
+(warning React Hook Form preesistente), build web ed export iOS superati.
+Il build web segnala la dimensione del bundle. La suite SQL simula le fonti
+Auth necessarie: non attesta enrollment/challenge TOTP HTTP reale.
+Procedura con ambiente/passaggi/esiti: [TEST-FOUNDER-M05.md](../docs/TEST-FOUNDER-M05.md).
+M06 resta necessario per concessioni mutabili/audit/economia, M09 per Paddle;
+nessun provisioning reale, migrazione remota, commit/push o deploy in questo blocco.
 
 **Uscita:** puoi vedere ogni cliente e capire piano, uso e scadenza senza aprire il pannello DB.
 

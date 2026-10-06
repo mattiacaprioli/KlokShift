@@ -1,6 +1,6 @@
 # Dashboard personale del fondatore
 
-**Stato:** specifica da implementare. Regole commerciali approvate il 2026-10-05; M03a/M03b forniscono il modello e i controlli server locali; nessuna area amministrativa globale/MFA/audit descritta qui è dichiarata già disponibile. Il prossimo blocco della sequenza rimane M05, poi concessioni M06.
+**Stato, 2026-10-06:** M05 implementato e verificato nel banco locale: allowlist/MFA e guard server, panoramica, aziende e account paginati, dettagli, capacità/date, anomalie disponibili e Storage misurato. La allowlist nasce vuota; provisioning reale e smoke Auth/TOTP/visuale su dev sono ancora da eseguire. Nessun rollout remoto in questa sessione. Concessioni, audit ed economia M06 e integrazione Paddle restano da realizzare. Procedura precisa: [TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md).
 
 Questo documento è la fonte dedicata per requisiti, dati, autorizzazioni e verifiche della dashboard personale di Alisher. Le regole commerciali complete sono in [MONETIZATION.md](MONETIZATION.md); dipendenze e sequenza di lavoro sono nel [piano di monetizzazione](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
 
@@ -15,15 +15,36 @@ La versione essenziale deve essere pronta **prima del primo cliente pagante**, i
 ## Accesso e architettura
 
 - Riutilizzare `web/`, con layout amministrativo distinto e data layer dedicato; non introdurre un secondo stack frontend.
-- Percorso proposto: `#/amministrazione`, da integrare nell'HashRouter esistente. Il nome della rotta non è una misura di sicurezza.
-- Mantenere nel backend un'allowlist di amministratori della piattaforma, separata da `workspace_members.authority`; inizialmente comprende soltanto l'account del fondatore.
+- Percorso implementato: `#/amministrazione`, nell'HashRouter esistente, prima del gate cliente. Il nome della rotta non è una misura di sicurezza.
+- Allowlist in `private.platform_admins`, separata da `workspace_members.authority`; nasce vuota, poi si provisiona esplicitamente soltanto il fondatore. Non dedurre l'identità amministrativa da email, ownership o metadata.
 - Richiedere sessione valida e MFA con livello `aal2`; verificare autorizzazione e revoca a ogni richiesta amministrativa.
 - Il browser usa chiave pubblica e sessione autenticata. Nessuna service-role key, credenziale provider o segreto amministrativo nel bundle.
 - Edge Function e RPC esplicite verificano attore e autorizzazione prima di leggere dati globali o usare credenziali server.
 - Conservare dati economici, spese e note private in entità non leggibili dai normali client; esporre soltanto i campi necessari.
 - Nessun SQL arbitrario, proxy generico, elevazione tramite `user_metadata` o policy che allarghi ai clienti la visibilità sulle altre aziende.
-- Collocazione proposta del dominio client: `src/features/admin/`, con `api.ts`, tipi, hook e query key dedicate. Le pagine non interrogano direttamente Supabase.
+- Dominio client implementato in `src/features/admin/`, con `api.ts`, parser/tipi, hook e query key `qk.admin` separate per identità e sessione; pagine in `web/src/admin/`. Le pagine non interrogano direttamente Supabase.
 - Ricerca paginata, filtri validati nel server e payload contenuti; evitare download dell'intero database per calcolare riepiloghi nel browser.
+
+Il guard M05 richiede email confermata, account non anonimo/bloccato/eliminato,
+allowlist non revocata, sessione Auth ancora presente/non scaduta, JWT `aal2` e
+fattore verificato ancora presente. `get_platform_admin_access` legge soltanto
+lo stato del chiamante anche a `aal1`, per raggiungere il setup/challenge. Le
+altre cinque RPC `admin_*` ricontrollano il guard prima di ogni lettura globale.
+Il browser non riceve `auth.users` integrale né helper/tabelle private.
+
+Ogni lista contiene 25 elementi nell'interfaccia (massimo 50 nelle RPC). Membri,
+sedi e periodi aziendali sono paginati separatamente; sedi gestite/collocazioni
+nella singola appartenenza account sono limitate a 25 con totale e avviso.
+Il controllo di accesso ogni 60 secondi legge solo lo stato del chiamante,
+senza polling globale. Errori di verifica accesso/revoche/uscita rimuovono i dati amministrativi
+dalla cache; un cambio token richiede una nuova verifica prima delle pagine.
+
+La misura spazio M05 usa `storage.objects.metadata.size` del bucket
+`staff-documents`: byte noti, dimensioni sconosciute e oggetti non attribuibili
+sono distinti. Non espone nomi/percorso/contenuto dei file e non stima costi.
+Etichette `customer/internal/test` in tabelle private sono esplicite e motivate;
+senza etichetta rimane `unclassified`, anche per una concessione gratuita.
+Non risolvono `migration_pending` né modificano periodi commerciali.
 
 ## Pagine della versione essenziale
 
@@ -171,8 +192,9 @@ Le scritture amministrative non aggirano limiti, diritto di accesso, stato provi
 
 ## Criteri di accettazione e passi
 
-- [ ] M05: accesso protetto, riepiloghi, ricerca paginata, schede e conteggi spiegabili; cliente/collaboratore/professionista/anon non accedono alle API globali.
-- [ ] Sessione senza MFA, amministratore revocato e account fuori allowlist sono rifiutati dal backend, anche conoscendo la rotta.
+- [x] M05 nel banco locale: accesso protetto, riepiloghi, ricerca paginata, schede e conteggi spiegabili; cliente/collaboratore/professionista/anon non accedono alle API globali.
+- [x] Test SQL: sessione senza MFA, amministratore revocato e account fuori allowlist rifiutati dal backend, anche conoscendo la rotta.
+- [ ] Enrollment/challenge TOTP reale, provisioning del fondatore e smoke visuale multiutente su Supabase dev, poi rollout deliberato.
 - [ ] M06: gratuità a vita per azienda, piano/sedi/quota, proroghe e audit; eventuale doppio invio non duplica l'azione.
 - [ ] Riattivazione con gratuità permanente valida senza carta o pagamento; una concessione non viene trasformata in abbonamento pagante dal flusso di ripresa.
 - [ ] Pagamenti, rimborsi e payout sono collegati a esiti verificati; annuale, gratuità e commissioni producono i totali attesi senza doppio conteggio.
@@ -184,4 +206,4 @@ Le scritture amministrative non aggirano limiti, diritto di accesso, stato provi
 - [ ] Il lancio pagante comprende anche M09: checkout web, eventi firmati/idempotenti e riconciliazione. La sola dashboard non abilita il lancio.
 - [ ] M10, dopo la base essenziale: snapshot, coorti, conversione, pause/uscite distinte, previsione e automazioni giustificate dal lavoro reale.
 
-Le verifiche sopra vanno eseguite durante l'implementazione con test di comportamento/autorizzazione pertinenti e smoke multiutente. Questo documento non dichiara test del prodotto già superati. Per regole ancora dipendenti da provider o validazione privacy/fiscale, seguire [MONETIZATION.md](MONETIZATION.md) e il [piano operativo](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
+Le verifiche automatiche locali M05 sono registrate nella procedura; non equivalgono a una prova visuale/Auth reale o a un rollout. Per regole ancora dipendenti da provider o validazione privacy/fiscale, seguire [MONETIZATION.md](MONETIZATION.md) e il [piano operativo](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).

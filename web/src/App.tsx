@@ -28,6 +28,7 @@ import { SedeNuovaPage } from "./pages/SedeNuova";
 import { SedeDettaglioPage } from "./pages/SedeDettaglio";
 import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
+import { AdminApp } from "./admin/AdminApp";
 
 export function App() {
   const { session, profile, loading, error, retryProfile, signOut } = useAuth();
@@ -61,6 +62,12 @@ export function App() {
   // pagina che lo crea, scambiando il token dell'email con un account.
   if (pathname === "/nuova-password") return <NuovaPasswordPage />;
   if (pathname === "/invito") return <InvitoPage />;
+
+  // L'amministratore può non avere aziende cliente. Il suo gate server è
+  // distinto da OwnerVenuesProvider e dai permessi del titolare.
+  if (pathname === "/amministrazione" || pathname.startsWith("/amministrazione/")) {
+    return session ? <AdminApp /> : <LoginPage />;
+  }
 
   // Fuori sessione esistono due sole pagine. Il catch-all riporta al login
   // anche il fragment che Supabase lascia nell'URL dopo la conferma email

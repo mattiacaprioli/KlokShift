@@ -106,9 +106,15 @@ la dashboard del fondatore in
 M03a/M03b implementano modello, accesso/capacità server e collegamento iniziale
 app/dashboard, verificati in locale. `migration_pending` conserva esplicitamente
 le operazioni precedenti, senza concessioni inventate; il dato mancante non
-sblocca. Pagamenti, amministrazione globale, quote/downgrade, rollout reale e
-completamento archivio/cancellazione restano da implementare. Procedura dev:
+sblocca. M05 aggiunge consultazione del fondatore in `web/` a
+`#/amministrazione`, allowlist privata vuota fino a provisioning esplicito,
+MFA `aal2` e controllo live di account/sessione/fattore a ogni RPC globale.
+Nessuna RLS cliente ampliata, nessun accesso admin ordinario a HR/chat/file.
+Concessioni/audit/economia M06, pagamenti, quote/downgrade, rollout reale e
+completamento archivio/cancellazione restano da implementare. Procedure dev:
 [docs/TEST-MONETIZATION-M03B.md](docs/TEST-MONETIZATION-M03B.md).
+[docs/TEST-FOUNDER-M05.md](docs/TEST-FOUNDER-M05.md) distingue il banco SQL
+locale dalla prova MFA reale e visuale, ancora da eseguire su dev isolato.
 
 - Il piano è aziendale; i due piani hanno le stesse funzioni e capacità diversa.
   Il limite di 30 riguarda persone uniche nell'intera azienda, non per sede.

@@ -127,7 +127,7 @@ refresh per concessioni future, focus/reconnect e ritorno al primo piano nativo.
 Nessun realtime commerciale globale/polling continuo per gratuità permanente.
 Una variazione del servizio viene riletta al refresh; le scritture DB sono
 sempre controllate subito. App/dashboard mostrano stato/date/capacità; i vecchi
-gate Pro e il toggle sono rimossi. M04 commerciale, M05/M06, quote, capacità
+gate Pro e il toggle sono rimossi. M04 commerciale, M06, quote, capacità
 futura dei downgrade, grazia di rinnovo e Paddle restano da completare.
 
 Verifiche e procedura: [TEST-MONETIZATION-M03B.md](../docs/TEST-MONETIZATION-M03B.md).
@@ -147,9 +147,42 @@ query globali e ogni mutazione del fondatore, con traccia degli interventi.
 `authority = owner` vale nell'azienda e non concede amministrazione di KlokShift.
 Nomi/tabelle/helper proposti nel piano non attestano schema già esistente.
 
+### Consultazione del fondatore M05 — locale
+
+`20261006000100_platform_admin_reads.sql` aggiunge allowlist e classificazioni
+private (`platform_admins`, `admin_workspace_labels`, `admin_account_labels`),
+senza assegnare implicitamente un amministratore. Classificare un'azienda non
+concede periodi, non risolve `migration_pending` e non cambia il funzionamento
+cliente. Nessuna RLS ordinaria viene ampliata.
+
+`get_platform_admin_access()` restituisce soltanto eleggibilità/accesso del
+chiamante. Ogni RPC globale (`admin_get_overview`, `admin_list_workspaces`,
+`admin_get_workspace`, `admin_list_accounts`, `admin_get_account`) verifica
+allowlist non revocata, account confermato/non anonimo/non bloccato/non
+eliminato, sessione ancora presente/non scaduta, JWT `aal2` e fattore MFA
+verificato ancora presente. Helper, viste e tabelle private non sono esposti
+ad authenticated/anon; il browser usa soltanto sessione e chiave pubblica.
+
+Payload con dati amministrativi minimi: account Auth effettivi, appartenenze,
+sedi, periodi, uso/date commerciali e aggregati. Nessun contenuto di chat,
+file, schede HR o token. Liste server con limiti/filtri validati e ordinamento
+stabile; dettagli aziendali paginati per sezione. Il consumo documenti viene
+da `storage.objects.metadata.size`: dimensioni mancanti/non valide e oggetti
+non attribuiti sono espliciti, non stimati da `staff_documents.size_bytes`.
+Finanza/costi sono null finché mancano le fonti. Non si prolunga l'archivio
+leggendo da admin. Concessioni mutabili/audit ed economia sono M06.
+
+Verifiche automatiche nel banco locale: `090_platform_admin.sql`, API/parser,
+isolamento cache e gate web; suite precedenti ancora verdi. Il bootstrap
+locale crea le sole colonne di `auth.sessions` e `auth.mfa_factors` necessarie
+alle fixture: non verifica GoTrue/TOTP HTTP e non va applicato su dev remoto.
+Provisioning e smoke Auth reale/visuale devono seguire
+[TEST-FOUNDER-M05.md](../docs/TEST-FOUNDER-M05.md) su un dev completo isolato.
+Nessuna nuova migration remota applicata in questo blocco.
+
 ## Banco di prova locale
 
-Non c'è la CLI Supabase in questa repo: `supabase/tests/run.sh` fa da `db reset`
+Il banco `supabase/tests/run.sh` fa da `db reset`
 su un Postgres 17 di Supabase in Docker (stessa major del progetto).
 
 ```bash
