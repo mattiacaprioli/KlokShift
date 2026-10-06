@@ -11,6 +11,16 @@ rimborsi e cifre riconciliate dipendono da M09. Nessun codice pubblico di riscat
 La quota documenti è dichiarata e verificata contro i byte noti al salvataggio;
 il blocco degli upload per quota non è ancora applicato.
 
+**Prima prova visuale, 6 ottobre:** l'utente ha mostrato la nuova scheda
+Bar Teatro, con lettura server di controllo e registro disponibili. Il menu
+«Nuova classificazione» si apriva vuoto: le opzioni erano racchiuse in un
+componente che il `Select` personalizzato non interpreta. Corretto localmente
+nei form aziende e account usando figli `<option>` diretti. Il test di
+regressione riproduce il difetto prima della correzione e passa dopo;
+suite corrente: 40 file / 282 test client, typecheck web, lint e build passano.
+La conferma di classificazione e il rilascio di questa correzione restano
+da provare; nessuna scrittura commerciale è dimostrata dagli screenshot.
+
 ## Ambiente scelto
 
 Il fondatore dichiara che per i prossimi due mesi il progetto ospitato
@@ -65,9 +75,10 @@ nuova migration sul progetto ospitato e nuovo build dashboard. Verificare
 che GitHub Actions completi i test e i job `deploy-database / db-push` e
 `deploy-pages / deploy`. Questi passaggi non sono stati eseguiti da Codex.
 
-Prima del rilascio, il sito pubblico mostra ancora M05 e le nuove RPC M06a
-non sono disponibili. Non basta avviare il nuovo frontend locale se è collegato
-a un DB ospitato privo della nuova migration.
+In un ambiente ancora a M05, le nuove RPC M06a non sono disponibili.
+Non basta avviare il nuovo frontend locale se è collegato a un DB ospitato
+privo della nuova migration. La correzione del menu richiede soltanto il
+rilascio della dashboard, senza nuove migration.
 
 ## 3. Classificare senza concedere diritti
 
@@ -75,7 +86,9 @@ a un DB ospitato privo della nuova migration.
    con l'account abilitato e verificare il secondo fattore.
 2. Aprire **Aziende → Bar Teatro** (o una sola azienda propria scelta).
 3. Nel pannello **Interventi del fondatore**, scegliere **Classificazione**,
-   nuova etichetta **Test**, motivo `Azienda personale di test preesistente`.
+   aprire **Nuova classificazione**. Atteso: Cliente, Interno, Test e Non
+   classificato sono visibili. Scegliere **Test**, motivo
+   `Azienda personale di test preesistente`.
 4. Premere **Rivedi intervento**. Atteso: riepilogo della sola etichetta,
    senza modifica di piano, prova o scadenze.
 5. Premere **Conferma intervento**. Atteso: etichetta Test e una riga nel
@@ -152,6 +165,9 @@ banco automatico; non occorre creare 31 schede nel progetto ospitato.
 ## Esito da registrare
 
 - [x] SQL/RLS, 6 suite concorrenti, 281 test client, tipi, lint e build locali.
+- [x] Correzione menu di classificazione: regressione riprodotta e risolta; 282 test client, typecheck web, lint e build passano.
+- [x] Scheda azienda e letture M06a mostrate dall'utente sul progetto attuale.
+- [ ] Rilascio del fix menu; verificare le quattro scelte in Aziende e Account.
 - [ ] Rilascio della nuova migration e dashboard sul progetto ospitato.
 - [ ] Prove visuali di classificazione, concessione, variazione e registro.
 - [ ] Conferma vecchia, retry di rete e diniego con account fuori allowlist.

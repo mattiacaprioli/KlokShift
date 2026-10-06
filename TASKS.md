@@ -520,6 +520,12 @@ Il dev remoto viene rimandato: per due mesi restano soltanto test personali,
 da separare prima dei tester esterni. Procedura:
 [TEST-FOUNDER-M06A.md](docs/TEST-FOUNDER-M06A.md).
 
+**Follow-up M06a, menu classificazione:** l'utente ha aperto la nuova scheda
+azienda e segnalato il menu vuoto. Corretto in locale il passaggio di opzioni
+dirette al `Select` per aziende/account; regressione riprodotta prima del fix.
+40 file / 282 test client, typecheck web, lint e build passano. Rilascio frontend
+e conferma visuale pendenti; nessuna nuova migration o scrittura remota.
+
 ### Sessione 2026-07-19 — Telaio monetizzazione Pro ✅ (storico, rimosso in M03b)
 
 > **Sessione storica superata dal modello approvato il 2026-10-05.** Il seguente resoconto conserva ciò che fu realizzato allora; non è il backlog attuale né una descrizione dello schema corrente. Per il nuovo lavoro seguire [MONETIZATION.md](docs/MONETIZATION.md) e il [piano M01–M11](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).

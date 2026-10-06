@@ -655,6 +655,13 @@ rimandato, da predisporre prima dell'ingresso di persone esterne.
 - [x] M06a: 15 file SQL/RLS, 6 suite concorrenti e 39 file / 281 test client passano; tipi, typecheck, lint senza errori e build web verificati localmente.
 - [ ] M06a: rilascio e prova visuale sul progetto attuale di soli test propri.
 
+Follow-up visuale del 6 ottobre: l'utente ha aperto la nuova scheda azienda;
+la classificazione era bloccata da un menu vuoto. Corretto localmente il
+passaggio delle opzioni al `Select` sia per aziende sia per account; un test
+riproduce il bug sul componente precedente e passa sul fix. Suite corrente
+40 file / 282 test client, typecheck web, lint e build passano. Da rilasciare
+il fix frontend e riprendere la prova di conferma; nessuna nuova migration.
+
 - [x] Aggiungere concessione gratuita a vita con capacità, assegnazione aziendale, motivo e cronologia; eventuali concessioni temporanee restano distinte.
 - [ ] Aggiungere codici/link di riscatto soltanto se scelti: destinatario, hash, scadenza per riscatto, monouso atomico e nessuna scadenza del beneficio permanente.
 - [ ] Collegare pagamenti/rimborsi provider con riferimento univoco, separati dalle somme attese; nessun addebito per la capacità gratuita concessa.

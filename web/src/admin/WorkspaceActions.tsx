@@ -10,9 +10,8 @@ import { Button, Card, Field, Input, Select, Spinner, Textarea } from "../ui/pri
 const labels = { customer: "Cliente", internal: "Interno", test: "Test", unclassified: "Non classificato" };
 const actionLabels = { grant_lifetime: "Gratuità a vita / variazione capacità", set_classification: "Classificazione", add_note: "Nota amministrativa" };
 function date(value: string) { return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value)); }
-function ClassificationOptions() {
-  return <>{classifications.map((c) => <option key={c} value={c}>{labels[c]}</option>)}</>;
-}
+// Select ricava il menu dai figli <option> diretti, senza eseguire componenti annidati.
+const classificationOptions = classifications.map((c) => <option key={c} value={c}>{labels[c]}</option>);
 function Reason({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return <Field label="Motivo dell'intervento" hint="Obbligatorio, conservato nel registro amministrativo."><Textarea required maxLength={2000} value={value} onChange={(e) => onChange(e.target.value)} /></Field>;
 }
@@ -79,7 +78,7 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
             <Field label="Sedi gratuite totali"><Input type="number" min={1} max={2147483647} step={1} required value={venues} onChange={(e) => setVenues(e.target.value)} /></Field>
             <Field label="Quota documenti (MiB)" hint="2048 MiB = 2 GiB. Quota dichiarata, da calibrare sui test."><Input type="number" min={1} step={1} required value={quota} onChange={(e) => setQuota(e.target.value)} /></Field></div>
           <p className="text-sm text-t3">Uso attuale: {snapshot!.access?.usage?.people ?? "non disponibile"} persone, {snapshot!.access?.usage?.venues ?? "non disponibile"} sedi aperte; {snapshot!.document_known_bytes / 1048576} MiB noti, {snapshot!.document_unknown_sizes} dimensioni da verificare.</p>
-        </> : action === "set_classification" ? <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}><ClassificationOptions /></Select></Field> : null}
+        </> : action === "set_classification" ? <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}>{classificationOptions}</Select></Field> : null}
         <Reason value={reason} onChange={setReason} />
         <Button type="submit" variant="gold" disabled={!reason.trim() || mutation.isPending}>Rivedi intervento</Button>
       </form>}
@@ -107,7 +106,7 @@ export function AccountClassification({ userId, accountId }: { userId: string; a
         <div className="flex gap-2"><Button variant="gold" disabled={mutation.isPending} onClick={() => void confirm()}>{mutation.isPending ? "Salvataggio…" : error ? "Riprova conferma" : "Conferma classificazione"}</Button><Button disabled={mutation.isPending} onClick={() => { setReview(null); setError(null); }}>Torna ai campi</Button></div></div> :
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!query.data || !reason.trim()) return; setError(null); setSuccess(false); setReview({ accountId, operationId: crypto.randomUUID(), revision: query.data.revision, classification, reason: reason.trim() }); }}>
         <p className="text-sm text-t3">Classificazione attuale: {labels[query.data.classification]}.</p>
-        <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}><ClassificationOptions /></Select></Field>
+        <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}>{classificationOptions}</Select></Field>
         <Reason value={reason} onChange={setReason} /><Button type="submit" variant="gold" disabled={!reason.trim()}>Rivedi classificazione</Button>
       </form>}
   </Card>;
