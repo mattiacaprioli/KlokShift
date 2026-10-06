@@ -10,6 +10,7 @@ import { Button, Card, Field, Input, Select, Spinner, Textarea } from "../ui/pri
 const labels = { customer: "Cliente", internal: "Interno", test: "Test", unclassified: "Non classificato" };
 const actionLabels = { grant_lifetime: "Gratuità a vita / variazione capacità", set_classification: "Classificazione", add_note: "Nota amministrativa" };
 function date(value: string) { return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value)); }
+function mib(value: number) { return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(value / 1048576) + " MiB"; }
 // Select ricava il menu dai figli <option> diretti, senza eseguire componenti annidati.
 const classificationOptions = classifications.map((c) => <option key={c} value={c}>{labels[c]}</option>);
 function Reason({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -24,22 +25,26 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
   const query = useAdminRead(userId, "workspace-control", workspaceId, () => getWorkspaceControl(workspaceId));
   const mutation = useAdminWrite(applyWorkspaceAction);
   const [action, setAction] = useState<WorkspaceCommand["change"]["action"]>("grant_lifetime");
-  const [plan, setPlan] = useState<"base" | "team">("team");
-  const [venues, setVenues] = useState("1");
-  const [quota, setQuota] = useState("2048");
-  const [classification, setClassification] = useState<AdminClassification>("unclassified");
+  const [planDraft, setPlan] = useState<"base" | "team" | null>(null);
+  const [venuesDraft, setVenues] = useState<string | null>(null);
+  const [quotaDraft, setQuota] = useState<string | null>(null);
+  const [classificationDraft, setClassification] = useState<AdminClassification | null>(null);
   const [reason, setReason] = useState("");
   const [review, setReview] = useState<WorkspaceCommand | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [success, setSuccess] = useState(false);
   const snapshot = query.data?.snapshot;
+  const plan = planDraft ?? snapshot?.lifetime?.plan ?? "team";
+  const venues = venuesDraft ?? String(snapshot?.lifetime?.venue_limit ?? 1);
+  const quota = quotaDraft ?? String(snapshot?.lifetime?.document_limit_bytes != null ? snapshot.lifetime.document_limit_bytes / 1048576 : 2048);
+  const classification = classificationDraft ?? snapshot?.classification ?? "unclassified";
   function prepare() {
     setError(null); setSuccess(false);
     if (!query.data || !reason.trim()) { setError(new Error("admin_reason_required")); return; }
     const venueLimit = Number(venues);
     const documentLimitBytes = Number(quota) * 1048576;
     if (action === "grant_lifetime" && (!Number.isSafeInteger(venueLimit) || venueLimit < 1 ||
-      !Number.isSafeInteger(Number(quota)) || !Number.isSafeInteger(documentLimitBytes) || documentLimitBytes < 1)) {
+      !Number.isSafeInteger(documentLimitBytes) || documentLimitBytes < 1)) {
       setError(new Error("invalid_access_capacity")); return;
     }
     const change: WorkspaceCommand["change"] = action === "grant_lifetime" ?
@@ -51,17 +56,22 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
     setError(null);
     try {
       await mutation.mutateAsync(review);
-      setReview(null); setReason(""); setSuccess(true);
+      setReview(null); setReason(""); setPlan(null); setVenues(null); setQuota(null); setClassification(null); setSuccess(true);
     } catch (e) { setError(e); }
   }
-  return <Card><h2 className="mb-3 font-semibold">Interventi del fondatore</h2>
+  return <Card><h2 className="mb-2 font-semibold">Gestisci piano e classificazione</h2>
+    <p className="mb-5 text-sm text-t3">Prepara un intervento per questa azienda. Le modifiche si applicano dopo aver rivisto il riepilogo e confermato.</p>
     <Feedback error={error ?? query.error} success={success} />
     {query.isPending || query.isFetching ? <Spinner /> : !query.isSuccess ? <Button onClick={() => void query.refetch()}>Riprova lettura</Button> : <>
-      <p className="mb-4 text-sm text-t3">Classificazione: {labels[snapshot!.classification]}. Gratuità corrente: {snapshot!.lifetime ? `${snapshot!.lifetime.plan === "base" ? "Base" : "Team"} · ${snapshot!.lifetime.venue_limit} sedi · quota documenti ${snapshot!.lifetime.document_limit_bytes == null ? "non dichiarata" : snapshot!.lifetime.document_limit_bytes / 1048576 + " MiB"}` : "nessuna concessione permanente attiva"}.</p>
+      <div className="mb-5 rounded-xl border border-border-2 bg-bg-1 p-4">
+        <h3 className="mb-2 text-sm font-semibold">Situazione attuale</h3>
+        <p className="text-sm text-t3">Classificazione: {labels[snapshot!.classification]}.</p>
+        <p className="text-sm text-t3">Gratuità a vita: {snapshot!.lifetime ? `${snapshot!.lifetime.plan === "base" ? "Base" : "Team"} · ${snapshot!.lifetime.venue_limit} ${snapshot!.lifetime.venue_limit === 1 ? "sede" : "sedi"} · documenti ${snapshot!.lifetime.document_limit_bytes == null ? "quota non dichiarata" : mib(snapshot!.lifetime.document_limit_bytes)}` : "Non assegnata"}.</p>
+      </div>
       {review ? <div className="space-y-4 rounded-xl border border-gold/30 p-4">
-        <h3 className="font-semibold">Conferma: {actionLabels[review.change.action]}</h3>
+        <h3 className="font-semibold">Modifica da confermare: {actionLabels[review.change.action]}</h3>
         {review.change.action === "grant_lifetime" ? <>
-          <p className="text-sm">Questa azienda riceve {review.change.plan === "base" ? "Base, fino a 30 persone" : "Team, persone senza limite commerciale"}, {review.change.venueLimit} sedi gratuite totali e {review.change.documentLimitBytes / 1048576} MiB di documenti dichiarati.</p>
+          <p className="text-sm">Questa azienda riceve {review.change.plan === "base" ? "Base, fino a 30 persone" : "Team, persone senza limite commerciale"}, un totale di {review.change.venueLimit} {review.change.venueLimit === 1 ? "sede gratuita" : "sedi gratuite"} e {mib(review.change.documentLimitBytes)} di documenti dichiarati.</p>
           <p className="text-sm text-t3">Decorrenza alla conferma sul server, senza scadenza commerciale, carta o rinnovi. L’eventuale concessione precedente resta nello storico con la sua fine. Le altre aziende dello stesso titolare mantengono i propri diritti.</p>
           <p className="text-sm text-t3">La quota documenti viene registrata: il blocco degli upload al suo raggiungimento non è ancora attivo.</p>
         </> : review.change.action === "set_classification" ?
@@ -72,12 +82,13 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
         <div className="flex flex-wrap gap-2"><Button variant="gold" disabled={mutation.isPending} onClick={() => void confirm()}>{mutation.isPending ? "Salvataggio…" : error ? "Riprova conferma" : "Conferma intervento"}</Button>
           <Button disabled={mutation.isPending} onClick={() => { setReview(null); setError(null); }}>Torna ai campi</Button></div>
       </div> : <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); prepare(); }}>
+        <h3 className="text-sm font-semibold">Prepara una modifica</h3>
         <Field label="Intervento"><Select value={action} onChange={(e) => setAction(e.target.value as typeof action)}>{Object.entries(actionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></Field>
         {action === "grant_lifetime" ? <>
-          <div className="grid gap-4 sm:grid-cols-3"><Field label="Piano concesso"><Select value={plan} onChange={(e) => setPlan(e.target.value as typeof plan)}><option value="base">Base · fino a 30 persone</option><option value="team">Team · senza limite persone</option></Select></Field>
-            <Field label="Sedi gratuite totali"><Input type="number" min={1} max={2147483647} step={1} required value={venues} onChange={(e) => setVenues(e.target.value)} /></Field>
-            <Field label="Quota documenti (MiB)" hint="2048 MiB = 2 GiB. Quota dichiarata, da calibrare sui test."><Input type="number" min={1} step={1} required value={quota} onChange={(e) => setQuota(e.target.value)} /></Field></div>
-          <p className="text-sm text-t3">Uso attuale: {snapshot!.access?.usage?.people ?? "non disponibile"} persone, {snapshot!.access?.usage?.venues ?? "non disponibile"} sedi aperte; {snapshot!.document_known_bytes / 1048576} MiB noti, {snapshot!.document_unknown_sizes} dimensioni da verificare.</p>
+          <div className="grid gap-4 sm:grid-cols-3"><Field label="Piano da concedere"><Select value={plan} onChange={(e) => setPlan(e.target.value as typeof plan)}><option value="base">Base · fino a 30 persone</option><option value="team">Team · senza limite persone</option></Select></Field>
+            <Field label="Sedi da concedere (totale)"><Input type="number" min={1} max={2147483647} step={1} required value={venues} onChange={(e) => setVenues(e.target.value)} /></Field>
+            <Field label="Quota documenti da concedere (MiB)" hint="2048 MiB = 2 GiB. Quota dichiarata; limite sugli upload ancora da attivare."><Input type="number" min={0} step="any" required value={quota} onChange={(e) => setQuota(e.target.value)} /></Field></div>
+          <p className="text-sm text-t3">Uso attuale: {snapshot!.access?.usage?.people ?? "non disponibile"} persone · sedi aperte: {snapshot!.access?.usage?.venues ?? "non disponibile"} · documenti: {mib(snapshot!.document_known_bytes)} noti, {snapshot!.document_unknown_sizes} dimensioni da verificare.</p>
         </> : action === "set_classification" ? <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}>{classificationOptions}</Select></Field> : null}
         <Reason value={reason} onChange={setReason} />
         <Button type="submit" variant="gold" disabled={!reason.trim() || mutation.isPending}>Rivedi intervento</Button>

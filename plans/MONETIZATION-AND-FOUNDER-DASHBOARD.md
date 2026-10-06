@@ -662,6 +662,14 @@ riproduce il bug sul componente precedente e passa sul fix. Suite corrente
 40 file / 282 test client, typecheck web, lint e build passano. Da rilasciare
 il fix frontend e riprendere la prova di conferma; nessuna nuova migration.
 
+Il fondatore ha poi mostrato la concessione a Da Buffa: Operativa,
+Team/una sede/2048 MiB gratuiti a vita, periodo e audit presenti. Su richiesta
+UI/UX, riordino locale della scheda in Riepilogo, Persone e sedi, Gestione e
+Cronologia: conteggi/limiti distinti, situazione corrente e modifica separate,
+modulo dalla concessione esistente e mantenuto durante la navigazione fra
+schede. 41 file / 291 test client, typecheck web, lint e build passano.
+Rilascio e prova visuale del riordino ancora pendenti, §8 della procedura M06a.
+
 - [x] Aggiungere concessione gratuita a vita con capacità, assegnazione aziendale, motivo e cronologia; eventuali concessioni temporanee restano distinte.
 - [ ] Aggiungere codici/link di riscatto soltanto se scelti: destinatario, hash, scadenza per riscatto, monouso atomico e nessuna scadenza del beneficio permanente.
 - [ ] Collegare pagamenti/rimborsi provider con riferimento univoco, separati dalle somme attese; nessun addebito per la capacità gratuita concessa.

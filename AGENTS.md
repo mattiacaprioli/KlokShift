@@ -112,10 +112,15 @@ MFA `aal2` e controllo live di account/sessione/fattore a ogni RPC globale.
 Nessuna RLS cliente ampliata, nessun accesso admin ordinario a HR/chat/file.
 M05 è stato rilasciato dal workflow del commit `f6ff685`; l'utente ha abilitato
 esplicitamente il fondatore e confermato il primo accesso MFA/panoramica.
-Le due aziende proprie di test esistevano prima della monetizzazione e restano
-`migration_pending`, senza avvio automatico della prova o concessioni.
+Le due aziende proprie di test esistevano prima della monetizzazione e sono
+entrate in `migration_pending`, senza avvio automatico della prova o concessioni.
+L'utente ha poi assegnato esplicitamente Team/una sede/2048 MiB gratuiti a vita
+a Da Buffa: screenshot del 6 ottobre, 21:12 Europe/Rome, con periodo e audit.
 M06a implementa in locale concessioni gratuite a vita immediate/variazioni,
 classificazioni, note e audit idempotente con revisione/lock aziendale.
+Riordino UI locale: schede Riepilogo, Persone e sedi, Gestione e Cronologia;
+modulo inizializzato dalla concessione corrente, modifiche conservate cambiando
+scheda. Rilascio del riordino e prova visuale ancora da fare.
 Quota documenti dichiarata, non ancora applicata agli upload; nessuna
 conversione automatica delle aziende ospitate. Economia/spese e altri
 interventi M06, pagamenti, quote/downgrade e archivio/cancellazione restano

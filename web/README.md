@@ -56,6 +56,13 @@ Quota documenti dichiarata, blocco upload per quota pendente. Nessun rilascio
 M06a in questa sessione; procedura:
 [TEST-FOUNDER-M06A.md](../docs/TEST-FOUNDER-M06A.md).
 
+La scheda azienda del fondatore usa quattro sezioni con URL `?scheda=`:
+Riepilogo, Persone e sedi, Gestione e Cronologia. I pannelli conservano il
+modulo durante il cambio sezione; il refresh completo riparte dai dati
+server. I valori proposti per una variazione provengono dalla concessione
+corrente. Riordino verificato localmente, prova visuale dopo rilascio:
+§8 di [TEST-FOUNDER-M06A.md](../docs/TEST-FOUNDER-M06A.md).
+
 ## Comandi (dalla root del repo)
 
 ```bash

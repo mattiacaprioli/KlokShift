@@ -526,6 +526,15 @@ dirette al `Select` per aziende/account; regressione riprodotta prima del fix.
 40 file / 282 test client, typecheck web, lint e build passano. Rilascio frontend
 e conferma visuale pendenti; nessuna nuova migration o scrittura remota.
 
+**Follow-up UI M06a:** l'utente ha assegnato a Da Buffa Team/una sede/2048 MiB
+gratuiti a vita; screenshot del 6 ottobre, 21:12 Europe/Rome, con azienda Operativa,
+periodo e audit. Riordinata localmente la scheda in Riepilogo, Persone e sedi,
+Gestione e Cronologia, con conteggi/limiti distinti, modulo dalla concessione
+corrente e conservazione della modifica fra schede. Corretti anche i menu
+dei filtri aziende/account con opzioni dirette. 41 file / 291 test client,
+typecheck web, lint e build passano; rilascio UI e prove visuali pendenti.
+Procedura §8 di [TEST-FOUNDER-M06A.md](docs/TEST-FOUNDER-M06A.md).
+
 ### Sessione 2026-07-19 — Telaio monetizzazione Pro ✅ (storico, rimosso in M03b)
 
 > **Sessione storica superata dal modello approvato il 2026-10-05.** Il seguente resoconto conserva ciò che fu realizzato allora; non è il backlog attuale né una descrizione dello schema corrente. Per il nuovo lavoro seguire [MONETIZATION.md](docs/MONETIZATION.md) e il [piano M01–M11](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).

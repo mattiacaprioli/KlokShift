@@ -18,8 +18,23 @@ componente che il `Select` personalizzato non interpreta. Corretto localmente
 nei form aziende e account usando figli `<option>` diretti. Il test di
 regressione riproduce il difetto prima della correzione e passa dopo;
 suite corrente: 40 file / 282 test client, typecheck web, lint e build passano.
-La conferma di classificazione e il rilascio di questa correzione restano
-da provare; nessuna scrittura commerciale è dimostrata dagli screenshot.
+In questa prima prova non era ancora dimostrata una scrittura commerciale.
+
+**Concessione confermata dall'utente:** lo screenshot di Da Buffa del
+6 ottobre, 21:12 Europe/Rome mostra azienda Operativa, Team, una sede,
+gratuità a vita da 21:11, quota dichiarata 2048 MiB, un periodo e un intervento
+nel registro. Classificazione ancora Non classificato. La conferma è stata
+eseguita dall'utente; non prova ancora variazioni, capacità, retry o export.
+Il commit `50be4fc` contiene il fix menu; le quattro scelte restano da
+verificare manualmente.
+
+**Riordino UI locale:** quattro schede (Riepilogo, Persone e sedi, Gestione,
+Cronologia), conteggi distinti dai limiti, situazione attuale distinta dalla
+modifica preparata. Il modulo parte dalla concessione presente. Navigazione
+nell'URL e pannelli mantenuti per conservare il lavoro durante il cambio
+scheda. Verificati 41 file / 291 test client, typecheck web, lint e build;
+nessuna nuova migration o scrittura remota da Codex. Prova visuale del
+riordino dopo il rilascio: §8.
 
 ## Ambiente scelto
 
@@ -53,14 +68,15 @@ yarn web:build
 porta 54422. Non applicare bootstrap/seed dei test al progetto ospitato.
 Prima di ripetere tutta la concorrenza, ripartire da reset.
 
-Atteso: 15 file SQL/RLS e 6 suite concorrenti passano; 39 file / 281 test
+Atteso: 15 file SQL/RLS e 6 suite concorrenti passano; 41 file / 291 test
 client passano; tipi, lint e build web passano. Restano il warning React Hook
 Form preesistente in `ShiftPanel.tsx` e l'avviso sulla dimensione del bundle.
 
 Verifica eseguita il 6 ottobre 2026: tutti questi controlli passano. Le tre
 nuove gare concorrenti passano contro sessioni Postgres distinte; non si
-tratta di una simulazione lato client. Auth/TOTP e prove visuali ospitate
-restano da eseguire dopo il rilascio.
+tratta di una simulazione lato client. Per il successivo riordino UI sono
+stati ripetuti test client, typecheck web, lint e build; DB e RPC invariati.
+Le ulteriori prove Auth/TOTP e le altre prove visuali restano aperte.
 
 Le nuove prove coprono guard/MFA, separazione etichetta/diritti, dato mancante,
 capacità persone/sedi/documenti, dimensioni ignote, periodi futuri, audit,
@@ -77,15 +93,16 @@ che GitHub Actions completi i test e i job `deploy-database / db-push` e
 
 In un ambiente ancora a M05, le nuove RPC M06a non sono disponibili.
 Non basta avviare il nuovo frontend locale se è collegato a un DB ospitato
-privo della nuova migration. La correzione del menu richiede soltanto il
-rilascio della dashboard, senza nuove migration.
+privo della nuova migration. Sul progetto attuale le nuove letture e la
+concessione sono già state mostrate dall'utente. Il riordino UI richiede
+soltanto il rilascio della dashboard, senza nuove migration.
 
 ## 3. Classificare senza concedere diritti
 
 1. Aprire [area del fondatore](https://klokshift.com/app/#/amministrazione)
    con l'account abilitato e verificare il secondo fattore.
 2. Aprire **Aziende → Bar Teatro** (o una sola azienda propria scelta).
-3. Nel pannello **Interventi del fondatore**, scegliere **Classificazione**,
+3. Aprire **Gestione → Gestisci piano e classificazione**, scegliere **Classificazione**,
    aprire **Nuova classificazione**. Atteso: Cliente, Interno, Test e Non
    classificato sono visibili. Scegliere **Test**, motivo
    `Azienda personale di test preesistente`.
@@ -93,14 +110,16 @@ rilascio della dashboard, senza nuove migration.
    senza modifica di piano, prova o scadenze.
 5. Premere **Conferma intervento**. Atteso: etichetta Test e una riga nel
    registro con motivo, attore, data e identificativo.
-6. Verificare che l'azienda resti **Migrazione da verificare**, piano non
-   assegnato, nessuna prova creata. L'altra azienda mantiene la sua etichetta.
+6. Stato e piano devono restare quelli precedenti: Bar Teatro senza
+   concessione resta **Migrazione da verificare**; Da Buffa già concessa
+   resta Operativa/Team. Nessuna prova creata. L'altra azienda mantiene la
+   sua etichetta. Controllare la riga in **Cronologia → Registro amministrativo**.
 
 ## 4. Assegnare una gratuità a vita
 
-1. Nella stessa scheda scegliere **Gratuità a vita / variazione capacità**.
+1. In **Gestione** scegliere **Gratuità a vita / variazione capacità**.
 2. Per un'azienda con una sede aperta e meno di 31 persone, scegliere
-   **Base**, **1 sede gratuita totale**, **2048 MiB**, motivo
+   **Base**, **1 sede da concedere (totale)**, **2048 MiB**, motivo
    `Concessione personale per verifica M06a`. Se l'uso noto supera questi
    valori, scegliere capacità compatibili: nessun dato viene eliminato.
 3. Premere **Rivedi intervento**. Atteso: azienda destinataria dalla scheda,
@@ -110,7 +129,7 @@ rilascio della dashboard, senza nuove migration.
    - azienda Operativa, origine Gratuito a vita, piano Base;
    - limite persone 30 e sedi 1, quota dichiarata 2048 MiB;
    - nessuna fine operatività/archivio inventata;
-   - nuovo periodo senza scadenza e nuova riga nel registro;
+   - nuovo periodo senza scadenza e nuova riga nel registro, in **Cronologia**;
    - nessuna prova avviata e nessun prezzo/checkout;
    - l'altra azienda resta invariata, anche con lo stesso titolare.
 5. Premere Aggiorna. Atteso: stessi diritti e stesso numero di interventi.
@@ -123,8 +142,8 @@ rilascio della dashboard, senza nuove migration.
    deve rifiutare una seconda sede per capacità, conservando quella esistente.
 3. Tornare alla scheda fondatore e confermare una variazione gratuita a
    **Base / 2 sedi / 2048 MiB**, con nuovo motivo.
-   Atteso: capacità 2, una concessione permanente corrente; il periodo
-   precedente rimane visibile con la revoca e il motivo originale.
+   Atteso: capacità 2, una concessione permanente corrente; in **Cronologia**
+   il periodo precedente rimane visibile con la revoca e il motivo originale.
 4. Nella dashboard cliente, creare la seconda sede.
    Atteso: creazione consentita; nessun addebito o checkout implicito.
 5. Dal fondatore tentare di ridurre di nuovo a una sede mentre entrambe
@@ -162,13 +181,52 @@ banco automatico; non occorre creare 31 schede nel progetto ospitato.
    [M05](TEST-FOUNDER-M05.md), sulle fixture esplicitamente scelte.
    Le nuove mutazioni rileggono il guard anche prima di restituire un retry.
 
+## 8. Provare il riordino UI
+
+Ambiente: dashboard ospitata sul progetto attuale di soli test propri,
+dopo il rilascio dell'aggiornamento frontend. Da Buffa ha già la concessione
+Team/una sede assegnata dall'utente; questa prova non richiede una nuova
+assegnazione o una nuova migration.
+
+1. Aprire **Aziende → Da Buffa**. Atteso: Riepilogo selezionato, stato
+   Operativa e piano Team; quattro schede sotto il nome. Nessun modulo di
+   intervento visibile nel Riepilogo. Conteggio persone e limite sono su
+   righe diverse; sedi aperte 1, sedi consentite 1.
+2. Aprire **Persone e sedi**. Atteso: membri e sedi con paginazione,
+   nessun campo di modifica del piano. I link agli account funzionano.
+3. Aprire **Gestione**. Atteso: riquadro Situazione attuale (Team, una sede,
+   2048 MiB) e, sotto, Prepara una modifica. Il modulo riprende i valori
+   concessi. I menu devono mostrare le scelte, senza popup vuoti.
+4. Cambiare un campo e scrivere un motivo di prova; premere **Rivedi
+   intervento** senza confermare. Aprire Cronologia e tornare in Gestione.
+   Atteso: riepilogo preparato conservato, nessun nuovo intervento nel
+   registro, piano attuale invariato. Usare **Torna ai campi** per annullare
+   la conferma preparata.
+5. Aprire **Cronologia**. Atteso: storico dei piani/concessioni e registro
+   amministrativo presenti insieme; la concessione precedente resta visibile.
+6. Ricaricare la pagina in Cronologia. Atteso: stessa scheda selezionata,
+   nuova lettura server, nessuna scrittura. Usare Indietro/Avanti del browser:
+   devono tornare alle schede visitate. Il refresh completo non conserva
+   una modifica non salvata; la conservazione vale per il cambio scheda.
+7. Restringere la finestra a circa 390 px. Atteso: schede raggiungibili con
+   scorrimento orizzontale, campi in colonna, tabelle scorrevoli; usare Tab
+   e Invio per cambiare scheda da tastiera. Nessun dato nascosto diventa
+   visibile fuori dalla propria scheda.
+8. Su un'azienda ancora `migration_pending`, verificare che il Riepilogo
+   mostri il conteggio corrente e limiti Non assegnati, senza valori
+   inventati. In Gestione preparare una classificazione: la sola etichetta
+   non assegna un piano.
+
 ## Esito da registrare
 
 - [x] SQL/RLS, 6 suite concorrenti, 281 test client, tipi, lint e build locali.
 - [x] Correzione menu di classificazione: regressione riprodotta e risolta; 282 test client, typecheck web, lint e build passano.
 - [x] Scheda azienda e letture M06a mostrate dall'utente sul progetto attuale.
-- [ ] Rilascio del fix menu; verificare le quattro scelte in Aziende e Account.
-- [ ] Rilascio della nuova migration e dashboard sul progetto ospitato.
+- [x] Utente: concessione Team/una sede/2048 MiB a Da Buffa, con periodo e audit visibili.
+- [x] Riordino UI: 291 test client, typecheck web, lint e build passano.
+- [ ] Rilascio e prova visuale delle quattro schede, URL e conservazione della modifica preparata.
+- [ ] Verificare manualmente le quattro scelte nei menu di classificazione di Aziende e Account.
+- [x] Dashboard e nuove RPC disponibili nel progetto ospitato: scheda e concessione mostrate dall'utente; nessun rilascio eseguito da Codex.
 - [ ] Prove visuali di classificazione, concessione, variazione e registro.
 - [ ] Conferma vecchia, retry di rete e diniego con account fuori allowlist.
 - [ ] Storico/export conservati dopo l'assegnazione e la variazione.

@@ -6,6 +6,13 @@ Questo documento è la fonte dedicata per requisiti, dati, autorizzazioni e veri
 
 ## Obiettivo e perimetro
 
+**Riordino UI locale, 6 ottobre:** la scheda azienda usa Riepilogo, Persone
+e sedi, Gestione e Cronologia. I dati attuali e i limiti sono distinti dai
+campi da confermare; la modifica preparata resta disponibile cambiando
+scheda. L'utente ha mostrato l'assegnazione Team/una sede/2048 MiB a Da Buffa,
+con periodo e audit. La prova visuale del nuovo riordino rimane aperta (§8
+di [TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md)).
+
 **Aggiornamento M06a, locale:** la scheda azienda aggiunge gratuità a vita
 immediata, variazione compatibile di capacità, classificazione e note;
 la scheda account aggiunge la classificazione. Ogni azione ha anteprima,
@@ -13,7 +20,7 @@ motivo, idempotenza server e audit paginato, senza ampliare la RLS cliente.
 Piano/sedi sono applicati dai controlli M03b; la quota documenti è soltanto
 dichiarata, con blocco quota upload ancora da implementare. Economia, spese,
 proroghe e recupero assistito restano aperti, come le prove manuali residue
-di M05. Nessun rilascio M06a o modifica alle aziende ospitate in questa sessione.
+di M05. Codex non ha eseguito rilasci M06a o modifiche alle aziende ospitate.
 Procedura: [TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md).
 
 Il fondatore deve capire per ogni cliente: chi gestisce l'azienda, quante sedi e persone usa, quale capacità ha, fino a quando può lavorare, quanto ha pagato e quali interventi sono necessari.
