@@ -1133,6 +1133,7 @@ export type Database = {
       workspace_access_periods: {
         Row: {
           created_at: string
+          document_limit_bytes: number | null
           ends_at: string | null
           id: string
           kind: string
@@ -1145,6 +1146,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          document_limit_bytes?: number | null
           ends_at?: string | null
           id?: string
           kind: string
@@ -1157,6 +1159,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          document_limit_bytes?: number | null
           ends_at?: string | null
           id?: string
           kind?: string
@@ -1342,10 +1345,25 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_apply_workspace_action: {
+        Args: {
+          p_action: string
+          p_classification?: string
+          p_document_limit_bytes?: number
+          p_expected_revision: string
+          p_operation_id: string
+          p_plan?: string
+          p_reason: string
+          p_venue_limit?: number
+          p_workspace: string
+        }
+        Returns: Json
+      }
       admin_get_account: {
         Args: { p_account: string; p_offset?: number }
         Returns: Json
       }
+      admin_get_account_control: { Args: { p_account: string }; Returns: Json }
       admin_get_overview: { Args: never; Returns: Json }
       admin_get_workspace: {
         Args: {
@@ -1354,6 +1372,10 @@ export type Database = {
           p_venues_offset?: number
           p_workspace: string
         }
+        Returns: Json
+      }
+      admin_get_workspace_control: {
+        Args: { p_workspace: string }
         Returns: Json
       }
       admin_list_accounts: {
@@ -1366,6 +1388,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_operations: {
+        Args: { p_offset?: number; p_target: string; p_target_kind: string }
+        Returns: Json
+      }
       admin_list_workspaces: {
         Args: {
           p_classification?: string
@@ -1374,6 +1400,16 @@ export type Database = {
           p_plan?: string
           p_query?: string
           p_state?: string
+        }
+        Returns: Json
+      }
+      admin_set_account_classification: {
+        Args: {
+          p_account: string
+          p_classification: string
+          p_expected_revision: string
+          p_operation_id: string
+          p_reason: string
         }
         Returns: Json
       }

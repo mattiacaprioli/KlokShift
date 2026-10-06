@@ -1,10 +1,20 @@
 # Dashboard personale del fondatore
 
-**Stato, 2026-10-06:** M05 implementato e verificato nel banco locale: allowlist/MFA e guard server, panoramica, aziende e account paginati, dettagli, capacità/date, anomalie disponibili e Storage misurato. La allowlist nasce vuota; provisioning reale e smoke Auth/TOTP/visuale su dev sono ancora da eseguire. Nessun rollout remoto in questa sessione. Concessioni, audit ed economia M06 e integrazione Paddle restano da realizzare. Procedura precisa: [TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md).
+**Stato, 2026-10-06:** M05 implementato e verificato nel banco locale: allowlist/MFA e guard server, panoramica, aziende e account paginati, dettagli, capacità/date, anomalie disponibili e Storage misurato. Rilasciato dal workflow del commit `f6ff685`; l'utente ha abilitato l'account scelto e confermato il primo accesso con secondo fattore verificato e panoramica caricata sul progetto attuale, contenente soltanto propri test. Restano da verificare dettagli, filtri, nuovo login, diniego ad altri account e revoca live. Le due aziende precedenti alla monetizzazione restano `migration_pending`, senza piano o prova automatici. Concessioni, audit ed economia M06 e integrazione Paddle restano da realizzare. Evidenze e procedura precisa: [TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md).
 
 Questo documento è la fonte dedicata per requisiti, dati, autorizzazioni e verifiche della dashboard personale di Alisher. Le regole commerciali complete sono in [MONETIZATION.md](MONETIZATION.md); dipendenze e sequenza di lavoro sono nel [piano di monetizzazione](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
 
 ## Obiettivo e perimetro
+
+**Aggiornamento M06a, locale:** la scheda azienda aggiunge gratuità a vita
+immediata, variazione compatibile di capacità, classificazione e note;
+la scheda account aggiunge la classificazione. Ogni azione ha anteprima,
+motivo, idempotenza server e audit paginato, senza ampliare la RLS cliente.
+Piano/sedi sono applicati dai controlli M03b; la quota documenti è soltanto
+dichiarata, con blocco quota upload ancora da implementare. Economia, spese,
+proroghe e recupero assistito restano aperti, come le prove manuali residue
+di M05. Nessun rilascio M06a o modifica alle aziende ospitate in questa sessione.
+Procedura: [TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md).
 
 Il fondatore deve capire per ogni cliente: chi gestisce l'azienda, quante sedi e persone usa, quale capacità ha, fino a quando può lavorare, quanto ha pagato e quali interventi sono necessari.
 
@@ -194,8 +204,10 @@ Le scritture amministrative non aggirano limiti, diritto di accesso, stato provi
 
 - [x] M05 nel banco locale: accesso protetto, riepiloghi, ricerca paginata, schede e conteggi spiegabili; cliente/collaboratore/professionista/anon non accedono alle API globali.
 - [x] Test SQL: sessione senza MFA, amministratore revocato e account fuori allowlist rifiutati dal backend, anche conoscendo la rotta.
-- [ ] Enrollment/challenge TOTP reale, provisioning del fondatore e smoke visuale multiutente su Supabase dev, poi rollout deliberato.
-- [ ] M06: gratuità a vita per azienda, piano/sedi/quota, proroghe e audit; eventuale doppio invio non duplica l'azione.
+- [x] Rilascio M05 e provisioning esplicito del fondatore; primo accesso Auth/MFA reale con panoramica confermato sul progetto di soli test propri.
+- [ ] Completare prove manuali di dettagli/filtri, enrollment/codice errato, logout/nuovo challenge, diniego ad altri account e revoca live.
+- [x] M06a locale: gratuità a vita per azienda, piano/sedi/quota dichiarata, variazione capacità, classificazioni e audit; doppio invio non duplica l'azione.
+- [ ] M06a: rilascio e prova visuale; M06: proroghe finite e applicazione della quota upload.
 - [ ] Riattivazione con gratuità permanente valida senza carta o pagamento; una concessione non viene trasformata in abbonamento pagante dal flusso di ripresa.
 - [ ] Pagamenti, rimborsi e payout sono collegati a esiti verificati; annuale, gratuità e commissioni producono i totali attesi senza doppio conteggio.
 - [ ] Spese distinguono cassa/competenza e quota progetto; dati economici privati non sono leggibili dai clienti.
@@ -206,4 +218,4 @@ Le scritture amministrative non aggirano limiti, diritto di accesso, stato provi
 - [ ] Il lancio pagante comprende anche M09: checkout web, eventi firmati/idempotenti e riconciliazione. La sola dashboard non abilita il lancio.
 - [ ] M10, dopo la base essenziale: snapshot, coorti, conversione, pause/uscite distinte, previsione e automazioni giustificate dal lavoro reale.
 
-Le verifiche automatiche locali M05 sono registrate nella procedura; non equivalgono a una prova visuale/Auth reale o a un rollout. Per regole ancora dipendenti da provider o validazione privacy/fiscale, seguire [MONETIZATION.md](MONETIZATION.md) e il [piano operativo](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).
+La procedura distingue verifiche automatiche locali, rilascio e prima prova visuale/Auth reale; questa prima prova non chiude le verifiche manuali restanti. Per regole ancora dipendenti da provider o validazione privacy/fiscale, seguire [MONETIZATION.md](MONETIZATION.md) e il [piano operativo](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md).

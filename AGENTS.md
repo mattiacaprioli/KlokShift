@@ -110,11 +110,23 @@ sblocca. M05 aggiunge consultazione del fondatore in `web/` a
 `#/amministrazione`, allowlist privata vuota fino a provisioning esplicito,
 MFA `aal2` e controllo live di account/sessione/fattore a ogni RPC globale.
 Nessuna RLS cliente ampliata, nessun accesso admin ordinario a HR/chat/file.
-Concessioni/audit/economia M06, pagamenti, quote/downgrade, rollout reale e
-completamento archivio/cancellazione restano da implementare. Procedure dev:
+M05 è stato rilasciato dal workflow del commit `f6ff685`; l'utente ha abilitato
+esplicitamente il fondatore e confermato il primo accesso MFA/panoramica.
+Le due aziende proprie di test esistevano prima della monetizzazione e restano
+`migration_pending`, senza avvio automatico della prova o concessioni.
+M06a implementa in locale concessioni gratuite a vita immediate/variazioni,
+classificazioni, note e audit idempotente con revisione/lock aziendale.
+Quota documenti dichiarata, non ancora applicata agli upload; nessuna
+conversione automatica delle aziende ospitate. Economia/spese e altri
+interventi M06, pagamenti, quote/downgrade e archivio/cancellazione restano
+da completare. [docs/TEST-FOUNDER-M06A.md](docs/TEST-FOUNDER-M06A.md).
+Il fondatore usa solo test propri per i prossimi due mesi: dev remoto separato
+rimandato fino a prima dei tester esterni, senza bloccare il lavoro locale.
+Procedure:
 [docs/TEST-MONETIZATION-M03B.md](docs/TEST-MONETIZATION-M03B.md).
 [docs/TEST-FOUNDER-M05.md](docs/TEST-FOUNDER-M05.md) distingue il banco SQL
-locale dalla prova MFA reale e visuale, ancora da eseguire su dev isolato.
+locale dalla prima prova MFA reale/visuale sul progetto di soli test propri;
+dettagli, filtri, diniego multiutente, nuovo login e revoca live restano aperti.
 
 - Il piano è aziendale; i due piani hanno le stesse funzioni e capacità diversa.
   Il limite di 30 riguarda persone uniche nell'intera azienda, non per sede.

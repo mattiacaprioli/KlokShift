@@ -147,7 +147,7 @@ query globali e ogni mutazione del fondatore, con traccia degli interventi.
 `authority = owner` vale nell'azienda e non concede amministrazione di KlokShift.
 Nomi/tabelle/helper proposti nel piano non attestano schema già esistente.
 
-### Consultazione del fondatore M05 — locale
+### Consultazione del fondatore M05
 
 `20261006000100_platform_admin_reads.sql` aggiunge allowlist e classificazioni
 private (`platform_admins`, `admin_workspace_labels`, `admin_account_labels`),
@@ -176,9 +176,25 @@ Verifiche automatiche nel banco locale: `090_platform_admin.sql`, API/parser,
 isolamento cache e gate web; suite precedenti ancora verdi. Il bootstrap
 locale crea le sole colonne di `auth.sessions` e `auth.mfa_factors` necessarie
 alle fixture: non verifica GoTrue/TOTP HTTP e non va applicato su dev remoto.
-Provisioning e smoke Auth reale/visuale devono seguire
-[TEST-FOUNDER-M05.md](../docs/TEST-FOUNDER-M05.md) su un dev completo isolato.
-Nessuna nuova migration remota applicata in questo blocco.
+Rilascio M05 riuscito tramite CI sul commit `f6ff685`; l'utente ha eseguito il
+provisioning esplicito e confermato il primo accesso MFA/panoramica sul progetto
+attuale, che contiene soltanto propri test. Le due aziende precedenti alla
+monetizzazione restano `migration_pending`, senza prova/piano automatici.
+Dettagli, filtri e prove negative Auth/revoca restano aperti; ambiente,
+passaggi ed evidenze sono in
+[TEST-FOUNDER-M05.md](../docs/TEST-FOUNDER-M05.md). Codex non ha applicato
+migration remote durante l'implementazione locale.
+
+M06a aggiunge `20261006000200_founder_concessions.sql`: quota documenti
+nullable sui periodi esistenti (nessun backfill commerciale), registro
+`private.admin_operations` senza FK cancellanti e RPC dedicate protette da
+guard live/MFA. Classificare non modifica l'accesso; concedere gratuità a vita
+risolve esplicitamente la migrazione di quella sola azienda, dopo lock e
+controllo capacità. Periodi precedenti conservati, replay autorizzato e
+identificativo unico globale; revisione esclude `server_now`. Il client non
+scrive direttamente audit/periodi/etichette. I byte concessi sono dichiarati,
+non ancora enforcement quota upload. Procedura:
+[TEST-FOUNDER-M06A.md](../docs/TEST-FOUNDER-M06A.md).
 
 ## Banco di prova locale
 

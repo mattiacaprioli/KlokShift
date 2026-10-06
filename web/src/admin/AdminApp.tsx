@@ -42,7 +42,7 @@ export function AdminApp() {
   return <div className="min-h-screen bg-bg-0 text-t1">
     <header className="border-b border-border-2 p-5">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-        <div><p className="font-serif text-xl">KlokShift · Fondatore</p><p className="text-xs text-t3">{access.isFetching ? 'Verifica accesso in corso…' : 'Consultazione amministrativa · secondo fattore verificato'}</p></div>
+        <div><p className="font-serif text-xl">KlokShift · Fondatore</p><p className="text-xs text-t3">{access.isFetching ? 'Verifica accesso in corso…' : 'Amministrazione · secondo fattore verificato'}</p></div>
         <div className="flex flex-wrap items-center gap-3">
           <Link to="/" className="text-sm text-t3">Dashboard cliente</Link>
           <Button onClick={() => void client.invalidateQueries({ queryKey: qk.admin.all })}>Aggiorna</Button>{exit}

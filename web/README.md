@@ -42,9 +42,19 @@ diritto commerciale. Finanza e costi appaiono «Non disponibili»; concessioni,
 audit e spese seguono in M06. Query key `qk.admin` isolate per account/sessione,
 dati rimossi dopo errore di accesso/revoca/uscita. La allowlist nasce vuota.
 Setup e challenge TOTP usano Auth nel data layer; il segreto rimane nel form.
-Procedura di provisioning e prova su Supabase dev completo:
-[TEST-FOUNDER-M05.md](../docs/TEST-FOUNDER-M05.md). Non è stato eseguito un
-rollout remoto né uno smoke visuale/TOTP reale in questa sessione.
+M05 rilasciato tramite CI sul commit `f6ff685`; provisioning esplicito e primo
+accesso MFA/panoramica confermati dall'utente sul progetto attuale di soli
+test propri. Dettagli, filtri e prove negative Auth/revoca restano aperti.
+Procedura ed evidenze:
+[TEST-FOUNDER-M05.md](../docs/TEST-FOUNDER-M05.md).
+
+M06a aggiunge azioni confermate nelle schede aziende/account e registro:
+gratuità a vita immediata/variazione compatibile, etichette e note. Il form
+mantiene lo stesso identificativo per riprovare una conferma fallita, non
+ritenta automaticamente; revisioni vecchie sono rifiutate dal backend.
+Quota documenti dichiarata, blocco upload per quota pendente. Nessun rilascio
+M06a in questa sessione; procedura:
+[TEST-FOUNDER-M06A.md](../docs/TEST-FOUNDER-M06A.md).
 
 ## Comandi (dalla root del repo)
 

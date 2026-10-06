@@ -5,6 +5,91 @@ Area web di **consultazione** a `#/amministrazione`. Nessuna migration pubblicat
 riscritta; nessun deploy o provisioning di un amministratore reale eseguito da
 questa sessione. Concessioni/modifiche, audit, spese e pagamenti sono step successivi.
 
+**Aggiornamento dopo il rilascio:** il fondatore ha confermato che il progetto
+attuale contiene soltanto proprie aziende/account di test, senza dati di terzi.
+La prova visuale può quindi usare questo ambiente. Il workflow
+[M05, commit f6ff685](https://github.com/mattiacaprioli/KlokShift/actions/runs/37425283890)
+risulta completato con successo, inclusi `deploy-database / db-push` e
+`deploy-pages / deploy`. Il fondatore ha poi condiviso la panoramica con
+«secondo fattore verificato» e lettura server del **6 ottobre 2026, 09:16,
+Europe/Rome**: primo accesso amministrativo e caricamento della panoramica
+confermati sul progetto attuale. Il provisioning è stato eseguito dall'utente,
+non da Codex; le altre verifiche manuali restano aperte.
+
+### Prima prova visuale osservata
+
+| Dato nella panoramica | Esito osservato |
+|---|---|
+| Accesso fondatore | Secondo fattore verificato; panoramica caricata |
+| Aziende | 2: Bar Teatro e Da Buffa, entrambe in «Migrazione da verificare» |
+| Classificazione amministrativa | 2 non classificate |
+| Account Auth | 4, tutti confermati |
+| Sedi aperte / chiuse | 2 / 0 |
+| Organico e appartenenze | 5 membri attivi, 1 senza account collegato, 2 gestori attivi, 5 collocazioni attuali |
+| Documenti Storage | 0,03 MiB; 1 oggetto; 0 dimensioni sconosciute; 0 non attribuiti |
+| Economia e costi | Non disponibili |
+
+Il fondatore conferma che le due aziende sono proprie aziende di test,
+**create prima del lavoro di monetizzazione**. `migration_pending` è coerente
+con questa origine: conserva esplicitamente le operazioni precedenti e non
+avvia una prova né assegna automaticamente piano, concessione o scadenza.
+«Non classificato» riguarda invece l'etichetta amministrativa: sapere che
+sono aziende di test non scrive automaticamente tale classificazione nel DB.
+Account Auth e membri aziendali sono conteggi diversi; la panoramica non
+segnala un errore per il solo fatto di mostrare 4 account e 5 membri.
+
+Questa evidenza riguarda la schermata fornita dall'utente, senza confronto
+indipendente di tutti i valori con il DB. Non attesta i dettagli, i filtri,
+il rifiuto di un codice errato, il nuovo login, gli account esclusi o la revoca.
+
+## 0. Prova sul progetto attuale con sole aziende proprie di test
+
+Questo è il percorso scelto dal fondatore per la prova iniziale. Un dev separato
+resta un'opzione per le prove successive e quando saranno presenti dati di terzi.
+
+1. Nel pannello Supabase del progetto `rmlobxjlqlpixkvrzmfg`, aprire
+   **Authentication → Users** e copiare l'UUID dell'account personale scelto
+   dal fondatore. Verificare email e conferma; nessuna identità amministrativa
+   va dedotta automaticamente dal fatto di essere titolare.
+2. Nel **SQL Editor** dello stesso progetto sostituire `TUO_UUID` ed eseguire:
+
+```sql
+select id,email,email_confirmed_at,deleted_at
+from auth.users where id='TUO_UUID'::uuid;
+
+insert into private.platform_admins(user_id,reason)
+values ('TUO_UUID'::uuid,'Fondatore KlokShift — attivazione esplicita M05')
+on conflict (user_id) do nothing;
+
+select user_id,granted_at,revoked_at
+from private.platform_admins where user_id='TUO_UUID'::uuid;
+```
+
+Atteso: l'account corretto con email confermata, una sola riga amministrativa
+e `revoked_at` nullo. Se la riga esiste ma è revocata, l'insert non la riattiva
+implicitamente: prima verificare il motivo della revoca.
+
+3. Aprire [l'area del fondatore](https://klokshift.com/app/#/amministrazione)
+   e accedere con quello stesso account. Atteso: «Verifica del fondatore».
+   Se compare «Area riservata», ricontrollare UUID/account scelto e la riga
+   amministrativa; se compare un errore, conservarne il testo per la diagnosi.
+4. Cliccare **Configura secondo fattore**, scansionare il QR con un'app TOTP,
+   poi inserire il codice. Atteso: un codice sbagliato mantiene chiusa l'area;
+   il codice corretto apre Panoramica/Aziende/Account. Se un fattore è già
+   verificato, compare direttamente il campo codice. Lasciare Confirm email
+   attivo; enrollment e verification TOTP devono essere abilitati su Auth.
+5. Aprire un'azienda propria e confrontare sedi, persone, piano e date con i
+   dati conosciuti. Provare ricerca, dettaglio account e **Aggiorna**.
+   `migration_pending` deve mostrare «Migrazione da verificare», senza piano
+   inventato. Economia/costi devono risultare «Non disponibili».
+6. Uscire e accedere di nuovo: atteso challenge MFA con il fattore esistente.
+   Con un altro account proprio di test, fuori allowlist, lo stesso URL deve
+   mostrare «Area riservata al fondatore».
+
+Il primo giro copre login, MFA e consultazione. I controlli negativi che
+alterano periodi, sessioni o account restano descritti nei punti successivi e
+vanno eseguiti soltanto sulle fixture scelte esplicitamente per quei controlli.
+
 ## 1. Verifica riproducibile nel banco SQL locale
 
 Dalla root `/Users/alisher/KlokShift`, con Docker attivo:
@@ -29,8 +114,11 @@ non offre Auth/REST/Storage HTTP: **la porta 54422 non è l'URL dell'app**.
 `bootstrap.sql` riproduce le colonne Auth necessarie alle fixture di sessione e
 fattori; non va applicato su Supabase dev o produzione.
 
-Risultati attesi: 14 file SQL/RLS e 5 suite concorrenti passano, compreso
-`090_platform_admin.sql`; 38 file / 272 test client passano. Typecheck e build
+Risultati verificati per il blocco M05 originale: 14 file SQL/RLS e 5 suite
+concorrenti passano, compreso `090_platform_admin.sql`; 38 file / 272 test
+client passano. Con M06a la suite corrente passa con 15 file SQL/RLS,
+6 suite concorrenti e 39 file / 281 test client, come registrato in
+[TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md). Typecheck e build
 passano; lint senza errori, con il warning preesistente di React Hook Form in
 `web/src/shifts/ShiftPanel.tsx`. Il build web segnala la dimensione del bundle.
 
@@ -44,8 +132,9 @@ che nessuna query globale parta prima dell'autorizzazione iniziale.
 
 ## 2. Preparare un Supabase dev completo e isolato
 
-La prova visuale richiede un **progetto dev sacrificabile** con Auth, REST e
-Storage effettivi. Non usare il progetto di produzione `rmlobxjlqlpixkvrzmfg`.
+Il percorso dev alternativo usa un **progetto dev sacrificabile** con Auth,
+REST e Storage effettivi, distinto da `rmlobxjlqlpixkvrzmfg`. Per il progetto
+attuale contenente soltanto test propri, seguire invece il punto 0.
 Non sono state usate credenziali dev o applicate migration remote in questa
 sessione: i passi seguenti sono la verifica manuale ancora da eseguire.
 
@@ -249,13 +338,16 @@ nessun riepilogo del fondatore deve riapparire. Disconnettendo la rete e premend
 Aggiorna devono comparire errore/riprova, senza presentare i vecchi dati come
 verificati. Non lasciare un token MFA o una concessione admin di test in produzione.
 
-## Esito da registrare prima del rollout
+## Esito delle verifiche M05
 
 - [x] SQL/RLS/concorrenza, API/parser/cache, gate web, tipi, lint e bundle locali.
-- [ ] Login Auth reale, enrollment QR, challenge corretto/errato e ripresa configurazione incompleta su dev.
-- [ ] Smoke visuale multiutente, filtri/pagine, date/spazio e confronto con DB dev.
-- [ ] Revoca allowlist con JWT ancora valido, logout/cambio account e reconnect su dev.
-- [ ] Provisioning dell'unico fondatore reale e rollout deliberato, dopo il gate dev.
+- [x] Rilascio M05: workflow del commit `f6ff685` riuscito, inclusi database e Pages.
+- [x] Account del fondatore scelto esplicitamente e abilitato; primo accesso Auth/MFA reale e panoramica confermati dalla schermata del 6 ottobre 2026, 09:16.
+- [x] Origine delle due aziende esistenti confermata dall'utente: proprie aziende di test create prima della monetizzazione; entrambe restano `migration_pending`, senza concessioni automatiche.
+- [ ] Enrollment QR, codice errato e ripresa di una configurazione incompleta: esiti da registrare separatamente.
+- [ ] Dettagli aziende/account, filtri/pagine, date/spazio e confronto con i dati del progetto scelto.
+- [ ] Logout e nuovo login con challenge; cambio verso un account proprio di test fuori allowlist e diniego dell'area amministrativa.
+- [ ] Revoca allowlist con JWT ancora valido e reconnect, sulle fixture esplicitamente scelte per queste prove.
 
 M05 non abilita il lancio pagante. Seguono concessioni/audit M06, flussi
 commerciali M04, Paddle e ciclo completo di archivio/cancellazione.

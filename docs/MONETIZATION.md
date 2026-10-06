@@ -4,7 +4,16 @@ Aggiornato il **6 ottobre 2026**. Documento canonico delle decisioni commerciali
 
 **Stato dell'implementazione:** M03a e blocco server M03b implementati e verificati in locale: accesso, capacità persone/sedi, blocco operativo su RPC/scritture dirette/upload, rettifiche limitate e consultazione storico. Collegamento iniziale app/dashboard: stato/date, prova esplicita, rimozione dei gate Pro sulle ore e scope storico delle sedi chiuse. Le aziende `migration_pending` conservano esplicitamente il funzionamento precedente finché vengono classificate, senza pagamenti/concessioni inventati. Il campo storico `workspaces.plan = free/pro` resta per compatibilità dello schema e non autorizza l'operatività. Restano concessioni/audit/economia del fondatore, quota aziendale, downgrade futuri, checkout/rinnovi/webhook Paddle e completamento di M11 (avvisi, restituzione completa e cancellazione). La procedura di test è in [TEST-MONETIZATION-M03B.md](TEST-MONETIZATION-M03B.md). Nessuna nuova migration remota o operazione finanziaria eseguita in questo blocco.
 
-**Aggiornamento M05:** consultazione del fondatore implementata e verificata nel banco locale, con allowlist/MFA server, panoramica, ricerca paginata, dettagli aziende/account, capacità/date, anomalie disponibili e spazio misurato. M06 (concessioni/audit/economia), quote e Paddle restano da realizzare. I dati finanziari/costi sono «Non disponibili», non valori dedotti dai piani. Provisioning del fondatore e prova MFA reale/visuale su dev restano aperti; nessun rollout remoto. Procedura: [TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md).
+**Aggiornamento M05:** consultazione del fondatore implementata e verificata nel banco locale, con allowlist/MFA server, panoramica, ricerca paginata, dettagli aziende/account, capacità/date, anomalie disponibili e spazio misurato. Rilascio del commit `f6ff685` riuscito; provisioning esplicito eseguito dall'utente e primo accesso con MFA/panoramica confermato sul progetto attuale di soli test propri. Le due aziende create prima della monetizzazione restano `migration_pending`: nessun piano, prova o concessione assegnati automaticamente. Dettagli, filtri e prove negative Auth/revoca restano da verificare manualmente. M06 (concessioni/audit/economia), quote e Paddle restano da realizzare. I dati finanziari/costi sono «Non disponibili», non valori dedotti dai piani. Procedura ed evidenze: [TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md).
+
+**Aggiornamento M06a, locale:** prima parte di M06 implementata: gratuità a
+vita immediata/variazione capacità dalla dashboard, classificazioni esplicite,
+note e audit atomico/idempotente. Nessuna conversione automatica delle aziende
+`migration_pending`; motivo e conferma obbligatori. Piano e sedi applicati
+dal server; quota documenti dichiarata, blocco upload per quota ancora pendente.
+M06 continua con economia/spese e altri interventi; Paddle dipende da M09.
+Nessuna concessione reale o nuova migration remota eseguita in questo blocco.
+Procedura: [TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md).
 
 La sequenza di lavoro, l'audit del codice e le verifiche sono nel [piano di implementazione](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md). La dashboard personale è descritta in [FOUNDER-DASHBOARD.md](FOUNDER-DASHBOARD.md).
 

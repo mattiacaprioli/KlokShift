@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { getAdminAccess } from "./api";
 const fresh = { staleTime: 0, gcTime: 0, retry: false, refetchOnWindowFocus: true, refetchOnReconnect: true } as const;
@@ -16,4 +16,22 @@ export function useAdminRead<T>(userId: string, resource: string, parameters: un
     }
   }, [client, query.error]);
   return query;
+}
+export function useAdminWrite<T>(mutationFn: (command: T) => Promise<unknown>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn, retry: false,
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: qk.admin.privileged }),
+        client.invalidateQueries({ queryKey: qk.workspaceAccess.all }),
+      ]);
+    },
+    onError: (error) => {
+      if (/admin_not_allowed|admin_mfa_required|not_authenticated/.test(error.message)) {
+        void client.cancelQueries({ queryKey: qk.admin.privileged }).then(() => client.removeQueries({ queryKey: qk.admin.privileged }));
+        void client.invalidateQueries({ queryKey: ["admin", "access"] });
+      }
+    },
+  });
 }
