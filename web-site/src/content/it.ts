@@ -1,4 +1,5 @@
 import type { Content } from "./types";
+import { PLAN_PRICES, formatEuro } from "../../../shared/pricing";
 
 /*
  * TUTTO il copy della vetrina sta qui. Nessuna stringa nei componenti: è la
@@ -41,16 +42,16 @@ export const it: Content = {
       { href: "#prezzi", label: "Prezzi" },
       { href: "#faq", label: "Domande" },
     ],
-    cta: "Prova gratis 30 giorni",
+    cta: "Prova la beta",
   },
 
   hero: {
     eyebrow: "Turni e ore del personale",
     title: "I turni della settimana in dieci minuti, non in una serata.",
     lead: "Pianifichi, il team conferma dal telefono e le ore dei turni si sommano automaticamente. Addio a fogli Excel e gruppi WhatsApp.",
-    ctaPrimary: "Prova gratis 30 giorni",
+    ctaPrimary: "Prova la beta",
     ctaSecondary: "Guarda come funziona",
-    note: "30 giorni gratis, senza carta. Poi da 29 € al mese o 290 € all'anno, IVA esclusa.",
+    note: "Beta: prova Team di 30 giorni, una sede, senza carta. I pagamenti non sono ancora disponibili.",
     shotAlt: "L'agenda dei turni della settimana",
   },
 
@@ -141,8 +142,8 @@ export const it: Content = {
     title: "Si parte in un pomeriggio.",
     steps: [
       {
-        title: "Crea la tua sede",
-        body: "Nome e città. Le altre sedi le aggiungi quando servono.",
+        title: "Prepara la prima sede",
+        body: "Crea l'account, conferma l'email e prepara la sede. Da «Piano e accesso» avvii la prova di 30 giorni.",
       },
       {
         title: "Aggiungi il team",
@@ -193,9 +194,9 @@ export const it: Content = {
   },
 
   plans: {
-    eyebrow: "Prezzi",
+    eyebrow: "Listino previsto al lancio",
     title: "Due piani semplici. Una sede inclusa.",
-    lead: "Scegli in base alla dimensione del team. Con l'annuale paghi 10 mesi invece di 12.",
+    lead: "Stesse funzioni, capacità diversa per l'intera azienda. Con l'annuale paghi 10 mensilità per 12 mesi consecutivi. Durante la beta puoi provare: gli acquisti non sono ancora disponibili.",
     billing: {
       label: "Periodo di fatturazione",
       monthly: "Mensile",
@@ -204,28 +205,28 @@ export const it: Content = {
     },
     options: [
       {
-        name: "Fino a 30 dipendenti",
+        name: "Base · fino a 30 persone",
         monthly: {
-          amount: "29 €",
+          amount: formatEuro(PLAN_PRICES.base.monthly),
           period: "al mese",
         },
         annual: {
-          amount: "290 €",
+          amount: formatEuro(PLAN_PRICES.base.annual),
           period: "all'anno",
           equivalent: "Equivale a 24,17 € al mese, con fatturazione annuale.",
           saving: "Risparmi 58 € all'anno",
         },
-        details: ["1 sede inclusa", "Prezzo IVA esclusa"],
+        details: ["30 persone uniche nell'intera azienda", "1 sede inclusa", "Prezzo IVA esclusa"],
         badge: "Per iniziare",
       },
       {
-        name: "Dipendenti illimitati",
+        name: "Team · senza limite persone",
         monthly: {
-          amount: "49 €",
+          amount: formatEuro(PLAN_PRICES.team.monthly),
           period: "al mese",
         },
         annual: {
-          amount: "490 €",
+          amount: formatEuro(PLAN_PRICES.team.annual),
           period: "all'anno",
           equivalent: "Equivale a 40,83 € al mese, con fatturazione annuale.",
           saving: "Risparmi 98 € all'anno",
@@ -244,10 +245,10 @@ export const it: Content = {
     extraVenue: {
       monthly: "Sede aggiuntiva: 15 € al mese.",
       annual: "Sede aggiuntiva: 150 € all'anno — risparmi 30 €.",
-      detail: "Una sede operativa completa, con il proprio planning e organico, nello stesso account.",
+      detail: "Una sede con il proprio planning e organico, nella stessa azienda. Chi lavora in più sedi conta una sola volta nel limite persone.",
     },
-    note: "30 giorni gratis, senza carta. Poi scegli la fatturazione mensile o annuale.",
-    cta: "Inizia la prova gratuita",
+    note: "Crea l'account e la prima sede, poi avvia la prova. Nessun addebito automatico alla scadenza.",
+    cta: "Prova la beta",
   },
 
   faq: {
@@ -256,11 +257,15 @@ export const it: Content = {
     items: [
       {
         q: "Serve una carta di credito per provare?",
-        a: "No. Hai 30 giorni con tutte le funzioni. Decidi dopo.",
+        a: "No. Ogni nuova azienda ha una prova unica di 30 giorni con il piano Team, tutte le funzioni e una sede. Parte quando il titolare conferma l'avvio da «Piano e accesso», dopo aver preparato la prima sede. Non si rinnova a pagamento.",
+      },
+      {
+        q: "Posso già acquistare un piano?",
+        a: "Durante la beta gli acquisti non sono ancora disponibili. Puoi creare l'account, preparare la prima sede e avviare la prova gratuita. Il listino mostra i prezzi previsti al lancio; il piano a pagamento si attiverà solo dopo un acquisto esplicito sul web.",
       },
       {
         q: "I dipendenti devono pagare?",
-        a: "No. L'app per il team è gratuita. Il piano da 29 € include fino a 30 dipendenti; quello da 49 € non prevede limiti.",
+        a: "No. Il piano è dell'azienda. Al lancio Base prevede fino a 30 persone uniche nell'intera azienda e Team non ha un limite persone; entrambi includono le stesse funzioni. Una persona che lavora in due sedi conta una sola volta.",
       },
       {
         q: "Quanto risparmio con il pagamento annuale?",
@@ -268,7 +273,7 @@ export const it: Content = {
       },
       {
         q: "E se chiudo per la stagione, o non rinnovo?",
-        a: "I dati restano tuoi. La dashboard passa in sola lettura: consulti lo storico e scarichi ore ed export per il consulente. Quando riapri, riattivi e riparti da dove eri.",
+        a: "Alla fine della prova l'operatività si ferma. Lo storico resta consultabile ed esportabile per 12 mesi dalla fine dell'operatività; per le rettifiche pregresse c'è una finestra separata di 7 giorni. Al lancio pagante la pausa mensile decorrerà dalla fine del periodo pagato. L'annuale copre 12 mesi consecutivi, senza congelamento automatico. Pausa, disdetta e cancellazione dei dati sono operazioni distinte.",
       },
       {
         q: "Ho più sedi. Come funziona?",
@@ -291,8 +296,8 @@ export const it: Content = {
 
   finalCta: {
     title: "La prossima settimana, pianificata in dieci minuti.",
-    lead: "Crea la tua sede e prova KlokShift per 30 giorni.",
-    cta: "Prova gratis 30 giorni",
+    lead: "Prova la beta: prepara la prima sede e avvia 30 giorni con il piano Team. Senza carta e senza rinnovo a pagamento.",
+    cta: "Prova la beta",
     secondary: "Ho già un account",
     note: "Lavori in un'azienda che usa KlokShift? Scarica l'app e fatti invitare.",
   },

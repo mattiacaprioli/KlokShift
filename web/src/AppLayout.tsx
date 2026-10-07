@@ -53,6 +53,7 @@ const NAV: NavItem[] = [
   { to: "/notifiche", label: "Notifiche", icon: "notifications", group: "Persone", badge: "notifiche" },
   { to: "/sede", label: "Sede", icon: "venue", group: "Gestione" },
   { to: "/collaboratori", label: "Collaboratori", icon: "team", group: "Gestione", ownerOnly: true },
+  { to: "/piano", label: "Piano e accesso", icon: "settings", group: "Gestione", ownerOnly: true },
   { to: "/impostazioni", label: "Impostazioni", icon: "settings", group: "Gestione" },
 ];
 

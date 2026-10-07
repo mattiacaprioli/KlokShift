@@ -20,6 +20,18 @@ M03b collega stato/date/capacità al cliente e conserva lettura/export dello
 storico. M05 aggiunge consultazione del fondatore verificata nel banco locale;
 pagamenti e ulteriori azioni commerciali/amministrative restano da implementare.
 
+**M04 beta (6 ottobre, locale):** `#/piano`, nel menu Gestione e nelle
+impostazioni del titolare, raccoglie stato, piano, origine, conteggi/limiti e
+scadenze del read model server. Prepara/avvia la prova con conferma esplicita;
+un'azienda nuova viene portata qui dopo la prima sede. Aziende preesistenti
+mantengono piano/limiti non assegnati e l'eccezione server finché ricevono una
+concessione esplicita. Link a storico/export restano disponibili nei permessi
+esistenti; errore di refresh non autorizza dal dato in cache.
+Il dettaglio richiudibile del listino usa `shared/pricing.ts`: è informativo,
+senza acquisto, addebito o modifica del piano. La pagina è riservata al titolare;
+il collaboratore vede il solo banner neutro. Nessun nuovo privilegio/RPC.
+Procedura: [TEST-MONETIZATION-M04.md](../docs/TEST-MONETIZATION-M04.md).
+
 La gestione commerciale del cliente vive sul web: acquisto, riepilogo prezzo,
 upgrade/downgrade, disdetta, pausa e ripartenza. Le azioni sono riservate ai
 titolari autorizzati e rispettano capacità aziendale, periodo acquistato ed

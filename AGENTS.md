@@ -106,7 +106,13 @@ la dashboard del fondatore in
 M03a/M03b implementano modello, accesso/capacità server e collegamento iniziale
 app/dashboard, verificati in locale. `migration_pending` conserva esplicitamente
 le operazioni precedenti, senza concessioni inventate; il dato mancante non
-sblocca. M05 aggiunge consultazione del fondatore in `web/` a
+sblocca. M04 beta aggiunge la pagina cliente `#/piano` per il titolare:
+stato/capacità/date, avvio prova confermato e listino informativo separato.
+Sito/FAQ/CTA/meta dichiarano la beta, con registrazione → prima sede → prova;
+nessun acquisto attivo o offerta acquistabile nel JSON-LD. Listino web condiviso
+in `shared/pricing.ts`, mai importato nell'app nativa. Contratti e checkout
+restano M09/M11. Procedura [docs/TEST-MONETIZATION-M04.md](docs/TEST-MONETIZATION-M04.md).
+M05 aggiunge consultazione del fondatore in `web/` a
 `#/amministrazione`, allowlist privata vuota fino a provisioning esplicito,
 MFA `aal2` e controllo live di account/sessione/fattore a ogni RPC globale.
 Nessuna RLS cliente ampliata, nessun accesso admin ordinario a HR/chat/file.
@@ -175,7 +181,7 @@ yarn start                # Expo dev server
 yarn ios                  # iOS simulator
 yarn android              # Android emulator
 yarn web                  # web
-yarn lint                 # expo lint src web/src web-site/src (eslint) — bloccante in CI
+yarn lint                 # expo lint src web/src web-site/src shared (eslint) — bloccante in CI
                           #   i path vanno nominati: senza, expo lint salta web/ e web-site/
 yarn site:dev             # sito vetrina (web-site/) — vedi web-site/README.md
 yarn add <pkg>            # dipendenze (oppure `npx expo install <pkg>`)

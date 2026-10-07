@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -65,10 +66,11 @@ export function NotForWaitersPage() {
  * stragrande maggioranza dei casi sono la stessa cosa, e chiedere due nomi a chi
  * ne ha uno solo è il modo più veloce per far abbandonare il modulo.
  *
- * Non serve navigare dopo: l'appartenenza appena creata fa passare il gate e
- * `<App />` monta la dashboard da sé.
+ * L'appartenenza appena creata fa passare il gate e monta la dashboard.
+ * Dopo il salvataggio portiamo il titolare al riepilogo per avviare la prova.
  */
 function OpenWorkspaceCard() {
+  const navigate = useNavigate();
   const create = useCreateFirstVenue();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -76,27 +78,31 @@ function OpenWorkspaceCard() {
 
   const trimmed = name.trim();
 
-  function submit() {
+  async function submit() {
     if (!trimmed || create.isPending) return;
     setError(null);
-    create.mutate(
-      {
+    try {
+      await create.mutateAsync({
         name: trimmed,
         city: null,
         address: null,
         cuisine_type: null,
         description: null,
-      },
-      { onError: (e) => setError(userErrorMessage(e)) }
-    );
+      });
+      // L’invalidazione del contesto smonta questo form. mutateAsync prosegue
+      // anche dopo lo smontaggio, a differenza del callback del singolo mutate.
+      navigate("/piano");
+    } catch (e) {
+      setError(userErrorMessage(e));
+    }
   }
 
   return (
     <div className="mt-6 rounded-2xl border border-border-2 bg-bg-1 p-5 text-left">
       <p className="text-sm font-semibold text-t1">Gestisci una sede?</p>
       <p className="mt-1 text-xs leading-5 text-t3">
-        Apri qui la tua azienda: da quel momento questa dashboard è tua, con
-        organico, turni e conteggio delle ore.
+        Prepara qui la tua azienda e la prima sede. Poi scegli quando avviare
+        la prova Team di 30 giorni senza carta.
       </p>
 
       {open ? (
@@ -104,12 +110,12 @@ function OpenWorkspaceCard() {
           className="mt-4 flex flex-col gap-3"
           onSubmit={(e) => {
             e.preventDefault();
-            submit();
+            void submit();
           }}
         >
           <Field
             label="Come si chiama"
-            hint="Diventa il nome della tua azienda e della prima sede. Puoi cambiarli dopo, e aggiungere altre sedi quando vuoi."
+            hint="Diventa il nome della tua azienda e della prima sede. Puoi cambiarli dopo. La prova include una sede."
           >
             <Input
               value={name}

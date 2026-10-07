@@ -5,9 +5,9 @@ porta alla registrazione della sede. È la **radice** del sito su GitHub Pages;
 la dashboard sta sotto `/app/` (vedi `web/README.md`).
 
 Qui dentro non c'è niente del prodotto: nessun Supabase, nessun `src/features`,
-nessun router. È una pagina sola con le ancore, e l'unica cosa che condivide con
-l'app sono i **token di design**, copiati in `src/index.css` dagli stessi valori
-di `web/src/index.css`.
+nessun router. È una pagina sola con le ancore. Condivide i **token di design**
+e il puro listino web `shared/pricing.ts` con la dashboard; non importa il data
+layer e non concede diritti.
 
 ## Comandi (dalla root del repo)
 
@@ -50,8 +50,10 @@ web. L'app nativa non mostra prezzi:
 - IVA esclusa e 30 giorni di prova senza carta.
 
 Con la fatturazione annuale si pagano 10 mensilità invece di 12: sono quindi
-inclusi **due mesi gratuiti**. Se cambia un importo, aggiornare insieme
-`src/content/it.ts` e l'`offers` JSON-LD in `index.html`.
+inclusi **due mesi gratuiti**. Gli importi principali di sito/dashboard derivano
+da `shared/pricing.ts`; aggiornare insieme i testi/esempi in `src/content/it.ts`.
+Durante la beta il JSON-LD di `index.html` non dichiara offerte acquistabili:
+aggiungerle solo col checkout realmente disponibile in M09.
 
 ## Regole commerciali approvate, da implementare
 
@@ -68,13 +70,17 @@ rettifiche pregresse, upgrade/downgrade espliciti, preavviso prezzi di 60 giorni
 rimborsi, spazio documenti e assistenza. La quota complessiva iniziale di circa
 2 GB documenti per azienda va calibrata sui tester prima di pubblicarla.
 
-M03a/M03b forniscono modello, controlli server e collegamento iniziale del
-client, verificati in locale; non attivano un flusso commerciale pubblico. Copy, FAQ, CTA,
-metadata/JSON-LD e condizioni devono essere allineati quando il servizio sarà
-realmente disponibile. Non pubblicare come già attivi checkout, pausa, archivio,
-tempi di ripristino o assistenza non ancora predisposti. I tester gratuiti a
-vita non costituiscono un freemium aperto al pubblico. La dicitura IVA attuale
-e i documenti fiscali vanno verificati sul canale di vendita scelto.
+M04 allinea in locale copy, FAQ, CTA e metadata/JSON-LD alla **beta effettiva**:
+«Prova la beta» porta alla registrazione web; dopo conferma email e prima sede,
+il titolare conferma l'avvio della prova unica Team/una sede/30 giorni nella
+pagina Piano e accesso. Nessun addebito automatico o checkout fittizio.
+Il listino è previsto al lancio; la FAQ distingue l'archivio/rettifiche già
+applicati dal server dalle future pause paganti e dai contratti annuali.
+I tester gratuiti a vita non costituiscono un freemium pubblico. La quota
+documenti non calibrata e tempi di ripristino/assistenza non predisposti non
+sono promessi. Condizioni e dicitura fiscale restano da validare prima delle
+vendite con M09/M11. Procedura:
+[TEST-MONETIZATION-M04.md](../docs/TEST-MONETIZATION-M04.md).
 
 Il pubblico è **qualunque azienda con personale a turni**, non solo
 l'ospitalità: sul sito le persone sono «team» / «dipendenti», il luogo «sede».

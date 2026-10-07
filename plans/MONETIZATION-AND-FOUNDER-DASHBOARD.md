@@ -3,7 +3,7 @@
 Analisi iniziale: **5 ottobre 2026**, repository al commit `da956cb`.
 Stato di esecuzione aggiornato: **6 ottobre 2026**.
 
-**Stato: regole commerciali approvate; M03a/M03b implementati, M05 rilasciato con primo accesso MFA/panoramica confermato, M06a verificato localmente.** Alisher ha confermato listino, 30 persone uniche per azienda, pagamenti automatici dal web al lancio, dashboard essenziale prima dei paganti, gratuità a vita con piano/sedi individuali, prova Team/una sede di 30 giorni e archivio di 12 mesi. Ha approvato anche le raccomandazioni sugli otto punti dopo il confronto con i concorrenti e ha scelto **Paddle**. Il fondatore dichiara una partita IVA già attiva in regime forfettario e attività di frontend developer; il codice ATECO esatto è da recuperare. Restano approvazione/configurazione Paddle, compatibilità ATECO e procedura fiscale, validazione privacy e dettagli tecnici esplicitamente aperti; la quota iniziale di spazio va calibrata sui tester. M06a aggiunge concessioni e audit senza modifiche remote in questo blocco. Classificazione e attivazione delle aziende ospitate rimangono esplicite; prove manuali residue e altre attività sono indicate nelle singole fasi.
+**Stato: regole commerciali approvate; M03a/M03b implementati, M05 rilasciato con primo accesso MFA/panoramica confermato, M06a e M04 beta verificati localmente.** Alisher ha confermato listino, 30 persone uniche per azienda, pagamenti automatici dal web al lancio, dashboard essenziale prima dei paganti, gratuità a vita con piano/sedi individuali, prova Team/una sede di 30 giorni e archivio di 12 mesi. Ha approvato anche le raccomandazioni sugli otto punti dopo il confronto con i concorrenti e ha scelto **Paddle**. Il fondatore dichiara una partita IVA già attiva in regime forfettario e attività di frontend developer; il codice ATECO esatto è da recuperare. Restano approvazione/configurazione Paddle, compatibilità ATECO e procedura fiscale, validazione privacy e dettagli tecnici esplicitamente aperti; la quota iniziale di spazio va calibrata sui tester. M06a aggiunge concessioni e audit senza modifiche remote in questo blocco. Classificazione e attivazione delle aziende ospitate rimangono esplicite; prove manuali residue e altre attività sono indicate nelle singole fasi.
 
 **Fonti correnti:** [MONETIZATION.md](../docs/MONETIZATION.md) per le regole e
 [FOUNDER-DASHBOARD.md](../docs/FOUNDER-DASHBOARD.md) per la dashboard personale.
@@ -432,7 +432,7 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M01 | Definire regole, conteggi e dettagli di lancio | Discussione con Alisher | IN CORSO: otto regole approvate; dettagli residui aperti |
 | M02 | Definire procedura fiscale e condizioni commerciali del canale iniziale | M01, commercialista | PROPOSTO |
 | M03 | Implementare accesso/capacità nel DB e concessioni gratuite a vita | Regole pertinenti M01 | IN CORSO: M03a/M03b verificati localmente; quote, classificazione reale e rollout pendenti |
-| M04 | Rendere coerenti app, dashboard cliente e sito; eliminare Free/Pro obsoleto | M03 | IN CORSO: collegamento minimo e rimozione gate; flussi commerciali/sito pendenti |
+| M04 | Rendere coerenti app, dashboard cliente e sito; eliminare Free/Pro obsoleto | M03 | BETA LOCALE VERIFICATA: pagina titolare, prova confermata, listino separato, sito coerente; manuali/store e percorso pagante M09/M11 pendenti |
 | M05 | Dashboard personale: accesso protetto, panorama, aziende e schede | M03; riuso stack web | RILASCIATO; primo accesso MFA/panoramica verificato; restanti prove manuali pendenti |
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | IN CORSO: M06a concessioni/classificazioni/audit locale; economia e altri interventi pendenti |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
@@ -576,11 +576,23 @@ Inventario iniziale del 2026-10-05. M03b collega accesso/capacità e conserva le
 - [x] Sostituire `PlanCard`, upsell, route `pro`, toggle dev e relativi chiamanti come da inventario.
 - [x] Adattare gate sedi e conteggi senza usare soltanto le sedi visibili al collaboratore.
 - [x] Mostrare stato/validità e comportamento a scadenza; le funzioni consultabili rimangono accessibili.
-- [ ] Implementare la gestione commerciale del titolare sul web; nell'app messaggi neutri e nessun prezzo/checkout.
-- [ ] Aggiornare `it.ts`, JSON-LD/meta di `index.html`, FAQ, CTA e documentazione. Il lancio pagante avrà un percorso web funzionante di prova/acquisto; eventuale beta anticipata ha una CTA reale di richiesta attivazione. Gratuità a vita per clienti selezionati non va presentata come freemium pubblico.
+- [x] Implementare la parte beta della gestione commerciale sul web: pagina `#/piano` per il titolare, stato/piano/capacità/date server, prova confermata dopo la prima sede, storico/export e listino separato; nell'app messaggi neutri e nessun prezzo/checkout.
+- [x] Aggiornare `it.ts`, JSON-LD/meta di `index.html`, FAQ, CTA e documentazione per la beta. CTA reale di registrazione → conferma email → prima sede → prova Team/una sede/30 giorni. Gratuità a vita selettiva non presentata come freemium pubblico; niente offerte JSON-LD acquistabili prima del checkout.
+- [ ] Completare acquisto e gestione contratto sul web con M09/M11, quindi riallineare CTA/FAQ/JSON-LD al lancio pagante e verificare il flusso store concreto.
+- [ ] Eseguire le prove manuali della nuova pagina cliente/sito/nativo: [TEST-MONETIZATION-M04.md](../docs/TEST-MONETIZATION-M04.md). Nessuna pubblicazione o prova browser reale eseguita in questa sessione.
 - [x] Aggiornare `AGENTS.md`, `web-site/README.md`, `supabase/README.md` e i commenti dei gate rimossi con lo stato M03b; ulteriori aggiornamenti seguiranno i flussi commerciali.
 
 **Uscita:** cliente e sito descrivono lo stesso servizio; nessuna funzione essenziale dipende da un tier Free/Pro inventato. Approvare il flusso store sul prodotto concreto.
+
+**M04 beta, 6 ottobre 2026:** verificati in locale 43 file / 311 test client,
+typecheck app/web/sito, lint (0 errori, warning React Hook Form già presente),
+build web/sito ed export iOS. Il listino web condiviso è coperto da lint e dal filtro
+di rilascio Pages. Nessuna modifica a schema/guard/RPC, migration pubblicate,
+backend remoto o diritti effettivi delle aziende. Scadenze del server, capacità
+non dedotta da Free/Pro e percorso storico/export conservati. La prova è
+già idempotente nel backend M03a; aprire una pagina non la avvia.
+Checkout, contratti, pause e cancellazione completa dipendono da M09/M11;
+il completamento locale della beta non li dichiara implementati.
 
 ### M05 — Dashboard personale di consultazione
 

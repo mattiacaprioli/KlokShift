@@ -48,6 +48,8 @@ export function ImpostazioniPage() {
 
         <NotificationPrefsSection />
 
+        {isOwner && workspaceId ? <Card><Link className="focus-gold text-gold underline" to="/piano">Piano e accesso dell’azienda</Link></Card> : null}
+
         {isOwner && workspaceId ? (
           <StaffChatSection workspaceId={workspaceId} />
         ) : null}

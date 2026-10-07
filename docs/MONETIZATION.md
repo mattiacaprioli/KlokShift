@@ -2,18 +2,40 @@
 
 Aggiornato il **6 ottobre 2026**. Documento canonico delle decisioni commerciali e di prodotto approvate da Alisher; i dettagli ancora aperti sono indicati esplicitamente.
 
-**Stato dell'implementazione:** M03a e blocco server M03b implementati e verificati in locale: accesso, capacità persone/sedi, blocco operativo su RPC/scritture dirette/upload, rettifiche limitate e consultazione storico. Collegamento iniziale app/dashboard: stato/date, prova esplicita, rimozione dei gate Pro sulle ore e scope storico delle sedi chiuse. Le aziende `migration_pending` conservano esplicitamente il funzionamento precedente finché vengono classificate, senza pagamenti/concessioni inventati. Il campo storico `workspaces.plan = free/pro` resta per compatibilità dello schema e non autorizza l'operatività. Restano concessioni/audit/economia del fondatore, quota aziendale, downgrade futuri, checkout/rinnovi/webhook Paddle e completamento di M11 (avvisi, restituzione completa e cancellazione). La procedura di test è in [TEST-MONETIZATION-M03B.md](TEST-MONETIZATION-M03B.md). Nessuna nuova migration remota o operazione finanziaria eseguita in questo blocco.
+**Stato dell'implementazione, 6 ottobre:** M03a/M03b forniscono modello e
+controlli server su operatività, capacità persone/sedi, rettifiche pregresse e
+lettura/export dello storico. `migration_pending` conserva esplicitamente le
+operazioni precedenti senza attribuire piano, capacità o prova; si risolve con
+un periodo commerciale esplicito, non con la sola etichetta Test/Interna/Cliente.
+Il campo storico `workspaces.plan = free/pro` non concede diritti.
+Procedura: [TEST-MONETIZATION-M03B.md](TEST-MONETIZATION-M03B.md).
 
-**Aggiornamento M05:** consultazione del fondatore implementata e verificata nel banco locale, con allowlist/MFA server, panoramica, ricerca paginata, dettagli aziende/account, capacità/date, anomalie disponibili e spazio misurato. Rilascio del commit `f6ff685` riuscito; provisioning esplicito eseguito dall'utente e primo accesso con MFA/panoramica confermato sul progetto attuale di soli test propri. Le due aziende create prima della monetizzazione restano `migration_pending`: nessun piano, prova o concessione assegnati automaticamente. Dettagli, filtri e prove negative Auth/revoca restano da verificare manualmente. M06 (concessioni/audit/economia), quote e Paddle restano da realizzare. I dati finanziari/costi sono «Non disponibili», non valori dedotti dai piani. Procedura ed evidenze: [TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md).
+**Fondatore M05/M06a:** area distinta protetta con allowlist, MFA e verifiche
+live; consultazione, concessioni immediate a vita/variazioni, classificazioni,
+note e audit atomico/idempotente implementati. L'utente ha confermato accesso
+MFA/panoramica e assegnazione Team/una sede/2048 MiB gratuiti a vita a Da Buffa
+(6 ottobre, 21:12 Europe/Rome, con periodo e audit). Le aziende vecchie non sono
+state attivate automaticamente. Restano prove manuali su dinieghi/revoche e
+riordino UI, oltre a interventi ulteriori ed economia/spese. Quota documenti
+per concessione dichiarata, enforcement upload ancora pendente. I dati
+finanziari/costi restano Non disponibili. Procedure:
+[TEST-FOUNDER-M05.md](TEST-FOUNDER-M05.md),
+[TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md).
 
-**Aggiornamento M06a, locale:** prima parte di M06 implementata: gratuità a
-vita immediata/variazione capacità dalla dashboard, classificazioni esplicite,
-note e audit atomico/idempotente. Nessuna conversione automatica delle aziende
-`migration_pending`; motivo e conferma obbligatori. Piano e sedi applicati
-dal server; quota documenti dichiarata, blocco upload per quota ancora pendente.
-M06 continua con economia/spese e altri interventi; Paddle dipende da M09.
-Nessuna concessione reale o nuova migration remota eseguita in questo blocco.
-Procedura: [TEST-FOUNDER-M06A.md](TEST-FOUNDER-M06A.md).
+**M04 beta, implementato e verificato localmente:** pagina cliente Piano e
+accesso per il titolare, conteggi e limiti distinti, date server, avvio prova
+con conferma dopo la prima sede, link storico/export e listino informativo
+separato. Il sito descrive la beta realmente provabile dal percorso di
+registrazione; prezzi al lancio e acquisti non disponibili sono distinti.
+L'app resta neutra senza prezzi/checkout. Nessuna nuova migration, modifica
+remota o pubblicazione in questo blocco. Verifica visuale da eseguire:
+[TEST-MONETIZATION-M04.md](TEST-MONETIZATION-M04.md).
+
+**Ancora da completare:** approvazione/configurazione Paddle e procedura fiscale,
+checkout/rinnovi/webhook/contratti (M09), quote e downgrade futuri, avvisi,
+restituzione completa e cancellazione (M11). M04 beta non dichiara concluso il
+percorso di vendita. Il fondatore usa attualmente solo aziende/account propri
+di test; dev remoto separato rimandato a prima dell'accesso di terzi.
 
 La sequenza di lavoro, l'audit del codice e le verifiche sono nel [piano di implementazione](../plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md). La dashboard personale è descritta in [FOUNDER-DASHBOARD.md](FOUNDER-DASHBOARD.md).
 

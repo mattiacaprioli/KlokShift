@@ -503,7 +503,7 @@ Le pagine ci sono tutte; quello che manca è ciò che rende la scrivania **più 
   - ⚠️ **DA FARE fuori dal repo**: nuova app Android `com.klokshift.app` su Firebase + nuovo `google-services.json` (senza, la build Android fallisce) e chiave FCM su EAS; `npx expo prebuild --clean` + rebuild dei dev client; DNS GoDaddy → GitHub Pages + custom domain; Supabase Auth (Site URL, Redirect URLs, template email); secret `SITE_URL`/`DASHBOARD_URL`/`SMTP_FROM` + deploy di `invite-staff`; `EXPO_PUBLIC_SITE_URL`/`EXPO_PUBLIC_REVIEW_SITE_URL` su EAS; casella `info@klokshift.com`; rigenerare `web-site/public/og.png` e `pitch/KlokShift.pptx`.
 
 - **Geolocalizzazione (futura, richiesta dall'utente 20/07 — "prima o poi")**: oggi la città è testo manuale, nessun GPS. Quando si aggiunge (es. `expo-location` per turni vicini / distanza): ⚠️ **aggiornare la privacy policy** (`web-review/privacy.html` dichiara "nessuna geolocalizzazione precisa") + permessi `NSLocationWhenInUse`/`ACCESS_FINE_LOCATION` in `app.json` + base giuridica consenso. La privacy policy è **documento vivo**: come le slide onboarding, va aggiornata quando cambia cosa raccoglie l'app.
-- **Monetizzazione e dashboard personale** (decisione 2026-10-05; stato 2026-10-06): M03a pubblicato con smoke produzione confermato dal fondatore; M03b implementato e verificato localmente con guard server, capacità serializzata, eccezione `migration_pending`, rettifiche finite, storico/export e collegamento iniziale client. **M05 implementato/verificato localmente e rilasciato tramite CI sul commit `f6ff685`:** allowlist privata vuota fino a provisioning esplicito, MFA/controllo live di account-sessione-fattore a ogni RPC globale; area web separata, panorama, ricerca paginata e dettagli aziende/account, conteggi Auth distinti da schede/organico, date/capacità/anomalie e byte Storage misurati. Nessuna RLS cliente ampliata, contenuto HR/chat/file o diritto commerciale inventato; finanza/costi non disponibili. 272 test client, 14 file SQL/RLS e 5 concorrenti, tipi/typecheck, lint e bundle verificati. L'utente ha abilitato il fondatore e confermato il primo accesso MFA/panoramica (6 ottobre, 09:16 Europe/Rome) sul progetto di soli test propri. Le due aziende sono state create prima della monetizzazione e restano `migration_pending`/non classificate, senza prova o diritti automatici. **Pendenti:** dettagli/filtri, codice errato, nuovo login, diniego multiutente e revoca live; M06 concessioni/audit/economia, M04 commerciale/sito, quote/downgrade, Paddle e M11 completo. Procedure: [test M03b](docs/TEST-MONETIZATION-M03B.md), [test M05 con ambiente/passaggi/esiti](docs/TEST-FOUNDER-M05.md). Codex non ha eseguito migration remote, commit/push o deploy durante l'implementazione locale; il successivo rilascio è stato eseguito dall'utente/CI. La dashboard essenziale precede i primi paganti; il piano e le regole restano in [MONETIZATION-AND-FOUNDER-DASHBOARD.md](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md), [MONETIZATION.md](docs/MONETIZATION.md) e [FOUNDER-DASHBOARD.md](docs/FOUNDER-DASHBOARD.md). Non assegnare diritti dal vecchio `free/pro`; pagamenti, procedura fiscale e flussi store richiedono verifiche effettive prima delle vendite.
+- **Monetizzazione e dashboard personale** (decisione 2026-10-05; stato 2026-10-06): M03a pubblicato con smoke produzione confermato dal fondatore; M03b implementato e verificato localmente con guard server, capacità serializzata, eccezione `migration_pending`, rettifiche finite, storico/export e collegamento iniziale client. **M05 implementato/verificato localmente e rilasciato tramite CI sul commit `f6ff685`:** allowlist privata vuota fino a provisioning esplicito, MFA/controllo live di account-sessione-fattore a ogni RPC globale; area web separata, panorama, ricerca paginata e dettagli aziende/account, conteggi Auth distinti da schede/organico, date/capacità/anomalie e byte Storage misurati. Nessuna RLS cliente ampliata, contenuto HR/chat/file o diritto commerciale inventato; finanza/costi non disponibili. 272 test client, 14 file SQL/RLS e 5 concorrenti, tipi/typecheck, lint e bundle verificati. L'utente ha abilitato il fondatore e confermato il primo accesso MFA/panoramica (6 ottobre, 09:16 Europe/Rome) sul progetto di soli test propri. Al primo accesso le due aziende create prima della monetizzazione erano `migration_pending`/non classificate, senza prova o diritti automatici. Da Buffa ha poi ricevuto una concessione esplicita: vedere l’aggiornamento M06a sotto. **Pendenti al primo rilascio M05:** dettagli/filtri e prove negative Auth/revoca, M06, M04, quote/downgrade, Paddle e M11. Gli aggiornamenti M06a e M04 sotto descrivono il lavoro successivo effettivo. Procedure: [test M03b](docs/TEST-MONETIZATION-M03B.md), [test M05 con ambiente/passaggi/esiti](docs/TEST-FOUNDER-M05.md). Codex non ha eseguito migration remote, commit/push o deploy durante l'implementazione locale; il successivo rilascio è stato eseguito dall'utente/CI. La dashboard essenziale precede i primi paganti; il piano e le regole restano in [MONETIZATION-AND-FOUNDER-DASHBOARD.md](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md), [MONETIZATION.md](docs/MONETIZATION.md) e [FOUNDER-DASHBOARD.md](docs/FOUNDER-DASHBOARD.md). Non assegnare diritti dal vecchio `free/pro`; pagamenti, procedura fiscale e flussi store richiedono verifiche effettive prima delle vendite.
 
 **Aggiornamento monetizzazione 2026-10-06 — M06a locale:** concessione a vita
 immediata/variazione capacità nella scheda azienda, classificazioni aziende e
@@ -534,6 +534,31 @@ corrente e conservazione della modifica fra schede. Corretti anche i menu
 dei filtri aziende/account con opzioni dirette. 41 file / 291 test client,
 typecheck web, lint e build passano; rilascio UI e prove visuali pendenti.
 Procedura §8 di [TEST-FOUNDER-M06A.md](docs/TEST-FOUNDER-M06A.md).
+
+### Sessione 2026-10-06 — M04 esperienza commerciale beta, locale
+
+- [x] Audit del codice effettivo: prova/RPC/read model già presenti, nessun
+  nuovo diritto dedotto da Free/Pro; uso delle decisioni approvate.
+- [x] Pagina cliente `#/piano` per il titolare: situazione attuale, persone/sedi
+  distinte dai limiti, date server, prova esplicita con conferma, storico/export.
+  Banner compatto e ingresso da menu/impostazioni; nuova azienda portata qui
+  dopo la prima sede. Collaboratori senza accesso al modulo commerciale.
+- [x] Listino richiudibile separato dalla concessione attuale; mensile/annuale
+  e sedi aggiuntive, formule approvate in `shared/pricing.ts`. Nessun checkout,
+  addebito, pausa o cambiamento piano simulato. Native invariato e senza prezzi.
+- [x] Sito/FAQ/CTA/meta/JSON-LD allineati alla beta: registrazione → conferma
+  email → prima sede → prova unica Team/una sede/30 giorni; acquisti pendenti,
+  niente offerte acquistabili nei dati strutturati. Gratuità selettiva non
+  presentata come freemium pubblico. Listino condiviso coperto da lint e
+  selezione CI Pages per modifiche solo a `shared/`.
+- [x] 43 file / 311 test client, typecheck app/web/sito, lint senza errori
+  (warning React Hook Form preesistente), build web/sito ed export iOS. Nessuno schema,
+  guard o RPC modificato; nessuna nuova migration né modifica remota.
+- [ ] Prove manuali/visuali e pubblicazione del frontend: procedura precisa in
+  [TEST-MONETIZATION-M04.md](docs/TEST-MONETIZATION-M04.md), ambiente locale
+  collegabile al progetto di soli test propri già concordato.
+- [ ] Vendite e gestione contratti M09/Paddle, completamento M11, quote e
+  altri interventi/finanza M06. La beta locale non dichiara pagamenti completati.
 
 ### Sessione 2026-07-19 — Telaio monetizzazione Pro ✅ (storico, rimosso in M03b)
 

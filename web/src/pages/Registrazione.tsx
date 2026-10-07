@@ -101,7 +101,7 @@ export function RegistrazionePage() {
   return (
     <AuthShell
       title="Crea il tuo account"
-      subtitle="La dashboard di chi organizza i turni di una sede."
+      subtitle="Prepara la prima sede, poi avvia la prova Team di 30 giorni senza carta."
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">

@@ -98,7 +98,8 @@ superamento della capacità. Inviti già riservati possono essere collegati e
 accettati senza un secondo conteggio, anche per consultare l'archivio.
 
 **`migration_pending` è un'eccezione di migrazione esplicita:** conserva le
-operazioni precedenti finché il fondatore classifica l'azienda; `can_operate`
+operazioni precedenti finché riceve un periodo commerciale esplicito; la sola
+etichetta Test/Interna/Cliente non risolve la migrazione. `can_operate`
 rimane falso nel read model e piano/capacità/date restano null. Non è una
 concessione. Una riga commerciale assente invece produce un errore, senza
 fallback. Il backfill aggiuntivo marca per revisione anche le aziende nate col
@@ -127,10 +128,14 @@ refresh per concessioni future, focus/reconnect e ritorno al primo piano nativo.
 Nessun realtime commerciale globale/polling continuo per gratuità permanente.
 Una variazione del servizio viene riletta al refresh; le scritture DB sono
 sempre controllate subito. App/dashboard mostrano stato/date/capacità; i vecchi
-gate Pro e il toggle sono rimossi. M04 commerciale, M06, quote, capacità
+gate Pro e il toggle sono rimossi. M04 beta usa queste stesse RPC nella pagina
+cliente `#/piano`: avvio prova con conferma, piano/conteggi/date e listino web
+informativo. Nessuna nuova migration o scrittura diretta commerciale.
+Checkout/gestione contratto M09/M11, ulteriori interventi M06, quote, capacità
 futura dei downgrade, grazia di rinnovo e Paddle restano da completare.
 
 Verifiche e procedura: [TEST-MONETIZATION-M03B.md](../docs/TEST-MONETIZATION-M03B.md).
+Flusso cliente e sito: [TEST-MONETIZATION-M04.md](../docs/TEST-MONETIZATION-M04.md).
 Questo blocco è verificato nel banco locale; non attestare un rollout remoto
 per la sola presenza delle migration nel repository.
 

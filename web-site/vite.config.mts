@@ -32,9 +32,8 @@ export default defineConfig(({ mode }) => ({
     ),
   },
   plugins: [react(), tailwindcss()],
-  // Nessun alias verso `../src/`: la vetrina non tocca Supabase né il data
-  // layer. È una pagina statica, e l'unica cosa che condivide col prodotto
-  // sono i token di design (copiati in `src/index.css`).
+  // La vetrina non importa Supabase o il data layer. Il listino web puro
+  // in shared/pricing.ts è condiviso con la dashboard cliente.
   build: {
     outDir: resolve(here, "dist"),
     emptyOutDir: true,
