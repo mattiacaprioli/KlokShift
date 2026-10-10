@@ -180,8 +180,8 @@ export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow
 }
 
 /**
- * CSV delle assenze del mese: **un file a parte**, non colonne in più nel CSV
- * delle ore, il cui schema non cambia mai (vedi `buildHoursCsv`).
+ * CSV delle assenze del mese: **un file a parte**. Il CSV delle ore porta solo
+ * le ore riconosciute (vedi `buildHoursCsv`); giorni e certificati stanno qui.
  *
  * Stesse convenzioni: ';', decimali con virgola, BOM. I giorni sono di
  * calendario, e l'intestazione lo dice, perché un CSV non ha una nota a piè di

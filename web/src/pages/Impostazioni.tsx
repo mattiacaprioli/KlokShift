@@ -6,11 +6,6 @@ import {
   useSetStaffCanChat,
   useStaffCanChat,
 } from "@/features/workspace/hooks";
-import {
-  COLLABORATOR_TUTORIAL,
-  type Tutorial,
-} from "@/features/team/tutorialContent";
-import { ABSENCE_MANAGER_TUTORIAL } from "@/features/absences/tutorialContent";
 import { useAuth } from "@/lib/auth";
 import {
   NOTIFICATION_CATEGORIES,
@@ -34,10 +29,7 @@ import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
 
 export function ImpostazioniPage() {
   const { session } = useAuth();
-  // Una guida compare solo a chi può fare quello che spiega: i collaboratori
-  // sono del titolare, le assenze di chi gestisce l'organico.
-  const { isOwner, canAny, workspaceId } = useOwnerVenues();
-  const canStaff = canAny("can_manage_staff");
+  const { isOwner, workspaceId } = useOwnerVenues();
 
   return (
     <>
@@ -52,30 +44,6 @@ export function ImpostazioniPage() {
 
         {isOwner && workspaceId ? (
           <StaffChatSection workspaceId={workspaceId} />
-        ) : null}
-
-        {isOwner || canStaff ? (
-          <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
-              Tutorial
-            </h2>
-            <div className="flex flex-col gap-2">
-              {isOwner ? (
-                <TutorialSection
-                  tutorial={COLLABORATOR_TUTORIAL}
-                  subtitle="Cosa fare, e cosa puoi fare dopo"
-                  link={{ to: "/collaboratori", label: "Vai ai collaboratori" }}
-                />
-              ) : null}
-              {canStaff ? (
-                <TutorialSection
-                  tutorial={ABSENCE_MANAGER_TUTORIAL}
-                  subtitle="Richieste, turni in conflitto ed export"
-                  link={{ to: "/staff", label: "Vai allo staff" }}
-                />
-              ) : null}
-            </div>
-          </section>
         ) : null}
 
         <section>
@@ -346,74 +314,6 @@ function AccountSection() {
         Sede.
       </p>
     </section>
-  );
-}
-
-/**
- * Una guida, con lo stesso testo dell'app (i `tutorialContent.ts` delle
- * feature). Chiusa di partenza: in una pagina di impostazioni una guida lunga
- * aperta sposterebbe tutto il resto in fondo.
- */
-function TutorialSection({
-  tutorial,
-  subtitle,
-  link,
-}: {
-  tutorial: Tutorial;
-  subtitle: string;
-  link: { to: string; label: string };
-}) {
-  return (
-    <Card className="p-0">
-      <details className="group">
-        <summary className="focus-gold flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-4 py-3.5 hover:bg-bg-1">
-          <span>
-            <span className="block text-sm font-semibold text-t1">
-              {tutorial.title}
-            </span>
-            <span className="mt-0.5 block text-xs text-t3">
-              {subtitle}
-            </span>
-          </span>
-          <span aria-hidden className="text-t4 transition group-open:rotate-90">
-            ›
-          </span>
-        </summary>
-
-        <div className="flex flex-col gap-5 border-t border-border px-4 py-4">
-          <p className="text-sm leading-6 text-t2">{tutorial.intro}</p>
-
-          {tutorial.sections.map((section) => (
-            <div key={section.title}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
-                {section.title}
-              </h3>
-              {section.steps ? (
-                <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-sm leading-6 text-t2 marker:font-semibold marker:text-gold">
-                  {section.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-              ) : null}
-              {section.points ? (
-                <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm leading-6 text-t2 marker:text-gold">
-                  {section.points.map((point) => (
-                    <li key={point}>{point}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ))}
-
-          <Link
-            to={link.to}
-            className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-          >
-            {link.label}
-          </Link>
-        </div>
-      </details>
-    </Card>
   );
 }
 

@@ -2,7 +2,8 @@
 // È il testo della voce «Tutorial» nelle impostazioni del titolare, in app e sulla
 // dashboard. Descrive il flusso com'è oggi nel codice: se cambi l'invito
 // (`addTeamMember`, `invite-staff`, `accept-invite`), i permessi
-// (`TEAM_PERMISSION_LABEL`) o la promozione dall'organico (`PromoteSection`),
+// (`TEAM_PERMISSION_LABEL`, `set_member_access`, l'ambito delle sedi) o la
+// promozione dall'organico (`PromoteSection`),
 // AGGIORNA queste righe, altrimenti il tutorial spiega un'app che non esiste più.
 //
 // Solo dati, nessun import di React Native: la dashboard web lo riusa così com'è.
@@ -36,36 +37,35 @@ export const COLLABORATOR_TUTORIAL: Tutorial = {
       title: "Cosa devi fare",
       steps: [
         "Apri Impostazioni → Collaboratori e premi «Invita un collaboratore» (sulla dashboard: Collaboratori, nel menu).",
-        "Scrivi l'email della persona.",
-        "Se hai più sedi, scegli su quali entra.",
-        `Scegli cosa può fare: ${permissionList}. Di partenza sono accesi solo i Turni.`,
+        "Scrivi nome, cognome ed email della persona.",
+        "Se hai più sedi, puoi scegliere su quali entra («Dove»): se non ne scegli nessuna, vale su tutte, anche quelle che aprirai.",
+        `Scegli cosa può fare: ${permissionList}. Si parte con tutto spento: devi accenderne almeno uno.`,
         "Premi «Invita».",
       ],
     },
     {
       title: "Cosa succede dopo",
       points: [
-        "Se ha già un account da sede con l'email confermata, l'accesso parte subito e gli arriva una notifica.",
+        "Se ha già un account KlokShift, anche da professionista, gli arriva una notifica e trova l'invito da accettare nell'app: l'accesso parte quando lo accetta.",
         "Altrimenti riceve un'email con un link: lo apre, sceglie una password ed è dentro, senza registrarsi. Il link vale 7 giorni e si usa una volta sola.",
         "Finché non apre il link non viene creato nessun account: se l'email era sbagliata, non resta niente a suo nome.",
-        "Quando entra ti arriva la notifica «Invito accettato». Nella lista, fino a quel momento, lo vedi come «Invito mandato».",
+        "Quando entra ti arriva una notifica: «Invito accettato», oppure «Scheda collegata» se ha creato l'account dal link. Nella lista, fino a quel momento, lo vedi come «Invito mandato».",
       ],
     },
     {
       title: "Cosa puoi fare in seguito",
       points: [
-        "Rimandare l'invito dalla lista dei collaboratori («Reinvia»), se il link è scaduto o l'email si è persa. Il link vecchio smette di funzionare. Puoi rimandarlo al massimo una volta ogni 15 minuti.",
-        "Cambiare i permessi sede per sede, sempre dalla lista: chi gestisce due sedi può fare cose diverse in ognuna.",
-        "Togliere l'accesso a una sede («Togli l'accesso»); in app c'è anche «Revoca tutto». Gli arriva una notifica, e turni, presenze e ore che ha già registrato restano dove sono.",
-        "Far gestire una sede a qualcuno che lavora già nel tuo organico: apri la sua scheda nello Staff e usa «Fagli gestire la sede». Nessuna email, e resta anche un professionista con i suoi turni.",
+        "Rimandare l'invito dalla lista dei collaboratori («Reinvia»), se il link è scaduto o l'email si è persa. Il link vecchio smette di funzionare. Puoi rimandarlo al massimo una volta ogni 15 minuti, e non più di 5 volte in tutto.",
+        "Cambiare i permessi e le sedi su cui vale l'accesso, sempre dalla lista (in app con «Modifica»). I permessi sono gli stessi per tutte le sedi che gestisce.",
+        "Togliere l'accesso alla gestione («Togli l'accesso»): vale per tutta l'azienda. Gli arriva una notifica, turni, presenze e ore che ha già registrato restano dove sono e, se lavora con voi, resta nell'organico. Per toglierlo solo da alcune sedi, cambia «Dove».",
+        "Far gestire l'azienda a qualcuno che lavora già nel tuo organico e ha l'account collegato: apri la sua scheda nello Staff e usa «Fagli gestire l'azienda». Nessuna email, e resta anche un professionista con i suoi turni.",
       ],
     },
     {
       title: "Da sapere",
       points: [
-        "Restano solo tuoi: aprire e chiudere sedi, invitare altri collaboratori, i messaggi e l'account.",
-        "Un indirizzo che ha già un account da professionista non si può invitare come collaboratore: serve un'altra email, oppure la strada dell'organico qui sopra.",
-        "Un collaboratore lavora con una sola azienda alla volta, e finché è collaboratore non può aprire sedi sue.",
+        "Restano solo tuoi: aprire e chiudere sedi, invitare altri collaboratori e l'account.",
+        "Le richieste dei professionisti (assenze, cambi turno) arrivano come card nella tua chat con loro. Un collaboratore con il permesso sull'organico riceve la notifica delle assenze e le decide dallo Staff.",
       ],
     },
   ],

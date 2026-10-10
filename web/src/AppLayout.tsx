@@ -144,6 +144,19 @@ export function AppLayout() {
               <p className="mt-0.5 text-xs text-t3">Il tuo account</p>
             </div>
           </Link>
+          {/* Fuori da `NAV`: l'aiuto non dipende da nessun permesso. */}
+          <NavLink
+            to="/aiuto"
+            className={({ isActive }) =>
+              cn(
+                "focus-gold mt-1 flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors",
+                isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1"
+              )
+            }
+          >
+            <SidebarIcon name="help" />
+            Aiuto e supporto
+          </NavLink>
           <button
             type="button"
             onClick={() => void signOut()}

@@ -21,7 +21,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
         "Ricevi una notifica e trovi la richiesta in chat con quella persona. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste», e in Staff › Assenze (nella dashboard, la voce «Assenze» del menu), con il numero sul badge.",
         "Apri la richiesta: vedi date, motivo e i turni in cui la persona è già assegnata in quei giorni.",
         "Scegli «Approva e togli dai turni» per liberare quei posti, oppure «Approva, i turni li sistemo io». Se non ci sono turni in conflitto c'è solo «Approva».",
-        "Se non va bene, «Rifiuta». La nota è facoltativa e la legge chi ha chiesto.",
+        "Se non va bene, «Rifiuta» (in app «Rifiuta la richiesta»). La nota è facoltativa e la legge chi ha chiesto.",
       ],
     },
     {
@@ -53,7 +53,8 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       title: "A fine mese",
       points: [
         "Nella pagina Ore trovi «Assenze del mese»: giorni di ferie, giorni e ore di permesso, giorni di malattia con i riferimenti dei certificati medici.",
-        "Il PDF delle ore contiene anche la tabella delle assenze; il CSV delle assenze è un file a parte, così quello delle ore resta com'è.",
+        "Il PDF delle ore contiene anche la tabella delle assenze. Il CSV delle ore ha colonne a parte per le ore riconosciute di ferie, malattia e permessi; il CSV delle assenze, con i giorni e i certificati, è un file a parte.",
+        "Dalla scheda della persona puoi indicare le ore riconosciute di un'assenza («Ore riconosciute»): finiscono nel consuntivo, separate dalle ore lavorate. Le ore riconosciute in conflitto con ore lavorate risultano da verificare, non contate due volte.",
         "Si contano solo le assenze approvate, in giorni di calendario compresi i festivi: il conteggio dei giorni lavorativi lo fa il consulente del lavoro.",
       ],
     },
@@ -76,10 +77,9 @@ export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
     {
       title: "Chiedere ferie o un permesso",
       steps: [
-        "Vai su Profilo → «Ferie, permessi e malattia», oppure in fondo alla tab Turni.",
-        "Premi «Nuova richiesta» e scegli Ferie o Permesso.",
-        "Scegli le date. Per un permesso di poche ore scegli «A ore» e indica l'orario.",
-        "Se lavori per più aziende, scegli a quale mandarla: ognuna decide per sé.",
+        "Vai su Profilo → «Ferie, permessi e malattia».",
+        "Premi «Nuova richiesta». Se lavori per più aziende, scegli prima a quale mandarla: ognuna decide per sé.",
+        "Scegli Ferie o Permesso, poi le date. Per un permesso di poche ore scegli «A ore» e indica l'orario.",
         "Aggiungi un motivo se vuoi e premi «Invia al titolare».",
       ],
     },

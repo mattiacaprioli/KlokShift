@@ -19,6 +19,7 @@ export default function WaiterLayout() {
       <Stack.Screen name="assenza/new" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />
       <Stack.Screen name="tutorial" options={{ headerShown: false }} />
+      <Stack.Screen name="aiuto" options={{ headerShown: false }} />
       <Stack.Screen
         name="impostazioni-notifiche"
         options={{ headerShown: false }}

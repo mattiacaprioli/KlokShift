@@ -28,6 +28,7 @@ import { SedeNuovaPage } from "./pages/SedeNuova";
 import { SedeDettaglioPage } from "./pages/SedeDettaglio";
 import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
+import { AiutoPage } from "./pages/Aiuto";
 import { PianoPage } from "./pages/Piano";
 import { AdminApp } from "./admin/AdminApp";
 
@@ -177,6 +178,7 @@ function Dashboard({ userId }: { userId: string }) {
           <Route path="/collaboratori" element={<TeamPage />} />
           <Route path="/impostazioni" element={<ImpostazioniPage />} />
           <Route path="/piano" element={<PianoPage />} />
+          <Route path="/aiuto" element={<AiutoPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
