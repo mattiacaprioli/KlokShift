@@ -16,6 +16,7 @@ import {
   useVoidClockRecord,
 } from "./hooks";
 import { clockedHours, effectiveClockTimes, formatClockTime } from "./hours";
+import { UNPLANNED_VOID_NOTICE } from "./unplanned";
 
 type EditMode = "correct" | "void" | null;
 
@@ -41,6 +42,7 @@ export function ManagerClockReview({
   scheduledOutAt,
   plannedHours,
   locked = false,
+  unplanned = false,
 }: {
   assignment: AssignmentWithStaff;
   /** Fine pianificata del turno, proposta quando manca l'uscita. */
@@ -48,6 +50,8 @@ export function ManagerClockReview({
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
   plannedHours: number;
   locked?: boolean;
+  /** Turno nato dalla timbratura: annullarla lo toglie. */
+  unplanned?: boolean;
 }) {
   const toast = useToast();
   const approve = useApproveClockRecord();
@@ -310,7 +314,9 @@ export function ManagerClockReview({
             <Text className="mt-2 text-sm leading-5 text-t2">
               {mode === "correct"
                 ? "Gli orari originali restano nello storico. Indica il motivo della modifica."
-                : "La timbratura non verrà conteggiata, ma resterà nello storico."}
+                : unplanned
+                  ? `${UNPLANNED_VOID_NOTICE} La timbratura resterà nello storico.`
+                  : "La timbratura non verrà conteggiata, ma resterà nello storico."}
             </Text>
 
             <ScrollView

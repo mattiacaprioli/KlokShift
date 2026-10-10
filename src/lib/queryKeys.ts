@@ -197,6 +197,16 @@ export const qk = {
     all: ["planning"] as const,
     range: (from: string, to: string) => ["planning", "range", from, to] as const,
   },
+  /**
+   * Timbrature senza turno ancora aperte. `mine` non ha l'id utente per la
+   * stessa ragione di `planning`; `open` è per azienda, come la vede chi gestisce.
+   */
+  clock: {
+    all: ["clock"] as const,
+    myUnplanned: ["clock", "myUnplanned"] as const,
+    openUnplanned: (workspaceId: string) =>
+      ["clock", "openUnplanned", workspaceId] as const,
+  },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
   chat: {
     all: ["chat"] as const,

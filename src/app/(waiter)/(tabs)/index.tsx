@@ -20,7 +20,12 @@ import {
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { HomeClockCard } from "@/features/clock/HomeClockCard";
-import { homeClockState } from "@/features/clock/availability";
+import {
+  blocksUnplannedClock,
+  homeClockState,
+} from "@/features/clock/availability";
+import { useMyUnplannedClock } from "@/features/clock/hooks";
+import { UnplannedClockCard } from "@/features/clock/UnplannedClockCard";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useMyPendingInvites } from "@/features/staff/hooks";
 import { useAuth } from "@/lib/auth";
@@ -39,11 +44,12 @@ export default function WaiterHomeScreen() {
   const waiterId = session!.user.id;
 
   const assignedQuery = useMyAssignedUpcoming(waiterId);
+  const unplannedQuery = useMyUnplannedClock();
   const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
   const unread = useUnreadCount(waiterId).data ?? 0;
   const respond = useRespondToAssignment();
   const pull = usePullToRefresh(() =>
-    assignedQuery.refetch()
+    Promise.all([assignedQuery.refetch(), unplannedQuery.refetch()])
   );
 
   const [declining, setDeclining] = useState<string | null>(null);
@@ -53,6 +59,18 @@ export default function WaiterHomeScreen() {
     [assignedQuery.data]
   );
   const clockItems = items.filter((item) => homeClockState(item) != null);
+  // Con un turno pianificato in corso o in arrivo non si propone il fuori
+  // turno in quella sede: si timbra quello (la stessa regola della RPC).
+  // Un'entrata fuori turno già aperta resta sempre, per l'uscita.
+  const unplanned = unplannedQuery.data ?? [];
+  const canStartUnplanned = (venueMemberId: string) =>
+    !items.some(
+      (item) =>
+        item.venue_member_id === venueMemberId && blocksUnplannedClock(item)
+    );
+  const showUnplanned = unplanned.some(
+    (entry) => entry.open != null || canStartUnplanned(entry.venueMemberId)
+  );
   // Un'entrata ancora aperta resta nella query anche oltre la fine pianificata,
   // perché la Home deve offrire l'uscita. Non è però il «prossimo turno».
   const upcomingItems = items.filter((item) => !isShiftOver(item.shift));
@@ -154,12 +172,19 @@ export default function WaiterHomeScreen() {
           />
         ) : null}
 
-        {clockItems.length > 0 ? (
+        {clockItems.length > 0 || showUnplanned ? (
           <View>
             <SectionHeader title="Timbratura" />
             <View className="gap-3">
               {clockItems.map((item) => (
                 <HomeClockCard key={item.id} item={item} />
+              ))}
+              {unplanned.map((entry) => (
+                <UnplannedClockCard
+                  key={entry.venueMemberId}
+                  entry={entry}
+                  canStart={canStartUnplanned(entry.venueMemberId)}
+                />
               ))}
             </View>
           </View>

@@ -172,6 +172,27 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Prima registra l’entrata.",
   },
   {
+    match: ["clock_unplanned_disabled"],
+    message: "In questa sede puoi timbrare solo sui turni assegnati.",
+  },
+  {
+    match: ["clock_planned_shift"],
+    message: "Hai un turno in corso o in arrivo: timbra quello.",
+  },
+  {
+    match: ["clock_already_open"],
+    message: "Hai già un’entrata aperta: registra prima l’uscita.",
+  },
+  {
+    match: ["clock_open_too_long"],
+    message:
+      "L’entrata è aperta da troppe ore: l’uscita la registra chi gestisce.",
+  },
+  {
+    match: ["note_too_long"],
+    message: "La nota è troppo lunga: massimo 500 caratteri.",
+  },
+  {
     match: ["clock_out_required"],
     message: "Manca l’uscita: correggi la timbratura prima di approvare le ore.",
   },

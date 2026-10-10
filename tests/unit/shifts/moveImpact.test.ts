@@ -45,6 +45,7 @@ function shift(
     require_confirmation: true,
     status: "open",
     title: input.id,
+    unplanned: false,
     venue_id: "venue-1",
     shift_role_requirements: [],
     shift_assignments: [],

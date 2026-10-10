@@ -1,5 +1,11 @@
 # Piani e decisioni
 
+## Timbratura senza turno — 2026-10-10
+
+[UNPLANNED-CLOCK.md](UNPLANNED-CLOCK.md): chi è abilitato timbra anche senza un
+turno pianificato; all'uscita nasce il turno «Fuori turno», da approvare.
+Implementata in `20261010000000_unplanned_clock.sql`.
+
 ## Monetizzazione e dashboard personale — decisioni 2026-10-05
 
 [MONETIZATION-AND-FOUNDER-DASHBOARD.md](MONETIZATION-AND-FOUNDER-DASHBOARD.md)

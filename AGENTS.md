@@ -97,6 +97,16 @@ cumulabilità e maggiorazioni dipendono dal contratto applicato. Un conflitto fr
 assenza riconosciuta e lavoro effettivo deve risultare **da verificare**, non
 essere contato due volte in silenzio.
 
+## Timbratura senza turno (2026-10-10)
+
+Chi gestisce le ore può abilitare una persona (`venue_members.clock_unplanned`,
+solo con la timbratura dall'app) a timbrare anche senza un turno. L'entrata è una
+`shift_clock_records` con `shift_id` nullo; all'uscita nasce il turno
+`shifts.unplanned` («Fuori turno») con un'assegnazione **da approvare**. Le ore
+restano solo su `shift_assignments`: non introdurre una seconda fonte di ore. I
+turni nati così non notificano (`app.unplanned_clock`) e i colleghi li vedono solo
+dopo l'approvazione. Dettagli in [plans/UNPLANNED-CLOCK.md](plans/UNPLANNED-CLOCK.md).
+
 ## Monetizzazione e dashboard personale (2026-10-05)
 
 Le regole approvate sono in [docs/MONETIZATION.md](docs/MONETIZATION.md);

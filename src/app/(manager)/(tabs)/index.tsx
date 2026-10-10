@@ -15,7 +15,10 @@ import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
+import type { OpenUnplannedClock } from "@/features/clock/api";
+import { useOpenUnplannedClocks } from "@/features/clock/hooks";
 import { LiveClockLine } from "@/features/clock/LiveClockLine";
+import { UnplannedClockModal } from "@/features/clock/UnplannedClockModal";
 import {
   liveClockStatusIn,
   liveClockSummary,
@@ -70,6 +73,8 @@ type TodayWorker = {
   live: LiveClockStatus | null;
   /** La persona, per scriverle; `null` sulla propria riga. */
   memberId: string | null;
+  /** In servizio senza un turno: niente orario pianificato da mostrare. */
+  unplanned?: boolean;
   onPress?: () => void;
 };
 
@@ -81,7 +86,7 @@ export default function ManagerHome() {
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Ristoratore";
 
   const venueQuery = useOwnerVenues();
-  const { venues, isMultiVenue, can, canAny } = venueQuery;
+  const { venues, isMultiVenue, can, canAny, workspaceId } = venueQuery;
   // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
   // le timbrature arrivano già col realtime.
   const now = useNow();
@@ -110,6 +115,8 @@ export default function ManagerHome() {
   const assignQuery = useOwnerTodayAssignments();
   const todayAssignments = assignQuery.data ?? [];
   const unread = useUnreadCount(userId).data ?? 0;
+  const unplannedQuery = useOpenUnplannedClocks(workspaceId);
+  const [managing, setManaging] = useState<OpenUnplannedClock | null>(null);
 
   /**
    * Il proprio prossimo turno, per chi gestisce e lavora.
@@ -193,7 +200,28 @@ export default function ManagerHome() {
         Number(b.live?.kind === "late") - Number(a.live?.kind === "late") ||
         `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`),
     );
-  const liveSummary = liveClockSummary(workers.map((w) => w.live));
+  // Chi timbra senza turno non è in nessuna assegnazione di oggi: si aggiunge
+  // in cima, perché è anche l'unica riga che chi ha «Ore» può dover chiudere.
+  const unplannedWorkers: TodayWorker[] = (unplannedQuery.data ?? []).map(
+    (c) => ({
+      key: `clk-${c.recordId}`,
+      name: c.memberName,
+      avatarUri: c.avatarUrl ?? undefined,
+      role: c.roleName,
+      date: "",
+      start: "",
+      end: "",
+      venue: venueBadge(c.venueId),
+      live: { kind: "in", since: c.clockInAt },
+      memberId: c.memberId,
+      unplanned: true,
+      onPress: c.canManage
+        ? () => setManaging(c)
+        : () => router.push(`/(manager)/staff/${c.memberId}`),
+    }),
+  );
+  const allWorkers = [...unplannedWorkers, ...workers];
+  const liveSummary = liveClockSummary(allWorkers.map((w) => w.live));
 
   function onWrite(memberId: string) {
     startConversation.mutate(
@@ -217,6 +245,7 @@ export default function ManagerHome() {
       // tirato giù, e senza questo resterebbero quelli di prima.
       periodQuery.refetch(),
       assignQuery.refetch(),
+      unplannedQuery.refetch(),
     ]),
   );
 
@@ -380,17 +409,17 @@ export default function ManagerHome() {
               </View>
             ) : assignQuery.isError ? (
               <QueryError onRetry={() => assignQuery.refetch()} />
-            ) : workers.length > 0 ? (
+            ) : allWorkers.length > 0 ? (
               <View className="gap-3">
                 <View>
                   <Mono gold>
-                    Oggi in sede · {workers.length}
+                    Oggi in sede · {allWorkers.length}
                     {liveSummary ? ` · ${liveSummary}` : ""}
                   </Mono>
                   <Display className="mt-0.5 text-2xl">Chi lavora oggi</Display>
                 </View>
                 <View className="gap-3">
-                  {workers.map((w) => (
+                  {allWorkers.map((w) => (
                     <Card
                       key={w.key}
                       className="rounded-3xl border-border-2 p-4"
@@ -404,6 +433,9 @@ export default function ManagerHome() {
                               {w.name}
                             </Text>
                             {w.isMe ? <Pill label="Tu" variant="tag" /> : null}
+                            {w.unplanned ? (
+                              <Pill label="Fuori turno" variant="pending" />
+                            ) : null}
                           </View>
                           {/* Con più sedi il ruolo da solo non basta: «Barman»
                               non dice in quale sala si presenta stasera. */}
@@ -495,6 +527,8 @@ export default function ManagerHome() {
           </>
         )}
       </ScrollView>
+
+      <UnplannedClockModal clock={managing} onClose={() => setManaging(null)} />
     </View>
   );
 }

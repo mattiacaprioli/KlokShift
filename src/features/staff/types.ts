@@ -106,6 +106,8 @@ export type PersonMembership = Pick<
 > & {
   /** Null = eredita il metodo predefinito della sede. */
   clock_method: Enums<"clock_method"> | null;
+  /** Può timbrare senza un turno pianificato (solo con la timbratura dall'app). */
+  clock_unplanned: boolean;
   venue: Pick<
     Tables<"venues">,
     "id" | "name" | "city" | "closed_at" | "clock_method"

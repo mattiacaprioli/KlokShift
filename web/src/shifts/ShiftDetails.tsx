@@ -267,6 +267,7 @@ export function ShiftDetails({
                 venueId={shift.venue_id}
                 startTime={shift.start_time}
                 endTime={shift.end_time}
+                unplanned={shift.unplanned}
               />
             ) : null}
           </div>

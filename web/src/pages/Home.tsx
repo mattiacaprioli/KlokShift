@@ -2,6 +2,8 @@ import { PersonAvatar } from "../ui/PersonAvatar";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
+import type { OpenUnplannedClock } from "@/features/clock/api";
+import { useOpenUnplannedClocks } from "@/features/clock/hooks";
 import {
   liveClockStatusIn,
   liveClockSummary,
@@ -36,7 +38,15 @@ import { useNavigate } from "react-router-dom";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
 import { LiveClockLine } from "../shifts/LiveClockLine";
 import { ShiftPanel } from "../shifts/ShiftPanel";
-import { Card, PageHeader, Pill, Placeholder, QueryError } from "../ui/primitives";
+import { UnplannedClockDialog } from "../shifts/UnplannedClockDialog";
+import {
+  Button,
+  Card,
+  PageHeader,
+  Pill,
+  Placeholder,
+  QueryError,
+} from "../ui/primitives";
 import { ListSkeleton, LoadingRegion, Skeleton } from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
@@ -56,6 +66,8 @@ type Worker = {
   live: LiveClockStatus | null;
   /** La persona, per scriverle; `null` sulla propria riga. */
   memberId: string | null;
+  /** In servizio senza un turno: niente orario pianificato da mostrare. */
+  unplanned?: OpenUnplannedClock;
 };
 
 /**
@@ -64,7 +76,7 @@ type Worker = {
  * schermi.
  */
 export function HomePage() {
-  const { venues, isMultiVenue, can, canAny } = useOwnerVenues();
+  const { venues, isMultiVenue, can, canAny, workspaceId } = useOwnerVenues();
   const self = useSelfStaff();
   // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
   // le timbrature arrivano già col realtime.
@@ -81,6 +93,9 @@ export function HomePage() {
   // Il turno si apre nel pannello qui sopra: restare sulla home è meno
   // spaesante che finire sul Planning, che si riposiziona da solo.
   const [panel, setPanel] = useState<Shift | null>(null);
+  const unplannedQuery = useOpenUnplannedClocks(workspaceId);
+  const unplannedData = unplannedQuery.data;
+  const [managing, setManaging] = useState<OpenUnplannedClock | null>(null);
 
   const [period, setPeriod] = useState<StatsPeriod>("week");
   // Lo stesso intervallo che apre il Planning, quindi la stessa entry di cache:
@@ -149,7 +164,28 @@ export function HomePage() {
         ),
     [todayAssignments, venueName, venues, can, self, now],
   );
-  const liveSummary = liveClockSummary(workers.map((w) => w.live));
+  // Chi timbra senza turno non è in nessuna assegnazione di oggi: va in cima,
+  // perché è anche l'unica riga che chi ha «Ore» può dover chiudere.
+  const allWorkers = useMemo<Worker[]>(
+    () => [
+      ...(unplannedData ?? []).map((c) => ({
+        key: `clk-${c.recordId}`,
+        name: c.memberName,
+        personId: c.memberId,
+        role: c.roleName,
+        date: "",
+        start: "",
+        end: "",
+        venue: venueName(c.venueId),
+        live: { kind: "in", since: c.clockInAt } as LiveClockStatus,
+        memberId: c.memberId,
+        unplanned: c,
+      })),
+      ...workers,
+    ],
+    [unplannedData, workers, venueName],
+  );
+  const liveSummary = liveClockSummary(allWorkers.map((w) => w.live));
 
   const nextShifts = activeUpcoming.slice(0, 5);
 
@@ -219,7 +255,7 @@ export function HomePage() {
       <div className="grid grid-cols-2 gap-6">
         <section>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
-            Chi lavora oggi {workers.length > 0 ? `· ${workers.length}` : ""}
+            Chi lavora oggi {allWorkers.length > 0 ? `· ${allWorkers.length}` : ""}
             {liveSummary ? (
               <span className="normal-case tracking-normal text-t2">
                 {" "}
@@ -231,14 +267,14 @@ export function HomePage() {
             <ListSkeleton avatar label="Caricamento di chi lavora oggi…" />
           ) : todayQuery.isError ? (
             <QueryError error={todayQuery.error} />
-          ) : workers.length === 0 ? (
+          ) : allWorkers.length === 0 ? (
             <Placeholder
               title="Oggi non lavora nessuno"
               detail="Nessun turno assegnato per la giornata di oggi."
             />
           ) : (
             <div className="flex flex-col gap-2">
-              {workers.map((w) => (
+              {allWorkers.map((w) => (
                 <Card
                   key={w.key}
                   className="flex items-center justify-between gap-3 p-3"
@@ -247,6 +283,11 @@ export function HomePage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-t1">
                       {w.name}
+                      {w.unplanned ? (
+                        <span className="ml-2 align-middle">
+                          <Pill tone="warning">Fuori turno</Pill>
+                        </span>
+                      ) : null}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-t4">
                       {[w.role ?? "Ruolo non indicato", w.venue]
@@ -263,6 +304,11 @@ export function HomePage() {
                   <div className="flex shrink-0 items-center gap-2">
                     {w.live?.kind === "late" && w.memberId ? (
                       <WriteButton memberId={w.memberId} />
+                    ) : null}
+                    {w.unplanned?.canManage ? (
+                      <Button onClick={() => setManaging(w.unplanned ?? null)}>
+                        Gestisci
+                      </Button>
                     ) : null}
                     <span className="font-mono text-xs text-t2">
                       {w.start && w.end
@@ -348,6 +394,13 @@ export function HomePage() {
           date={panel.date}
           shift={panel}
           onClose={() => setPanel(null)}
+        />
+      ) : null}
+
+      {managing ? (
+        <UnplannedClockDialog
+          clock={managing}
+          onClose={() => setManaging(null)}
         />
       ) : null}
     </>

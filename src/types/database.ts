@@ -655,7 +655,9 @@ export type Database = {
           created_at: string
           id: string
           method: Database["public"]["Enums"]["clock_method"]
-          shift_id: string
+          note: string | null
+          role_id: string | null
+          shift_id: string | null
           venue_id: string
           venue_member_id: string
           void_reason: string | null
@@ -669,7 +671,9 @@ export type Database = {
           created_at?: string
           id?: string
           method: Database["public"]["Enums"]["clock_method"]
-          shift_id: string
+          note?: string | null
+          role_id?: string | null
+          shift_id?: string | null
           venue_id: string
           venue_member_id: string
           void_reason?: string | null
@@ -683,7 +687,9 @@ export type Database = {
           created_at?: string
           id?: string
           method?: Database["public"]["Enums"]["clock_method"]
-          shift_id?: string
+          note?: string | null
+          role_id?: string | null
+          shift_id?: string | null
           venue_id?: string
           venue_member_id?: string
           void_reason?: string | null
@@ -696,6 +702,13 @@ export type Database = {
             columns: ["assignment_id"]
             isOneToOne: false
             referencedRelation: "shift_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_clock_records_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "venue_roles"
             referencedColumns: ["id"]
           },
           {
@@ -762,6 +775,7 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["shift_status"]
           title: string
+          unplanned: boolean
           venue_id: string
         }
         Insert: {
@@ -776,6 +790,7 @@ export type Database = {
           start_time: string
           status?: Database["public"]["Enums"]["shift_status"]
           title: string
+          unplanned?: boolean
           venue_id: string
         }
         Update: {
@@ -790,6 +805,7 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["shift_status"]
           title?: string
+          unplanned?: boolean
           venue_id?: string
         }
         Relationships: [
@@ -971,6 +987,7 @@ export type Database = {
       venue_members: {
         Row: {
           clock_method: Database["public"]["Enums"]["clock_method"] | null
+          clock_unplanned: boolean
           created_at: string
           employment_type: Database["public"]["Enums"]["employment_type"]
           id: string
@@ -981,6 +998,7 @@ export type Database = {
         }
         Insert: {
           clock_method?: Database["public"]["Enums"]["clock_method"] | null
+          clock_unplanned?: boolean
           created_at?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
@@ -991,6 +1009,7 @@ export type Database = {
         }
         Update: {
           clock_method?: Database["public"]["Enums"]["clock_method"] | null
+          clock_unplanned?: boolean
           created_at?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
@@ -1465,7 +1484,64 @@ export type Database = {
           created_at: string
           id: string
           method: Database["public"]["Enums"]["clock_method"]
-          shift_id: string
+          note: string | null
+          role_id: string | null
+          shift_id: string | null
+          venue_id: string
+          venue_member_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      clock_punch_unplanned: {
+        Args: {
+          p_action: string
+          p_note?: string
+          p_role?: string
+          p_venue_member: string
+        }
+        Returns: {
+          assignment_id: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["clock_method"]
+          note: string | null
+          role_id: string | null
+          shift_id: string | null
+          venue_id: string
+          venue_member_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      close_unplanned_clock: {
+        Args: { p_out: string; p_reason: string; p_record: string }
+        Returns: {
+          assignment_id: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["clock_method"]
+          note: string | null
+          role_id: string | null
+          shift_id: string | null
           venue_id: string
           venue_member_id: string
           void_reason: string | null
@@ -1606,6 +1682,20 @@ export type Database = {
         }[]
       }
       get_my_context: { Args: never; Returns: Json }
+      get_my_unplanned_clock: {
+        Args: never
+        Returns: {
+          clock_in_at: string
+          note: string
+          open_record_id: string
+          role_id: string
+          roles: Json
+          venue_id: string
+          venue_member_id: string
+          venue_name: string
+          workspace_name: string
+        }[]
+      }
       get_my_work_history: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
@@ -1677,6 +1767,22 @@ export type Database = {
           total_hours: number
         }[]
       }
+      get_open_unplanned_clocks: {
+        Args: { p_workspace: string }
+        Returns: {
+          avatar_url: string
+          can_manage: boolean
+          clock_in_at: string
+          member_id: string
+          member_name: string
+          note: string
+          record_id: string
+          role_name: string
+          venue_id: string
+          venue_member_id: string
+          venue_name: string
+        }[]
+      }
       get_owner_past_shifts_count: {
         Args: {
           p_from?: string
@@ -1715,6 +1821,7 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["shift_status"]
           title: string
+          unplanned: boolean
           venue_id: string
         }[]
         SetofOptions: {
@@ -1974,6 +2081,27 @@ export type Database = {
         }
         Returns: {
           clock_method: Database["public"]["Enums"]["clock_method"] | null
+          clock_unplanned: boolean
+          created_at: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          id: string
+          left_at: string | null
+          member_id: string
+          venue_id: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "venue_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_member_clock_unplanned: {
+        Args: { p_enabled: boolean; p_venue_member: string }
+        Returns: {
+          clock_method: Database["public"]["Enums"]["clock_method"] | null
+          clock_unplanned: boolean
           created_at: string
           employment_type: Database["public"]["Enums"]["employment_type"]
           id: string
@@ -2070,7 +2198,34 @@ export type Database = {
           created_at: string
           id: string
           method: Database["public"]["Enums"]["clock_method"]
-          shift_id: string
+          note: string | null
+          role_id: string | null
+          shift_id: string | null
+          venue_id: string
+          venue_member_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      void_unplanned_clock: {
+        Args: { p_reason: string; p_record: string }
+        Returns: {
+          assignment_id: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["clock_method"]
+          note: string | null
+          role_id: string | null
+          shift_id: string | null
           venue_id: string
           venue_member_id: string
           void_reason: string | null

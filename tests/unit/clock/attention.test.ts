@@ -16,6 +16,8 @@ function clock(outAt: string | null): ClockRecordWithCorrections {
     venue_id: "venue-1",
     venue_member_id: "member-1",
     method: "app",
+    note: null,
+    role_id: null,
     clock_in_at: "2026-09-25T12:00:00Z",
     clock_out_at: outAt,
     voided_at: null,
@@ -45,6 +47,7 @@ function shift(input?: {
     positions_filled: 1,
     positions_total: 1,
     require_confirmation: false,
+    unplanned: false,
     shift_role_requirements: [],
     shift_assignments: [
       {

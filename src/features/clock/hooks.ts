@@ -1,13 +1,19 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { invalidateWorkViews } from "@/features/shifts/invalidation";
 import {
   approveClockRecord,
+  closeUnplannedClock,
   correctClockRecord,
+  getMyUnplannedClock,
+  getOpenUnplannedClocks,
   punchClock,
+  punchUnplannedClock,
+  setMemberClockUnplanned,
   setVenueClockMethod,
   setMemberClockMethod,
   voidClockRecord,
+  voidUnplannedClock,
 } from "./api";
 
 // Planning e storico incorporano lo stato minimo delle timbrature per segnalare
@@ -86,6 +92,60 @@ export function useSetMemberClockMethod() {
       venueMemberId: string;
       method: Parameters<typeof setMemberClockMethod>[1];
     }) => setMemberClockMethod(vars.venueMemberId, vars.method),
+    onSuccess: () => invalidateWorkViews(qc),
+  });
+}
+
+/** Dove posso timbrare senza turno: per la Home del professionista. */
+export function useMyUnplannedClock(enabled = true) {
+  return useQuery({
+    queryKey: qk.clock.myUnplanned,
+    queryFn: getMyUnplannedClock,
+    enabled,
+  });
+}
+
+export function usePunchUnplannedClock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: punchUnplannedClock,
+    onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+/**
+ * Le timbrature senza turno aperte nell'azienda. Le aggiorna il realtime su
+ * `shift_clock_records` (via `workViewQueryKeys`), come le altre timbrature.
+ */
+export function useOpenUnplannedClocks(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: qk.clock.openUnplanned(workspaceId ?? ""),
+    queryFn: () => getOpenUnplannedClocks(workspaceId as string),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useCloseUnplannedClock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: closeUnplannedClock,
+    onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+export function useVoidUnplannedClock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: voidUnplannedClock,
+    onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+export function useSetMemberClockUnplanned() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { venueMemberId: string; enabled: boolean }) =>
+      setMemberClockUnplanned(vars.venueMemberId, vars.enabled),
     onSuccess: () => invalidateWorkViews(qc),
   });
 }

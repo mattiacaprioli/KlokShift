@@ -34,6 +34,7 @@ import {
   type RomeFieldResult,
 } from "@/features/clock/timezone";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
+import { UNPLANNED_VOID_NOTICE } from "@/features/clock/unplanned";
 
 /**
  * Un campo data+ora della correzione, sempre nell'ora di Roma. Nell'ora che a
@@ -41,7 +42,7 @@ import type { AssignmentWithStaff } from "@/features/assignments/api";
  * errore. Non indovina mai: un orario lavorato sbagliato di un'ora è peggio di
  * una domanda in più.
  */
-function RomeDateTimeField({
+export function RomeDateTimeField({
   label,
   value,
   onChange,
@@ -94,11 +95,14 @@ function ClockReview({
   assignment,
   plannedHours,
   locked,
+  unplanned,
 }: {
   assignment: AssignmentWithStaff;
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
   plannedHours: number;
   locked: boolean;
+  /** Turno nato dalla timbratura: annullarla lo toglie. */
+  unplanned: boolean;
 }) {
   const clock = assignment.clock;
   const approve = useApproveClockRecord();
@@ -252,6 +256,11 @@ function ClockReview({
 
       {mode === "void" ? (
         <div className="mt-3 flex flex-wrap gap-2 rounded-xl bg-error/10 p-3">
+          {unplanned ? (
+            <p className="w-full text-xs leading-5 text-error">
+              {UNPLANNED_VOID_NOTICE}
+            </p>
+          ) : null}
           <Input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -308,12 +317,15 @@ export function PresenceSection({
   venueId,
   startTime,
   endTime,
+  unplanned = false,
 }: {
   shiftId: string;
   /** La sede del turno: decide se le proprie ore sono proprie da scrivere. */
   venueId: string;
   startTime: string;
   endTime: string;
+  /** Turno nato da una timbratura senza turno. */
+  unplanned?: boolean;
 }) {
   const { data, isPending } = useShiftAssignments(shiftId);
   const presence = useSetAssignmentPresence(shiftId);
@@ -459,6 +471,7 @@ export function PresenceSection({
                 assignment={a}
                 plannedHours={planned}
                 locked={mineLocked}
+                unplanned={unplanned}
               />
             </div>
           );

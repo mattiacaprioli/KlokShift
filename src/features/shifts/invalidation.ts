@@ -57,6 +57,9 @@ export function workViewQueryKeys(
     qk.staff.all,
     qk.absences.summaryAll,
     qk.absences.creditsAll,
+    // L'uscita da un fuori turno fa nascere un turno: la timbratura aperta
+    // sparisce e compare il turno, e le due viste vanno rilette insieme.
+    qk.clock.all,
   ];
 }
 

@@ -75,7 +75,7 @@ const ROLES_EMBED =
   "roles:venue_member_roles(role:venue_roles(id, name, sort_order))";
 
 const MEMBERSHIPS_EMBED =
-  "memberships:venue_members(id, venue_id, employment_type, clock_method, left_at, created_at, " +
+  "memberships:venue_members(id, venue_id, employment_type, clock_method, clock_unplanned, left_at, created_at, " +
   VENUE_EMBED +
   ", " +
   ROLES_EMBED +
@@ -128,6 +128,7 @@ type RawVenueMember = {
   venue_id: string;
   employment_type: EmploymentType;
   clock_method: PersonMembership["clock_method"];
+  clock_unplanned: boolean;
   left_at: string | null;
   created_at: string;
   venue: RawVenueBrief;
@@ -214,6 +215,7 @@ function toMembership(row: RawMember, vm: RawVenueMember): PersonMembership {
     link_status: linkStatusOf(row.status, vm.left_at),
     employment_type: vm.employment_type,
     clock_method: vm.clock_method,
+    clock_unplanned: vm.clock_unplanned,
     created_at: vm.created_at,
     left_at: vm.left_at,
     venue: vm.venue,

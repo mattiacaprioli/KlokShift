@@ -159,12 +159,15 @@ function PresenceRow({
   shiftId,
   scheduledOutAt,
   locked,
+  unplanned,
 }: {
   assignment: AssignmentWithStaff;
   plannedHours: number;
   shiftId: string;
   scheduledOutAt: Date;
   locked?: boolean;
+  /** Turno nato da una timbratura senza turno. */
+  unplanned?: boolean;
 }) {
   const presence = useSetAssignmentPresence(shiftId);
   const toast = useToast();
@@ -257,6 +260,7 @@ function PresenceRow({
         scheduledOutAt={scheduledOutAt}
         plannedHours={plannedHours}
         locked={locked}
+        unplanned={unplanned}
       />
 
       {locked ? (
@@ -700,6 +704,7 @@ export default function ShiftDetailScreen() {
                     shift.end_time
                   )}
                   locked={isPresenceLocked(a)}
+                  unplanned={shift.unplanned}
                 />
               ))
             ) : (

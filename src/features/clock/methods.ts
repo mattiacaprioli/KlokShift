@@ -57,6 +57,18 @@ export function inheritedClockMethodHint(
   return `Segue l’impostazione della sede. ${clockMethodDescription(venueMethod)}`;
 }
 
+/**
+ * Timbratura senza turno: stesse parole in app e dashboard. Il turno nasce
+ * all'uscita e resta da approvare, quindi la descrizione lo dice.
+ */
+export const CLOCK_UNPLANNED_LABEL = "Può timbrare anche senza turno";
+export const CLOCK_UNPLANNED_DESCRIPTION =
+  "Se non ha un turno in corso, timbra entrata e uscita dall’app: all’uscita nasce un turno «Fuori turno» con quegli orari, da approvare.";
+
+export function clockUnplannedSummary(enabled: boolean): string {
+  return enabled ? "Può timbrare anche senza turno" : "Solo sui turni assegnati";
+}
+
 export function effectiveClockMethod(
   override: Enums<"clock_method"> | null,
   venueDefault: Enums<"clock_method">

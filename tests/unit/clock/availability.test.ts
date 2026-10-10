@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgendaItem } from "../../../src/features/assignments/agenda";
 import {
+  blocksUnplannedClock,
   homeClockState,
   isClockWindowOpen,
 } from "../../../src/features/clock/availability";
@@ -24,6 +25,8 @@ function item(
         clock_out_at: options.outAt ?? null,
         created_at: options.inAt,
         method: "app",
+        note: null,
+        role_id: null,
         shift_id: "shift",
         venue_id: "venue",
         venue_member_id: "venue-member",
@@ -117,5 +120,32 @@ describe("homeClockState", () => {
         "2026-09-24"
       )
     ).toBe(null);
+  });
+});
+
+describe("blocksUnplannedClock", () => {
+  // Istanti in ora locale senza offset: la CI gira in UTC.
+  const at = (time: string) => new Date(`2026-09-24T${time}:00`);
+
+  it("blocca dall'ora prima dell'inizio fino alla fine del turno", () => {
+    expect(blocksUnplannedClock(item(), at("16:59"))).toBe(false);
+    expect(blocksUnplannedClock(item(), at("17:00"))).toBe(true);
+    expect(blocksUnplannedClock(item(), at("22:59"))).toBe(true);
+    expect(blocksUnplannedClock(item(), at("23:00"))).toBe(false);
+  });
+
+  it("non blocca un turno annullato, rifiutato o già timbrato", () => {
+    expect(
+      blocksUnplannedClock(item({ shiftStatus: "cancelled" }), at("19:00"))
+    ).toBe(false);
+    expect(
+      blocksUnplannedClock(item({ assignmentStatus: "declined" }), at("19:00"))
+    ).toBe(false);
+    expect(
+      blocksUnplannedClock(
+        item({ inAt: "2026-09-24T16:00:00Z", outAt: "2026-09-24T17:00:00Z" }),
+        at("19:00")
+      )
+    ).toBe(false);
   });
 });

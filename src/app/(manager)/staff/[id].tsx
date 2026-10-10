@@ -65,12 +65,18 @@ import type {
   StaffPersonDetail,
 } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
-import { useSetMemberClockMethod } from "@/features/clock/hooks";
+import {
+  useSetMemberClockMethod,
+  useSetMemberClockUnplanned,
+} from "@/features/clock/hooks";
 import {
   CLOCK_METHOD_CHOICES,
+  CLOCK_UNPLANNED_DESCRIPTION,
+  CLOCK_UNPLANNED_LABEL,
   clockMethodChoice,
   clockMethodDescription,
   clockMethodLabel,
+  clockUnplannedSummary,
   effectiveClockMethod,
   inheritedClockMethodHint,
   type ClockMethodChoice,
@@ -135,6 +141,49 @@ function ClockMethodPicker({
   );
 }
 
+/** Timbratura senza turno: ha senso solo quando la persona timbra dall'app. */
+function ClockUnplannedToggle({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: value }}
+      onPress={() => onChange(!value)}
+      className={cn(
+        "flex-row items-center gap-3 rounded-2xl border px-4 py-3",
+        value ? "border-gold/70 bg-gold/10" : "border-border bg-bg-1"
+      )}
+    >
+      <View
+        className={cn(
+          "h-6 w-6 shrink-0 items-center justify-center rounded-md border",
+          value ? "border-gold bg-gold" : "border-border-2"
+        )}
+      >
+        {value ? <Icon name="check" size={14} color="#1A1206" /> : null}
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text
+          className={cn(
+            "text-[15px] font-sans-semibold",
+            value ? "text-gold" : "text-t1"
+          )}
+        >
+          {CLOCK_UNPLANNED_LABEL}
+        </Text>
+        <Text className="mt-0.5 text-xs leading-4 text-t3">
+          {CLOCK_UNPLANNED_DESCRIPTION}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 /**
  * Una sede in cui la persona lavora.
  *
@@ -176,6 +225,7 @@ function WorkplaceCard({
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
   const setClock = useSetMemberClockMethod();
+  const setUnplanned = useSetMemberClockUnplanned();
 
   const savedRoles = membership.staff_member_roles
     .map((r) => r.role)
@@ -189,14 +239,24 @@ function WorkplaceCard({
   const [clockChoice, setClockChoice] = useState<ClockMethodChoice>(
     clockMethodChoice(membership.clock_method)
   );
+  const [unplanned, setUnplannedChoice] = useState(membership.clock_unplanned);
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
+  const venueMethod = membership.venue?.clock_method ?? "manual";
   const effectiveMethod = effectiveClockMethod(
     membership.clock_method,
-    membership.venue?.clock_method ?? "manual"
+    venueMethod
   );
-  const busy = update.isPending || remove.isPending || setClock.isPending;
+  // Il metodo scelto nel form, non quello salvato: l'interruttore compare non
+  // appena si sceglie la timbratura dall'app.
+  const chosenMethod =
+    clockChoice === "inherit" ? venueMethod : clockChoice;
+  const busy =
+    update.isPending ||
+    remove.isPending ||
+    setClock.isPending ||
+    setUnplanned.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
   const staffDirty =
@@ -208,7 +268,9 @@ function WorkplaceCard({
     editing &&
     canEditClock &&
     clockChoice !== clockMethodChoice(membership.clock_method);
-  const dirty = staffDirty || clockDirty;
+  const unplannedDirty =
+    editing && canEditClock && unplanned !== membership.clock_unplanned;
+  const dirty = staffDirty || clockDirty || unplannedDirty;
   useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
 
   // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
@@ -217,6 +279,7 @@ function WorkplaceCard({
     setRoleIds(savedRoles.map((r) => r.id));
     setEmpType(membership.employment_type);
     setClockChoice(clockMethodChoice(membership.clock_method));
+    setUnplannedChoice(membership.clock_unplanned);
     setEditing(true);
   }
 
@@ -236,6 +299,12 @@ function WorkplaceCard({
         await setClock.mutateAsync({
           venueMemberId: membership.id,
           method: clockChoice === "inherit" ? null : clockChoice,
+        });
+      }
+      if (unplannedDirty) {
+        await setUnplanned.mutateAsync({
+          venueMemberId: membership.id,
+          enabled: unplanned,
         });
       }
       toast.show(`Modifiche salvate · ${venueName}`);
@@ -352,9 +421,15 @@ function WorkplaceCard({
               <Mono>Metodo di timbratura</Mono>
               <ClockMethodPicker
                 value={clockChoice}
-                venueMethod={membership.venue?.clock_method ?? "manual"}
+                venueMethod={venueMethod}
                 onChange={setClockChoice}
               />
+              {chosenMethod === "app" ? (
+                <ClockUnplannedToggle
+                  value={unplanned}
+                  onChange={setUnplannedChoice}
+                />
+              ) : null}
             </View>
           ) : null}
 
@@ -392,6 +467,12 @@ function WorkplaceCard({
                 <Text className="-mt-2 pb-3 text-xs leading-5 text-t3">
                   {clockMethodDescription(effectiveMethod)}
                 </Text>
+                {effectiveMethod === "app" ? (
+                  <ReadField
+                    label="Senza turno"
+                    value={clockUnplannedSummary(membership.clock_unplanned)}
+                  />
+                ) : null}
               </>
             ) : null}
           </View>

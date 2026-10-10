@@ -3,6 +3,7 @@ import { isActiveAssignment } from "@/features/assignments/status";
 import {
   addDaysToDate,
   shiftEndsAt,
+  shiftStartsAt,
   todayString,
   toDateString,
   type ShiftTimes,
@@ -62,4 +63,32 @@ export function homeClockState(
   return method === "app" && windowOpen && today >= item.shift.date
     ? "in"
     : null;
+}
+
+/** Da quanto prima dell'inizio un turno pianificato «si timbra quello». */
+export const UNPLANNED_BLOCK_BEFORE_MIN = 60;
+
+/**
+ * Questo turno pianificato impedisce adesso un'entrata senza turno sulla
+ * stessa scheda? Gemello **manuale** del controllo `clock_planned_shift` in
+ * `clock_punch_unplanned` (20261010000000): dall'ora prima dell'inizio alla
+ * fine, se non è annullato, rifiutato o già timbrato. Se cambia lì, cambia qui.
+ */
+export function blocksUnplannedClock(
+  item: AgendaItem,
+  now: Date = new Date()
+): boolean {
+  if (item.shift.status === "cancelled" || !isActiveAssignment(item.status)) {
+    return false;
+  }
+  if (item.clock) return false;
+  const from =
+    shiftStartsAt(item.shift.date, item.shift.start_time).getTime() -
+    UNPLANNED_BLOCK_BEFORE_MIN * 60_000;
+  const to = shiftEndsAt(
+    item.shift.date,
+    item.shift.start_time,
+    item.shift.end_time
+  ).getTime();
+  return now.getTime() >= from && now.getTime() < to;
 }

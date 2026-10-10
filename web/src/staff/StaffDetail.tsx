@@ -59,9 +59,15 @@ import {
 import { useToast } from "../ui/Toast";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { UnsavedEdits, useUnsavedEdit } from "@/lib/unsavedEdits";
-import { useSetMemberClockMethod } from "@/features/clock/hooks";
+import {
+  useSetMemberClockMethod,
+  useSetMemberClockUnplanned,
+} from "@/features/clock/hooks";
 import {
   CLOCK_METHOD_CHOICES,
+  CLOCK_UNPLANNED_DESCRIPTION,
+  CLOCK_UNPLANNED_LABEL,
+  clockUnplannedSummary,
   clockMethodChoice,
   clockMethodDescription,
   clockMethodLabel,
@@ -1077,6 +1083,7 @@ function WorkplaceCard({
   const remove = useRemoveStaffMember();
   const restore = useAddPersonToVenue();
   const setClock = useSetMemberClockMethod();
+  const setUnplanned = useSetMemberClockUnplanned();
   const toast = useToast();
   const savedRoles = membership.staff_member_roles
     .map((r) => r.role)
@@ -1090,18 +1097,23 @@ function WorkplaceCard({
   const [clockChoice, setClockChoice] = useState<ClockMethodChoice>(
     clockMethodChoice(membership.clock_method)
   );
+  const [unplanned, setUnplannedChoice] = useState(membership.clock_unplanned);
   const [confirming, setConfirming] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
+  const venueMethod = membership.venue?.clock_method ?? "manual";
   const effectiveMethod = effectiveClockMethod(
     membership.clock_method,
-    membership.venue?.clock_method ?? "manual"
+    venueMethod
   );
+  // Il metodo scelto nel form: l'interruttore compare appena si sceglie l'app.
+  const chosenMethod = clockChoice === "inherit" ? venueMethod : clockChoice;
   const busy =
     update.isPending ||
     setRoles.isPending ||
     remove.isPending ||
-    setClock.isPending;
+    setClock.isPending ||
+    setUnplanned.isPending;
   const staffDirty =
     editing &&
     (empType !== membership.employment_type ||
@@ -1111,7 +1123,9 @@ function WorkplaceCard({
     editing &&
     canEditClock &&
     clockChoice !== clockMethodChoice(membership.clock_method);
-  const dirty = staffDirty || clockDirty;
+  const unplannedDirty =
+    editing && canEditClock && unplanned !== membership.clock_unplanned;
+  const dirty = staffDirty || clockDirty || unplannedDirty;
   useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
 
   // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
@@ -1120,6 +1134,7 @@ function WorkplaceCard({
     setRoleIds(savedRoles.map((r) => r.id));
     setEmpType(membership.employment_type);
     setClockChoice(clockMethodChoice(membership.clock_method));
+    setUnplannedChoice(membership.clock_unplanned);
     setConfirming(false);
     setEditing(true);
   }
@@ -1140,6 +1155,12 @@ function WorkplaceCard({
         await setClock.mutateAsync({
           venueMemberId: membership.id,
           method: clockChoice === "inherit" ? null : clockChoice,
+        });
+      }
+      if (unplannedDirty) {
+        await setUnplanned.mutateAsync({
+          venueMemberId: membership.id,
+          enabled: unplanned,
         });
       }
       toast.show(`Modifiche salvate · ${venueName}`);
@@ -1263,6 +1284,26 @@ function WorkplaceCard({
             </Field>
           ) : null}
 
+          {canEditClock && chosenMethod === "app" ? (
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-bg-1 px-3 py-2.5 has-disabled:cursor-not-allowed">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-gold"
+                checked={unplanned}
+                disabled={busy}
+                onChange={(e) => setUnplannedChoice(e.target.checked)}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-t1">
+                  {CLOCK_UNPLANNED_LABEL}
+                </span>
+                <span className="mt-0.5 block text-xs leading-5 text-t3">
+                  {CLOCK_UNPLANNED_DESCRIPTION}
+                </span>
+              </span>
+            </label>
+          ) : null}
+
           <EditActions
             pending={busy}
             canSave={dirty}
@@ -1289,6 +1330,11 @@ function WorkplaceCard({
               <p className="mt-1 text-xs font-normal leading-5 text-t4">
                 {clockMethodDescription(effectiveMethod)}
               </p>
+            </ReadItem>
+          ) : null}
+          {canEditClock && effectiveMethod === "app" ? (
+            <ReadItem label="Senza turno" wide>
+              {clockUnplannedSummary(membership.clock_unplanned)}
             </ReadItem>
           ) : null}
         </dl>
