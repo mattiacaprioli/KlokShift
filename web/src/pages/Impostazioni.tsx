@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { userErrorMessage } from "@/lib/errors";
+import { changePasswordSchema } from "@/features/auth/schema";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   useSetStaffCanChat,
@@ -22,8 +23,16 @@ import {
   uploadAvatar,
 } from "@/features/account/api";
 import { cn } from "@/lib/cn";
-import { Button, Card, Field, Input, PageHeader } from "../ui/primitives";
+import {
+  Button,
+  Card,
+  Field,
+  Input,
+  PageHeader,
+  PasswordInput,
+} from "../ui/primitives";
 import { Avatar } from "../ui/Avatar";
+import { PasswordChecklist } from "../ui/PasswordChecklist";
 import { useToast } from "../ui/Toast";
 import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
 
@@ -37,6 +46,8 @@ export function ImpostazioniPage() {
 
       <div className="flex max-w-2xl flex-col gap-8">
         <AccountSection />
+
+        <PasswordSection />
 
         <NotificationPrefsSection />
 
@@ -313,6 +324,125 @@ function AccountSection() {
         turni. La sede — nome, indirizzo, logo — si modifica dalla scheda
         Sede.
       </p>
+    </section>
+  );
+}
+
+/**
+ * Cambio password da loggati. Il gemello app è
+ * `src/features/auth/ChangePasswordForm.tsx`; le regole vengono da
+ * `changePasswordSchema`, così le due strade non si disallineano.
+ *
+ * ⚠️ Non è `NuovaPassword.tsx`: là la prova d'identità è il link ricevuto per
+ * email, qui la sessione da sola non basta e si chiede la password attuale.
+ */
+function PasswordSection() {
+  const { changePassword } = useAuth();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  function close() {
+    setOpen(false);
+    setCurrent("");
+    setPassword("");
+    setConfirm("");
+    setError(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    const parsed = changePasswordSchema.safeParse({
+      currentPassword: current,
+      password,
+      confirmPassword: confirm,
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Controlla i campi.");
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    const res = await changePassword(current, password);
+    setBusy(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    toast.show("Password aggiornata.");
+    close();
+  }
+
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
+        Password
+      </h2>
+      <Card>
+        {!open ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-t2">
+              La stessa con cui accedi dall&apos;app.
+            </p>
+            <Button onClick={() => setOpen(true)}>Cambia password</Button>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="flex max-w-sm flex-col gap-4">
+            <Field label="Password attuale">
+              <PasswordInput
+                autoComplete="current-password"
+                required
+                autoFocus
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+              />
+            </Field>
+            <Field label="Nuova password">
+              <PasswordInput
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            <Field label="Ripeti la nuova password">
+              <PasswordInput
+                autoComplete="new-password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </Field>
+
+            <PasswordChecklist value={password} />
+
+            <p className="text-xs leading-5 text-t3">
+              Gli altri dispositivi dove hai fatto l&apos;accesso verranno
+              disconnessi.
+            </p>
+
+            {error ? (
+              <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button type="submit" variant="gold" disabled={busy}>
+                {busy ? "Salvataggio…" : "Cambia password"}
+              </Button>
+              <Button type="button" disabled={busy} onClick={close}>
+                Annulla
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
     </section>
   );
 }

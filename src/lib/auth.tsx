@@ -61,8 +61,9 @@ type AuthState = {
   }>;
   /**
    * `redirectTo`: dove deve atterrare il link di recupero. Vale la stessa
-   * regola di `emailRedirectTo` (allowlist, altrimenti Site URL). Omesso
-   * sull'app, che non ha una pagina propria dove impostare la password.
+   * regola di `emailRedirectTo` (allowlist, altrimenti Site URL). Anche l'app
+   * lo passa, verso la dashboard: è l'unico posto con la pagina dove si sceglie
+   * la nuova password, e il Site URL porta all'app.
    */
   resetPassword: (
     email: string,
@@ -81,8 +82,22 @@ type AuthState = {
     email: string,
     emailRedirectTo?: string
   ) => Promise<{ error: string | null }>;
-  /** Cambia la password dell'utente in sessione (anche di sola recovery). */
+  /**
+   * Imposta la password senza chiedere quella attuale: solo per la sessione di
+   * recupero (`NuovaPassword.tsx`), dove la prova d'identità è stata il link
+   * ricevuto per email. Da loggati si passa da `changePassword`.
+   */
   updatePassword: (password: string) => Promise<{ error: string | null }>;
+  /**
+   * Cambio password da loggati: chiede quella attuale, perché la sessione da
+   * sola non prova chi sta tenendo in mano il telefono sbloccato. A cambio
+   * riuscito chiude le sessioni sugli altri dispositivi — chi cambia password
+   * spesso lo fa perché qualcun altro potrebbe conoscerla.
+   */
+  changePassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   /** Re-fetch the profile row after an edit, without blanking the UI. */
   refreshProfile: () => Promise<void>;
@@ -215,7 +230,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async (
       next: Session | null,
       ticket: AuthRequestTicket,
-      claim = false
+      { claim = false, silent = false }: { claim?: boolean; silent?: boolean } = {}
     ) => {
       try {
         const nextProfile = next?.user ? await resolveProfile(next.user) : null;
@@ -228,6 +243,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (claim && nextProfile) void claimInvites();
       } catch (cause) {
         if (!mountedRef.current || !requestGateRef.current.isCurrent(ticket)) {
+          return;
+        }
+        // Rilettura in background: il profilo che c'era resta buono, e una
+        // lettura andata male non vale la schermata d'errore.
+        if (silent) {
+          setLoading(false);
           return;
         }
         setProfile(null);
@@ -293,6 +314,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         event === "SIGNED_IN" ||
         event === "SIGNED_OUT" ||
         event === "USER_UPDATED";
+      // La stessa persona che si riautentica (la verifica della password
+      // attuale) o che cambia la password: il profilo si rilegge senza
+      // rimettere `loading`. ⚠️ Con `loading` il RootNavigator dell'app torna
+      // `null` e smonta lo Stack, e il web mostra lo spinner: chi cambiava la
+      // password dalle impostazioni si ritrovava sulla home.
+      const silent =
+        hadInitialSession &&
+        nextId !== null &&
+        previousId === nextId &&
+        (event === "SIGNED_IN" || event === "USER_UPDATED");
       // Invalida subito bootstrap e letture in volo, prima del setTimeout. Un
       // semplice TOKEN_REFRESHED della stessa persona non deve interrompere il
       // profilo che si sta già caricando.
@@ -303,9 +334,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // TOKEN_REFRESHED aggiorna soltanto il token se il bootstrap era già
       // concluso. Se è il primo evento osservato, vale come INITIAL_SESSION.
       if (shouldLoadProfile) {
-        const ticket = beginProfileLoad(next);
+        const ticket = silent
+          ? requestGate.begin(nextId)
+          : beginProfileLoad(next);
         setTimeout(
-          () => void finishProfileLoad(next, ticket, event === "SIGNED_IN"),
+          () =>
+            void finishProfileLoad(next, ticket, {
+              claim: event === "SIGNED_IN",
+              silent,
+            }),
           0
         );
       }
@@ -394,6 +431,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: error ? authErrorMessage(error.message) : null };
   }
 
+  async function changePassword(currentPassword: string, newPassword: string) {
+    const email = sessionRef.current?.user.email;
+    if (!email) return { error: "Sessione scaduta. Esci e accedi di nuovo." };
+
+    // La verifica è un accesso vero e proprio: GoTrue non ha un «controlla la
+    // password» a parte, e così vale anche il suo limite ai tentativi. Il
+    // SIGNED_IN che ne nasce è della stessa persona, quindi non svuota la
+    // cache e non fa ricaricare l'app (vedi `silent` nel listener).
+    const check = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+    if (check.error) {
+      const wrong = check.error.message
+        .toLowerCase()
+        .includes("invalid login credentials");
+      return {
+        error: wrong
+          ? "La password attuale non è corretta."
+          : authErrorMessage(check.error.message),
+      };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: authErrorMessage(error.message) };
+
+    // Best-effort: la password è già cambiata, e un errore qui non deve far
+    // credere il contrario. `others` lascia intatta la sessione corrente.
+    try {
+      await supabase.auth.signOut({ scope: "others" });
+    } catch {
+      // ignora: le altre sessioni restano aperte, ma la vecchia password non
+      // basta più per aprirne di nuove.
+    }
+    return { error: null };
+  }
+
   async function signOut() {
     // De-registra il push token PRIMA del signOut: dopo, la RLS "own only"
     // blocca la delete. Best-effort: non deve mai impedire il logout.
@@ -466,6 +540,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         resetPassword,
         resendConfirmation,
         updatePassword,
+        changePassword,
         signOut,
         refreshProfile,
         retryProfile,

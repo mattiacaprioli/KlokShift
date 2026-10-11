@@ -42,5 +42,29 @@ export const signupSchema = z
     path: ["confirmPassword"],
   });
 
+/** Uguale al testo di `authErrorMessage`, che lo dà quando è GoTrue a fermarla. */
+export const passwordUnchangedMessage =
+  "La nuova password deve essere diversa dalla precedente.";
+
+// Cambio password da loggati (app e dashboard): quella attuale si chiede sempre,
+// vedi `changePassword` in `lib/auth.tsx`.
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Inserisci la password attuale."),
+    password: z
+      .string()
+      .refine(isPasswordValid, "La password non rispetta i requisiti indicati."),
+    confirmPassword: z.string().min(1, "Ripeti la password."),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: passwordMismatchMessage,
+    path: ["confirmPassword"],
+  })
+  .refine((v) => v.password !== v.currentPassword, {
+    message: passwordUnchangedMessage,
+    path: ["password"],
+  });
+
 export type LoginForm = z.infer<typeof loginSchema>;
 export type SignupForm = z.infer<typeof signupSchema>;
+export type ChangePasswordForm = z.infer<typeof changePasswordSchema>;

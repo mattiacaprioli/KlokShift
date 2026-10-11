@@ -17,6 +17,15 @@ import {
   useResendConfirmation,
 } from "@/features/auth/useResendConfirmation";
 import { GhostButton } from "@/components/ui/GhostButton";
+import { DEFAULT_SITE_URL } from "@/features/account/legal";
+
+// Il link di recupero atterra sulla dashboard, l'unico posto con la pagina dove
+// si sceglie la nuova password: il Site URL del progetto porta all'app, che
+// quella pagina non ce l'ha. Stesso indirizzo che la dashboard manda per sé
+// (`web/src/pages/Login.tsx`), quindi già nell'allowlist dei redirect.
+const RECOVERY_REDIRECT_URL = `${(
+  process.env.EXPO_PUBLIC_SITE_URL?.trim() || DEFAULT_SITE_URL
+).replace(/\/+$/, "")}/app/`;
 
 export default function Login() {
   const insets = useSafeAreaInsets();
@@ -53,7 +62,7 @@ export default function Login() {
       toast.show("Inserisci la tua email per recuperare la password.", "error");
       return;
     }
-    const { error } = await resetPassword(email);
+    const { error } = await resetPassword(email, RECOVERY_REDIRECT_URL);
     if (error) toast.show(error, "error");
     else toast.show("Email di recupero inviata. Controlla la posta.");
   }

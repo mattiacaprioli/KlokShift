@@ -64,6 +64,24 @@ export default function ManagerSettingsScreen() {
               <Icon name="chevR" size={18} color="#6A6358" />
             </Pressable>
 
+            <Pressable
+              onPress={() => router.push("/(manager)/cambia-password")}
+              className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
+            >
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
+                <Icon name="lock" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[15px] font-sans-semibold text-t1">
+                  Cambia password
+                </Text>
+                <Text className="mt-0.5 text-[13px] text-t3">
+                  Vale anche per la dashboard web
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#6A6358" />
+            </Pressable>
+
             {/* Il ritorno al proprio lato: chi è qui per una promozione
                 dall'organico è prima di tutto un professionista, e i suoi turni
                 stanno di là. La riga esiste solo per lui. */}
