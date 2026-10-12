@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -45,6 +46,56 @@ describe("release workflows", () => {
     expect(database).toContain("version: 2.108.0");
     expect(database).not.toContain("version: latest");
     expect(JSON.parse(deno).lock.frozen).toBe(true);
+  });
+});
+
+describe("segreti e ordine dei rilasci (C11)", () => {
+  const ci = repoFile(".github/workflows/ci.yml");
+  const database = repoFile(".github/workflows/supabase.yml");
+
+  const step = (workflow: string, name: string) => {
+    const start = workflow.indexOf(`- name: ${name}`);
+    const end = workflow.indexOf("\n      - ", start);
+    return workflow.slice(start, end === -1 ? undefined : end);
+  };
+
+  it("passa i segreti Supabase solo agli step che li usano", () => {
+    for (const name of ["Link project", "Push migrations"]) {
+      expect(step(database, name)).toContain(
+        "SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}"
+      );
+      expect(step(database, name)).toContain(
+        "SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}"
+      );
+    }
+    // Due step per due segreti: nessun'altra occorrenza, nemmeno sul job.
+    expect(database.match(/secrets\.SUPABASE_/g)).toHaveLength(4);
+  });
+
+  it("fissa a uno SHA l'azione esterna del rilascio del DB", () => {
+    expect(database).toMatch(/uses: supabase\/setup-cli@[0-9a-f]{40} /);
+  });
+
+  it("passa al deploy del DB solo i segreti dichiarati", () => {
+    const deploy = ci.slice(ci.indexOf("  deploy-database:"));
+    expect(ci).not.toContain("secrets: inherit");
+    expect(deploy).toContain("SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}");
+    expect(deploy).toContain("SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}");
+  });
+
+  it("mette in coda i run sullo stesso ref senza interromperli", () => {
+    const head = ci.slice(0, ci.indexOf("\njobs:"));
+    expect(head).toMatch(
+      /^concurrency:\n {2}group: ci-\$\{\{ github\.ref \}\}\n {2}cancel-in-progress: false$/m
+    );
+  });
+
+  it("non ignora expo-env.d.ts, che il typecheck della CI richiede", () => {
+    const res = spawnSync("git", ["check-ignore", "--no-index", "-q", "expo-env.d.ts"], {
+      cwd: process.cwd(),
+    });
+    // 0 = ignorato, 1 = non ignorato, 128 = errore di git.
+    expect(res.status).toBe(1);
   });
 });
 

@@ -15,19 +15,26 @@ jobs:
     concurrency:
       group: supabase-production
       cancel-in-progress: false
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    # I segreti stanno solo sugli step che li usano, non sull'intero job: così
+    # le azioni esterne del job non li ricevono.
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v2
+      # Fissata allo SHA di `v2` (un branch che si sposta, oggi = v2.1.2): gira
+      # nel job che scrive sul DB di produzione.
+      - uses: supabase/setup-cli@afb1b15109756ea5cf9d8985a359d9095235ca2b # v2.1.2
         with:
           # Stessa versione dichiarata nel package del progetto: niente latest.
           version: 2.108.0
 
       - name: Link project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase link --project-ref rmlobxjlqlpixkvrzmfg
 
       - name: Push migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase db push
