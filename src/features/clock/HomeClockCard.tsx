@@ -12,11 +12,24 @@ import { homeClockState } from "./availability";
 import { usePunchClock } from "./hooks";
 import { effectiveClockTimes, formatClockTime } from "./hours";
 
-export function HomeClockCard({ item }: { item: AgendaItem }) {
+/**
+ * `inBlocked` lo decide la Home (`blocksPlannedClockIn`): con un'entrata senza
+ * turno ancora aperta l'entrata del turno non si offre, perché le ore si
+ * conterebbero due volte (la RPC la rifiuta con `clock_already_open`).
+ * L'uscita di un turno già timbrato resta sempre disponibile.
+ */
+export function HomeClockCard({
+  item,
+  inBlocked = false,
+}: {
+  item: AgendaItem;
+  inBlocked?: boolean;
+}) {
   const toast = useToast();
   const punch = usePunchClock();
   const [confirming, setConfirming] = useState<"in" | "out" | null>(null);
   const state = homeClockState(item);
+  const blocked = state === "in" && inBlocked;
   const times = item.clock ? effectiveClockTimes(item.clock) : null;
   const venueName = item.shift.venue?.name ?? "Sede";
 
@@ -69,6 +82,10 @@ export function HomeClockCard({ item }: { item: AgendaItem }) {
           <Text className="mt-4 text-sm text-t2">
             Entrata registrata alle {formatClockTime(times.inAt)}.
           </Text>
+        ) : blocked ? (
+          <Text className="mt-4 text-sm leading-5 text-t2">
+            Prima registra l’uscita dal fuori turno.
+          </Text>
         ) : (
           <Text className="mt-4 text-sm leading-5 text-t3">
             Verrà registrato l’orario corrente del server.
@@ -84,7 +101,7 @@ export function HomeClockCard({ item }: { item: AgendaItem }) {
                 ? "Timbra entrata"
                 : "Timbra uscita"
           }
-          disabled={punch.isPending}
+          disabled={punch.isPending || blocked}
           onPress={() => setConfirming(state)}
         />
       </Card>

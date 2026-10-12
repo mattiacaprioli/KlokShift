@@ -8,6 +8,7 @@ import {
   toDateString,
   type ShiftTimes,
 } from "@/lib/format";
+import type { MyUnplannedClock } from "./api";
 import { effectiveClockTimes } from "./hours";
 import { effectiveClockMethod } from "./methods";
 
@@ -91,4 +92,28 @@ export function blocksUnplannedClock(
     item.shift.end_time
   ).getTime();
   return now.getTime() >= from && now.getTime() < to;
+}
+
+/** Per quanto un'entrata senza turno aperta blocca ancora l'entrata di un turno. */
+export const UNPLANNED_OPEN_BLOCK_HOURS = 24;
+
+/**
+ * Un'entrata senza turno ancora aperta impedisce adesso di timbrare l'entrata
+ * di un turno pianificato? Gemello **manuale** del controllo
+ * `clock_already_open` in `clock_punch` (20261012000300): entrata aperta da
+ * meno di 24 ore, in qualunque sede o azienda. Se cambia lì, cambia qui.
+ *
+ * Il server guarda tutte le entrate dell'account; qui ci sono quelle che
+ * `get_my_unplanned_clock` restituisce (sedi aperte, aziende leggibili). Per il
+ * resto risponde la RPC, con il suo messaggio.
+ */
+export function blocksPlannedClockIn(
+  unplanned: Pick<MyUnplannedClock, "open">[],
+  now: Date = new Date()
+): boolean {
+  const since = now.getTime() - UNPLANNED_OPEN_BLOCK_HOURS * 3_600_000;
+  return unplanned.some(
+    (entry) =>
+      entry.open != null && new Date(entry.open.clockInAt).getTime() > since
+  );
 }

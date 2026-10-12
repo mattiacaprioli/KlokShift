@@ -201,6 +201,46 @@ begin
     'clock_unplanned_disabled', 'ma una nuova entrata no');
 end $$;
 
+-- Una sola entrata aperta anche nel verso opposto: con un fuori turno aperto non
+-- si timbra l'entrata di un turno pianificato (le ore si conterebbero due volte).
+do $$
+declare
+  vm uuid;
+  ids uuid[];
+  asg uuid;
+  rec public.shift_clock_records;
+begin
+  perform tests.logout();
+  select x.id into vm from public.venue_members x
+   where x.member_id = tests.id('M_Emp') and x.venue_id = tests.id('V1');
+  perform tests.login('Ow');
+  perform public.set_member_clock_unplanned(vm, true);
+  perform tests.login('Emp');
+  rec := public.clock_punch_unplanned(vm, 'in', null, 'Inventario');
+
+  -- Il turno pianificato arriva dopo l'entrata: prima si sarebbe timbrato quello.
+  perform tests.login('Ow');
+  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Cena',
+    'date', (public.local_now() - interval '10 minutes')::date::text,
+    'start_time', to_char(public.local_now() - interval '10 minutes', 'HH24:MI'),
+    'end_time', to_char(public.local_now() + interval '50 minutes', 'HH24:MI'),
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm)))));
+  perform tests.logout();
+  select a.id into asg from public.shift_assignments a where a.shift_id = ids[1] and a.venue_member_id = vm;
+
+  perform tests.login('Emp');
+  perform tests.raises(format('select public.clock_punch(%L, ''in'')', asg),
+    'clock_already_open', 'con un fuori turno aperto non si timbra l''entrata pianificata');
+  perform public.clock_punch_unplanned(vm, 'out');
+  rec := public.clock_punch(asg, 'in');
+  perform tests.ok(rec.clock_in_at is not null and rec.clock_out_at is null,
+    'chiuso il fuori turno, il pianificato si timbra');
+  -- Nessuna entrata resta aperta per i blocchi che seguono.
+  perform public.clock_punch(asg, 'out');
+  perform tests.logout();
+end $$;
+
 -- Fuori turno iniziato prima della fine operativa e chiuso in archivio: si
 -- rettifica, si approva e si annulla come il turno pianificato equivalente.
 do $$

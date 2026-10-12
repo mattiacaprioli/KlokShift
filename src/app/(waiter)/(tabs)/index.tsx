@@ -21,6 +21,7 @@ import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { HomeClockCard } from "@/features/clock/HomeClockCard";
 import {
+  blocksPlannedClockIn,
   blocksUnplannedClock,
   homeClockState,
 } from "@/features/clock/availability";
@@ -71,6 +72,9 @@ export default function WaiterHomeScreen() {
   const showUnplanned = unplanned.some(
     (entry) => entry.open != null || canStartUnplanned(entry.venueMemberId)
   );
+  // E viceversa: con un fuori turno aperto l'entrata pianificata aspetta
+  // l'uscita da quello (la stessa regola della RPC, `clock_already_open`).
+  const plannedInBlocked = blocksPlannedClockIn(unplanned);
   // Un'entrata ancora aperta resta nella query anche oltre la fine pianificata,
   // perché la Home deve offrire l'uscita. Non è però il «prossimo turno».
   const upcomingItems = items.filter((item) => !isShiftOver(item.shift));
@@ -177,7 +181,11 @@ export default function WaiterHomeScreen() {
             <SectionHeader title="Timbratura" />
             <View className="gap-3">
               {clockItems.map((item) => (
-                <HomeClockCard key={item.id} item={item} />
+                <HomeClockCard
+                  key={item.id}
+                  item={item}
+                  inBlocked={plannedInBlocked}
+                />
               ))}
               {unplanned.map((entry) => (
                 <UnplannedClockCard

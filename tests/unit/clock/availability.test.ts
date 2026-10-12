@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgendaItem } from "../../../src/features/assignments/agenda";
 import {
+  blocksPlannedClockIn,
   blocksUnplannedClock,
   homeClockState,
   isClockWindowOpen,
@@ -147,5 +148,34 @@ describe("blocksUnplannedClock", () => {
         at("19:00")
       )
     ).toBe(false);
+  });
+});
+
+describe("blocksPlannedClockIn", () => {
+  const now = new Date("2026-09-24T18:00:00Z");
+  const entry = (clockInAt: string | null) => ({
+    open: clockInAt
+      ? { recordId: "record", clockInAt, roleId: null, note: null }
+      : null,
+  });
+
+  it("blocca l'entrata pianificata con un fuori turno aperto, in qualunque sede", () => {
+    expect(
+      blocksPlannedClockIn([entry(null), entry("2026-09-24T14:00:00Z")], now)
+    ).toBe(true);
+  });
+
+  it("non blocca senza entrate aperte", () => {
+    expect(blocksPlannedClockIn([], now)).toBe(false);
+    expect(blocksPlannedClockIn([entry(null)], now)).toBe(false);
+  });
+
+  it("come la RPC, un'entrata aperta da 24 ore o più non blocca più", () => {
+    expect(blocksPlannedClockIn([entry("2026-09-23T18:00:01Z")], now)).toBe(
+      true
+    );
+    expect(blocksPlannedClockIn([entry("2026-09-23T18:00:00Z")], now)).toBe(
+      false
+    );
   });
 });
