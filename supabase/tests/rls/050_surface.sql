@@ -89,6 +89,22 @@ begin
       where n.nspname in ('public', 'private') and p.prokind = 'f'
         and (p.proconfig is null or not exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'))),
     '', 'ogni funzione ha il search_path fissato');
+
+  -- 7. Le letture operative DEFINER aggirano la policy restrittiva di archivio:
+  --    il confine commerciale deve stare nel loro corpo. Elenco esplicito: quelle
+  --    di 20261005000500_commercial_archive_reads più le letture della timbratura
+  --    senza turno (una ridefinizione partita da una versione vecchia l'aveva perso).
+  perform tests.eq(
+    (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname = any (array[
+          'get_absence_availability', 'get_absence_hour_credits', 'get_absence_summary',
+          'get_chat_counterparts', 'get_chat_unread_count', 'get_hours_summary',
+          'get_member_performance', 'get_member_worked_shifts', 'get_staff_planning',
+          'get_workspace_absence_summary', 'get_workspace_contacts', 'get_workspace_hours_summary',
+          'get_open_unplanned_clocks', 'get_my_unplanned_clock'])
+        and p.prosrc not like '%commercial_readable_%'),
+    '', 'le letture operative DEFINER mantengono il confine commerciale');
 end $$;
 
 rollback;

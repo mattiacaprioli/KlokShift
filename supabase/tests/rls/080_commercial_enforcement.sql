@@ -13,7 +13,7 @@ do $$
 declare
   ws uuid := tests.id('W1'); v1 uuid := tests.id('V1'); v2 uuid := tests.id('V2');
   r jsonb; mid uuid; aid uuid; sid uuid; future_sid uuid; future_aid uuid;
-  pending uuid; pending_venue uuid; current_people integer; until_at timestamptz;
+  pending uuid; pending_venue uuid; current_people integer; until_at timestamptz; emp2_vm uuid; unplanned_id uuid;
   archive_at timestamptz; clock_sid uuid; clock_aid uuid; clock_id uuid; conversation uuid;
 begin
   perform tests.logout();
@@ -71,6 +71,13 @@ begin
     'end_time',(public.local_now()+interval '1 hour')::time))))[1];
   clock_aid := public.assign(clock_sid,mid);
   perform public.set_member_clock_method(mid,'app');
+  -- Timbratura senza turno: Emma abilitata e senza entrate, Enzo con un'entrata aperta in V2.
+  perform public.set_member_clock_unplanned(mid,true);
+  select id into emp2_vm from public.venue_members where member_id=tests.id('M_Emp2') and venue_id=v2;
+  perform public.set_member_clock_method(emp2_vm,'app');
+  perform public.set_member_clock_unplanned(emp2_vm,true);
+  perform tests.login('Emp2');
+  unplanned_id := (public.clock_punch_unplanned(emp2_vm,'in')).id;
   perform tests.logout();
   until_at := now()-interval '1 hour';
   -- Dati preesistenti alla fine operativa, preparati solo nella fixture.
@@ -78,6 +85,8 @@ begin
   update public.shift_assignments set created_at=until_at-interval '1 day' where id in (aid,future_aid,clock_aid);
   insert into public.shift_clock_records(assignment_id,shift_id,venue_id,venue_member_id,method,clock_in_at,created_at)
   values(clock_aid,clock_sid,v1,mid,'app',until_at-interval '10 minutes',until_at-interval '10 minutes') returning id into clock_id;
+  update public.shift_clock_records set clock_in_at=until_at-interval '10 minutes',created_at=until_at-interval '10 minutes'
+   where id=unplanned_id;
   delete from public.workspace_access_periods where workspace_id=ws;
   perform public.grant_workspace_access(ws,'complimentary_temporary','base',3,until_at-interval '30 days',until_at,'Fixture archivio');
   perform tests.login('Ow');
@@ -103,6 +112,14 @@ begin
   perform tests.login('Emp');
   perform tests.raises(format('select public.clock_punch(%L,''in'')',future_aid),'workspace_read_only','nessuna nuova entrata in archivio');
   perform public.clock_punch(clock_aid,'out');
+  -- L'archivio resta consultabile, ma non propone nuove entrate senza turno.
+  perform tests.ok(exists(select 1 from public.get_staff_planning(current_date+1,current_date+1)),
+    'in archivio il planning dei colleghi resta consultabile');
+  perform tests.eq((select count(*) from public.get_my_unplanned_clock()),0::bigint,
+    'in archivio niente «Timbra senza turno»');
+  perform tests.login('Emp2');
+  perform tests.eq((select open_record_id from public.get_my_unplanned_clock()),unplanned_id,
+    'l''entrata fuori turno aperta resta visibile in archivio');
   perform tests.login('Ow');
   perform public.approve_clock_record(clock_aid);
   perform tests.raises(format('select public.correct_clock_record(%L,now()+interval ''1 day'',null,''Dopo scadenza'')',clock_id),
@@ -130,6 +147,12 @@ begin
     'attendance_window_closed','dopo sette giorni nessuna rettifica');
   perform tests.ok(exists(select 1 from public.shifts where id=sid),'lettura continua dopo rettifiche');
   perform tests.logout();
+  -- Una sede ancora aperta a fine archivio (quelle sopra sono chiuse per l'export):
+  -- la riapre il titolare in una breve finestra operativa.
+  update public.workspace_access_periods set ends_at=now()+interval '1 day' where workspace_id=ws;
+  perform tests.login('Ow');
+  perform public.set_venue_closed(v1,false);
+  perform tests.logout();
   update public.workspace_access_periods set starts_at=now()-interval '15 months',ends_at=now()-interval '13 months' where workspace_id=ws;
   perform tests.login('Ow');
   perform tests.eq((select count(*) from public.shifts where id=sid),0::bigint,'lettura termina a fine archivio');
@@ -139,10 +162,16 @@ begin
     'workspace_read_only','nessun thread dopo fine archivio');
   perform tests.raises(format('insert into public.messages(conversation_id,sender_id,content) values(%L,%L,''Dopo archivio'')',
     conversation,auth.uid()),'row-level security','nessun testo dopo fine archivio');
+  perform tests.eq((select count(*) from public.get_open_unplanned_clocks(ws)),0::bigint,
+    'a fine archivio nessuna timbratura aperta leggibile');
   perform public.remove_member(tests.id('M_Emp2'));
   perform tests.login('Emp');
   perform tests.raises(format('select public.open_conversation(p_workspace=>%L)',ws),
     'workspace_read_only','anche ingresso chat per azienda termina');
+  perform tests.eq((select count(*) from public.get_staff_planning(current_date+1,current_date+1)),0::bigint,
+    'a fine archivio il planning dei colleghi non si legge più');
+  perform tests.eq((select count(*) from public.get_my_unplanned_clock()),0::bigint,
+    'né la timbratura senza turno');
   perform tests.eq(public.get_workspace_access(tests.id('W2'))->>'state','operational','altra azienda ancora operativa');
   -- Un'azienda in migration_pending continua senza prove/concessioni inventate.
   perform tests.login('Ow');
