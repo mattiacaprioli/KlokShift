@@ -1,14 +1,8 @@
 -- Chiamate reali come authenticated: capacità, archivio, eccezioni e isolamento.
 begin;
-
--- Mezzogiorno di oggi a Roma: il turno «Timbratura già aperta» non scavalca mai
--- la mezzanotte. Resta la data vera, perché le altre fixture usano current_date e
--- now(). Il rollback ripristina la funzione della baseline.
-create or replace function public.local_now()
-returns timestamp language sql stable set search_path = '' as $$
-  select date_trunc('day', now() at time zone 'Europe/Rome') + interval '12 hours';
-$$;
-
+-- ⚠️ Non fissare local_now() qui: il turno «Timbratura già aperta» deve iniziare
+-- prima di until_at, che dipende da now(). Con mezzogiorno fisso la suite falliva
+-- fra le 00:00 e le 11:00 (attendance_window_closed, C01 nel registro dell'audit).
 do $$
 declare
   ws uuid := tests.id('W1'); v1 uuid := tests.id('V1'); v2 uuid := tests.id('V2');
