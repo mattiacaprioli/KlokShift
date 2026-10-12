@@ -112,7 +112,8 @@ begin
   perform tests.eq(sh.title, 'Fuori turno', 'con il titolo che lo dice');
   perform tests.eq(sh.description, 'Inventario', 'e la nota del professionista');
   perform tests.eq(sh.venue_id, tests.id('V1'), 'nella sede della timbratura');
-  perform tests.ok(sh.end_time > sh.start_time, 'mai lungo zero');
+  perform tests.ok(public.shift_ends_at(sh.date, sh.start_time, sh.end_time) > sh.date + sh.start_time,
+    'mai lungo zero');
   perform tests.eq(asg.status::text, 'confirmed', 'chi ha lavorato non deve confermare');
   perform tests.eq(asg.hours_source, 'clock_expected', 'le ore vengono dalla timbratura');
   perform tests.ok(asg.worked_hours is null and asg.attendance_reviewed_at is null,
@@ -170,7 +171,9 @@ begin
     1::bigint, 'l''uscita è una correzione con motivo');
   perform tests.logout();
   select * into sh from public.shifts where id = rec.shift_id;
-  perform tests.eq(public.shift_duration_hours(sh.start_time, sh.end_time), 8::numeric,
+  perform tests.eq(public.shift_duration_hours(sh.start_time, sh.end_time),
+    (extract(epoch from (date_trunc('minute', (started + interval '8 hours') at time zone 'Europe/Rome')
+                        - date_trunc('minute', started at time zone 'Europe/Rome'))) / 3600)::numeric,
     'il turno nasce con gli orari corretti');
   perform tests.login('Co2');
 

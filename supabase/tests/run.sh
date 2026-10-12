@@ -81,19 +81,18 @@ case "${1:-}" in
     echo "ok: schema ricostruito"
     ;;
   test)
-    fail=0
+    fail=0; failed=()
     for f in "$HERE"/rls/*.sql; do
       [ -e "$f" ] || { echo "nessun test in $HERE/rls"; exit 0; }
       echo "== $(basename "$f")"
-      app < "$f" || fail=1
+      app < "$f" || { fail=1; failed+=("rls/$(basename "$f")"); }
     done
-    if [ "$fail" -eq 0 ]; then
-      for f in "$HERE"/concurrency/*.sql; do
-        [ -e "$f" ] || break
-        echo "== concurrency/$(basename "$f")"
-        admin < "$f" || fail=1
-      done
-    fi
+    for f in "$HERE"/concurrency/*.sql; do
+      [ -e "$f" ] || break
+      echo "== concurrency/$(basename "$f")"
+      admin < "$f" || { fail=1; failed+=("concurrency/$(basename "$f")"); }
+    done
+    [ "$fail" -eq 0 ] || echo "FALLITI: ${failed[*]}"
     exit $fail
     ;;
   sql)

@@ -20,7 +20,7 @@ begin
 
   perform tests.login('Ow');
   ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
-    'venue_id', tests.id('V1'), 'title', 'Timbratura', 'date', (current_date - 1)::text,
+    'venue_id', tests.id('V1'), 'title', 'Timbratura', 'date', (public.local_now()::date - 1)::text,
     'start_time', '00:01', 'end_time', '23:59',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm)))));
   sh := ids[1];
@@ -83,8 +83,8 @@ begin
   perform tests.login('Co2');
   corr := public.correct_clock_record(
     rec.id,
-    ((current_date - 1)::timestamp + time '08:00') at time zone 'Europe/Rome',
-    ((current_date - 1)::timestamp + time '12:10') at time zone 'Europe/Rome',
+    ((public.local_now()::date - 1)::timestamp + time '08:00') at time zone 'Europe/Rome',
+    ((public.local_now()::date - 1)::timestamp + time '12:10') at time zone 'Europe/Rome',
     'Orari confermati dal professionista'
   );
   perform tests.eq(corr.reason, 'Orari confermati dal professionista',
@@ -98,26 +98,26 @@ begin
 
   perform tests.eq((
     select sum(to_review_count) from public.get_workspace_hours_summary(
-      tests.id('W1'), current_date - 1, current_date
+      tests.id('W1'), public.local_now()::date - 1, public.local_now()::date
     )
   ), 1::bigint, 'il riepilogo separa la timbratura da verificare');
   perform tests.eq((
     select sum(approved_hours) from public.get_workspace_hours_summary(
-      tests.id('W1'), current_date - 1, current_date
+      tests.id('W1'), public.local_now()::date - 1, public.local_now()::date
     )
   ), 0::numeric, 'la proposta non entra nelle ore definitive');
 
   perform tests.login('Emp');
-  perform tests.eq((select hours_source from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+  perform tests.eq((select hours_source from public.get_my_work_history_range(public.local_now()::date - 1, public.local_now()::date - 1) where title = 'Timbratura'),
     'pending', 'nello storico la timbratura da approvare non è definitiva');
-  perform tests.eq((select clock_out_at from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
-    ((current_date - 1)::timestamp + time '12:10') at time zone 'Europe/Rome', 'e mostra gli orari corretti');
+  perform tests.eq((select clock_out_at from public.get_my_work_history_range(public.local_now()::date - 1, public.local_now()::date - 1) where title = 'Timbratura'),
+    ((public.local_now()::date - 1)::timestamp + time '12:10') at time zone 'Europe/Rome', 'e mostra gli orari corretti');
   perform tests.login('Co2');
   reviewed := public.approve_clock_record(a);
   perform tests.login('Emp');
-  perform tests.eq((select hours_source from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+  perform tests.eq((select hours_source from public.get_my_work_history_range(public.local_now()::date - 1, public.local_now()::date - 1) where title = 'Timbratura'),
     'approved', 'dopo l''approvazione le ore vengono dalla timbratura');
-  perform tests.eq((select worked_hours from public.get_my_work_history_range(current_date - 1, current_date - 1) where title = 'Timbratura'),
+  perform tests.eq((select worked_hours from public.get_my_work_history_range(public.local_now()::date - 1, public.local_now()::date - 1) where title = 'Timbratura'),
     4.25::numeric, 'con le ore approvate');
   perform tests.login('Co2');
   perform tests.eq(reviewed.worked_hours, 4.25::numeric,
@@ -126,7 +126,7 @@ begin
     'l''approvazione è marcata separatamente');
   perform tests.eq((
     select sum(approved_hours) from public.get_workspace_hours_summary(
-      tests.id('W1'), current_date - 1, current_date
+      tests.id('W1'), public.local_now()::date - 1, public.local_now()::date
     )
   ), 4.25::numeric, 'solo dopo l''approvazione le ore sono definitive');
 

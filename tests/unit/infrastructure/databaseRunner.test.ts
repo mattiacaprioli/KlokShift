@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -18,8 +18,9 @@ interface DockerScenario {
 }
 
 interface Call {
-  command: "docker" | "sleep";
+  command: "docker" | "sleep" | "psql";
   args: string[];
+  suite?: string;
 }
 
 // Si esegue il Bash effettivo, sostituendo solo gli strumenti esterni. Il
@@ -69,6 +70,12 @@ switch (args[0]) {
     finish(scenario.startFails ? 1 : 0, scenario.startFails ? "Could not start container" : "");
     break;
   case "exec":
+    // Le suite arrivano da stdin: la prima riga dice quale, il marcatore se fallisce.
+    if (args.includes("psql")) {
+      const sql = fs.readFileSync(0, "utf8");
+      fs.appendFileSync(process.env.KS_RUNNER_CALLS, JSON.stringify({ command: "psql", args, suite: sql.split("\\n")[0] }) + "\\n");
+      finish(sql.includes("-- fallisce") ? 3 : 0, sql.includes("-- fallisce") ? "ERROR: suite fallita" : "");
+    }
     if (!args.includes("pg_isready")) finish(98, "Unexpected docker exec command");
     state.readinessCalls += 1;
     finish(state.readinessCalls <= (scenario.readinessFailures || 0) ? 1 : 0);
@@ -114,6 +121,43 @@ function runRunner(scenario: DockerScenario = {}, command: "up" | "down" = "up")
     const lines = readFileSync(callsPath, "utf8").trim();
     const calls: Call[] = lines ? lines.split("\n").map((line) => JSON.parse(line) as Call) : [];
     return { status: result.status, stdout: result.stdout, stderr: result.stderr, calls };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// Il ramo `test` su suite finte: copia del runner accanto a rls/ e concurrency/.
+function runSuites(suites: Record<string, string>) {
+  const dir = mkdtempSync(join(tmpdir(), "klokshift-database-suites-"));
+  const statePath = join(dir, "state.json");
+  const callsPath = join(dir, "calls.jsonl");
+  try {
+    writeFileSync(join(dir, "scenario.json"), "{}");
+    writeFileSync(statePath, JSON.stringify({ cachedImages: [], pulls: {}, readinessCalls: 0, created: false }));
+    writeFileSync(callsPath, "");
+    writeFileSync(join(dir, "docker"), stub, { mode: 0o755 });
+    copyFileSync(runner, join(dir, "run.sh"));
+    mkdirSync(join(dir, "rls"));
+    mkdirSync(join(dir, "concurrency"));
+    for (const [path, body] of Object.entries(suites)) {
+      writeFileSync(join(dir, path), `-- ${path}\n${body}\n`);
+    }
+    const result = spawnSync("bash", [join(dir, "run.sh"), "test"], {
+      env: {
+        ...process.env,
+        PATH: `${dir}:${process.env.PATH ?? ""}`,
+        KS_RUNNER_SCENARIO: join(dir, "scenario.json"),
+        KS_RUNNER_STATE: statePath,
+        KS_RUNNER_CALLS: callsPath,
+      },
+      encoding: "utf8",
+      timeout: 15_000,
+    });
+    if (result.error) throw result.error;
+    const calls = readFileSync(callsPath, "utf8").trim().split("\n").map((line) => JSON.parse(line) as Call);
+    const suitesRun = calls.filter((call) => call.command === "psql")
+      .map((call) => ({ suite: call.suite?.replace(/^-- /, ""), user: call.args[call.args.indexOf("-U") + 1] }));
+    return { status: result.status, stdout: result.stdout, suitesRun };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -232,5 +276,53 @@ describe("banco Postgres locale: avvio", () => {
     expect(result.status).toBe(0);
     expect(dockerCalls(result, "rm")).toHaveLength(0);
     expect(pulledImages(result)).toEqual([]);
+  });
+});
+
+describe("banco Postgres locale: test", () => {
+  it("esegue le suite di concorrenza anche dopo un fallimento RLS e dice quali sono fallite", () => {
+    const result = runSuites({
+      "rls/010_ok.sql": "select 1;",
+      "rls/020_ko.sql": "-- fallisce",
+      "rls/030_ok.sql": "select 1;",
+      "concurrency/010_ok.sql": "select 1;",
+      "concurrency/020_ok.sql": "select 1;",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.suitesRun).toEqual([
+      { suite: "rls/010_ok.sql", user: "postgres" },
+      { suite: "rls/020_ko.sql", user: "postgres" },
+      { suite: "rls/030_ok.sql", user: "postgres" },
+      { suite: "concurrency/010_ok.sql", user: "supabase_admin" },
+      { suite: "concurrency/020_ok.sql", user: "supabase_admin" },
+    ]);
+    expect(result.stdout).toContain("== concurrency/020_ok.sql");
+    expect(result.stdout).toContain("FALLITI: rls/020_ko.sql");
+  });
+
+  it("elenca anche una suite di concorrenza fallita", () => {
+    const result = runSuites({
+      "rls/010_ko.sql": "-- fallisce",
+      "concurrency/010_ko.sql": "-- fallisce",
+      "concurrency/020_ok.sql": "select 1;",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.suitesRun.map((run) => run.suite)).toEqual([
+      "rls/010_ko.sql", "concurrency/010_ko.sql", "concurrency/020_ok.sql",
+    ]);
+    expect(result.stdout).toContain("FALLITI: rls/010_ko.sql concurrency/010_ko.sql");
+  });
+
+  it("tutto verde: exit 0 e nessun elenco di falliti", () => {
+    const result = runSuites({
+      "rls/010_ok.sql": "select 1;",
+      "concurrency/010_ok.sql": "select 1;",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.suitesRun).toHaveLength(2);
+    expect(result.stdout).not.toContain("FALLITI");
   });
 });
