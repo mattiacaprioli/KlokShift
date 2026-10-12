@@ -560,9 +560,11 @@ export default function ShiftDetailScreen() {
           </View>
         ) : null}
 
-        {/* Azioni turno */}
+        {/* Azioni turno. Il fuori turno descrive lavoro già svolto: non si
+            chiude, non si annulla e non si modifica (C06); se è sbagliato si
+            annulla la timbratura, dalle presenze qui sotto. */}
         <View className="mt-6 gap-2.5">
-          {shift.status === "open" ? (
+          {shift.unplanned ? null : shift.status === "open" ? (
             <View className="flex-row gap-2.5">
               <Pressable
                 disabled={busy}
@@ -607,7 +609,7 @@ export default function ShiftDetailScreen() {
             </Pressable>
           )}
 
-          {!isPast && shift.status !== "cancelled" ? (
+          {!isPast && !shift.unplanned && shift.status !== "cancelled" ? (
             <Pressable
               disabled={busy}
               onPress={() => router.push(`/(manager)/shift/edit/${id}`)}

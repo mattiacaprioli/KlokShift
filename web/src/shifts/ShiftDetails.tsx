@@ -72,8 +72,9 @@ export function ShiftDetails({
   const canManage = can(shift.venue_id, "can_manage_shifts");
   // Come nell'app: un turno finito si consuntiva (qui sotto), non si ripianifica
   // — e il form non accetta comunque una data passata. Uno annullato prima si
-  // ripristina.
-  const canEdit = canManage && !cancelled && !over;
+  // ripristina. Un fuori turno nasce già finito; lo si dice comunque, perché
+  // non si modifica né si annulla nemmeno se l'uscita cade nel minuto dopo (C06).
+  const canEdit = canManage && !cancelled && !over && !shift.unplanned;
   const showLiveClock =
     !cancelled &&
     now >= shiftStartsAt(shift.date, shift.start_time) &&

@@ -426,12 +426,13 @@ export function PlanningPage() {
       payload,
       toDate,
       // I turni di quel giorno in cui la persona può davvero entrare: fuori
-      // quelli annullati (`assign_one` li rifiuta), quelli dove è già assegnata
-      // (`unique (shift_id, venue_member_id)`) e quelli di una sede dove non
-      // lavora (`not_in_roster`). Offrirli sarebbe offrire un errore.
+      // quelli annullati e i fuori turno (`assign_one` li rifiuta), quelli dove
+      // è già assegnata (`unique (shift_id, venue_member_id)`) e quelli di una
+      // sede dove non lavora (`not_in_roster`). Offrirli sarebbe offrire un errore.
       candidates: (byDay.get(toDate) ?? []).filter(
         (s) =>
           s.status !== "cancelled" &&
+          !s.unplanned &&
           payload.personVenueIds.includes(s.venue_id) &&
           !s.shift_assignments.some(
             (a) => a.staff_member?.person_id === payload.personId,
@@ -999,6 +1000,8 @@ function MonthGrid({
                 {visible.map((shift) => {
                   const counts = shiftCounts(shift);
                   const cancelled = shift.status === "cancelled";
+                  // Il fuori turno descrive lavoro già svolto: non si sposta.
+                  const draggable = !cancelled && !shift.unplanned;
                   const tone = shiftTone(shift);
                   const clockKinds = clockKindsByShift.get(shift.id) ?? [];
                   return (
@@ -1008,7 +1011,7 @@ function MonthGrid({
                         if (dnd.swallowClick()) return;
                         onOpen(day, shift);
                       }}
-                      {...(cancelled
+                      {...(!draggable
                         ? {}
                         : dnd.dragProps(
                             {
@@ -1037,9 +1040,8 @@ function MonthGrid({
                       className={cn(
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
                         TONE_BORDER[tone],
-                        cancelled
-                          ? "opacity-50"
-                          : "cursor-grab active:cursor-grabbing",
+                        cancelled && "opacity-50",
+                        draggable && "cursor-grab active:cursor-grabbing",
                         dnd.isSource(shift.id) && "opacity-40",
                       )}
                     >
@@ -1129,6 +1131,8 @@ function ShiftCell({
 }) {
   const dnd = useShiftDrag();
   const cancelled = shift.status === "cancelled";
+  // Il fuori turno descrive lavoro già svolto: non si sposta (C06).
+  const draggable = !cancelled && !shift.unplanned;
   const tone = shiftTone(shift);
   const { filled, total, short } = shiftCounts(shift);
   const people = shift.shift_assignments.filter((a) =>
@@ -1154,7 +1158,7 @@ function ShiftCell({
       // Un turno annullato non si trascina: `notify_on_shift_change` salta i
       // turni cancellati, quindi spostarlo non avviserebbe nessuno — e chi lo
       // ha spostato non lo saprebbe.
-      {...(cancelled
+      {...(!draggable
         ? {}
         : dnd.dragProps(
             {
@@ -1178,7 +1182,8 @@ function ShiftCell({
         "focus-gold rounded-lg border border-l-[3px] p-2 text-left transition",
         cancelled
           ? "border-border bg-bg-1 opacity-50"
-          : "cursor-grab border-border-2 bg-bg-1 hover:bg-bg-2 active:cursor-grabbing",
+          : "border-border-2 bg-bg-1 hover:bg-bg-2",
+        draggable && "cursor-grab active:cursor-grabbing",
         // Dopo il colore di bordo generico, sennò `cn()` lo considera vinto.
         TONE_BORDER[tone],
         dnd.isSource(shift.id) && "opacity-40",

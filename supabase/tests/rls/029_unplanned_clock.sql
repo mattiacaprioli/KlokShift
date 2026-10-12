@@ -12,6 +12,10 @@ declare
   sh public.shifts;
   asg public.shift_assignments;
   started timestamptz;
+  ow_vm uuid;
+  other_ids uuid[];
+  other_aid uuid;
+  base jsonb;
 begin
   select x.id into vm
     from public.venue_members x
@@ -122,6 +126,53 @@ begin
   perform tests.eq((select count(*) from public.notifications
                      where type in ('shift_assigned', 'shift_unassigned') and related_id is not distinct from sh.id),
     0::bigint, 'nessuna notifica di turno assegnato');
+
+  -- Descrive lavoro già svolto: non si sposta, non si annulla, non riceve altre
+  -- persone. Il titolo e la descrizione invece si correggono. `update_shift`
+  -- vuole il turno intero: si parte da quello attuale e si cambia un campo.
+  select x.id into ow_vm from public.venue_members x
+   where x.member_id = tests.id('M_Ow') and x.venue_id = tests.id('V1');
+  base := jsonb_build_object('title', sh.title, 'description', sh.description,
+    'date', sh.date, 'start_time', sh.start_time, 'end_time', sh.end_time,
+    'require_confirmation', sh.require_confirmation);
+  perform tests.login('Co2');
+  perform tests.raises(format('select public.set_shift_status(%L, ''cancelled'')', sh.id),
+    'not_allowed', 'chi ha solo Ore non tocca il turno');
+  perform tests.login('Ow');
+  perform tests.raises(format('select public.update_shift(%L, %L::jsonb)', sh.id,
+      base || jsonb_build_object('date', sh.date + 1)),
+    'unplanned_shift_locked', 'non si sposta a un altro giorno');
+  perform tests.raises(format('select public.update_shift(%L, %L::jsonb)', sh.id,
+      base || jsonb_build_object('end_time', sh.end_time + interval '1 hour')),
+    'unplanned_shift_locked', 'né cambia orario');
+  perform tests.raises(format('select public.update_shift(%L, %L::jsonb)', sh.id,
+      base || jsonb_build_object('staff', jsonb_build_array(
+        jsonb_build_object('venue_member_id', vm), jsonb_build_object('venue_member_id', ow_vm)))),
+    'unplanned_shift_locked', 'il form non aggiunge persone');
+  perform tests.raises(format('select public.set_shift_status(%L, ''cancelled'')', sh.id),
+    'unplanned_shift_locked', 'non si annulla');
+  perform tests.raises(format('select public.set_shift_status(%L, ''closed'')', sh.id),
+    'unplanned_shift_locked', 'né si chiude');
+  perform tests.raises(format('select public.assign(%L, %L)', sh.id, ow_vm),
+    'unplanned_shift_locked', 'non riceve altre persone');
+  other_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Pranzo', 'date', (sh.date + 2)::text,
+    'start_time', '12:00', 'end_time', '15:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', ow_vm)))));
+  select a.id into other_aid from public.shift_assignments a where a.shift_id = other_ids[1];
+  perform tests.raises(format('select public.move_assignment(%L, %L)', other_aid, sh.id),
+    'unplanned_shift_locked', 'nemmeno spostandoci qualcuno');
+  -- Chi ha timbrato resta dov'è: lo blocca già la timbratura (trigger di delete).
+  perform tests.raises(format('select public.reassign(%L, %L)', asg.id, ow_vm),
+    'attendance_started', 'la persona non si cambia');
+  perform tests.raises(format('select public.move_assignment(%L, null, %L)', asg.id, sh.date + 1),
+    'attendance_started', 'né si sposta a un altro giorno');
+  perform public.update_shift(sh.id, base || jsonb_build_object('title', 'Inventario magazzino'));
+  perform tests.eq((select s.title from public.shifts s where s.id = sh.id), 'Inventario magazzino',
+    'il titolo si corregge');
+  perform tests.eq((select s.date from public.shifts s where s.id = sh.id), sh.date, 'senza spostarlo');
+  perform public.delete_shift(other_ids[1]);
+  perform tests.logout();
 
   perform tests.login('Co2');
   perform tests.eq((select sum(to_review_count) from public.get_workspace_hours_summary(

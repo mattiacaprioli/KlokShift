@@ -151,6 +151,12 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questo turno è già finito.",
   },
   {
+    // Il turno «Fuori turno» descrive lavoro già svolto (C06).
+    match: ["unplanned_shift_locked"],
+    message:
+      "Un turno nato da una timbratura non si sposta né si annulla. Se è sbagliato, annulla la timbratura.",
+  },
+  {
     match: ["attendance_started"],
     message:
       "Questa persona ha già timbrato: annulla prima la timbratura indicando il motivo.",
