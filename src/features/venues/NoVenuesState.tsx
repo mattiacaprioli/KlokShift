@@ -26,6 +26,9 @@ import { useOwnerVenues } from "./OwnerVenues";
  * stesso pulsante: `venue/new` apre azienda e sede in un colpo. Se qualcuno lo ha
  * già invitato in un'azienda, l'invito compare qui sopra — accettarlo è più
  * probabile che aprirne una nuova.
+ *
+ * Dentro un'azienda la sede la apre solo il titolare (come `SedeNuova.tsx` sul
+ * web e la RPC `create_venue`): a un collaboratore non si offre il pulsante.
  */
 export function NoVenuesState({
   subtitle = "Ti serve una sede prima di organizzare i turni.",
@@ -35,7 +38,8 @@ export function NoVenuesState({
   className?: string;
 }) {
   const router = useRouter();
-  const { workspaceId, pendingInvites } = useOwnerVenues();
+  const { workspaceId, isOwner, pendingInvites } = useOwnerVenues();
+  const canAdd = !workspaceId || isOwner;
   return (
     <View className={cn("mt-6 gap-4", className)}>
       {pendingInvites.map((invite) => (
@@ -45,16 +49,20 @@ export function NoVenuesState({
         <EmptyState
           title="Configura la tua sede"
           subtitle={
-            workspaceId
-              ? subtitle
-              : "Apri la tua azienda con la prima sede: ci vuole un minuto."
+            !workspaceId
+              ? "Apri la tua azienda con la prima sede: ci vuole un minuto."
+              : canAdd
+                ? subtitle
+                : "Solo il titolare può aggiungere una sede."
           }
         />
-        <GoldButton
-          className="mt-2"
-          label={workspaceId ? "Configura sede" : "Crea la prima sede"}
-          onPress={() => router.push("/(manager)/venue/new")}
-        />
+        {canAdd ? (
+          <GoldButton
+            className="mt-2"
+            label={workspaceId ? "Configura sede" : "Crea la prima sede"}
+            onPress={() => router.push("/(manager)/venue/new")}
+          />
+        ) : null}
       </View>
     </View>
   );

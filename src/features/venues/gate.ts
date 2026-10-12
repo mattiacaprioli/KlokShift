@@ -20,3 +20,28 @@ export function canCreateVenue(args: {
     ? { allowed: true }
     : { allowed: false, reason: `La capacità dell'azienda è di ${access.limits.venues} sedi aperte. Le sedi chiuse conservano lo storico.` };
 }
+
+/**
+ * Cosa mostra «Nuova sede». Il punto delicato è `first`: crea un'**azienda**
+ * nuova, quindi si decide solo con il contesto caricato senza errori. Un
+ * contesto in errore ha anche lui `workspaceId` assente, ma è un dato mancante
+ * e non sblocca niente: senza questa distinzione un errore di rete apriva una
+ * seconda azienda.
+ */
+export type VenueNewMode = "loading" | "error" | "first" | "add" | "denied";
+
+export function venueNewMode(args: {
+  isPending: boolean;
+  isError: boolean;
+  workspaceId?: string;
+  isOwner: boolean;
+  accessPending: boolean;
+}): VenueNewMode {
+  if (args.isPending) return "loading";
+  if (args.isError) return "error";
+  if (!args.workspaceId) return "first";
+  // Come `create_venue` e la dashboard: aprire una sede non si delega.
+  if (!args.isOwner) return "denied";
+  if (args.accessPending) return "loading";
+  return "add";
+}

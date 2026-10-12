@@ -28,6 +28,7 @@ import type { Venue } from "./api";
 export function VenueFormView({
   venue,
   workspaceId,
+  firstWorkspace = false,
   eyebrow = "Sede",
   title,
   intro,
@@ -36,11 +37,15 @@ export function VenueFormView({
 }: {
   /** `null` = creazione. */
   venue: Venue | null;
-  /**
-   * L'azienda a cui appartiene la sede. `undefined` = chi la crea non ha ancora
-   * un'azienda: la prima sede la apre insieme all'azienda (`useCreateFirstVenue`).
-   */
+  /** L'azienda a cui appartiene la sede. */
   workspaceId: string | undefined;
+  /**
+   * Chi la crea non ha ancora un'azienda: la prima sede la apre insieme
+   * all'azienda (`useCreateFirstVenue`). Va detto in modo esplicito
+   * (`venueNewMode`): `workspaceId` assente può anche voler dire «contesto non
+   * caricato», e lì creare un'azienda ne farebbe nascere una seconda.
+   */
+  firstWorkspace?: boolean;
   eyebrow?: string;
   title?: string;
   intro?: string;
@@ -90,8 +95,12 @@ export function VenueFormView({
     };
     try {
       let venueId: string;
-      if (!venue && !workspaceId) {
+      if (!venue && firstWorkspace) {
         venueId = (await createFirst.mutateAsync(input)).venueId;
+      } else if (!workspaceId) {
+        // Azienda non letta: nessuna chiamata, e mai un'azienda «di ripiego».
+        toast.show("Non riusciamo a leggere la tua azienda. Riprova.", "error");
+        return;
       } else {
         venueId = (await save.mutateAsync({ input, venueId: venue?.id })).id;
       }

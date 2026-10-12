@@ -4,7 +4,7 @@ import {
   workspaceAccessRefetchDelay,
   canUseWorkspaceOperations,
 } from "@/features/workspace/access";
-import { canCreateVenue } from "@/features/venues/gate";
+import { canCreateVenue, venueNewMode } from "@/features/venues/gate";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 
@@ -170,5 +170,39 @@ describe("accesso commerciale aziendale", () => {
     ["azienda senza identificativo", { ...trial(), workspace_id: "" }],
   ])("rifiuta %s senza concedere accesso per default", (_name, payload) => {
     expect(() => parseWorkspaceAccess(payload)).toThrow("workspace_access_invalid");
+  });
+});
+
+describe("nuova sede: quale schermata", () => {
+  const base = {
+    isPending: false,
+    isError: false,
+    workspaceId: "ws",
+    isOwner: true,
+    accessPending: false,
+  };
+
+  it("aspetta il contesto prima di decidere", () => {
+    expect(venueNewMode({ ...base, isPending: true, workspaceId: undefined })).toBe("loading");
+    expect(venueNewMode({ ...base, isPending: true })).toBe("loading");
+  });
+
+  it("con il contesto in errore non apre mai una prima azienda", () => {
+    expect(venueNewMode({ ...base, isError: true, workspaceId: undefined, isOwner: false })).toBe("error");
+    expect(venueNewMode({ ...base, isError: true })).toBe("error");
+  });
+
+  it("prima azienda solo con il contesto caricato e nessuna azienda da gestire", () => {
+    expect(venueNewMode({ ...base, workspaceId: undefined, isOwner: false })).toBe("first");
+  });
+
+  it("nell'azienda di un altro la sede la apre solo il titolare", () => {
+    expect(venueNewMode({ ...base, isOwner: false })).toBe("denied");
+    expect(venueNewMode({ ...base, isOwner: false, accessPending: true })).toBe("denied");
+  });
+
+  it("il titolare aspetta lo stato commerciale, poi decide canCreateVenue", () => {
+    expect(venueNewMode({ ...base, accessPending: true })).toBe("loading");
+    expect(venueNewMode(base)).toBe("add");
   });
 });
