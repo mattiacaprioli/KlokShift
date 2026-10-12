@@ -31,13 +31,15 @@ import { useCreateFirstVenue } from "./hooks";
  */
 export function OpenWorkspaceSection() {
   const toast = useToast();
-  const { canManage } = useOwnerVenues();
+  const { canManage, isPending, isError } = useOwnerVenues();
   const { setMode } = useViewMode();
   const create = useCreateFirstVenue();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
 
-  if (canManage) return null;
+  // Senza il contesto `canManage` è falso anche per chi un'azienda ce l'ha già:
+  // un dato mancante non deve offrire di aprirne una seconda (come il gate web).
+  if (canManage || isPending || isError) return null;
 
   function submit() {
     const trimmed = name.trim();

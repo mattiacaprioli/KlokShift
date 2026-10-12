@@ -13,6 +13,13 @@ import { queryClient } from "@/lib/queryClient";
 import { unregisterCurrentPushToken } from "@/features/push/api";
 import type { Tables } from "@/types/database";
 import { createAuthRequestGate, type AuthRequestTicket } from "@/lib/authRequestGate";
+import {
+  authErrorMessage,
+  runChangePassword,
+  type ChangePasswordResult,
+} from "@/features/auth/changePassword";
+
+export { authErrorMessage };
 
 type Profile = Tables<"profiles">;
 
@@ -97,7 +104,7 @@ type AuthState = {
   changePassword: (
     currentPassword: string,
     newPassword: string
-  ) => Promise<{ error: string | null }>;
+  ) => Promise<ChangePasswordResult>;
   signOut: () => Promise<void>;
   /** Re-fetch the profile row after an edit, without blanking the UI. */
   refreshProfile: () => Promise<void>;
@@ -431,41 +438,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: error ? authErrorMessage(error.message) : null };
   }
 
-  async function changePassword(currentPassword: string, newPassword: string) {
+  async function changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<ChangePasswordResult> {
     const email = sessionRef.current?.user.email;
     if (!email) return { error: "Sessione scaduta. Esci e accedi di nuovo." };
-
-    // La verifica è un accesso vero e proprio: GoTrue non ha un «controlla la
-    // password» a parte, e così vale anche il suo limite ai tentativi. Il
-    // SIGNED_IN che ne nasce è della stessa persona, quindi non svuota la
-    // cache e non fa ricaricare l'app (vedi `silent` nel listener).
-    const check = await supabase.auth.signInWithPassword({
-      email,
-      password: currentPassword,
-    });
-    if (check.error) {
-      const wrong = check.error.message
-        .toLowerCase()
-        .includes("invalid login credentials");
-      return {
-        error: wrong
-          ? "La password attuale non è corretta."
-          : authErrorMessage(check.error.message),
-      };
-    }
-
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) return { error: authErrorMessage(error.message) };
-
-    // Best-effort: la password è già cambiata, e un errore qui non deve far
-    // credere il contrario. `others` lascia intatta la sessione corrente.
-    try {
-      await supabase.auth.signOut({ scope: "others" });
-    } catch {
-      // ignora: le altre sessioni restano aperte, ma la vecchia password non
-      // basta più per aprirne di nuove.
-    }
-    return { error: null };
+    // La sequenza (verifica, cambio, chiusura delle altre sessioni) sta in un
+    // modulo puro, testato: vedi `features/auth/changePassword.ts`.
+    return runChangePassword(supabase.auth, email, currentPassword, newPassword);
   }
 
   async function signOut() {
@@ -549,40 +530,4 @@ export function AuthProvider({ children }: PropsWithChildren) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function authErrorMessage(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes("invalid login credentials")) {
-    return "Email o password non corretti.";
-  }
-  if (m.includes("user already registered")) {
-    return "Esiste già un account con questa email.";
-  }
-  if (m.includes("password should be at least")) {
-    return "La password deve avere almeno 6 caratteri.";
-  }
-  if (m.includes("unable to validate email") || m.includes("invalid email")) {
-    return "Inserisci un indirizzo email valido.";
-  }
-  if (m.includes("email not confirmed")) {
-    return "Conferma la tua email prima di accedere.";
-  }
-  if (m.includes("different from the old password")) {
-    return "La nuova password deve essere diversa dalla precedente.";
-  }
-  // ⚠️ Due limiti diversi, e l'attesa non è la stessa. Il servizio email
-  // integrato di Supabase manda **2 email all'ora per progetto**: chi ci
-  // sbatte non è «uno che insiste», è il secondo utente che si registra
-  // nella stessa ora. Dirgli «qualche minuto» lo fa solo riprovare a vuoto.
-  // Si toglie configurando un SMTP proprio in Authentication → Emails.
-  if (m.includes("email rate limit")) {
-    return "Abbiamo mandato troppe email nell'ultima ora. Riprova più tardi.";
-  }
-  // Questo invece è il freno per singolo indirizzo ("For security purposes,
-  // you can only request this after N seconds"): lì i minuti sono giusti.
-  if (m.includes("rate limit") || m.includes("you can only request this")) {
-    return "Troppi tentativi. Aspetta qualche minuto e riprova.";
-  }
-  return "Si è verificato un errore. Riprova.";
 }

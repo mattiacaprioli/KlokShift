@@ -335,6 +335,10 @@ function AccountSection() {
  *
  * ⚠️ Non è `NuovaPassword.tsx`: là la prova d'identità è il link ricevuto per
  * email, qui la sessione da sola non basta e si chiede la password attuale.
+ *
+ * Se la password cambia ma gli altri dispositivi non si disconnettono,
+ * `warning` resta scritto nella sezione (non come errore) finché non si riapre
+ * il modulo: un toast sparirebbe da solo.
  */
 function PasswordSection() {
   const { changePassword } = useAuth();
@@ -344,6 +348,7 @@ function PasswordSection() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function close() {
@@ -375,6 +380,7 @@ function PasswordSection() {
       return;
     }
     toast.show("Password aggiornata.");
+    setWarning(res.warning ?? null);
     close();
   }
 
@@ -385,11 +391,25 @@ function PasswordSection() {
       </h2>
       <Card>
         {!open ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-t2">
-              La stessa con cui accedi dall&apos;app.
-            </p>
-            <Button onClick={() => setOpen(true)}>Cambia password</Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-t2">
+                La stessa con cui accedi dall&apos;app.
+              </p>
+              <Button
+                onClick={() => {
+                  setWarning(null);
+                  setOpen(true);
+                }}
+              >
+                Cambia password
+              </Button>
+            </div>
+            {warning ? (
+              <p className="rounded-xl border border-border-2 px-3 py-2 text-xs leading-5 text-t2">
+                {warning}
+              </p>
+            ) : null}
           </div>
         ) : (
           <form onSubmit={onSubmit} className="flex max-w-sm flex-col gap-4">

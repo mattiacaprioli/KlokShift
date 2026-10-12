@@ -18,10 +18,15 @@ import { PasswordChecklist } from "./PasswordChecklist";
  * Il gemello web è `PasswordSection` in `web/src/pages/Impostazioni.tsx`; il
  * recupero da password dimenticata è un'altra strada e passa solo dalla
  * dashboard (`NuovaPassword.tsx`).
+ *
+ * Se la password cambia ma gli altri dispositivi non si disconnettono, il form
+ * resta aperto con un avviso (non un errore) finché non lo si chiude: chi cambia
+ * password per un sospetto deve saperlo, e un toast sparirebbe da solo.
  */
 export function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   const { changePassword } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit } = useForm<ChangePasswordValues>({
@@ -49,8 +54,24 @@ export function ChangePasswordForm({ onDone }: { onDone: () => void }) {
       setApiError(res.error);
       return;
     }
+    if (res.warning) {
+      setWarning(res.warning);
+      return;
+    }
     onDone();
   });
+
+  if (warning) {
+    return (
+      <View className="gap-4">
+        <Text className="font-sans-bold text-base text-t1">
+          Password aggiornata.
+        </Text>
+        <Text className="font-sans text-sm leading-5 text-t2">{warning}</Text>
+        <GoldButton className="mt-2" size="lg" label="Fatto" onPress={onDone} />
+      </View>
+    );
+  }
 
   return (
     <View className="gap-4">
