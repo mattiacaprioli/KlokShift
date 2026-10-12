@@ -5,7 +5,7 @@ begin;
 
 do $$
 declare
-  m_emp uuid; m_co uuid; r record; h text := 'hash-di-prova-1'; newuser uuid := gen_random_uuid();
+  m_emp uuid; m_co uuid; m_dora uuid; r record; h text := 'hash-di-prova-1'; newuser uuid := gen_random_uuid();
 begin
   -- Nessun utente le raggiunge da REST.
   perform tests.login('Ow');
@@ -57,6 +57,23 @@ begin
   perform set_config('role', 'authenticated', true);
   perform tests.eq((select count(*) from public.venues), 2::bigint, 'Carla vede le sedi di W1');
   perform tests.logout();
+
+  -- Il link vale solo per l'indirizzo a cui è partito: se la scheda cambia email,
+  -- chi ha il vecchio link non crea un account confermato per un indirizzo altrui.
+  perform tests.login('Ow');
+  m_dora := (public.add_member(tests.id('W1'), '{"full_name":"Dora","email":"dora@t.test"}'::jsonb, 'collaborator', '{"shifts":true}'::jsonb) ->> 'member_id')::uuid;
+  perform tests.logout();
+  perform public.claim_invite_send(m_dora, tests.id('Ow'), 'hash-di-prova-2', now() + interval '7 days');
+  perform tests.eq((select email from public.peek_invite('hash-di-prova-2')), 'dora@t.test', 'il link vale per l''indirizzo di spedizione');
+  perform tests.login('Ow');
+  perform public.update_member(m_dora, '{"email":"dora.nuova@t.test"}'::jsonb);
+  perform tests.logout();
+  perform tests.raises('select public.peek_invite(''hash-di-prova-2'')', 'invite_not_found', 'cambiata l''email il vecchio link non vale più');
+  perform tests.raises('select public.consume_invite(''hash-di-prova-2'', gen_random_uuid())', 'invite_not_found', 'e non si consuma');
+  -- Reinvio: il limite dei 15 minuti si aggira come sopra con expires_at.
+  update public.member_invites set last_sent_at = now() - interval '1 hour' where member_id = m_dora;
+  perform public.claim_invite_send(m_dora, tests.id('Ow'), 'hash-di-prova-3', now() + interval '7 days');
+  perform tests.eq((select email from public.peek_invite('hash-di-prova-3')), 'dora.nuova@t.test', 'il nuovo invio vale per il nuovo indirizzo');
 end $$;
 
 rollback;

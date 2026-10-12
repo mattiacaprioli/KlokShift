@@ -184,6 +184,7 @@ export type Database = {
           last_sent_at: string | null
           member_id: string
           sent_count: number
+          sent_to_email: string | null
           token_hash: string | null
         }
         Insert: {
@@ -197,6 +198,7 @@ export type Database = {
           last_sent_at?: string | null
           member_id: string
           sent_count?: number
+          sent_to_email?: string | null
           token_hash?: string | null
         }
         Update: {
@@ -210,6 +212,7 @@ export type Database = {
           last_sent_at?: string | null
           member_id?: string
           sent_count?: number
+          sent_to_email?: string | null
           token_hash?: string | null
         }
         Relationships: [
