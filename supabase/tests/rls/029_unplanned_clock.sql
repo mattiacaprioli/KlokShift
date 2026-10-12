@@ -201,5 +201,60 @@ begin
     'clock_unplanned_disabled', 'ma una nuova entrata no');
 end $$;
 
+-- Fuori turno iniziato prima della fine operativa e chiuso in archivio: si
+-- rettifica, si approva e si annulla come il turno pianificato equivalente.
+do $$
+declare
+  vm_a uuid;
+  vm_b uuid;
+  rec_a public.shift_clock_records;
+  rec_b public.shift_clock_records;
+  until_at timestamptz := now() - interval '1 hour';
+begin
+  perform tests.logout();
+  select x.id into vm_a from public.venue_members x
+   where x.member_id = tests.id('M_Emp') and x.venue_id = tests.id('V1');
+  select x.id into vm_b from public.venue_members x
+   where x.member_id = tests.id('M_Emp2') and x.venue_id = tests.id('V2');
+  perform tests.login('Ow');
+  perform public.set_venue_clock_method(tests.id('V2'), 'app');
+  perform public.set_member_clock_unplanned(vm_a, true);
+  perform public.set_member_clock_unplanned(vm_b, true);
+  perform tests.login('Emp');
+  rec_a := public.clock_punch_unplanned(vm_a, 'in');
+  perform tests.login('Emp2');
+  rec_b := public.clock_punch_unplanned(vm_b, 'in');
+  perform tests.logout();
+
+  -- Entrate un'ora prima della fine operativa; poi l'azienda passa in archivio,
+  -- dentro la finestra di rettifica.
+  update public.shift_clock_records
+     set clock_in_at = until_at - interval '1 hour', created_at = until_at - interval '1 hour'
+   where id in (rec_a.id, rec_b.id);
+  delete from public.workspace_access_periods where workspace_id = tests.id('W1');
+  perform public.grant_workspace_access(tests.id('W1'), 'complimentary_temporary', 'base', 3,
+    until_at - interval '30 days', until_at, 'Fixture archivio');
+  perform tests.login('Ow');
+  perform tests.eq(public.get_workspace_access(tests.id('W1'))->>'state', 'archive', 'l''azienda è in archivio');
+
+  perform tests.login('Emp');
+  rec_a := public.clock_punch_unplanned(vm_a, 'out');
+  perform tests.login('Emp2');
+  rec_b := public.clock_punch_unplanned(vm_b, 'out');
+  perform tests.ok(rec_a.assignment_id is not null and rec_b.assignment_id is not null,
+    'in archivio l''uscita fa nascere il fuori turno');
+
+  perform tests.login('Co2');
+  perform public.correct_clock_record(rec_a.id, null, until_at - interval '30 minutes', 'Uscita registrata in ritardo');
+  perform public.approve_clock_record(rec_a.assignment_id);
+  rec_b := public.void_clock_record(rec_b.assignment_id, 'Entrata registrata per errore');
+  perform tests.logout();
+  -- Letto da postgres: «Ore» senza «Turni» non legge le assegnazioni da REST.
+  perform tests.ok((select a.attendance_reviewed_at is not null and a.worked_hours is not null
+                      from public.shift_assignments a where a.id = rec_a.assignment_id),
+    'il fuori turno chiuso in archivio si rettifica e si approva');
+  perform tests.ok(rec_b.voided_at is not null, 'e si annulla');
+end $$;
+
 rollback;
 select 'unplanned clock: ok' as result;
