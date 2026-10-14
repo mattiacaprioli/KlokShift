@@ -18,8 +18,11 @@ import {
 
 // Planning e storico incorporano lo stato minimo delle timbrature per segnalare
 // le anomalie: un'uscita/correzione/approvazione deve spegnere subito il badge.
-function invalidateClockViews(qc: ReturnType<typeof useQueryClient>) {
-  invalidateWorkViews(qc);
+function invalidateClockViews(
+  qc: ReturnType<typeof useQueryClient>,
+  shiftId?: string
+) {
+  invalidateWorkViews(qc, shiftId);
 }
 
 export function usePunchClock() {
@@ -67,7 +70,9 @@ export function useVoidClockRecord() {
   return useMutation({
     mutationFn: (vars: { assignmentId: string; reason: string }) =>
       voidClockRecord(vars.assignmentId, vars.reason),
-    onSuccess: () => invalidateClockViews(qc),
+    // Anche il dettaglio del turno: per un fuori turno l'annullamento lo
+    // elimina, e la schermata non deve restare sul turno in cache.
+    onSuccess: (record) => invalidateClockViews(qc, record.shift_id ?? undefined),
   });
 }
 

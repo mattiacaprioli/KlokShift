@@ -1284,13 +1284,16 @@ function WorkplaceCard({
             </Field>
           ) : null}
 
-          {canEditClock && chosenMethod === "app" ? (
+          {/* Con un metodo diverso dall'app la scelta non vale ma resta
+              salvata: se è accesa si vede, ferma, perché tornando all'app si
+              riattiva da sola. */}
+          {canEditClock && (chosenMethod === "app" || unplanned) ? (
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-bg-1 px-3 py-2.5 has-disabled:cursor-not-allowed">
               <input
                 type="checkbox"
                 className="mt-0.5 accent-gold"
                 checked={unplanned}
-                disabled={busy}
+                disabled={busy || chosenMethod !== "app"}
                 onChange={(e) => setUnplannedChoice(e.target.checked)}
               />
               <span className="min-w-0 flex-1">
@@ -1298,7 +1301,9 @@ function WorkplaceCard({
                   {CLOCK_UNPLANNED_LABEL}
                 </span>
                 <span className="mt-0.5 block text-xs leading-5 text-t3">
-                  {CLOCK_UNPLANNED_DESCRIPTION}
+                  {chosenMethod === "app"
+                    ? CLOCK_UNPLANNED_DESCRIPTION
+                    : "Resta salvata: torna attiva con la timbratura dall’app."}
                 </span>
               </span>
             </label>

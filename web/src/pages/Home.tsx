@@ -263,6 +263,23 @@ export function HomePage() {
               </span>
             ) : null}
           </h2>
+          {/* Senza questa lettura chi timbra fuori turno sparirebbe in
+              silenzio, e con lui l'unica riga che chi ha «Ore» può dover
+              chiudere: un avviso piccolo, il resto della lista resta. */}
+          {unplannedQuery.isError ? (
+            <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2">
+              <p className="text-xs text-warning">
+                Timbrature fuori turno non disponibili
+              </p>
+              <Button
+                className="px-3 py-1 text-xs"
+                disabled={unplannedQuery.isFetching}
+                onClick={() => void unplannedQuery.refetch()}
+              >
+                Riprova
+              </Button>
+            </div>
+          ) : null}
           {todayQuery.isPending ? (
             <ListSkeleton avatar label="Caricamento di chi lavora oggi…" />
           ) : todayQuery.isError ? (

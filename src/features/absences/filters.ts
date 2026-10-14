@@ -40,8 +40,9 @@ export function toggleAbsenceKind(
 
 /**
  * `venueMemberIds`: le persone della sede scelta, ricavate dall'organico. Se la
- * sede è scelta ma l'organico non è ancora arrivato, meglio una lista vuota per
- * un istante che una lista non filtrata spacciata per filtrata.
+ * sede è scelta ma l'organico non è ancora arrivato, meglio una lista vuota
+ * che una lista non filtrata spacciata per filtrata. Attesa ed errore
+ * dell'organico li deve dire la pagina: qui sono solo «vuota».
  */
 export function filterCompanyAbsences<
   T extends Pick<AbsenceWithPerson, "member_id" | "kind">,

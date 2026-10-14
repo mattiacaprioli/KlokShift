@@ -50,7 +50,8 @@ export default function ManagerAbsencesScreen() {
   const [filters, setFilters] = useState<CompanyAbsenceFilters>(NO_ABSENCE_FILTERS);
   const [panelOpen, setPanelOpen] = useState(false);
   // L'organico serve solo per il filtro per sede.
-  const people = useOwnerPeople(isMultiVenue && canStaff ? ownerId : undefined).data;
+  const peopleQuery = useOwnerPeople(isMultiVenue && canStaff ? ownerId : undefined);
+  const people = peopleQuery.data;
 
   const rows = query.data;
   const personOptions = useMemo(() => absencePeopleOf(rows ?? []), [rows]);
@@ -215,7 +216,18 @@ export default function ManagerAbsencesScreen() {
               ) : null}
             </View>
 
-            {visible.length === 0 ? (
+            {/* Il filtro per sede passa dall'organico: finché non c'è, la
+                lista filtrata sarebbe vuota, e un errore la lascerebbe vuota
+                per sempre spacciandola per «nessuna assenza». */}
+            {filters.venueId && peopleQuery.isError ? (
+              <QueryError
+                title="Filtro per sede non disponibile"
+                subtitle="Non siamo riusciti a caricare l'organico. Riprova, oppure togli il filtro per sede."
+                onRetry={() => peopleQuery.refetch()}
+              />
+            ) : filters.venueId && peopleQuery.isPending ? (
+              <ListSkeleton variant="person" label="Caricamento organico…" />
+            ) : visible.length === 0 ? (
               <EmptyState
                 title="Nessuna assenza con questi filtri"
                 subtitle="Prova ad azzerarli. Lo storico completo di una persona è nella sua scheda, in Staff."

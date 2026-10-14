@@ -22,7 +22,7 @@ import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { HomeClockCard } from "@/features/clock/HomeClockCard";
 import {
   blocksPlannedClockIn,
-  blocksUnplannedClock,
+  canStartUnplannedClock,
   homeClockState,
 } from "@/features/clock/availability";
 import { useMyUnplannedClock } from "@/features/clock/hooks";
@@ -61,14 +61,13 @@ export default function WaiterHomeScreen() {
   );
   const clockItems = items.filter((item) => homeClockState(item) != null);
   // Con un turno pianificato in corso o in arrivo non si propone il fuori
-  // turno in quella sede: si timbra quello (la stessa regola della RPC).
+  // turno in quella sede: si timbra quello (la stessa regola della RPC). E
+  // finché i turni assegnati non sono arrivati non lo si propone affatto.
   // Un'entrata fuori turno già aperta resta sempre, per l'uscita.
   const unplanned = unplannedQuery.data ?? [];
+  const assignedReady = assignedQuery.isSuccess ? items : undefined;
   const canStartUnplanned = (venueMemberId: string) =>
-    !items.some(
-      (item) =>
-        item.venue_member_id === venueMemberId && blocksUnplannedClock(item)
-    );
+    canStartUnplannedClock(assignedReady, venueMemberId);
   const showUnplanned = unplanned.some(
     (entry) => entry.open != null || canStartUnplanned(entry.venueMemberId)
   );
@@ -176,7 +175,7 @@ export default function WaiterHomeScreen() {
           />
         ) : null}
 
-        {clockItems.length > 0 || showUnplanned ? (
+        {clockItems.length > 0 || showUnplanned || unplannedQuery.isError ? (
           <View>
             <SectionHeader title="Timbratura" />
             <View className="gap-3">
@@ -194,6 +193,15 @@ export default function WaiterHomeScreen() {
                   canStart={canStartUnplanned(entry.venueMemberId)}
                 />
               ))}
+              {/* Senza questa lettura non si sa se c'è un'entrata aperta da
+                  chiudere: meglio dirlo che non mostrare niente. */}
+              {unplannedQuery.isError ? (
+                <QueryError
+                  title="Timbratura senza turno non disponibile"
+                  subtitle="Non sappiamo se hai un'entrata aperta. Controlla la connessione e riprova."
+                  onRetry={() => unplannedQuery.refetch()}
+                />
+              ) : null}
             </View>
           </View>
         ) : null}

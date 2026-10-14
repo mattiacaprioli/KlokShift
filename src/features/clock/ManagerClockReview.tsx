@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
@@ -54,6 +55,7 @@ export function ManagerClockReview({
   unplanned?: boolean;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const approve = useApproveClockRecord();
   const correct = useCorrectClockRecord();
   const voidClock = useVoidClockRecord();
@@ -154,6 +156,10 @@ export function ManagerClockReview({
           setMode(null);
           setReason("");
           toast.show("Timbratura annullata");
+          // Il turno «Fuori turno» non esiste più: si torna da dove si veniva.
+          // Senza storia (link da notifica) resta il «Turno non trovato» del
+          // dettaglio, che si rilegge da sé.
+          if (unplanned && router.canGoBack()) router.back();
         },
         onError: (error) =>
           toast.show(

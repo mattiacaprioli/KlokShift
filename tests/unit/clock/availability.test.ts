@@ -3,6 +3,7 @@ import type { AgendaItem } from "../../../src/features/assignments/agenda";
 import {
   blocksPlannedClockIn,
   blocksUnplannedClock,
+  canStartUnplannedClock,
   homeClockState,
   isClockWindowOpen,
 } from "../../../src/features/clock/availability";
@@ -177,5 +178,24 @@ describe("blocksPlannedClockIn", () => {
     expect(blocksPlannedClockIn([entry("2026-09-23T18:00:00Z")], now)).toBe(
       false
     );
+  });
+});
+
+describe("canStartUnplannedClock (C14)", () => {
+  const at = new Date("2026-09-24T19:00:00");
+  const onCard = (venueMemberId: string) =>
+    ({ ...item(), venue_member_id: venueMemberId }) as AgendaItem;
+
+  it("non propone l'entrata finché i turni assegnati non sono arrivati", () => {
+    expect(canStartUnplannedClock(undefined, "vm", at)).toBe(false);
+  });
+
+  it("la propone senza turni da timbrare, anche se un'altra scheda ne ha uno", () => {
+    expect(canStartUnplannedClock([], "vm", at)).toBe(true);
+    expect(canStartUnplannedClock([onCard("other")], "vm", at)).toBe(true);
+  });
+
+  it("non la propone con un turno pianificato in corso sulla stessa scheda", () => {
+    expect(canStartUnplannedClock([onCard("vm")], "vm", at)).toBe(false);
   });
 });

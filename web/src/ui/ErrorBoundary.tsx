@@ -4,10 +4,14 @@ import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { reportError } from "../lib/reportError";
 import { Button } from "./primitives";
 
-/** Fallback della dashboard: la stessa promessa di ErrorFallback sull'app. */
-function DashboardErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+/**
+ * Fallback della dashboard: la stessa promessa di ErrorFallback sull'app.
+ *
+ * Il messaggio dell'errore non si mostra: è inglese, tecnico e a volte parla
+ * di com'è fatto il database. Il dettaglio va a `reportError` (onError qui sotto).
+ */
+function DashboardErrorFallback({ resetErrorBoundary }: FallbackProps) {
   const navigate = useNavigate();
-  const message = error instanceof Error ? error.message : "Errore imprevisto.";
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
@@ -18,9 +22,6 @@ function DashboardErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
         </h1>
         <p className="mt-2 text-sm leading-6 text-t3">
           La pagina si è interrotta. I dati sul server non sono stati toccati.
-        </p>
-        <p className="mt-4 rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-left font-mono text-xs break-words text-t4">
-          {message}
         </p>
         <div className="mt-5 flex justify-center gap-2">
           <Button variant="gold" onClick={resetErrorBoundary}>

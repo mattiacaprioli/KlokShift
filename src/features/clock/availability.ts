@@ -94,6 +94,24 @@ export function blocksUnplannedClock(
   return now.getTime() >= from && now.getTime() < to;
 }
 
+/**
+ * Si può proporre adesso l'entrata senza turno su questa scheda? `items`
+ * `undefined` = i turni assegnati non sono ancora arrivati (caricamento o
+ * errore): una lista che manca non vuol dire «nessun turno da timbrare», e il
+ * dato mancante non sblocca.
+ */
+export function canStartUnplannedClock(
+  items: readonly AgendaItem[] | undefined,
+  venueMemberId: string,
+  now: Date = new Date()
+): boolean {
+  if (!items) return false;
+  return !items.some(
+    (item) =>
+      item.venue_member_id === venueMemberId && blocksUnplannedClock(item, now)
+  );
+}
+
 /** Per quanto un'entrata senza turno aperta blocca ancora l'entrata di un turno. */
 export const UNPLANNED_OPEN_BLOCK_HOURS = 24;
 

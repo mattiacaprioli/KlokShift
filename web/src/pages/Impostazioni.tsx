@@ -87,7 +87,10 @@ export function ImpostazioniPage() {
  */
 function StaffChatSection({ workspaceId }: { workspaceId: string }) {
   const toast = useToast();
-  const { data: enabled, isPending } = useStaffCanChat(workspaceId);
+  // Lo stato vero o niente: un interruttore «acceso» per difetto, con la
+  // lettura fallita, direbbe una cosa non verificata e al primo clic la
+  // scriverebbe al contrario.
+  const { data: enabled, isError } = useStaffCanChat(workspaceId);
   const save = useSetStaffCanChat();
 
   return (
@@ -105,12 +108,17 @@ function StaffChatSection({ workspaceId }: { workspaceId: string }) {
               Chi è in organico può scriversi. A te e ai collaboratori si scrive
               comunque.
             </span>
+            {isError ? (
+              <span className="mt-1 block text-xs text-warning">
+                Stato non disponibile: ricarica la pagina per modificarlo.
+              </span>
+            ) : null}
           </span>
           <input
             type="checkbox"
             className="peer sr-only"
-            checked={enabled ?? true}
-            disabled={isPending || save.isPending}
+            checked={enabled === true}
+            disabled={enabled === undefined || save.isPending}
             onChange={(e) =>
               save.mutate(
                 { workspaceId, enabled: e.target.checked },
