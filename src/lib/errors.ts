@@ -190,6 +190,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Hai già un’entrata aperta: registra prima l’uscita.",
   },
   {
+    // Chiusa da un altro nel frattempo: il gestore o il professionista (C13).
+    match: ["clock_already_closed"],
+    message: "L'uscita è già stata registrata. Aggiorna la pagina.",
+  },
+  {
     match: ["clock_open_too_long"],
     message:
       "L’entrata è aperta da troppe ore: l’uscita la registra chi gestisce.",
@@ -207,8 +212,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Indica il motivo della modifica.",
   },
   {
+    // Lo usano close_unplanned_clock (tutte e tre le regole) e
+    // correct_clock_record (solo «dopo l'entrata»).
     match: ["invalid_clock_interval"],
-    message: "L’uscita deve essere successiva all’entrata.",
+    message:
+      "Orario d'uscita non valido: deve essere dopo l'entrata, non nel futuro e al massimo 24 ore dopo.",
   },
   {
     match: ["clock_status_not_allowed"],

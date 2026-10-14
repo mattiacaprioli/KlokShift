@@ -292,6 +292,112 @@ begin
   perform tests.logout();
 end $$;
 
+-- Entrate orfane e casi concorrenti (C13). Chi viene tolto dalla sede con un
+-- fuori turno aperto non lo vede più e non lo chiude: non deve bloccarlo altrove.
+-- E chi arriva secondo su un'entrata già chiusa deve sentirselo dire.
+do $$
+declare
+  vm uuid;
+  vm3 uuid;
+  emp_type public.employment_type;
+  ids uuid[];
+  asg uuid;
+  rec public.shift_clock_records;
+  rec2 public.shift_clock_records;
+begin
+  perform tests.logout();
+  select x.id, x.employment_type into vm, emp_type from public.venue_members x
+   where x.member_id = tests.id('M_Emp') and x.venue_id = tests.id('V1');
+  select x.id into vm3 from public.venue_members x where x.member_id = tests.id('M_Emp_W2');
+  -- Chi ha timbrato un turno non ancora finito non si toglie dalla sede
+  -- (attendance_started). Qui lo sono la «Cena» del blocco precedente e i fuori
+  -- turno nati poco fa (in transazione now() è fermo): si portano a ieri, con
+  -- le timbrature. Un'uscita propria degli ultimi 5 minuti passerebbe per il
+  -- retry di un'uscita riuscita, e qui i casi sono quelli di ore dopo.
+  update public.shifts s set date = s.date - 1
+   where public.shift_ends_at(s.date, s.start_time, s.end_time) > public.local_now()
+     and exists (select 1 from public.shift_assignments a
+                   join public.shift_clock_records r on r.assignment_id = a.id and r.voided_at is null
+                  where a.shift_id = s.id and a.venue_member_id = vm);
+  update public.shift_clock_records
+     set clock_in_at = clock_in_at - interval '1 day', clock_out_at = clock_out_at - interval '1 day'
+   where venue_member_id = vm;
+  perform tests.login('Ow');
+  perform public.set_member_clock_unplanned(vm, true);
+  perform tests.login('Emp');
+  rec := public.clock_punch_unplanned(vm, 'in');
+  perform tests.login('Ow');
+  perform public.remove_member(tests.id('M_Emp'), tests.id('V1'));
+
+  perform tests.login('Emp');
+  rec2 := public.clock_punch_unplanned(vm3, 'in');
+  perform tests.ok(rec2.id <> rec.id, 'l''entrata orfana non blocca un''altra azienda');
+  perform public.clock_punch_unplanned(vm3, 'out');
+  -- Nemmeno l'entrata di un turno pianificato (stesso controllo, C05).
+  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V3'), 'title', 'Pranzo',
+    'date', (public.local_now() - interval '10 minutes')::date::text,
+    'start_time', to_char(public.local_now() - interval '10 minutes', 'HH24:MI'),
+    'end_time', to_char(public.local_now() + interval '50 minutes', 'HH24:MI'),
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm3)))));
+  select a.id into asg from public.shift_assignments a where a.shift_id = ids[1];
+  rec2 := public.clock_punch(asg, 'in');
+  perform tests.ok(rec2.clock_in_at is not null, 'né il turno pianificato');
+  perform public.clock_punch(asg, 'out');
+
+  -- Rimessa in sede, la scheda è la stessa: l'entrata torna sua, e nella sede
+  -- resta una sola entrata aperta.
+  perform tests.login('Ow');
+  perform tests.eq(public.set_member_venue(tests.id('M_Emp'), tests.id('V1'), emp_type), vm,
+    'rimessa in sede, la scheda è la stessa');
+  perform tests.login('Emp');
+  rec2 := public.clock_punch_unplanned(vm, 'in');
+  perform tests.eq(rec2.id, rec.id, 'nella stessa sede resta una sola entrata aperta');
+  perform tests.raises(format('select public.clock_punch_unplanned(%L, ''in'')', vm3),
+    'clock_already_open', 'e torna a bloccare le altre');
+
+  -- Il gestore chiude, poi il professionista esce. (Senza una sua uscita negli
+  -- ultimi 5 minuti, che passerebbe per il retry di un'uscita riuscita.)
+  perform tests.login('Co2');
+  perform public.close_unplanned_clock(rec.id, clock_timestamp(), 'Uscita confermata a voce');
+  perform tests.login('Emp');
+  perform tests.raises(format('select public.clock_punch_unplanned(%L, ''out'')', vm),
+    'clock_already_closed', 'l''uscita già registrata dal gestore si dice');
+
+  -- Il gestore annulla, poi il professionista esce.
+  rec := public.clock_punch_unplanned(vm, 'in');
+  perform tests.login('Co2');
+  perform public.void_unplanned_clock(rec.id, 'Timbrata per errore');
+  perform tests.login('Emp');
+  perform tests.raises(format('select public.clock_punch_unplanned(%L, ''out'')', vm),
+    'clock_already_closed', 'anche se l''ha annullata');
+
+  -- Il professionista esce, poi il gestore chiude.
+  rec := public.clock_punch_unplanned(vm, 'in');
+  perform public.clock_punch_unplanned(vm, 'out');
+  perform tests.login('Emp2');
+  perform tests.raises(format('select public.close_unplanned_clock(%L, %L, ''x'')', rec.id, clock_timestamp()),
+    'not_allowed', 'a chi non ha Ore non si dice nulla');
+  perform tests.login('Co2');
+  perform tests.raises(format('select public.close_unplanned_clock(%L, %L, ''x'')', rec.id, clock_timestamp()),
+    'clock_already_closed', 'a chi gestisce le ore sì');
+
+  -- Lo stesso per un'entrata rimasta aperta in una sede chiusa.
+  perform tests.login('Emp');
+  rec := public.clock_punch_unplanned(vm, 'in');
+  perform tests.login('Ow');
+  perform public.set_venue_closed(tests.id('V1'), true);
+  perform tests.login('Emp');
+  rec2 := public.clock_punch_unplanned(vm3, 'in');
+  perform tests.ok(rec2.id <> rec.id, 'l''entrata di una sede chiusa non blocca le altre');
+  perform public.clock_punch_unplanned(vm3, 'out');
+  perform tests.login('Ow');
+  perform public.set_venue_closed(tests.id('V1'), false);
+  perform tests.login('Emp');
+  perform public.clock_punch_unplanned(vm, 'out');
+  perform tests.logout();
+end $$;
+
 -- Fuori turno iniziato prima della fine operativa e chiuso in archivio: si
 -- rettifica, si approva e si annulla come il turno pianificato equivalente.
 do $$

@@ -7,4 +7,17 @@ describe("userErrorMessage", () => {
     expect(message).not.toBe(GENERIC_ERROR);
     expect(message).toMatch(/annulla la timbratura/);
   });
+
+  it("dice tutte le regole dell'uscita, non solo la prima (C12)", () => {
+    const message = userErrorMessage(new Error("invalid_clock_interval"));
+    expect(message).toMatch(/dopo l'entrata/);
+    expect(message).toMatch(/non nel futuro/);
+    expect(message).toMatch(/24 ore/);
+  });
+
+  it("dice che l'uscita c'è già, nei casi concorrenti (C13)", () => {
+    const message = userErrorMessage(new Error("clock_already_closed"));
+    expect(message).not.toBe(GENERIC_ERROR);
+    expect(message).toMatch(/già stata registrata/);
+  });
 });

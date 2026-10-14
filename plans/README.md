@@ -28,7 +28,16 @@ con la fondazione additiva M03a, verificata nel banco locale; limiti operativi,
 interfacce, checkout e rollout richiedono i blocchi successivi. Lo stato nel
 piano distingue decisioni, codice implementato e verifiche completate.
 
-## Audit 2026-10-04 — riferimento corrente
+## Audit 2026-10-12 — riferimento corrente
+
+[AUDIT-2026-10-12.md](AUDIT-2026-10-12.md) è l'audit al commit `491bcda`,
+successivo a monetizzazione M03–M06a, area fondatore e timbratura senza turno.
+Contiene 25 interventi C01–C25 con evidenze, gate, passi, condizioni di arresto,
+sei decisioni del titolare (D1–D6), le verifiche ancora aperte e il prompt per il
+modello esecutore. Partire da C01, poi seguire l'«Ordine pratico» del documento.
+Leggere l'avviso in testa al file prima di committarlo.
+
+## Audit 2026-10-04
 
 [AUDIT-2026-10-04.md](AUDIT-2026-10-04.md) contiene l'audit aggiornato al commit
 `d4ed077`, inclusa la rimozione intenzionale delle recensioni. Riporta 14

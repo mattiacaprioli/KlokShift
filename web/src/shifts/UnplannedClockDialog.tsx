@@ -6,6 +6,11 @@ import {
 } from "@/features/clock/hooks";
 import { formatClockTime } from "@/features/clock/hours";
 import { romeDateTimeLocal, romeFieldToIso } from "@/features/clock/timezone";
+import {
+  defaultUnplannedOut,
+  formatUnplannedDuration,
+  validateUnplannedOut,
+} from "@/features/clock/unplanned";
 import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -32,8 +37,10 @@ export function UnplannedClockDialog({
   const close = useCloseUnplannedClock();
   const voidClock = useVoidUnplannedClock();
   const [mode, setMode] = useState<"close" | "void">("close");
+  // Adesso, ma mai oltre le 24 ore che il server accetta: per un'entrata
+  // dimenticata da più di un giorno «adesso» era un orario sempre rifiutato.
   const [outAt, setOutAt] = useState(() =>
-    romeDateTimeLocal(new Date().toISOString())
+    romeDateTimeLocal(defaultUnplannedOut(clock.clockInAt, Date.now()))
   );
   const [outChoice, setOutChoice] = useState<0 | 1 | undefined>();
   const [reason, setReason] = useState("");
@@ -49,13 +56,9 @@ export function UnplannedClockDialog({
   }, [pending, onClose]);
 
   const outResult = romeFieldToIso(outAt, { ambiguousChoice: outChoice });
-  const outError = !outResult.ok
-    ? null
-    : Date.parse(outResult.iso) <= Date.parse(clock.clockInAt)
-      ? "L’uscita deve essere successiva all’entrata."
-      : Date.parse(outResult.iso) > now.getTime()
-        ? "L’uscita non può essere nel futuro."
-        : null;
+  const outError = outResult.ok
+    ? validateUnplannedOut(clock.clockInAt, outResult.iso, now.getTime())
+    : null;
   const canSave =
     reason.trim().length > 0 &&
     !pending &&
@@ -153,6 +156,11 @@ export function UnplannedClockDialog({
               {outError ??
                 "All’uscita nasce il turno «Fuori turno» con questi orari, da approvare."}
             </p>
+            {outResult.ok && !outError ? (
+              <p className="mt-1 text-xs leading-5 text-t2">
+                Durata: {formatUnplannedDuration(clock.clockInAt, outResult.iso)}
+              </p>
+            ) : null}
           </div>
         ) : (
           <p className="text-xs leading-5 text-t4">

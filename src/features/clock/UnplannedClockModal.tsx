@@ -10,7 +10,16 @@ import { Pressable, Text, View } from "@/tw";
 import type { OpenUnplannedClock } from "./api";
 import { useCloseUnplannedClock, useVoidUnplannedClock } from "./hooks";
 import { formatClockTime } from "./hours";
-import { unplannedOutAt } from "./unplanned";
+import {
+  defaultUnplannedOut,
+  formatRomeDay,
+  formatUnplannedDuration,
+  romeTime,
+  timeFromPicker,
+  timeToPicker,
+  unplannedOutAt,
+  validateUnplannedOut,
+} from "./unplanned";
 
 type Mode = "close" | "void";
 
@@ -31,7 +40,9 @@ export function UnplannedClockModal({
   const close = useCloseUnplannedClock();
   const voidClock = useVoidUnplannedClock();
   const [mode, setMode] = useState<Mode>("close");
-  const [outTime, setOutTime] = useState(() => new Date());
+  // L'uscita come orario di Roma (`HH:mm`): il giorno lo dà l'entrata.
+  const [outTime, setOutTime] = useState("");
+  const [outChoice, setOutChoice] = useState<0 | 1 | undefined>();
   const [reason, setReason] = useState("");
   const [lastId, setLastId] = useState<string | null>(null);
   const pending = close.isPending || voidClock.isPending;
@@ -41,14 +52,28 @@ export function UnplannedClockModal({
   if (clock && clock.recordId !== lastId) {
     setLastId(clock.recordId);
     setMode("close");
-    setOutTime(new Date());
+    setOutTime(romeTime(defaultUnplannedOut(clock.clockInAt, now.getTime())));
+    setOutChoice(undefined);
     setReason("");
   }
 
-  const outAt = clock ? unplannedOutAt(clock.clockInAt, outTime) : null;
-  const invalid = !outAt || outAt.getTime() > now.getTime();
+  // Stesse regole del web (`UnplannedClockDialog`): orario di Roma, ora
+  // ripetuta da scegliere, uscita dopo l'entrata, non nel futuro, entro 24 ore.
+  const bare = clock ? unplannedOutAt(clock.clockInAt, outTime) : null;
+  const ambiguous = bare != null && !bare.ok && bare.reason === "ambiguous";
+  const outResult =
+    clock && ambiguous && outChoice !== undefined
+      ? unplannedOutAt(clock.clockInAt, outTime, outChoice)
+      : bare;
+  const outError =
+    !clock || !outResult
+      ? null
+      : outResult.ok
+        ? validateUnplannedOut(clock.clockInAt, outResult.iso, now.getTime())
+        : outResult.message;
+  const outAt = outResult?.ok && !outError ? outResult.iso : null;
   const canSave =
-    reason.trim().length > 0 && !pending && (mode === "void" || !invalid);
+    reason.trim().length > 0 && !pending && (mode === "void" || outAt != null);
 
   function dismiss() {
     if (!pending) onClose();
@@ -70,7 +95,7 @@ export function UnplannedClockModal({
     };
     if (mode === "close" && outAt) {
       close.mutate(
-        { recordId: clock.recordId, outAt: outAt.toISOString(), reason: reason.trim() },
+        { recordId: clock.recordId, outAt, reason: reason.trim() },
         handlers
       );
     } else {
@@ -100,7 +125,9 @@ export function UnplannedClockModal({
           </Text>
           <Text className="mt-2 text-sm leading-5 text-t2">
             {clock
-              ? `In servizio dalle ${formatClockTime(clock.clockInAt)} a ${clock.venueName}${
+              ? `In servizio da ${formatRomeDay(clock.clockInAt)} alle ${formatClockTime(
+                  clock.clockInAt
+                )} a ${clock.venueName}${
                   clock.roleName ? ` · ${clock.roleName}` : ""
                 }.`
               : ""}
@@ -138,11 +165,54 @@ export function UnplannedClockModal({
           >
             {mode === "close" ? (
               <>
-                <TimeField label="Uscita" value={outTime} onChange={setOutTime} />
-                <Text className="mt-2 text-xs leading-4 text-t3">
-                  {invalid
-                    ? "L’uscita non può essere nel futuro."
-                    : "All’uscita nasce il turno «Fuori turno» con questi orari, da approvare."}
+                <TimeField
+                  label="Uscita"
+                  value={timeToPicker(outTime || "00:00")}
+                  onChange={(picked) => {
+                    setOutTime(timeFromPicker(picked));
+                    setOutChoice(undefined);
+                  }}
+                />
+                {ambiguous ? (
+                  <View className="mt-3 flex-row gap-2">
+                    {([0, 1] as const).map((c) => (
+                      <Pressable
+                        key={c}
+                        onPress={() => setOutChoice(c)}
+                        className={
+                          outChoice === c
+                            ? "flex-1 items-center rounded-full border border-gold bg-gold/10 py-2"
+                            : "flex-1 items-center rounded-full border border-border py-2"
+                        }
+                      >
+                        <Text
+                          className={
+                            outChoice === c
+                              ? "text-xs font-sans-semibold text-gold"
+                              : "text-xs text-t2"
+                          }
+                        >
+                          {c === 0 ? "La prima volta" : "La seconda volta"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+                {clock && outAt ? (
+                  <Text className="mt-3 text-sm font-sans-semibold text-t1">
+                    Uscita: {formatRomeDay(outAt)} {formatClockTime(outAt)} ·{" "}
+                    {formatUnplannedDuration(clock.clockInAt, outAt)}
+                  </Text>
+                ) : null}
+                <Text
+                  className={
+                    outError
+                      ? "mt-2 text-xs leading-4 text-warning"
+                      : "mt-2 text-xs leading-4 text-t3"
+                  }
+                >
+                  {outError ??
+                    "All’uscita nasce il turno «Fuori turno» con questi orari, da approvare."}
                 </Text>
               </>
             ) : (
