@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { FontFamily } from "@/constants/fonts";
+import { cn } from "@/lib/cn";
 import {
   addDaysToDate,
   formatDayLabel,
@@ -35,11 +36,12 @@ export const HOUR_GUTTER = 32;
  * arancio c'è da rispondere, spento fuori gioco. Qui il colore è tutto il
  * blocco e non una barra, perché in una colonna da 40pt la barra non si vede.
  */
+const NEUTRAL_TONE = { bg: "rgba(106, 99, 88, 0.25)", edge: "#6A6358" };
 const TONE: Record<AgendaItem["status"], { bg: string; edge: string }> = {
   confirmed: { bg: "rgba(79, 201, 125, 0.20)", edge: "#4FC97D" },
   assigned: { bg: "rgba(226, 146, 47, 0.24)", edge: "#E2922F" },
-  declined: { bg: "rgba(106, 99, 88, 0.25)", edge: "#6A6358" },
-  no_show: { bg: "rgba(106, 99, 88, 0.25)", edge: "#6A6358" },
+  declined: NEUTRAL_TONE,
+  no_show: NEUTRAL_TONE,
 };
 
 function weekDays(monday: string): string[] {
@@ -60,7 +62,8 @@ function ShiftBlock({
   onPress: () => void;
 }) {
   const { item, startMin, endMin, lane, lanes, continued } = segment;
-  const tone = TONE[item.status];
+  const cancelled = item.shift.status === "cancelled";
+  const tone = cancelled ? NEUTRAL_TONE : TONE[item.status];
   const top = (startMin / 60) * HOUR_H;
   const height = Math.max(((endMin - startMin) / 60) * HOUR_H, MIN_BLOCK_H);
   const laneWidth = columnWidth / lanes;
@@ -71,7 +74,7 @@ function ShiftBlock({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${venue}, ${formatDayLabel(item.shift.date)}, ${formatShiftRange(item.shift.start_time, item.shift.end_time)}`}
+      accessibilityLabel={`${venue}, ${formatDayLabel(item.shift.date)}, ${formatShiftRange(item.shift.start_time, item.shift.end_time)}${cancelled ? ", Annullato" : ""}`}
       className="absolute overflow-hidden rounded-md px-1 py-0.5"
       style={{
         top: top + 1,
@@ -83,26 +86,26 @@ function ShiftBlock({
         borderLeftColor: tone.edge,
         // Un turno che cade nelle proprie ferie si vede subito anche qui: il
         // turno resta (lo toglie la sede), ma non deve sembrare un turno qualunque.
-        ...(absent
+        ...(absent && !cancelled
           ? { borderWidth: 1, borderStyle: "dashed", borderColor: "#E2922F" }
           : null),
-        opacity: over || item.status === "no_show" ? 0.5 : 1,
+        opacity: cancelled || over || item.status === "no_show" ? 0.5 : 1,
       }}
     >
       {/* La coda di un notturno inizia a mezzanotte solo per il taglio della
           colonna: ripetere l'ora d'inizio lì direbbe un'ora sbagliata. */}
-      {!continued ? (
+      {!continued || cancelled ? (
         <Text
           className="text-[10px] font-sans-bold text-t1"
           style={{ fontVariant: ["tabular-nums"] }}
           numberOfLines={1}
         >
-          {formatTime(item.shift.start_time)}
+          {cancelled ? "Annullato" : formatTime(item.shift.start_time)}
         </Text>
       ) : null}
       {height >= 40 ? (
         <Text
-          className="text-[10px] font-sans-semibold text-t1"
+          className={cn("text-[10px] font-sans-semibold text-t1", cancelled && "line-through")}
           numberOfLines={Math.max(1, Math.floor((height - 18) / 13))}
         >
           {venue}

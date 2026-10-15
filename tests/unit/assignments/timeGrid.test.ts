@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Enums } from "@/types/database";
 
 import {
   daySegments,
@@ -6,9 +7,15 @@ import {
   plannedHours,
 } from "@/features/assignments/timeGrid";
 
-const shift = (id: string, date: string, start: string, end: string) => ({
+const shift = (
+  id: string,
+  date: string,
+  start: string,
+  end: string,
+  status: Enums<"shift_status"> = "open"
+) => ({
   id,
-  shift: { date, start_time: `${start}:00`, end_time: `${end}:00` },
+  shift: { date, start_time: `${start}:00`, end_time: `${end}:00`, status },
 });
 
 // Lunedì 5 – domenica 11 ottobre 2026.
@@ -139,5 +146,29 @@ describe("plannedHours", () => {
         WEEK
       )
     ).toBe(12);
+  });
+
+  it.each(["assigned", "confirmed"] as const)(
+    "esclude i turni annullati anche se l'assegnazione è %s, mantenendo quelli aperti e chiusi",
+    (status) => {
+      const items = [
+        shift("aperto", "2026-10-06", "09:00", "17:00"),
+        shift("chiuso", "2026-10-07", "18:00", "22:00", "closed"),
+        shift("annullato", "2026-10-08", "09:00", "17:00", "cancelled"),
+        shift("annullato-notturno", "2026-10-11", "22:00", "04:00", "cancelled"),
+      ].map((item) => ({ ...item, status }));
+
+      expect(plannedHours(items, WEEK)).toBe(12);
+      // L'annullamento resta visibile nella griglia, compresa la parte notturna.
+      const byDay = daySegments(items, WEEK);
+      expect(byDay.get("2026-10-08")?.[0].item.shift.status).toBe("cancelled");
+      expect(byDay.get("2026-10-11")?.[0].item.shift.status).toBe("cancelled");
+    }
+  );
+
+  it("restituisce zero per una settimana con soli turni annullati", () => {
+    expect(
+      plannedHours([shift("annullato", "2026-10-06", "09:00", "17:00", "cancelled")], WEEK)
+    ).toBe(0);
   });
 });

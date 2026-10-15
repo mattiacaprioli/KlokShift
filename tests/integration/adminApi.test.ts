@@ -3,6 +3,10 @@ import { getAdminAccess, getAdminOverview, getAdminWorkspace, getAdminAccount, l
 import { workspaceSchema } from "@/features/admin/types";
 import { qk } from "@/lib/queryKeys";
 import { createTestQueryClient } from "../helpers/async";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { QueryClientProvider, type QueryObserverOptions } from "@tanstack/react-query";
+import { useAdminAccess, useAdminRead } from "@/features/admin/hooks";
 const { rpc, mfa } = vi.hoisted(() => ({ rpc: vi.fn(), mfa: { enroll: vi.fn(), listFactors: vi.fn(), challengeAndVerify: vi.fn(), unenroll: vi.fn() } }));
 vi.mock("@/lib/supabase", () => ({ supabase: { rpc, auth: { mfa } } }));
 const id = "11111111-1111-4111-8111-111111111111";
@@ -87,5 +91,47 @@ describe('Amministrazione: dati verificati e confini della cache', () => {
   it('separa fattori verificati da configurazioni da riprendere', async () => {
     mfa.listFactors.mockResolvedValue({ data: { totp: [{ id, status: 'verified' }], all: [{ id, factor_type: 'totp', status: 'verified' }, { id: other, factor_type: 'totp', status: 'unverified' }] }, error: null });
     await expect(listAdminMfaFactors()).resolves.toEqual({ verified: [{ id, name: 'App di autenticazione' }], pending: [{ id: other, name: 'App di autenticazione' }] });
+  });
+});
+
+describe("Opzioni delle letture amministrative", () => {
+  it("ritenta una volta la verifica di accesso dopo un errore transitorio", async () => {
+    const client = createTestQueryClient();
+    function Probe() { useAdminAccess(id, "session-fixture"); return null; }
+    renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(Probe)));
+    const query = client.getQueryCache().find({ queryKey: qk.admin.access(id, "session-fixture") })!;
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "Failed to fetch" } })
+      .mockResolvedValueOnce({ data: { eligible: true, can_access: true }, error: null });
+    try {
+      await expect(client.fetchQuery({ ...query.options, queryKey: query.queryKey, retryDelay: 0 })).resolves.toEqual({
+        eligible: true, can_access: true,
+      });
+      expect(rpc).toHaveBeenCalledTimes(2);
+    } finally { client.clear(); }
+  });
+
+  it("il focus riverifica l'accesso senza rileggere panoramica e liste", () => {
+    const client = createTestQueryClient();
+    function Probe() {
+      useAdminAccess(id, "session-fixture");
+      useAdminRead(id, "overview", null, async () => null);
+      useAdminRead(id, "workspaces", null, async () => null);
+      useAdminRead(id, "accounts", null, async () => null);
+      useAdminRead(id, "workspace", null, async () => null);
+      useAdminRead(id, "account", null, async () => null);
+      return null;
+    }
+    renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(Probe)));
+    const onFocus = (queryKey: readonly unknown[]) =>
+      (client.getQueryCache().find({ queryKey })!.options as QueryObserverOptions).refetchOnWindowFocus;
+    expect(onFocus(qk.admin.access(id, "session-fixture"))).toBe(true);
+    for (const resource of ["overview", "workspaces", "accounts"]) {
+      expect(onFocus(qk.admin.data(id, resource, null))).toBe(false);
+    }
+    for (const resource of ["workspace", "account"]) {
+      expect(onFocus(qk.admin.data(id, resource, null))).toBe(true);
+    }
+    client.clear();
   });
 });

@@ -5,6 +5,7 @@ import {
   todayString,
   type ShiftTimes,
 } from "@/lib/format";
+import type { Enums } from "@/types/database";
 
 const DAY_MIN = 24 * 60;
 
@@ -140,13 +141,13 @@ export function initialScrollHour<T>(
   return Math.max(0, hour - 1);
 }
 
-/** Le ore pianificate dei turni che **iniziano** nei giorni dati. */
-export function plannedHours<T extends { shift: ShiftTimes }>(
+/** Le ore pianificate dei turni non annullati che **iniziano** nei giorni dati. */
+export function plannedHours<T extends { shift: ShiftTimes & { status: Enums<"shift_status"> } }>(
   items: readonly T[],
   days: readonly string[]
 ): number {
   return items
-    .filter((i) => days.includes(i.shift.date))
+    .filter((i) => i.shift.status !== "cancelled" && days.includes(i.shift.date))
     .reduce(
       (sum, i) => sum + shiftDurationHours(i.shift.start_time, i.shift.end_time),
       0

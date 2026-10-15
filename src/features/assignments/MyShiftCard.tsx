@@ -22,7 +22,7 @@ type AssignmentStatus = Enums<"assignment_status">;
  * Lo stato di un turno si legge dalla barra colorata a sinistra, non da
  * un'etichetta: la Pill costava un terzo della larghezza della card e su uno
  * schermo da 375pt troncava sia il nome della sede sia il ruolo. Resta solo
- * dove dice qualcosa che il colore non dice — un turno rifiutato o un'assenza.
+ * dove dice qualcosa che il colore non dice — un turno annullato, rifiutato o un'assenza.
  *
  * Gli stessi tre colori del lato sede (vedi `shiftTone`), letti però sul
  * **proprio** stato invece che sulla copertura: verde a posto, arancio c'è da
@@ -85,14 +85,17 @@ export function MyShiftCard({
    */
   absenceNote?: string | null;
 }) {
-  const s = STATUS[status];
+  const cancelled = shift.status === "cancelled";
+  const s: (typeof STATUS)[AssignmentStatus] = cancelled
+    ? { bar: "bg-t4", pill: { label: "Annullato", variant: "cancelled" } }
+    : STATUS[status];
   const venueName = shift.venue?.name ?? "Sede";
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
   const duration = formatHours(
     shiftDurationHours(shift.start_time, shift.end_time)
   );
-  const spent = status === "declined" || status === "no_show";
-  const canRespond = status === "assigned" && onConfirm != null;
+  const spent = cancelled || status === "declined" || status === "no_show";
+  const canRespond = !cancelled && status === "assigned" && onConfirm != null;
 
   if (variant === "compact") {
     return (
@@ -106,7 +109,7 @@ export function MyShiftCard({
         <View className={cn("h-8 w-1 rounded-full", s.bar)} />
         <View className="items-start">
           <Text
-            className="text-[15px] font-sans-bold text-t1"
+            className={cn("text-[15px] font-sans-bold text-t1", cancelled && "line-through")}
             style={{ fontVariant: ["tabular-nums"] }}
           >
             {formatTime(shift.start_time)}
@@ -115,7 +118,7 @@ export function MyShiftCard({
         </View>
         <View className="flex-1">
           <Text
-            className="text-[15px] font-sans-semibold text-t1"
+            className={cn("text-[15px] font-sans-semibold text-t1", cancelled && "line-through")}
             numberOfLines={1}
           >
             {venueName}
@@ -124,6 +127,9 @@ export function MyShiftCard({
             <Text className="text-[13px] text-t2" numberOfLines={1}>
               {role}
             </Text>
+          ) : null}
+          {cancelled ? (
+            <Pill className="mt-1" label="Annullato" variant="cancelled" />
           ) : null}
         </View>
       </Card>
@@ -143,21 +149,21 @@ export function MyShiftCard({
 
         <View className="items-start pt-0.5">
           <Text
-            className="text-lg font-sans-bold text-t1"
+            className={cn("text-lg font-sans-bold text-t1", cancelled && "line-through")}
             style={{ fontVariant: ["tabular-nums"] }}
           >
             {formatTime(shift.start_time)}
           </Text>
           <View className="flex-row items-start gap-0.5">
             <Text
-              className="text-sm text-t2"
+              className={cn("text-sm text-t2", cancelled && "line-through")}
               style={{ fontVariant: ["tabular-nums"] }}
             >
               {formatTime(shift.end_time)}
             </Text>
             {/* Il turno finisce il giorno dopo: senza questo, 22:00–04:00 si
                 legge come un turno che finisce diciotto ore prima di iniziare. */}
-            {overnight ? <Mono gold>+1</Mono> : null}
+            {overnight ? <Mono gold={!cancelled}>+1</Mono> : null}
           </View>
           <Mono className="mt-1">{duration}</Mono>
         </View>
@@ -166,13 +172,16 @@ export function MyShiftCard({
           <View className="flex-row items-center gap-2">
             <Avatar uri={shift.venue?.logo_url} name={venueName} size={28} />
             <Text
-              className="flex-1 text-[15px] font-sans-bold text-t1"
+              className={cn("flex-1 text-[15px] font-sans-bold text-t1", cancelled && "line-through")}
               numberOfLines={1}
             >
               {venueName}
             </Text>
           </View>
-          <Text className="mt-1.5 text-[13px] text-t2" numberOfLines={2}>
+          <Text
+            className={cn("mt-1.5 text-[13px] text-t2", cancelled && "line-through")}
+            numberOfLines={2}
+          >
             {role ? `${role} · ${shift.title}` : shift.title}
           </Text>
           {s.pill ? (

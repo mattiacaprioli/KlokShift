@@ -115,24 +115,26 @@ function RootNavigator() {
       ) : null}
       <Stack screenOptions={screenOptions}>
         <Stack.Protected guard={!session}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      </Stack.Protected>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        </Stack.Protected>
 
-      <Stack.Protected guard={isManagerView}>
-        <Stack.Screen name="(manager)" options={{ headerShown: false }} />
-      </Stack.Protected>
+        <Stack.Protected guard={isManagerView}>
+          <Stack.Screen name="(manager)" options={{ headerShown: false }} />
+        </Stack.Protected>
 
-      <Stack.Protected guard={waiterOnboarding}>
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-      </Stack.Protected>
+        <Stack.Protected guard={waiterOnboarding}>
+          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+        </Stack.Protected>
 
-      <Stack.Protected guard={waiterReady}>
-        <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
-      </Stack.Protected>
+        <Stack.Protected guard={waiterReady}>
+          <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
+        </Stack.Protected>
 
-      {__DEV__ ? (
-        <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
-      ) : null}
+        {/* Le rotte omesse vengono comunque registrate da Expo Router: per
+            escludere la demo dalle build serve un guard, non un JSX condizionale. */}
+        <Stack.Protected guard={__DEV__}>
+          <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
+        </Stack.Protected>
       </Stack>
       {session && profile ? <IntroOverlay /> : null}
     </View>

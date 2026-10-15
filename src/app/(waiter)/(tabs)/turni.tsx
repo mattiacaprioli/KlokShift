@@ -180,7 +180,9 @@ export default function WaiterShiftsScreen() {
     () => allSections.filter((s) => (s.date ?? "") >= anchorDay),
     [allSections, anchorDay]
   );
-  const daConfermare = items.filter((a) => a.status === "assigned");
+  const daConfermare = items.filter(
+    (a) => a.shift.status !== "cancelled" && a.status === "assigned"
+  );
 
   // Chi è in organico da qualche parte: decide se il selettore ha senso, e se
   // sulle card serve il nome della sede.
@@ -446,7 +448,7 @@ export default function WaiterShiftsScreen() {
                 selected={visibleDay}
                 onSelect={goToDay}
                 items={weekItems}
-                ready={weekQuery.isSuccess}
+                ready={weekQuery.isSuccess && !weekQuery.isPlaceholderData}
                 today={today}
                 onOpen={(item) => router.push(`/(waiter)/shift/${item.shift.id}`)}
                 absenceNoteFor={absenceNoteFor}

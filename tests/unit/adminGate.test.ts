@@ -50,4 +50,13 @@ describe('Gate fondatore prima delle query globali', () => {
     expect(render()).toContain('KlokShift · Fondatore');
     expect(globalRead).toHaveBeenCalledOnce();
   });
+  it('dopo una verifica riuscita mantiene le pagine montate e inerti durante una nuova verifica', () => {
+    status.mockReturnValueOnce({ data: { eligible: true, can_access: true } })
+      .mockReturnValue({ isPending: true, isFetching: true });
+    globalRead.mockReturnValue({ isPending: true });
+    const html = render();
+    expect(html).toContain('inert=""');
+    expect(html).toContain('Verifica accesso…');
+    expect(globalRead).toHaveBeenCalledOnce();
+  });
 });

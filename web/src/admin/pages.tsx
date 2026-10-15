@@ -123,6 +123,9 @@ export function WorkspacePage({ userId }: {
   userId: string;
 }) {
   const { id = '' } = useParams();
+  return <WorkspaceDetail key={id} userId={userId} id={id} />;
+}
+function WorkspaceDetail({ userId, id }: { userId: string; id: string }) {
   const [params] = useSearchParams();
   const tab = workspaceTabs.find((t) => t.id === params.get('scheda'))?.id ?? 'riepilogo';
   const [offsets, setOffsets] = useState({ members: 0, venues: 0, periods: 0 });
@@ -195,6 +198,9 @@ export function AccountPage({ userId }: {
   userId: string;
 }) {
   const { id = '' } = useParams();
+  return <AccountDetail key={id} userId={userId} id={id} />;
+}
+function AccountDetail({ userId, id }: { userId: string; id: string }) {
   const [offset, setOffset] = useState(0);
   const query = useAdminRead(userId, 'account', { id, offset }, () => getAdminAccount(id, offset));
   return <><Read query={query}>{(d) => <div className="space-y-6"><PageHeader title={d.account.full_name || d.account.email || 'Account'} subtitle={`${labels[d.account.status]} · ${labels[d.account.classification]}`} actions={<Link className="text-gold" to="/amministrazione/account">Tutti gli account</Link>} /><Snapshot at={d.generated_at} />

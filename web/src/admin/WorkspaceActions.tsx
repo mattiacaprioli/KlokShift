@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminRead, useAdminWrite } from "@/features/admin/hooks";
 import { applyWorkspaceAction, getWorkspaceControl, getAccountControl, setAccountClassification, listOperations } from "@/features/admin/controls";
-import type { AccountCommand, AdminClassification, WorkspaceCommand } from "@/features/admin/controls";
+import type { AccountCommand, AccountControl, AdminClassification, WorkspaceCommand } from "@/features/admin/controls";
 import { classifications } from "@/features/admin/types";
 import { userErrorMessage } from "@/lib/errors";
 import { Button, Card, Field, Input, Select, Spinner, Textarea } from "../ui/primitives";
+import { confirmationFailure } from "./confirmation";
 
 const labels = { customer: "Cliente", internal: "Interno", test: "Test", unclassified: "Non classificato" };
 const actionLabels = { grant_lifetime: "Gratuità a vita / variazione capacità", set_classification: "Classificazione", add_note: "Nota amministrativa" };
@@ -57,7 +58,11 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
     try {
       await mutation.mutateAsync(review);
       setReview(null); setReason(""); setPlan(null); setVenues(null); setQuota(null); setClassification(null); setSuccess(true);
-    } catch (e) { setError(e); }
+    } catch (e) {
+      const failure = confirmationFailure(e);
+      setError(failure.error);
+      if (!failure.retry) { setReview(null); void query.refetch(); }
+    }
   }
   return <Card><h2 className="mb-2 font-semibold">Gestisci piano e classificazione</h2>
     <p className="mb-5 text-sm text-t3">Prepara un intervento per questa azienda. Le modifiche si applicano dopo aver rivisto il riepilogo e confermato.</p>
@@ -97,10 +102,23 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
   </Card>;
 }
 
+export function useAccountClassificationDraft(accountId: string, control: AccountControl | undefined) {
+  const [draft, setClassification] = useState<AdminClassification | null>(null);
+  const classification = draft ?? control?.classification ?? "unclassified";
+  function prepare(reason: string): AccountCommand | null {
+    if (!control || !reason.trim()) return null;
+    return {
+      accountId, operationId: crypto.randomUUID(), revision: control.revision,
+      classification, reason: reason.trim(),
+    };
+  }
+  return { classification, setClassification, prepare };
+}
+
 export function AccountClassification({ userId, accountId }: { userId: string; accountId: string }) {
   const query = useAdminRead(userId, "account-control", accountId, () => getAccountControl(accountId));
   const mutation = useAdminWrite(setAccountClassification);
-  const [classification, setClassification] = useState<AdminClassification>("unclassified");
+  const { classification, setClassification, prepare } = useAccountClassificationDraft(accountId, query.data);
   const [reason, setReason] = useState("");
   const [review, setReview] = useState<AccountCommand | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -108,14 +126,18 @@ export function AccountClassification({ userId, accountId }: { userId: string; a
   async function confirm() {
     if (!review || mutation.isPending) return;
     setError(null);
-    try { await mutation.mutateAsync(review); setReview(null); setReason(""); setSuccess(true); }
-    catch (e) { setError(e); }
+    try { await mutation.mutateAsync(review); setReview(null); setReason(""); setClassification(null); setSuccess(true); }
+    catch (e) {
+      const failure = confirmationFailure(e);
+      setError(failure.error);
+      if (!failure.retry) { setReview(null); void query.refetch(); }
+    }
   }
   return <Card><h2 className="mb-3 font-semibold">Classificazione account</h2><Feedback error={error ?? query.error} success={success} />
     {query.isPending || query.isFetching ? <Spinner /> : !query.isSuccess ? <Button onClick={() => void query.refetch()}>Riprova lettura</Button> :
       review ? <div className="space-y-3"><p>Nuova etichetta: {labels[review.classification]}.</p><p className="text-sm text-t3">Non cambia le appartenenze, i permessi, l’accesso del fondatore o i piani aziendali.</p><p className="whitespace-pre-wrap text-sm">Motivo: {review.reason}</p>
         <div className="flex gap-2"><Button variant="gold" disabled={mutation.isPending} onClick={() => void confirm()}>{mutation.isPending ? "Salvataggio…" : error ? "Riprova conferma" : "Conferma classificazione"}</Button><Button disabled={mutation.isPending} onClick={() => { setReview(null); setError(null); }}>Torna ai campi</Button></div></div> :
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!query.data || !reason.trim()) return; setError(null); setSuccess(false); setReview({ accountId, operationId: crypto.randomUUID(), revision: query.data.revision, classification, reason: reason.trim() }); }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); const command = prepare(reason); if (!command) return; setError(null); setSuccess(false); setReview(command); }}>
         <p className="text-sm text-t3">Classificazione attuale: {labels[query.data.classification]}.</p>
         <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}>{classificationOptions}</Select></Field>
         <Reason value={reason} onChange={setReason} /><Button type="submit" variant="gold" disabled={!reason.trim()}>Rivedi classificazione</Button>

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { DashboardSkeleton } from "./ui/Skeleton";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
@@ -30,7 +31,7 @@ import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 import { AiutoPage } from "./pages/Aiuto";
 import { PianoPage } from "./pages/Piano";
-import { AdminApp } from "./admin/AdminApp";
+const AdminApp = lazy(() => import("./admin/AdminApp").then((module) => ({ default: module.AdminApp })));
 
 export function App() {
   const { session, profile, loading, error, retryProfile, signOut } = useAuth();
@@ -68,7 +69,9 @@ export function App() {
   // L'amministratore può non avere aziende cliente. Il suo gate server è
   // distinto da OwnerVenuesProvider e dai permessi del titolare.
   if (pathname === "/amministrazione" || pathname.startsWith("/amministrazione/")) {
-    return session ? <AdminApp /> : <LoginPage />;
+    return session ? <Suspense fallback={<Spinner label="Caricamento amministrazione…" />}>
+      <AdminApp key={session.user.id} />
+    </Suspense> : <LoginPage />;
   }
 
   // Fuori sessione esistono due sole pagine. Il catch-all riporta al login

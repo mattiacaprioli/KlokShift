@@ -12,34 +12,45 @@ export function AdminApp() {
   const { session, signOut } = useAuth();
   const client = useQueryClient();
   const userId = session!.user.id;
-  // Il cambio JWT produce una verifica nuova prima di mostrare dati. Il JWT
-  // non entra nella query key né nella cache amministrativa.
+  // Ogni JWT richiede una verifica nuova. Dopo la prima riuscita le pagine
+  // restano montate, ma inerti e coperte finché il server risponde.
+  // Il JWT non entra nella query key né nella cache amministrativa.
   const sessionVersion = useMemo(() => {
     if (!session?.access_token)
       return "signed-out";
     return crypto.randomUUID();
   }, [session?.access_token]);
   const access = useAdminAccess(userId, sessionVersion);
+  const [verifiedUser, setVerifiedUser] = useState<string | null>(null);
+  const granted = !access.isPending && !access.isError && access.data?.can_access === true;
+  const denied = access.isError || (!access.isPending && access.data?.can_access === false);
+  // Aggiornamento condizionale prima dei figli: anche un diniego durante una
+  // riverifica deve togliere l'albero nello stesso render, senza un frame residuo.
+  if (granted && verifiedUser !== userId) setVerifiedUser(userId);
+  else if ((denied || (verifiedUser !== null && verifiedUser !== userId)) && verifiedUser !== null) setVerifiedUser(null);
+  const keepMounted = granted || (verifiedUser === userId && access.isPending && !denied);
+  const rechecking = keepMounted && (access.isPending || access.isFetching);
   useEffect(() => {
-    if (access.isError || !access.data?.can_access) {
-      void client.cancelQueries({ queryKey: qk.admin.privileged });
-      client.removeQueries({ queryKey: qk.admin.privileged });
+    if (denied) {
+      void client.cancelQueries({ queryKey: qk.admin.privileged })
+        .then(() => client.removeQueries({ queryKey: qk.admin.privileged }));
     }
-  }, [access.isError, access.data?.can_access, client]);
+  }, [denied, client]);
   useEffect(() => () => {
     void client.cancelQueries({ queryKey: qk.admin.all });
     client.removeQueries({ queryKey: qk.admin.all });
   }, [client]);
   const exit = <Button onClick={() => void signOut()}>Esci</Button>;
-  if (access.isPending)
+  if (access.isPending && !keepMounted)
     return <Spinner label="Verifica accesso amministrativo…" />;
   if (access.isError)
     return <div className="mx-auto max-w-xl p-8"><Placeholder title="Accesso da verificare" detail={errorMessage(access.error)} action={<div className="flex gap-2"><Button onClick={() => void access.refetch()}>Riprova</Button>{exit}</div>} /></div>;
-  if (!access.data.eligible)
+  if (!keepMounted && !access.data?.eligible)
     return <div className="mx-auto max-w-xl p-8"><Placeholder title="Area riservata al fondatore" detail="Questo account non dispone dell'accesso amministrativo." action={<div className="flex gap-2"><Link className="text-gold" to="/">Dashboard cliente</Link>{exit}</div>} /></div>;
-  if (!access.data.can_access)
+  if (!keepMounted)
     return <MfaForm onVerified={() => void access.refetch()} exit={exit} />;
-  return <div className="min-h-screen bg-bg-0 text-t1">
+  return <>
+    <div className="min-h-screen bg-bg-0 text-t1" inert={rechecking || undefined} aria-hidden={rechecking || undefined}>
     <header className="border-b border-border-2 p-5">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
         <div><p className="font-serif text-xl">KlokShift · Fondatore</p><p className="text-xs text-t3">{access.isFetching ? 'Verifica accesso in corso…' : 'Amministrazione · secondo fattore verificato'}</p></div>
@@ -62,7 +73,11 @@ export function AdminApp() {
         <Route path="*" element={<Navigate to="/amministrazione" replace />} />
       </Routes>
     </main>
-  </div>;
+    </div>
+    {rechecking && <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-0/95" role="status" aria-live="polite">
+      <Spinner label="Verifica accesso…" />
+    </div>}
+  </>;
 }
 function MfaForm({ onVerified, exit }: {
   onVerified: () => void;
