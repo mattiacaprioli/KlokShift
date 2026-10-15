@@ -44,6 +44,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { oneLine, errorForLog } from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -305,19 +306,29 @@ Deno.serve(async (req) => {
   // transazione dei contatori: o l'invito è registrato per intero, o non è
   // partito. Per il dipendente la RPC lo ignora (nessun token nel suo invito).
   const token = newInviteToken();
+  const tokenHash = await sha256hex(token);
   const expires = new Date(Date.now() + INVITE_TTL_DAYS * 86400_000).toISOString();
 
   // Autorizzazione, stato della scheda, canale, rate limit e incremento: tutto qui.
   const { data, error } = await admin.rpc("claim_invite_send", {
     p_member: body.memberId,
     p_caller: userData.user.id,
-    p_token_hash: await sha256hex(token),
+    p_token_hash: tokenHash,
     p_expires: expires,
   });
   if (error) return claimFailed(error.message);
 
-  const payload = (data as Payload[] | null)?.[0];
-  if (!payload) return json({ error: "not_owner" }, 403);
+  const claimed = (data as Payload[] | null)?.[0];
+  if (!claimed) return json({ error: "not_owner" }, 403);
+  // Normalizzare prima delle due composizioni: testo, HTML e oggetto usano
+  // gli stessi nomi. L'escape HTML nelle composizioni resta necessario.
+  const payload: Payload = {
+    ...claimed,
+    email: oneLine(claimed.email),
+    display_name: oneLine(claimed.display_name),
+    workspace_name: oneLine(claimed.workspace_name),
+    venue_names: claimed.venue_names.map(oneLine),
+  };
 
   // ⚠️ Il token in chiaro vive qui e nell'email, e basta. Non va loggato: chi
   // legge i log della function entrerebbe nell'account di un collaboratore.
@@ -350,11 +361,12 @@ Deno.serve(async (req) => {
     // Il tentativo resta consumato di proposito: rimborsarlo aprirebbe un loop
     // di ritentativi contro un SMTP che sta già rifiutando. Il client dice di
     // riprovare tra qualche minuto.
-    return json({ error: "smtp_failed", detail: String(e) }, 502);
+    console.error("smtp_failed", errorForLog(e, [token, tokenHash, SMTP_PASS, SERVICE_ROLE_KEY]));
+    return json({ error: "smtp_failed" }, 502);
   } finally {
     // Senza `close()` l'isolate resta appeso al socket e l'invocazione va in
     // timeout **pur avendo spedito**: l'utente vede un errore e reinvia.
-    await client.close();
+    try { await client.close(); } catch { /* L'esito dell'invio è già deciso. */ }
   }
 
   return json({ sent: true });

@@ -57,7 +57,10 @@ Deno.serve(async (req) => {
     .from("push_tokens")
     .select("token")
     .eq("user_id", payload.user_id);
-  if (error) return json({ error: error.message }, 500);
+  if (error) {
+    console.error("push_tokens_failed", error.code);
+    return json({ error: "push_tokens_failed" }, 500);
+  }
 
   const tokens = (rows ?? [])
     .map((r) => r.token as string)

@@ -32,6 +32,7 @@
 //   supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { errorForLog, fullName as normalizeFullName, isPasswordValid } from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -68,19 +69,6 @@ function claimFailed(message: string) {
   return json({ error: code ?? "invite_not_found" }, code ? STATUS[code] : 404);
 }
 
-/**
- * Le stesse regole di `src/features/auth/schema.ts`, riscritte perché una Edge
- * Function non importa dal bundle dell'app.
- *
- * ⚠️ Rivalidare non è ridondanza: il form è il posto dove si spiegano le regole,
- * non dove si applicano. Qui arriva quello che il browser manda.
- */
-function isPasswordValid(v: string): boolean {
-  return (
-    v.length >= 8 && /[a-z]/.test(v) && /[A-Z]/.test(v) && /[0-9]/.test(v)
-  );
-}
-
 /** Quello che finisce nel database. Il token in chiaro non lo vede mai nessuno. */
 async function sha256hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
@@ -103,7 +91,7 @@ Deno.serve(async (req) => {
     return json({ error: "invalid json" }, 400);
   }
 
-  const token = (body.token ?? "").trim();
+  const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!token) return json({ error: "invite_not_found" }, 404);
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -129,10 +117,11 @@ Deno.serve(async (req) => {
 
   if (body.op !== "accept") return json({ error: "invalid op" }, 400);
 
-  const password = body.password ?? "";
+  const password = typeof body.password === "string" ? body.password : "";
   if (!isPasswordValid(password)) return json({ error: "weak_password" }, 400);
 
-  const fullName = (body.fullName ?? "").trim();
+  const fullName = normalizeFullName(typeof body.fullName === "string" ? body.fullName : "")
+    || normalizeFullName(invite.display_name) || null;
 
   // ⚠️ L'ordine: prima l'account, poi il token bruciato. Al contrario, una
   // creazione fallita si porterebbe via il token e lascerebbe la persona fuori
@@ -147,7 +136,7 @@ Deno.serve(async (req) => {
     email: invite.email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName || invite.display_name || null },
+    user_metadata: { full_name: fullName },
   });
 
   if (createError || !created?.user) {
@@ -157,13 +146,25 @@ Deno.serve(async (req) => {
     if (message.includes("already") || message.includes("registered")) {
       return json({ error: "email_taken" }, 409);
     }
-    return json({ error: "create_failed", detail: createError?.message }, 502);
+    console.error("create_user_failed", errorForLog(createError, [token, hash, password, SERVICE_ROLE_KEY]));
+    return json({ error: "create_failed" }, 502);
   }
 
   // Rende definitivo l'ingresso e brucia il token. Se fallisce non si torna
   // indietro: l'account c'è, rispondere con un errore su un'operazione riuscita
   // manderebbe la persona a ritentare per niente.
-  await admin.rpc("consume_invite", { p_hash: hash, p_user: created.user.id });
+  try {
+    const { error: consumeError } = await admin.rpc("consume_invite", {
+      p_hash: hash, p_user: created.user.id,
+    });
+    if (consumeError) {
+      console.error("consume_invite_failed", errorForLog(consumeError, [token, hash, password, SERVICE_ROLE_KEY]));
+      return json({ ok: true, email: invite.email, activationPending: true });
+    }
+  } catch (consumeError) {
+    console.error("consume_invite_failed", errorForLog(consumeError, [token, hash, password, SERVICE_ROLE_KEY]));
+    return json({ ok: true, email: invite.email, activationPending: true });
+  }
 
   return json({ ok: true, email: invite.email });
 });
