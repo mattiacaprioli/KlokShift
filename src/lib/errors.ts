@@ -25,6 +25,7 @@ export class UserFacingError extends Error {
 }
 
 const PATTERNS: { match: string[]; message: string }[] = [
+  { match: ["invalid_avatar_url"], message: "Immagine del profilo non valida. Caricala di nuovo." },
   { match: ["admin_not_allowed"], message: "L'accesso amministrativo non è autorizzato. Accedi con l'account abilitato." },
   { match: ["admin_mfa_required"], message: "Completa la verifica con il secondo fattore per accedere." },
   { match: ["admin_mfa_verification_failed"], message: "Verifica non riuscita. Controlla il codice e riprova." },

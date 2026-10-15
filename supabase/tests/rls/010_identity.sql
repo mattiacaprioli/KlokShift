@@ -402,5 +402,46 @@ begin
   perform tests.logout();
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- Avatar: solo Storage Supabase e percorso della persona, anche in INSERT.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  own_url text := 'https://fixture.supabase.co/storage/v1/object/public/avatars/' || tests.id('Emp')::text || '/1.png';
+  other_url text := 'https://fixture.supabase.co/storage/v1/object/public/avatars/' || tests.id('Emp2')::text || '/1.png';
+begin
+  perform tests.login('Emp');
+  perform tests.raises(
+    'update public.profiles set avatar_url = ''https://esempio.invalid/x.png'' where id = auth.uid()',
+    'invalid_avatar_url', 'un avatar esterno non può tracciare chi legge il profilo');
+  perform tests.raises(
+    format('update public.profiles set avatar_url = %L where id = auth.uid()', other_url),
+    'invalid_avatar_url', 'la foto deve stare nel percorso della persona');
+  perform tests.raises(
+    format('update public.profiles set avatar_url = %L where id = auth.uid()', own_url || '?tracking=1'),
+    'invalid_avatar_url', 'avatar senza query arbitrarie');
+  perform tests.raises(
+    'update public.profiles set avatar_url = ''https://fixture.supabase.co.evil.invalid/storage/v1/object/public/avatars/1.png'' where id = auth.uid()',
+    'invalid_avatar_url', 'un dominio che somiglia a Supabase non è Storage');
+
+  update public.profiles set avatar_url = own_url where id = auth.uid();
+  perform tests.eq((select avatar_url from public.profiles where id = auth.uid()), own_url,
+    'la foto caricata nel proprio percorso è accettata');
+  update public.profiles set avatar_url = null where id = auth.uid();
+  perform tests.ok((select avatar_url is null from public.profiles where id = auth.uid()),
+    'la persona può rimuovere la propria foto');
+  perform tests.logout();
+
+  perform tests.raises(
+    'insert into public.profiles (id, avatar_url) values (''eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'', ''https://esempio.invalid/x.png'')',
+    'invalid_avatar_url', 'il controllo protegge anche nuovi profili');
+
+  -- STOP C17: delete_account deve continuare a poter anonimizzare una foto.
+  update public.profiles set avatar_url = own_url where id = tests.id('Emp');
+  perform public.delete_account(tests.id('Emp'));
+  perform tests.ok((select avatar_url is null and deleted_at is not null from public.profiles where id = tests.id('Emp')),
+    'la cancellazione account rimuove un avatar valido senza rompere il trigger');
+end $$;
+
 rollback;
 select 'identity: ok' as result;

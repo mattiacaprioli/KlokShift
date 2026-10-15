@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { isStorageAvatarUrl } from "@/lib/avatarUrl";
 import { useState } from "react";
 
 /**
@@ -20,7 +21,7 @@ export function Avatar({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const style = { width: size, height: size };
 
-  if (url && url !== failedUrl) {
+  if (isStorageAvatarUrl(url) && url !== failedUrl) {
     return (
       <img
         src={url}

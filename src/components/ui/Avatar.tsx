@@ -1,6 +1,7 @@
 import { Image } from "@/tw/image";
 import { Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { isStorageAvatarUrl } from "@/lib/avatarUrl";
 import { useState } from "react";
 
 type Props = {
@@ -30,7 +31,7 @@ function colorFor(name?: string | null) {
 
 export function Avatar({ uri, name, size = 48, className }: Props) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
-  if (uri && uri !== failedUri) {
+  if (isStorageAvatarUrl(uri) && uri !== failedUri) {
     return (
       <Image
         source={uri}
