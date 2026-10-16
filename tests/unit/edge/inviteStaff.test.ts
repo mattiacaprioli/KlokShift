@@ -17,7 +17,7 @@ function fixture(channel: "email" | "token" = "email", venues = ["Sede\r\nBcc: e
     close = close;
   }
   const edge = edgeRuntime("invite-staff", {
-    "npm:@supabase/supabase-js@2": { createClient: (_url: string, key: string) => key === "fixture-anon" ? asUser : admin },
+    "npm:@supabase/supabase-js@2.117.0": { createClient: (_url: string, key: string) => key === "fixture-anon" ? asUser : admin },
     "https://deno.land/x/denomailer@1.6.0/mod.ts": { SMTPClient },
   });
   const request = () => edge.handle(post({ memberId: "member" }, { Authorization: "Bearer fixture" }));

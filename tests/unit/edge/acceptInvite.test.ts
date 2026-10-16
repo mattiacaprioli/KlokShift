@@ -7,7 +7,7 @@ function fixture() {
     { data: [invite], error: null } : { data: null, error: null });
   const createUser = vi.fn().mockResolvedValue({ data: { user: { id: "new-user" } }, error: null });
   const edge = edgeRuntime("accept-invite", {
-    "npm:@supabase/supabase-js@2": { createClient: () => ({ rpc, auth: { admin: { createUser } } }) },
+    "npm:@supabase/supabase-js@2.117.0": { createClient: () => ({ rpc, auth: { admin: { createUser } } }) },
   });
   const request = (input: Record<string, unknown> = {}) => edge.handle(post({
     op: "accept", token: "fixture-token-secret", password: "Password1", fullName: "Ada Rossi", ...input,

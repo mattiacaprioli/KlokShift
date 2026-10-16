@@ -8,8 +8,8 @@
 //   supabase secrets set PUSH_HOOK_SECRET=<random>   (+ opz. EXPO_ACCESS_TOKEN)
 //   supabase functions deploy push --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
 
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { Expo, type ExpoPushMessage } from "npm:expo-server-sdk";
+import { createClient } from "npm:@supabase/supabase-js@2.117.0";
+import { Expo, type ExpoPushMessage } from "npm:expo-server-sdk@7.2.0";
 
 type NotificationPayload = {
   notification_id: string;
@@ -80,26 +80,41 @@ Deno.serve(async (req) => {
   }));
 
   const deadTokens: string[] = [];
+  let sent = 0;
   for (const chunk of expo.chunkPushNotifications(messages)) {
     try {
       const tickets = await expo.sendPushNotificationsAsync(chunk);
       tickets.forEach((ticket, i) => {
-        if (
-          ticket.status === "error" &&
-          ticket.details?.error === "DeviceNotRegistered"
-        ) {
+        if (ticket.status === "ok") {
+          sent += 1;
+          return;
+        }
+        // Il messaggio del provider può contenere il token: registra solo il codice.
+        console.error("expo_push_ticket_failed", ticket.details?.error ?? "unknown");
+        if (ticket.details?.error === "DeviceNotRegistered") {
           deadTokens.push(chunk[i].to as string);
         }
       });
-    } catch (err) {
-      console.error("expo push send failed", err);
+    } catch {
+      console.error("expo_push_send_failed");
     }
   }
 
   // Cleanup dei token non più validi (disinstallazione / permesso revocato).
+  let removed = 0;
   if (deadTokens.length > 0) {
-    await supabase.from("push_tokens").delete().in("token", deadTokens);
+    try {
+      const { data, error } = await supabase.from("push_tokens").delete().in("token", deadTokens).select("token");
+      if (error) {
+        console.error("push_token_cleanup_failed", error.code);
+      } else {
+        removed = data?.length ?? 0;
+      }
+    } catch {
+      console.error("push_token_cleanup_failed");
+    }
   }
 
-  return json({ sent: tokens.length, removed: deadTokens.length });
+  // Un ticket ok conferma l'accettazione da Expo, non la consegna al dispositivo.
+  return json({ sent, removed });
 });

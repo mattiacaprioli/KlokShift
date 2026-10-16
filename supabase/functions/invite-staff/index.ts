@@ -42,7 +42,7 @@
 // fra i "Redirect URLs" di Supabase Auth: quel link non passa più da GoTrue, è
 // una rotta nostra con un token nostro.
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { oneLine, errorForLog } from "./logic.ts";
 

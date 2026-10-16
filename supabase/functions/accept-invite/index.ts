@@ -31,7 +31,7 @@
 // Deploy (NIENTE JWT, a differenza di `invite-staff` e `delete-account`):
 //   supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import { errorForLog, fullName as normalizeFullName, isPasswordValid } from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;

@@ -17,7 +17,7 @@
 // Deploy (richiede JWT, quindi NIENTE --no-verify-jwt):
 //   supabase functions deploy delete-account --project-ref rmlobxjlqlpixkvrzmfg
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import {
   runDeleteAccount,
   type FileRef,
