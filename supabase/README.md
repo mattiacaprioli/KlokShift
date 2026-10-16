@@ -45,7 +45,8 @@ Regole che tengono i confini (la ricorsione RLS 42P17 è già capitata):
 ### Scritture
 
 **Tutte via RPC** (`add_member`, `set_member_access`, `create_shifts`,
-`update_shift`, `assign`, `record_attendance`, `request_absence`, …), atomiche, con
+`update_shift`, `assign`, `record_attendance`, `request_absence`,
+`save_shift_template`, …), atomiche, con
 errori `raise exception '<codice>'` (nessun no-op silenzioso). INSERT/UPDATE/DELETE
 sono revocati ad `anon` e `authenticated` per default; le uniche scritture dirette
 sono elencate in `tests/rls/050_surface.sql` (profilo proprio, dati sede, listino

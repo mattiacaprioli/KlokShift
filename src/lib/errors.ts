@@ -214,6 +214,14 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Durata della pausa non valida.",
   },
   {
+    match: ["template_limit"],
+    message: "Questa sede ha già 30 modelli. Eliminane uno per salvarne un altro.",
+  },
+  {
+    match: ["template_invalid"],
+    message: "Controlla orari e fabbisogno del modello.",
+  },
+  {
     match: ["break_rule_invalid"],
     message:
       "Regola della pausa non valida: soglia da 1 a 24 ore, pausa da 5 a 240 minuti.",

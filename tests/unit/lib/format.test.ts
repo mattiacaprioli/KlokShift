@@ -22,7 +22,9 @@ import {
   shiftEndsAt,
   shiftSlotLabel,
   startOfWeek,
+  timeToDate,
   toDateString,
+  toTimeString,
   todayString,
 } from "@/lib/format";
 
@@ -92,6 +94,13 @@ describe("orari dei turni", () => {
   it("segnala il giorno dopo nell'intervallo", () => {
     expect(formatShiftRange("22:00:00", "04:00:00")).toBe("22:00–04:00 +1");
     expect(formatShiftRange("09:00", "17:00")).toBe("09:00–17:00");
+  });
+
+  it("da «HH:MM[:SS]» a un Date di oggi con quell'orario", () => {
+    const d = timeToDate("18:45:00");
+    expect(toTimeString(d)).toBe("18:45");
+    expect(d.getSeconds()).toBe(0);
+    expect(toTimeString(timeToDate("07:05"))).toBe("07:05");
   });
 
   it("dà un nome alla fascia dall'ora d'inizio", () => {

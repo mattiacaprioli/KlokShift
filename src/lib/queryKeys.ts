@@ -107,6 +107,12 @@ export const qk = {
     detailWithVenue: (id: string) =>
       ["shifts", "detail", id, "venue"] as const,
   },
+  /** I modelli di turno, per sede (`shift_templates.venue_id`). */
+  shiftTemplates: {
+    all: ["shiftTemplates"] as const,
+    byVenue: (venueId: string) =>
+      ["shiftTemplates", "byVenue", venueId] as const,
+  },
   documents: {
     all: ["documents"] as const,
     // Per membro (`staff_documents.member_id`): un membro dell'azienda ha una

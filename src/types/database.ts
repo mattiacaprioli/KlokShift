@@ -803,6 +803,56 @@ export type Database = {
           },
         ]
       }
+      shift_templates: {
+        Row: {
+          break_minutes: number
+          created_at: string
+          description: string | null
+          end_time: string
+          id: string
+          name: string
+          require_confirmation: boolean
+          role_targets: Json
+          start_time: string
+          updated_at: string
+          venue_id: string
+        }
+        Insert: {
+          break_minutes?: number
+          created_at?: string
+          description?: string | null
+          end_time: string
+          id?: string
+          name: string
+          require_confirmation?: boolean
+          role_targets?: Json
+          start_time: string
+          updated_at?: string
+          venue_id: string
+        }
+        Update: {
+          break_minutes?: number
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          name?: string
+          require_confirmation?: boolean
+          role_targets?: Json
+          start_time?: string
+          updated_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_templates_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           break_minutes: number
@@ -1691,6 +1741,10 @@ export type Database = {
       create_workspace: { Args: { p_name: string }; Returns: string }
       delete_account: { Args: { p_user: string }; Returns: undefined }
       delete_shift: { Args: { p_shift: string }; Returns: undefined }
+      delete_shift_template: {
+        Args: { p_template: string }
+        Returns: undefined
+      }
       get_absence_availability: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -2150,6 +2204,10 @@ export type Database = {
       respond_to_invite: {
         Args: { p_accept: boolean; p_member: string }
         Returns: undefined
+      }
+      save_shift_template: {
+        Args: { p_template: Json; p_venue: string }
+        Returns: string
       }
       set_absence_hour_credit: {
         Args: { p_absence: string; p_date: string; p_minutes?: number }

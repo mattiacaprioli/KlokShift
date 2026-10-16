@@ -436,12 +436,17 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M05 | Dashboard personale: accesso protetto, panorama, aziende e schede | M03; riuso stack web | RILASCIATO; primo accesso MFA/panoramica verificato; restanti prove manuali pendenti |
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | IN CORSO: M06a concessioni/classificazioni/audit locale; economia e altri interventi pendenti |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
-| M08 | Verifica account/contratto e prova sandbox Paddle, avviate presto | M01–M02 per chiusura; indagine indipendente avviabile prima | PROPOSTO: scelta Paddle confermata; verifiche da eseguire |
-| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | PROPOSTO |
+| M08 | Verifica account/contratto e prova sandbox Paddle | M01–M02 per chiusura; indagine indipendente avviabile prima | RIMANDATO dal fondatore il 2026-10-10; scelta Paddle confermata, verifiche da riprendere |
+| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | RIMANDATO dal fondatore il 2026-10-10; integrazione da realizzare dopo M08 |
 | M10 | KPI storici, anomalie, previsione e automazioni mirate | Dati raccolti da M05–M09 | PROPOSTO |
 | M11 | Primo mese, pausa stagionale, uscita, archivio/export e cancellazione verificata | Regole M01, modello M03, UI M04/M05, provider M09 | PROPOSTO; parte della V1 |
 
 Ordine di avvio: **M01 + indagine M02/M08 → M03 → M05 → concessioni M06 → M04 → M09 + completamento M11 → completamento economico M06 → lancio pagante M07 → M10**. I tester gratuiti possono iniziare prima del completamento pagamenti; M09/M11 rimangono necessari per i primi clienti paganti. Nessuna dipendenza circolare: M06 consegna prima le concessioni, poi collega i dati prodotti da M09; le regole e la fondazione di M11 entrano già in M01/M03.
+
+**Aggiornamento del 10 ottobre 2026:** il fondatore rimanda M08 e M09 a un
+secondo momento. Le due fasi sono documentate separatamente sotto, con il punto
+di ripresa. Il rinvio non cambia il modello commerciale approvato né i
+prerequisiti per i primi incassi; non autorizza attivazioni live o addebiti.
 
 ### M01 — Decisioni commerciali
 
@@ -706,23 +711,75 @@ Rilascio e prova visuale del riordino ancora pendenti, §8 della procedura M06a.
 
 **Uscita:** primi clienti paganti verificati e un processo sostenibile. Le azioni di contatto saranno svolte dal fondatore o soltanto su sua istruzione esplicita.
 
-### M08–M09 — Automazione pagamenti
+### M08 — Preparazione e verifica Paddle
+
+**Stato: rimandato dal fondatore il 10 ottobre 2026.** Da riprendere prima
+dell'integrazione M09. La scelta Paddle e le regole commerciali sono approvate;
+account, approvazione e prove non risultano completati in questo piano.
+Fonte delle decisioni: [MONETIZATION.md](../docs/MONETIZATION.md).
+
+**Punto di ripresa:** verificare se esiste già un account Paddle e il suo stato,
+poi predisporre la sandbox (ambiente con pagamenti di prova). Rileggere stato
+Git, codice effettivo e risultati dei test manuali M04; consultare la
+documentazione ufficiale aggiornata del provider quando si esegue il lavoro.
 
 - [x] Scegliere Paddle come unico provider iniziale.
-- [ ] Completare verifiche applicabili all'account/prodotto Paddle; verificare contratto, costo effettivo, dati fiscali e payout.
-- [ ] Provare in sandbox due piani × due cicli + sedi extra, cambio quantità, proration, downgrade, insoluti e disdetta.
-- [ ] Provare primo periodo gratuito senza duplicazioni, pausa a fine periodo e ripresa con prezzo/data mostrati; nessun rinnovo residuo degli extra durante la pausa.
-- [ ] Provare insoluto con tolleranza senza reset e riallineamento con retry/fatture provider; testare prezzi con preavviso e promemoria annuali.
-- [ ] Documentare catalogo e mapping Paddle per piani, cicli, sedi extra e stati commerciali.
-- [ ] Implementare checkout server, webhook firmato, idempotenza e riconciliazione.
-- [ ] Integrare pagamento, contratti, periodi e payout nella dashboard del fondatore, senza doppio conteggio.
-- [ ] Configurare gestione cliente/portale e limiti ai cambi non compatibili.
+- [ ] Verificare account, dati dell'attività e verifiche applicabili al prodotto; registrare lo stato effettivo dell'approvazione.
+- [ ] Predisporre la sandbox e distinguere configurazione, credenziali e identificativi dall'ambiente live. Conservare i segreti fuori dai documenti e dal repository.
+- [ ] Verificare contratto, costo effettivo, dati fiscali, documenti provider e payout; coordinare con M02 la verifica ATECO/procedura fiscale prima dei primi incassi.
+- [ ] Preparare il catalogo dei due piani e delle sedi aggiuntive, ciascuno con ciclo mensile e annuale, usando il listino approvato sotto.
+- [ ] Documentare identificativi prodotti/prezzi, quantità delle sedi extra e mapping fra stati Paddle e stati commerciali aziendali. Non ricavare diritti dal vecchio Free/Pro.
+- [ ] Provare in sandbox acquisto mensile/annuale e più sedi, cambio quantità, proration, downgrade, insoluti e disdetta; registrare effetto, importo e decorrenza effettivi.
+- [ ] Verificare acquisto dopo la prova unica già gestita da KlokShift: nessun secondo periodo gratuito o reset delle date. Chiarire il rapporto fra prova interna e stati del provider prima di integrarli.
+- [ ] Provare pausa a fine periodo e ripresa con prezzo/data mostrati, senza rinnovi residui degli extra; annuale senza congelamento automatico.
+- [ ] Provare insoluto di rinnovo con tolleranza di 7 giorni senza reset; verificare retry/fatture provider, preavviso prezzi e promemoria annuali previsti dal modello.
+- [ ] Annotare risultati, limiti e questioni aperte, distinguendo funzioni provate in sandbox da approvazione e disponibilità live.
+
+| Voce del catalogo | Mensile | Annuale | Capacità |
+|---|---:|---:|---|
+| Base | 29 € | 290 € | Una sede, fino a 30 persone uniche nell'azienda |
+| Team | 49 € | 490 € | Una sede, senza limite commerciale di persone |
+| Sede aggiuntiva | 15 € | 150 € | Quantità di sedi oltre quella inclusa |
+
+Importi approvati IVA esclusa; annuale anticipato per 12 mesi consecutivi,
+equivalente a 10 mensilità. La dicitura fiscale effettiva del checkout va
+validata in M02. Non pubblicare una quota documenti non ancora calibrata.
+
+**Uscita M08:** catalogo e mapping documentati, fattibilità del ciclo commerciale
+provata in sandbox, stato dell'account noto e questioni residue esplicite.
+L'approvazione live e la procedura fiscale devono essere chiuse prima degli
+incassi; non sono presunte dal buon esito di una prova sandbox.
+
+### M09 — Integrazione e automazione pagamenti
+
+**Stato: rimandato dal fondatore il 10 ottobre 2026.** Dipende dagli esiti
+tecnici M08, dal modello M03 e dalle interfacce cliente/fondatore M04–M05.
+Pausa, riattivazione, archivio e cancellazione vanno coordinati con M11;
+gli incassi richiedono anche la chiusura dei prerequisiti M02.
+
+**Punto di ripresa:** usare il catalogo/mapping verificato in M08 e progettare
+prima il collegamento server fra azienda, contratto, pagamenti e periodi di
+accesso; poi collegare il checkout alla pagina cliente Piano e accesso.
+Verificare cosa esiste realmente nel codice al momento della ripresa.
+
+- [ ] Implementare il checkout sul web con creazione/verifica server, autorizzazione del titolare, piano/ciclo/sedi e riepilogo prima della conferma. Prezzi e checkout restano fuori dall'app nativa.
+- [ ] Implementare webhook firmati, registrazione degli eventi, idempotenza e riconciliazione; gestire duplicati, retry ed eventi fuori ordine. Il ritorno dal checkout nel browser non concede diritti.
+- [ ] Collegare soltanto eventi verificati a contratto, capacità e periodi aziendali; conservare storico e date, senza assegnare diritti per dati mancanti o resettare la prova.
+- [ ] Implementare rinnovi e insoluti con la tolleranza approvata, senza spostare arbitrariamente fine operatività, rettifiche o archivio.
+- [ ] Configurare gestione cliente/portale e flussi web per cambi, disdetta, pausa e ripresa con gli esiti provider, coordinandoli con M11.
 - [ ] Impedire downgrade incompatibili con organico/sedi prima della modifica del contratto; ricontrollare alla decorrenza e applicare l'esito concordato senza cancellazioni o acquisti automatici.
+- [ ] Integrare pagamento, contratti, periodi e payout nella dashboard del fondatore e nel completamento economico M06, senza doppio conteggio.
 - [ ] Provare doppio addebito, rimborso totale/parziale e contestazione; applicare la regola commerciale scelta senza eliminare automaticamente lo storico aziendale.
 - [ ] Verificare aziende gratuite escluse dagli addebiti, passaggio pagante→gratuito senza rinnovi residui, pagamento fallito, rimborso, account cancellato e retry delle cancellazioni provider.
-- [ ] Attivare il live dopo prove e configurazione controllata; non applicare migration o iniziare addebiti reali nell'esecuzione locale del piano.
+- [ ] Verificare lettura/export dell'archivio e permessi dei membri dopo la fine operativa; preservare aziende legacy in `migration_pending` finché ricevono una sistemazione commerciale esplicita.
+- [ ] Aggiungere soltanto migration nuove se necessarie; verificare prima in locale/sandbox, senza riscrivere quelle pubblicate.
+- [ ] Aggiornare pagina cliente, sito/FAQ/CTA/JSON-LD e documentazione al checkout realmente funzionante, mantenendo distinti listino, capacità concessa e pagamento verificato.
+- [ ] Eseguire test server/client e prove manuali del ciclo completo, documentando ambiente, passaggi, esiti attesi ed evidenze reali.
+- [ ] Attivare il live dopo prove e configurazione controllata, con i prerequisiti fiscali/commerciali e M11 chiusi. Non applicare migration o iniziare addebiti reali come conseguenza automatica del piano.
 
-**Uscita:** il diritto aziendale segue eventi verificati; un cliente può acquistare/rinnovare/disdire dal web e il fondatore riconcilia pagamenti e accrediti.
+**Uscita M09:** il diritto aziendale segue eventi verificati; un cliente può
+acquistare/rinnovare/disdire dal web e il fondatore riconcilia pagamenti e
+accrediti. La prima vendita richiede anche il completamento del ciclo M11.
 
 ### M11 — Primo mese, pausa e archivio dopo uscita
 

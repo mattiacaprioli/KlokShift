@@ -1,5 +1,11 @@
 # Piani e decisioni
 
+## Modelli di turno — 2026-10-16
+
+[SHIFT-TEMPLATES.md](SHIFT-TEMPLATES.md): un turno tipo si salva come modello
+(orari, pausa, fabbisogno, note; niente data né persone) e si riusa da app e
+dashboard. Implementati in `20261016000200_shift_templates.sql`.
+
 ## Pausa nei turni — 2026-10-16
 
 [BREAKS.md](BREAKS.md): la sede decide se la pausa è retribuita (resta nelle

@@ -21,6 +21,12 @@ describe("userErrorMessage", () => {
     expect(message).toMatch(/solo per le nuove aziende/);
   });
 
+  it("dice cosa fare quando la sede ha già troppi modelli di turno", () => {
+    const message = userErrorMessage(new Error("template_limit"));
+    expect(message).not.toBe(GENERIC_ERROR);
+    expect(message).toMatch(/Eliminane uno/);
+  });
+
   it("dice che l'uscita c'è già, nei casi concorrenti (C13)", () => {
     const message = userErrorMessage(new Error("clock_already_closed"));
     expect(message).not.toBe(GENERIC_ERROR);

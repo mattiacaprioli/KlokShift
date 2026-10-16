@@ -41,6 +41,7 @@ import {
   formatDate,
   formatShiftSummary,
   isShiftOver,
+  shiftSlotLabel,
   shiftStartsAt,
   todayString,
 } from "@/lib/format";
@@ -52,6 +53,11 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
 import { MAX_BREAK_MINUTES, shiftBreakError } from "@/features/shifts/breaks";
 import { useShiftBreak } from "@/features/shifts/useShiftBreak";
+import type { ShiftTemplate } from "@/features/shiftTemplates/api";
+import {
+  applicableRoleTargets,
+  type ShiftTemplateInput,
+} from "@/features/shiftTemplates/template";
 import { dayLabel, startOfWeek, weekDays } from "../lib/week";
 import {
   Button,
@@ -67,6 +73,8 @@ import { LiveClockLine } from "./LiveClockLine";
 import { ShiftDetails } from "./ShiftDetails";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
+import { SaveTemplateDialog } from "./SaveTemplateDialog";
+import { ShiftTemplatesRow } from "./ShiftTemplatesRow";
 
 type RoleTarget = { role_id: string; count: number };
 
@@ -200,11 +208,20 @@ function InternalForm({
    * perché può sapere cose che l'app non sa. Schede di sede, come `staffRoles`.
    */
   const [forcedAbsent, setForcedAbsent] = useState<Set<string>>(new Set());
+  // Il modello da cui si è partiti (acceso nella riga dei modelli) e quello che
+  // si sta per salvare.
+  const [template, setTemplate] = useState<{ id: string; name: string } | null>(
+    null
+  );
+  const [savingTemplate, setSavingTemplate] =
+    useState<ShiftTemplateInput | null>(null);
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
+    trigger,
     watch,
     formState: { errors },
   } = useForm<InternalShiftForm>({
@@ -322,6 +339,8 @@ function InternalForm({
     lastVenueRef.current = formVenueId;
     setStaffRoles({});
     setRoleTargets([]);
+    // I modelli sono della sede: quello applicato non vale per l'altra.
+    setTemplate(null);
   }, [shift, formVenueId]);
 
   /**
@@ -476,6 +495,42 @@ function InternalForm({
 
   function setStaffRole(staffId: string, roleId: string | null) {
     setStaffRoles((prev) => ({ ...prev, [staffId]: roleId }));
+  }
+
+  /**
+   * Riempie il form dal modello. Data, «Ripeti anche il…» e persone restano
+   * quelli scelti: il modello non li ricorda.
+   */
+  function applyTemplate(t: ShiftTemplate) {
+    const opts = { shouldDirty: true, shouldValidate: true };
+    setValue("title", t.name, opts);
+    setValue("start_time", t.start_time.slice(0, 5), opts);
+    setValue("end_time", t.end_time.slice(0, 5), opts);
+    setValue("description", t.description ?? "", opts);
+    setValue("require_confirmation", t.require_confirmation, opts);
+    setRoleTargets(applicableRoleTargets(t.role_targets, roles));
+    pause.setMinutes(t.break_minutes);
+    setTemplate({ id: t.id, name: t.name });
+  }
+
+  /** Dal form così com'è: servono orari e pausa validi, non le persone. */
+  async function onSaveTemplate() {
+    if (!(await trigger(["start_time", "end_time"]))) return;
+    const values = getValues();
+    const error = shiftBreakError(values.start_time, values.end_time, pause.minutes);
+    if (error) {
+      toast.show(error, "error");
+      return;
+    }
+    setSavingTemplate({
+      name: values.title.trim() || shiftSlotLabel(values.start_time),
+      start_time: values.start_time,
+      end_time: values.end_time,
+      break_minutes: pause.minutes,
+      description: values.description.trim() || null,
+      require_confirmation: values.require_confirmation,
+      role_targets: roleTargets.filter((t) => t.count > 0),
+    });
   }
 
   function setRoleCount(roleId: string, count: number) {
@@ -684,6 +739,14 @@ function InternalForm({
                   ))}
                 </Select>
               </Field>
+            ) : null}
+
+            {!shift ? (
+              <ShiftTemplatesRow
+                venueId={formVenueId || undefined}
+                activeId={template?.id ?? null}
+                onApply={applyTemplate}
+              />
             ) : null}
 
             <Field label="Titolo" error={errors.title?.message}>
@@ -1014,6 +1077,9 @@ function InternalForm({
               Annulla modifiche
             </Button>
           ) : null}
+          <Button onClick={onSaveTemplate} disabled={pending || !formVenueId}>
+            Salva come modello
+          </Button>
         </div>
         {shift ? (
           <p className="min-w-60 flex-1 text-[11px] leading-4 text-t4">
@@ -1032,6 +1098,21 @@ function InternalForm({
           pending={pending}
           onConfirm={() => save(pendingMove.values)}
           onCancel={() => setPendingMove(null)}
+        />
+      ) : null}
+
+      {savingTemplate && formVenueId ? (
+        <SaveTemplateDialog
+          venueId={formVenueId}
+          template={savingTemplate}
+          onSaved={(saved) => {
+            setTemplate(saved);
+            // Un turno senza titolo prende il nome appena dato al modello.
+            if (!getValues("title").trim()) {
+              setValue("title", saved.name, { shouldValidate: true });
+            }
+          }}
+          onClose={() => setSavingTemplate(null)}
         />
       ) : null}
     </form>

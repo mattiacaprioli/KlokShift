@@ -5,19 +5,11 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Segmented } from "@/components/ui/Segmented";
 import { userErrorMessage } from "@/lib/errors";
-import { toTimeString } from "@/lib/format";
+import { timeToDate, toTimeString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { TimeField } from "@/features/shifts/TimeField";
 import { useRequestShiftChange } from "./hooks";
 import type { ChangeRequestKind } from "./api";
-
-/** "HH:MM[:SS]" → Date di oggi con quell'orario (per i TimeField). */
-function timeToDate(time: string): Date {
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h ?? 0, m ?? 0, 0, 0);
-  return d;
-}
 
 const KINDS = [
   { id: "substitution" as const, label: "Non posso venire" },

@@ -20,6 +20,7 @@ import { useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { moveImpactWindow } from "@/features/shifts/moveImpact";
 import type { Shift } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { templateFromShift } from "@/features/shiftTemplates/template";
 import {
   formatDate,
   formatShiftRange,
@@ -33,6 +34,7 @@ import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { LiveClockLine } from "./LiveClockLine";
 import { PresenceSection } from "./PresenceSection";
+import { SaveTemplateDialog } from "./SaveTemplateDialog";
 
 /**
  * Il turno com'è, prima di toccarlo.
@@ -75,6 +77,10 @@ export function ShiftDetails({
   // ripristina. Un fuori turno nasce già finito; lo si dice comunque, perché
   // non si modifica né si annulla nemmeno se l'uscita cade nel minuto dopo (C06).
   const canEdit = canManage && !cancelled && !over && !shift.unplanned;
+  // Anche da un turno passato o annullato: «come venerdì scorso» è proprio il
+  // caso. Il fuori turno no: non è stato pianificato.
+  const canSaveTemplate = canManage && !shift.unplanned;
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const showLiveClock =
     !cancelled &&
     now >= shiftStartsAt(shift.date, shift.start_time) &&
@@ -281,13 +287,33 @@ export function ShiftDetails({
         </div>
       </div>
 
-      {canEdit ? (
+      {canEdit || canSaveTemplate ? (
         <footer className="flex flex-wrap gap-2 border-t border-border-2 px-6 py-4">
-          <Button variant="gold" onClick={onEdit}>
-            Modifica
-          </Button>
-          <CancelShiftButton shift={shift} onDone={onClose} />
+          {canEdit ? (
+            <>
+              <Button variant="gold" onClick={onEdit}>
+                Modifica
+              </Button>
+              <CancelShiftButton shift={shift} onDone={onClose} />
+            </>
+          ) : null}
+          {canSaveTemplate ? (
+            <Button
+              onClick={() => setSavingTemplate(true)}
+              disabled={roleReqsQuery.isPending}
+            >
+              Salva come modello
+            </Button>
+          ) : null}
         </footer>
+      ) : null}
+
+      {savingTemplate ? (
+        <SaveTemplateDialog
+          venueId={shift.venue_id}
+          template={templateFromShift(shift, roleReqsQuery.data ?? [])}
+          onClose={() => setSavingTemplate(false)}
+        />
       ) : null}
     </div>
   );

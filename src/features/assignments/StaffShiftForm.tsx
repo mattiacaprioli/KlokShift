@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
 import { ScrollView, View } from "@/tw";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
@@ -9,6 +10,7 @@ import {
   SHIFT_RANGE_ERROR,
   isValidShiftRange,
   shiftSlotLabel,
+  timeToDate,
   toDateString,
   toTimeString,
 } from "@/lib/format";
@@ -31,6 +33,13 @@ import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
 import { shiftBreakError } from "@/features/shifts/breaks";
 import { useShiftBreak } from "@/features/shifts/useShiftBreak";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import type { ShiftTemplate } from "@/features/shiftTemplates/api";
+import { SaveTemplateModal } from "@/features/shiftTemplates/SaveTemplateModal";
+import { ShiftTemplatePicker } from "@/features/shiftTemplates/ShiftTemplatePicker";
+import {
+  applicableRoleTargets,
+  type ShiftTemplateInput,
+} from "@/features/shiftTemplates/template";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -78,6 +87,12 @@ export function StaffShiftForm({ initialDate }: Props) {
   const [targets, setTargets] = useState<Record<string, number>>({});
   const [requireConfirmation, setRequireConfirmation] = useState(false);
   const pause = useShiftBreak(venue, toTimeString(start), toTimeString(end));
+  // Il modello da cui si è partiti: dà il titolo al turno e il nome proposto
+  // a «Salva come modello».
+  const [template, setTemplate] = useState<{ id: string; name: string } | null>(
+    null
+  );
+  const [saving, setSaving] = useState<ShiftTemplateInput | null>(null);
 
   function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
@@ -122,10 +137,64 @@ export function StaffShiftForm({ initialDate }: Props) {
     const hadSelection = selectedIds.length > 0 || Object.keys(targets).length > 0;
     setSelected({});
     setTargets({});
+    // I modelli sono della sede: quello applicato non vale per l'altra.
+    setTemplate(null);
     choose(id);
     if (hadSelection) {
       toast.show("Persone e fabbisogni azzerati: erano di un'altra sede.");
     }
+  }
+
+  /**
+   * Riempie il form dal modello. Giorno e persone restano quelli scelti: il
+   * modello non li ricorda, e toglierli punirebbe chi li ha già messi.
+   */
+  function applyTemplate(t: ShiftTemplate) {
+    setStart(timeToDate(t.start_time));
+    setEnd(timeToDate(t.end_time));
+    pause.setMinutes(t.break_minutes);
+    setTargets(
+      Object.fromEntries(
+        applicableRoleTargets(t.role_targets, roles).map((r) => [
+          r.role_id,
+          r.count,
+        ])
+      )
+    );
+    setNote(t.description ?? "");
+    setRequireConfirmation(t.require_confirmation);
+    setTemplate({ id: t.id, name: t.name });
+  }
+
+  /** Orario e pausa validi: le stesse regole del turno, persone a parte. */
+  function timesError(): string | null {
+    if (!isValidShiftRange(toTimeString(start), toTimeString(end))) {
+      return SHIFT_RANGE_ERROR;
+    }
+    return shiftBreakError(toTimeString(start), toTimeString(end), pause.minutes);
+  }
+
+  function onSaveTemplate() {
+    if (!venueId) {
+      toast.show("Configura prima la tua sede.", "error");
+      return;
+    }
+    const error = timesError();
+    if (error) {
+      toast.show(error, "error");
+      return;
+    }
+    setSaving({
+      name: template?.name ?? shiftSlotLabel(toTimeString(start)),
+      start_time: toTimeString(start),
+      end_time: toTimeString(end),
+      break_minutes: pause.minutes,
+      description: note.trim() || null,
+      require_confirmation: requireConfirmation,
+      role_targets: roles
+        .map((role) => ({ role_id: role.id, count: targets[role.id] ?? 0 }))
+        .filter((t) => t.count > 0),
+    });
   }
 
   function onSubmit() {
@@ -137,17 +206,9 @@ export function StaffShiftForm({ initialDate }: Props) {
       toast.show("Seleziona almeno una persona.", "error");
       return;
     }
-    if (!isValidShiftRange(toTimeString(start), toTimeString(end))) {
-      toast.show(SHIFT_RANGE_ERROR, "error");
-      return;
-    }
-    const pauseError = shiftBreakError(
-      toTimeString(start),
-      toTimeString(end),
-      pause.minutes
-    );
-    if (pauseError) {
-      toast.show(pauseError, "error");
+    const error = timesError();
+    if (error) {
+      toast.show(error, "error");
       return;
     }
     const dateStr = toDateString(date);
@@ -157,10 +218,11 @@ export function StaffShiftForm({ initialDate }: Props) {
     create.mutate(
       {
         venue_id: venueId,
-        // La fascia oraria, non la data: la data è già una colonna del turno,
-        // e ripeterla nel titolo riempiva la riga più in vista di ogni card
-        // con l'informazione che la riga sotto dava di nuovo.
-        title: shiftSlotLabel(toTimeString(start)),
+        // Il nome del modello se si è partiti da uno, altrimenti la fascia
+        // oraria. Mai la data: è già una colonna del turno, e ripeterla nel
+        // titolo riempiva la riga più in vista di ogni card con l'informazione
+        // che la riga sotto dava di nuovo.
+        title: template?.name ?? shiftSlotLabel(toTimeString(start)),
         date: dateStr,
         start_time: toTimeString(start),
         end_time: toTimeString(end),
@@ -199,6 +261,12 @@ export function StaffShiftForm({ initialDate }: Props) {
       >
         {/* Primo campo: tutto il resto del form dipende da questa risposta. */}
         <VenuePicker value={venueId} onChange={chooseVenue} />
+
+        <ShiftTemplatePicker
+          venueId={venueId}
+          activeId={template?.id ?? null}
+          onApply={applyTemplate}
+        />
 
         <View className="gap-3">
           <Mono>Giorno</Mono>
@@ -267,7 +335,23 @@ export function StaffShiftForm({ initialDate }: Props) {
           disabled={create.isPending || selectedIds.length === 0}
           onPress={onSubmit}
         />
+        {/* Non chiede persone: il modello non le ricorda. */}
+        <GhostButton
+          className="-mt-4"
+          label="Salva come modello"
+          disabled={create.isPending}
+          onPress={onSaveTemplate}
+        />
       </ScrollView>
+
+      {saving && venueId ? (
+        <SaveTemplateModal
+          venueId={venueId}
+          template={saving}
+          onSaved={setTemplate}
+          onClose={() => setSaving(null)}
+        />
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

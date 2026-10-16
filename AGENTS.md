@@ -118,6 +118,15 @@ timbrata, poi la pianificata. ⚠️ `shiftCountedHours` e `effectiveClockBreak`
 sono gemelli **manuali** di `shift_counted_hours` e `clock_record_break`. Dettagli
 in [plans/BREAKS.md](plans/BREAKS.md).
 
+## Modelli di turno (2026-10-16)
+
+Un turno tipo si salva come **modello** (`shift_templates`, per sede) e si
+riusa dal form del nuovo turno, in app e dashboard. Ricorda orari, pausa,
+fabbisogno per ruolo, note e «chiedi conferma»; **non** la data e **non** le
+persone. Lo legge e lo scrive chi ha «Turni» sulla sede, solo via
+`save_shift_template` / `delete_shift_template`. Eliminarlo non tocca i turni
+creati da lui. Dettagli in [plans/SHIFT-TEMPLATES.md](plans/SHIFT-TEMPLATES.md).
+
 ## Monetizzazione e dashboard personale (2026-10-05)
 
 Le regole approvate sono in [docs/MONETIZATION.md](docs/MONETIZATION.md);

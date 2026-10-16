@@ -42,6 +42,8 @@ import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
 import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
+import { SaveTemplateModal } from "@/features/shiftTemplates/SaveTemplateModal";
+import { templateFromShift } from "@/features/shiftTemplates/template";
 import { ManagerClockReview } from "@/features/clock/ManagerClockReview";
 import { useApproveClockRecords } from "@/features/clock/hooks";
 import { LiveClockLine } from "@/features/clock/LiveClockLine";
@@ -386,6 +388,7 @@ export default function ShiftDetailScreen() {
   const busy = statusMutation.isPending;
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   function onCancelShift() {
     statusMutation.mutate("cancelled", {
@@ -633,6 +636,20 @@ export default function ShiftDetailScreen() {
               </Text>
             </Pressable>
           ) : null}
+
+          {/* Anche da un turno passato o annullato: «come venerdì scorso» è
+              proprio il caso. Il fuori turno no: non è stato pianificato. */}
+          {!shift.unplanned && can(shift.venue_id, "can_manage_shifts") ? (
+            <Pressable
+              disabled={roleReqsQuery.isPending}
+              onPress={() => setSavingTemplate(true)}
+              className="items-center rounded-2xl border border-border-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-t1">
+                Salva come modello
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {roleRequirements.length > 0 ? (
@@ -779,6 +796,14 @@ export default function ShiftDetailScreen() {
         onConfirm={onRestoreShift}
         onCancel={() => setRestoreVisible(false)}
       />
+
+      {savingTemplate ? (
+        <SaveTemplateModal
+          venueId={shift.venue_id}
+          template={templateFromShift(shift, roleRequirements)}
+          onClose={() => setSavingTemplate(false)}
+        />
+      ) : null}
     </View>
   );
 }

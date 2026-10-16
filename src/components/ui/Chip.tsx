@@ -7,15 +7,24 @@ type Props = {
   /** Gold fill when active (otherwise a neutral tint). */
   gold?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
   className?: string;
 };
 
 /** Small uppercase mono chip — skills, filters, role tags (prototype's Pill). */
-export function Chip({ label, active, gold, onPress, className }: Props) {
+export function Chip({
+  label,
+  active,
+  gold,
+  onPress,
+  onLongPress,
+  className,
+}: Props) {
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
+      onLongPress={onLongPress}
+      disabled={!onPress && !onLongPress}
       className={cn(
         "self-start rounded-full border px-2.5 py-1.5",
         active

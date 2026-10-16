@@ -6,6 +6,10 @@ import { formatBreakMinutes } from "@/lib/format";
 import { View } from "@/tw";
 import { BREAK_PRESETS, MAX_BREAK_MINUTES } from "./breaks";
 
+function isPreset(minutes: number) {
+  return (BREAK_PRESETS as readonly number[]).includes(minutes);
+}
+
 type Props = {
   minutes: number;
   onChange: (minutes: number) => void;
@@ -16,9 +20,31 @@ type Props = {
  * minuti liberi. Se sia retribuita lo decide la sede, non questo campo.
  */
 export function BreakField({ minutes, onChange }: Props) {
-  const preset = (BREAK_PRESETS as readonly number[]).includes(minutes);
+  const preset = isPreset(minutes);
   const [custom, setCustom] = useState(!preset);
   const [draft, setDraft] = useState(preset ? "" : String(minutes));
+  // L'ultimo valore scritto da questo campo, e l'ultimo ricevuto.
+  const [emitted, setEmitted] = useState<number | null>(null);
+  const [seen, setSeen] = useState(minutes);
+
+  /**
+   * La pausa può cambiare da fuori: un modello di turno, la regola della sede
+   * quando cambia l'orario. Allora il campo la mostra com'è — 20 minuti aprono
+   * «Altro», 30 accendono il chip. Quella scritta qui no: chi digita «30» in
+   * «Altro» non deve vederselo chiudere a metà.
+   */
+  if (minutes !== seen) {
+    setSeen(minutes);
+    if (minutes !== emitted) {
+      setCustom(!isPreset(minutes));
+      setDraft(isPreset(minutes) ? "" : String(minutes));
+    }
+  }
+
+  function emit(value: number) {
+    setEmitted(value);
+    onChange(value);
+  }
 
   return (
     <View className="gap-2">
@@ -31,7 +57,7 @@ export function BreakField({ minutes, onChange }: Props) {
             active={!custom && minutes === value}
             onPress={() => {
               setCustom(false);
-              onChange(value);
+              emit(value);
             }}
           />
         ))}
@@ -50,7 +76,7 @@ export function BreakField({ minutes, onChange }: Props) {
           onChangeText={(text) => {
             const digits = text.replace(/\D/g, "").slice(0, 3);
             setDraft(digits);
-            onChange(Math.min(MAX_BREAK_MINUTES, Number(digits || 0)));
+            emit(Math.min(MAX_BREAK_MINUTES, Number(digits || 0)));
           }}
           keyboardType="number-pad"
           placeholder="Minuti di pausa"
