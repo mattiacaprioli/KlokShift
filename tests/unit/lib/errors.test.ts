@@ -15,6 +15,12 @@ describe("userErrorMessage", () => {
     expect(message).toMatch(/24 ore/);
   });
 
+  it("dice perché la prova non parte per un'azienda non nuova (C18)", () => {
+    const message = userErrorMessage(new Error("trial_not_eligible"));
+    expect(message).not.toBe(GENERIC_ERROR);
+    expect(message).toMatch(/solo per le nuove aziende/);
+  });
+
   it("dice che l'uscita c'è già, nei casi concorrenti (C13)", () => {
     const message = userErrorMessage(new Error("clock_already_closed"));
     expect(message).not.toBe(GENERIC_ERROR);

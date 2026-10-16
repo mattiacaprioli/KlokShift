@@ -59,6 +59,7 @@ declare
   started timestamptz;
   period_id uuid;
   pending_ws uuid;
+  scheduled_ws uuid;
   next_owner uuid;
   original_owner uuid;
 begin
@@ -155,6 +156,30 @@ begin
   perform tests.login('Ow');
   perform tests.eq(public.get_workspace_access(pending_ws) ->> 'state', 'operational',
     'la classificazione esplicita rende valido il periodo di transizione');
+
+  -- La prova è solo per le aziende nuove (D2): finita la transizione, l'azienda
+  -- in archivio non si riattiva da sola per 30 giorni.
+  perform tests.logout();
+  update public.workspace_access_periods
+     set starts_at = now() - interval '10 days', ends_at = now() - interval '1 hour'
+   where workspace_id = pending_ws;
+  perform tests.login('Ow');
+  perform tests.eq(public.get_workspace_access(pending_ws) ->> 'state', 'archive',
+    'finita la transizione l''azienda è in archivio');
+  perform tests.raises(format('select public.start_workspace_trial(%L)', pending_ws),
+    'trial_not_eligible', 'dopo un periodo concesso la prova non si avvia');
+
+  -- Anche una concessione programmata e non ancora iniziata (stato «setup»).
+  scheduled_ws := public.create_workspace('Commerciale: concessione programmata');
+  perform public.create_venue(scheduled_ws, 'Sede programmata');
+  perform tests.commercial_service();
+  perform public.grant_workspace_access(scheduled_ws, 'complimentary_temporary', 'team', 1,
+    now() + interval '7 days', now() + interval '37 days', 'Concessione programmata');
+  perform tests.login('Ow');
+  perform tests.eq(public.get_workspace_access(scheduled_ws) ->> 'state', 'setup',
+    'la concessione futura non è ancora operativa');
+  perform tests.raises(format('select public.start_workspace_trial(%L)', scheduled_ws),
+    'trial_not_eligible', 'e la prova non parte comunque');
   perform tests.logout();
 end $$;
 
