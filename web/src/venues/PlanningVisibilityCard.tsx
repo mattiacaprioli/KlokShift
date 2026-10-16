@@ -8,10 +8,16 @@ import { useToast } from "../ui/Toast";
 /**
  * «Planning visibile all'organico» — gemella di `VenuePlanningToggle` nell'app.
  *
- * Salva al clic, fuori dal modulo della sede: è un interruttore, e farlo
- * passare da «Modifica → Salva» lo nasconderebbe dietro due clic.
+ * Dentro «Modifica» della sede, salva al clic come timbrature e pausa.
  */
-export function PlanningVisibilityCard({ venue }: { venue: Venue }) {
+export function PlanningVisibilityCard({
+  venue,
+  embedded = false,
+}: {
+  venue: Venue;
+  /** Nel modal sede usa il contenitore del pannello. */
+  embedded?: boolean;
+}) {
   const save = useSetVenueSeesPlanning();
   const toast = useToast();
   const on = venue.staff_sees_planning;
@@ -31,8 +37,8 @@ export function PlanningVisibilityCard({ venue }: { venue: Venue }) {
     );
   }
 
-  return (
-    <Card className="mt-6 max-w-2xl">
+  const content = (
+    <section>
       <div className="flex items-start justify-between gap-4">
         <div className="max-w-xl">
           <span className="text-xs font-semibold uppercase tracking-wider text-gold">
@@ -71,6 +77,8 @@ export function PlanningVisibilityCard({ venue }: { venue: Venue }) {
           />
         </button>
       </div>
-    </Card>
+    </section>
   );
+
+  return embedded ? content : <Card className="mt-6 max-w-2xl">{content}</Card>;
 }

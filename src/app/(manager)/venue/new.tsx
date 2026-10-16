@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueFormView } from "@/features/venues/VenueFormView";
@@ -43,48 +44,42 @@ export default function VenueNewScreen() {
     accessPending,
   });
 
-  if (mode === "loading") {
-    return (
-      <View
-        className="flex-1 bg-bg-0 px-5"
-        style={{ paddingTop: insets.top + 24 }}
-      >
-        <SkeletonGroup className="gap-4">
-          <Skeleton className="h-8 w-1/2" />
-          <Skeleton className="h-12" />
-          <Skeleton className="h-12" />
-          <Skeleton className="h-12" />
-        </SkeletonGroup>
-      </View>
-    );
-  }
-
-  if (mode === "error") {
-    return (
-      <View className="flex-1 justify-center bg-bg-0 px-6">
-        <QueryError onRetry={() => void refetch()} />
-      </View>
-    );
-  }
-
-  if (mode === "denied") {
-    return (
-      <View className="flex-1 justify-center bg-bg-0 px-6">
-        <EmptyState
-          title="Solo il titolare può aggiungere una sede"
-          subtitle="Come collaboratore puoi lavorare sulle sedi su cui ti hanno dato accesso."
-        />
-      </View>
-    );
-  }
-
   const firstWorkspace = mode === "first";
   const gate = canCreateVenue({ access, firstWorkspace });
 
-  if (!gate.allowed) {
+  if (mode === "loading" || mode === "error" || mode === "denied" || !gate.allowed) {
     return (
-      <View className="flex-1 justify-center bg-bg-0 px-6">
-        <EmptyState title="Nuova sede non disponibile" subtitle={gate.reason} />
+      <View
+        className="flex-1 bg-bg-0 px-5"
+        style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom }}
+      >
+        <ScreenHeader
+          eyebrow="Sede"
+          title="Nuova sede"
+          onBack={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/(manager)/(tabs)/profilo");
+          }}
+        />
+        <View className={mode === "loading" ? "mt-6" : "flex-1 justify-center"}>
+          {mode === "loading" ? (
+            <SkeletonGroup className="gap-4">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+              <Skeleton className="h-12" />
+            </SkeletonGroup>
+          ) : mode === "error" ? (
+            <QueryError onRetry={() => void refetch()} />
+          ) : mode === "denied" ? (
+            <EmptyState
+              title="Solo il titolare può aggiungere una sede"
+              subtitle="Come collaboratore puoi lavorare sulle sedi su cui ti hanno dato accesso."
+            />
+          ) : !gate.allowed ? (
+            <EmptyState title="Nuova sede non disponibile" subtitle={gate.reason} />
+          ) : null}
+        </View>
       </View>
     );
   }

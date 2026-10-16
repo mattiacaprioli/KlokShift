@@ -410,8 +410,8 @@ Le recensioni dei clienti erano spente dal 12/09 (`REVIEWS_ENABLED=false`). Ora 
 Un turno tipo («Cena», «Pranzo sala») si salva come modello e si riusa senza riscrivere orari, pausa, fabbisogno e note. Decisione in [plans/SHIFT-TEMPLATES.md](plans/SHIFT-TEMPLATES.md).
 
 - **DB** (`20261016000200_shift_templates.sql`): tabella `shift_templates` per sede, letta da chi ha «Turni», scritta solo da `save_shift_template` (stesso nome → aggiorna; max 30 per sede) e `delete_shift_template`, con la guardia commerciale dei turni. Suite `032_shift_templates.sql`.
-- **App**: chip «Parti da un modello» nel form del nuovo turno (pressione lunga = elimina), «Salva come modello» nel form e nel dettaglio di un turno anche passato. Il turno prende il nome del modello come titolo.
-- **Dashboard**: stessa riga nel pannello di creazione (× = elimina), «Salva come modello» nel pannello e nel dettaglio.
+- **App**: «Modelli» in alto a destra nel nuovo turno, con un pannello dal basso (× = elimina, conferma sulla riga); «Salva come modello» in fondo al form e nel dettaglio di un turno anche passato. Il turno prende il nome del modello come titolo.
+- **Dashboard**: pulsante «Modelli» accanto a «Chiudi» nel pannello di creazione, con menu a tendina (× = elimina); «Salva come modello» in fondo al pannello e nel dettaglio.
 - `BreakField` ora segue una pausa impostata da fuori (20 minuti aprono «Altro»); `timeToDate` spostata in `src/lib/format.ts`.
 - [ ] **Prova a mano** in app e dashboard dopo il rilascio della migration (il banco locale è solo Postgres).
 

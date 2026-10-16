@@ -12,29 +12,25 @@ import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import { cn } from "@/lib/cn";
+import { useUnsavedEdit } from "@/lib/unsavedEdits";
 import { Button, Card, Field, Input, Textarea } from "../ui/primitives";
-import { ClockMethodCard } from "./ClockMethodCard";
 
 /**
  * Logo + modulo di una sede, in creazione o in modifica.
  *
- * Estratto da `pages/Sede.tsx` quando un account ha smesso di avere un solo
- * sede: ora lo usano `/sede` (la sede attiva) e `/sede/nuovo`.
+ * Usato da `/sede/nuovo` e dalla scheda Dati sede del modal di modifica.
  */
 export function VenueFormCard({
   venue,
   onSaved,
-  onCancel,
-  showClockMethod = false,
+  embedded = false,
 }: {
   /** `null` = creazione. */
   venue: Venue | null;
   /** Dopo il salvataggio. In creazione si conosce solo l'id della sede nuova. */
   onSaved?: (venue: { id: string }) => void;
-  /** Aperto da una lettura (`VenueCard`): «Annulla» ci torna senza salvare. */
-  onCancel?: () => void;
-  /** Le timbrature sono un'impostazione della sede e vivono nella sua modifica. */
-  showClockMethod?: boolean;
+  /** Nel modal usa il contenitore del pannello, senza una seconda card. */
+  embedded?: boolean;
 }) {
   const toast = useToast();
   const { session } = useAuth();
@@ -102,6 +98,8 @@ export function VenueFormCard({
     },
   });
 
+  useUnsavedEdit("dati-sede", isDirty);
+
   return (
     <>
       {/* Il logo si carica solo su una sede già creata: prima non c'è una riga
@@ -109,7 +107,7 @@ export function VenueFormCard({
           dal modulo avrebbe voluto dire o salvare campi a metà, o perdere la
           foto uscendo senza salvare. */}
       {venue ? (
-        <Card className={cn("mb-4 max-w-2xl", onCancel && "border-gold/40")}>
+        <Card className={cn("mb-4 max-w-2xl", embedded && "max-w-none")}>
           <div className="flex items-center gap-4">
             <Avatar url={venue.logo_url} name={venue.name} size={72} />
             <div className="flex min-w-0 flex-col items-start gap-2">
@@ -149,7 +147,10 @@ export function VenueFormCard({
         </Card>
       ) : null}
 
-      <Card className={cn("max-w-2xl", onCancel && "border-gold/40")}>
+      <Card className={cn(
+        "max-w-2xl",
+        embedded && "max-w-none rounded-none border-0 bg-transparent p-0"
+      )}>
         <form
           onSubmit={handleSubmit((values) =>
             save.mutate(
@@ -194,15 +195,6 @@ export function VenueFormCard({
           ) : null}
 
           <div className="flex gap-2">
-            {onCancel ? (
-              <Button
-                type="button"
-                disabled={save.isPending}
-                onClick={onCancel}
-              >
-                Annulla
-              </Button>
-            ) : null}
             <Button
               type="submit"
               variant="gold"
@@ -217,9 +209,6 @@ export function VenueFormCard({
           </div>
         </form>
 
-        {venue && showClockMethod ? (
-          <ClockMethodCard venue={venue} embedded />
-        ) : null}
       </Card>
     </>
   );

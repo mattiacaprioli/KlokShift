@@ -1,14 +1,17 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { todayString } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import { useOwnerVenues, venuesKeyOf } from "@/features/venues/OwnerVenues";
 import type { Enums } from "@/types/database";
 import {
+  getOwnerEndedShifts,
   getOwnerPastShiftsCount,
   getOwnerPastShiftsPage,
   getOwnerShifts,
@@ -45,6 +48,24 @@ export function useOwnerShifts() {
     queryKey: qk.shifts.byOwner(venuesKey),
     queryFn: () => getOwnerShifts(venueIds),
     enabled: venueIds.length > 0,
+  });
+}
+
+/**
+ * Turni già conclusi da `from` a oggi, tutte le sedi: l'agenda li mette prima
+ * dei prossimi quando dal calendario si torna indietro.
+ *
+ * Tiene i dati precedenti mentre carica: andando indietro di una settimana i
+ * pallini già noti restano al loro posto invece di spegnersi e riaccendersi.
+ */
+export function useOwnerEndedShifts(from: string) {
+  const { venueIds, venuesKey } = useOwnerVenues();
+  const to = todayString();
+  return useQuery({
+    queryKey: qk.shifts.ended(venuesKey, from, to),
+    queryFn: () => getOwnerEndedShifts(venueIds, from, to),
+    enabled: venueIds.length > 0 && from <= to,
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -79,6 +79,13 @@ export const qk = {
     all: ["shifts"] as const,
     byOwner: (scope: string) => ["shifts", "byOwner", scope] as const,
     byOwnerAll: ["shifts", "byOwner"] as const,
+    /**
+     * I turni conclusi dell'agenda. Sta sotto `byOwner` apposta: è l'altra metà
+     * della stessa lista, e chi invalida `byOwnerAll` (realtime, mutation) deve
+     * rinfrescarle insieme.
+     */
+    ended: (scope: string, from: string, to: string) =>
+      ["shifts", "byOwner", scope, "ended", from, to] as const,
     range: (scope: string, from: string, to: string) =>
       ["shifts", "range", scope, from, to] as const,
     // Prefisso: ogni intervallo già in cache (la vista calendario ne tiene più

@@ -9,7 +9,7 @@ export function ClockMethodCard({
   embedded = false,
 }: {
   venue: Venue;
-  /** Dentro il modulo sede non serve una seconda card né il nome ripetuto. */
+  /** Nel modal sede usa il contenitore del pannello. */
   embedded?: boolean;
 }) {
   const save = useSetVenueClockMethod();
@@ -17,11 +17,7 @@ export function ClockMethodCard({
   const appEnabled = venue.clock_method === "app";
 
   const content = (
-    <section
-      className={
-        embedded ? "mt-6 border-t border-border-2 pt-5" : undefined
-      }
-    >
+    <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-wider text-gold">

@@ -1,5 +1,7 @@
 import { cn } from "@/lib/cn";
 import type { Venue } from "@/features/venues/api";
+import { clockMethodLabel } from "@/features/clock/methods";
+import { formatBreakMinutes } from "@/lib/format";
 import { Avatar } from "../ui/Avatar";
 import { Button, Card } from "../ui/primitives";
 
@@ -34,6 +36,20 @@ export function VenueInfoCard({
     ["Città", venue.city],
     ["Indirizzo", venue.address],
     ["Tipo di sede", venue.cuisine_type],
+    ["Timbratura predefinita", clockMethodLabel(venue.clock_method)],
+    ["Pausa", venue.break_paid ? "Retribuita" : "Non retribuita"],
+    [
+      "Pausa suggerita",
+      venue.break_rule_after_minutes != null && venue.break_rule_minutes != null
+        ? `${formatBreakMinutes(venue.break_rule_minutes)} nei turni oltre ${formatBreakMinutes(venue.break_rule_after_minutes)}`
+        : "Non impostata",
+    ],
+    [
+      "Planning per l’organico",
+      venue.staff_sees_planning
+        ? "Tutti i turni della sede"
+        : "Solo i propri turni",
+    ],
   ];
 
   return (
@@ -50,6 +66,14 @@ export function VenueInfoCard({
         </div>
         {onEdit ? <Button onClick={onEdit}>Modifica</Button> : null}
       </div>
+
+      {venue.description ? (
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-5 text-t2">
+          {venue.description}
+        </p>
+      ) : onEdit ? (
+        <p className="mt-3 text-sm text-t4">Nessuna descrizione.</p>
+      ) : null}
 
       <dl className="mt-4 flex flex-col gap-2 border-t border-border-2 pt-4">
         {/* A chi la scrive i campi vuoti servono: dicono cosa manca. */}
@@ -72,13 +96,6 @@ export function VenueInfoCard({
           ))}
       </dl>
 
-      {venue.description ? (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-5 text-t2">
-          {venue.description}
-        </p>
-      ) : onEdit ? (
-        <p className="mt-3 text-sm text-t4">Nessuna descrizione.</p>
-      ) : null}
     </Card>
   );
 }

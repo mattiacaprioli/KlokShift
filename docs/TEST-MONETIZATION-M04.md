@@ -90,7 +90,7 @@ accedere manualmente nella dashboard locale.
 
 1. Come collaboratore di test, verificare che Piano e accesso non sia nel
    menu; digitare `#/piano`. Atteso: sezione riservata al titolare e nessun
-   modulo di attivazione/listino. Il banner resta neutro e i permessi delle
+   modulo di attivazione/listino. I permessi delle
    altre pagine rimangono quelli del membro.
 2. Come titolare, dopo un caricamento valido bloccare nelle DevTools soltanto
    le richieste a `*/rest/v1/rpc/get_workspace_access` e premere Aggiorna stato.

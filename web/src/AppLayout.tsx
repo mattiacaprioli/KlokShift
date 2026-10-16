@@ -1,5 +1,4 @@
 import { DetailSkeleton } from "./ui/Skeleton";
-import { WorkspaceAccessBanner } from "./WorkspaceAccessBanner";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -186,7 +185,6 @@ export function AppLayout() {
                 stampato il {new Date().toLocaleDateString("it-IT")}
               </span>
             </div>
-            <WorkspaceAccessBanner />
             <PersonAvatarProvider><Outlet /></PersonAvatarProvider>
           </>
         )}

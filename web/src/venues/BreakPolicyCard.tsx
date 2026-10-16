@@ -22,7 +22,14 @@ type Policy = {
  * Pausa retribuita o no, e la regola che la propone nei turni lunghi: per chi
  * ha il permesso Ore, come il metodo di timbratura. Ogni scelta salva.
  */
-export function BreakPolicyCard({ venue }: { venue: Venue }) {
+export function BreakPolicyCard({
+  venue,
+  embedded = false,
+}: {
+  venue: Venue;
+  /** Nel modal sede usa il contenitore del pannello. */
+  embedded?: boolean;
+}) {
   const save = useSetVenueBreakPolicy();
   const toast = useToast();
   const current: Policy = {
@@ -39,8 +46,8 @@ export function BreakPolicyCard({ venue }: { venue: Venue }) {
     );
   }
 
-  return (
-    <Card className="mt-6 max-w-2xl">
+  const content = (
+    <section>
       <span className="text-xs font-semibold uppercase tracking-wider text-gold">
         Pausa
       </span>
@@ -145,6 +152,8 @@ export function BreakPolicyCard({ venue }: { venue: Venue }) {
       </div>
 
       <p className="mt-4 text-xs leading-5 text-t4">{BREAK_POLICY_COPY.note}</p>
-    </Card>
+    </section>
   );
+
+  return embedded ? content : <Card className="mt-6 max-w-2xl">{content}</Card>;
 }

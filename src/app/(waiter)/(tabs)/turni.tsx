@@ -16,7 +16,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { Segmented } from "@/components/ui/Segmented";
-import { WeekCalendar } from "@/components/ui/WeekCalendar";
+import { monthGridStart, WeekCalendar } from "@/components/ui/WeekCalendar";
 import { absenceForShift } from "@/features/absences/conflicts";
 import { useMyCurrentAbsences } from "@/features/absences/hooks";
 import { MY_ABSENCE_NOTE } from "@/features/absences/labels";
@@ -70,6 +70,9 @@ const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
  * tetto di 62 giorni che `get_staff_planning` applica comunque lato server.
  */
 const PLANNING_WINDOW_DAYS = 42;
+
+/** Il tetto della finestra che `get_staff_planning` applica (`p_from + 62`). */
+const PLANNING_MAX_DAYS = 62;
 
 const MODES = [
   { id: "mine", label: "I miei" },
@@ -129,6 +132,12 @@ type Mode = (typeof MODES)[number]["id"];
  *
  * La griglia legge una finestra sua (`useMyAssignmentsInRange`) invece dei
  * «prossimi»: lunedì passato deve restare dov'era, come in ogni calendario.
+ *
+ * Dal 16/10/2026 vale anche per l'elenco: i giorni passati del calendario hanno
+ * il pallino, e sceglierne uno mostra i turni fatti da lì in avanti. Prima il
+ * calendario taceva su tutto ciò che era già finito, e un giorno lavorato
+ * sembrava un giorno libero. Il conteggio in testa e i «da confermare» restano
+ * sui prossimi: sono cose da fare, non da ricordare.
  */
 export default function WaiterShiftsScreen() {
   const router = useRouter();
@@ -175,11 +184,6 @@ export default function WaiterShiftsScreen() {
     () => withShift(assignedQuery.data ?? []),
     [assignedQuery.data]
   );
-  const allSections = useMemo(() => groupAssignmentsByDay(items), [items]);
-  const sections = useMemo(
-    () => allSections.filter((s) => (s.date ?? "") >= anchorDay),
-    [allSections, anchorDay]
-  );
   const daConfermare = items.filter(
     (a) => a.shift.status !== "cancelled" && a.status === "assigned"
   );
@@ -196,6 +200,49 @@ export default function WaiterShiftsScreen() {
   // Se il titolare lo spegne mentre si guarda la sede, si torna ai propri turni.
   const mode: Mode = sharesPlanning ? chosenMode : "mine";
   const layout: AgendaLayout = mode === "venue" ? "list" : chosenLayout;
+
+  /**
+   * I turni già fatti, dall'inizio della griglia del mese scelto fino a oggi:
+   * il passato dell'elenco e dei suoi pallini. Il mese e non il giorno, perché i
+   * pallini coprono tutto ciò che il calendario mostra, anche aperto. Sfogliando
+   * in avanti resta il mese corrente.
+   */
+  const pastAnchor = anchorDay < today;
+  const endedQuery = useMyAssignmentsInRange(
+    waiterId,
+    monthGridStart(pastAnchor ? anchorDay : today),
+    today,
+    mode === "mine" && layout === "list"
+  );
+  /**
+   * Le assegnazioni già concluse: ciò che la finestra ha e i «prossimi» no. Un
+   * turno finito fra le due letture sta in entrambe, e vale la riga dei prossimi.
+   */
+  const ended = useMemo(() => {
+    const upcomingIds = new Set(items.map((a) => a.id));
+    return withShift(endedQuery.data ?? []).filter(
+      (a) => !upcomingIds.has(a.id)
+    );
+  }, [endedQuery.data, items]);
+  const endedIds = useMemo(() => new Set(ended.map((a) => a.id)), [ended]);
+  const agendaItems = useMemo(
+    () =>
+      ended.length === 0
+        ? items
+        : [...ended, ...items].sort(
+            (a, b) =>
+              a.shift.date.localeCompare(b.shift.date) ||
+              a.shift.start_time.localeCompare(b.shift.start_time)
+          ),
+    [ended, items]
+  );
+  const sections = useMemo(
+    () =>
+      groupAssignmentsByDay(agendaItems).filter(
+        (s) => (s.date ?? "") >= anchorDay
+      ),
+    [agendaItems, anchorDay]
+  );
 
   // La griglia: le tre settimane del pager più la domenica prima, che può
   // portare nel lunedì la coda di un notturno.
@@ -215,15 +262,24 @@ export default function WaiterShiftsScreen() {
     Array.from({ length: 7 }, (_, i) => addDaysToDate(monday, i))
   );
 
-  // Il planning della sede: una finestra che parte dal giorno da cui parte
-  // l'agenda, così scegliere una data lontana va a prendersi il periodo giusto
-  // invece di mostrare un vuoto. Il server filtra già da `anchorDay` in avanti,
-  // quindi qui non serve il `filter` che la vista «I miei» fa sulle sezioni.
-  const planningTo = addDaysToDate(anchorDay, PLANNING_WINDOW_DAYS);
-  const planning = useStaffPlanning(anchorDay, planningTo, mode === "venue");
+  // Il planning della sede: una finestra attorno al giorno scelto, così una
+  // data lontana va a prendersi il periodo giusto invece di mostrare un vuoto.
+  // Parte dalla griglia del mese — non dal giorno scelto — perché anche i giorni
+  // che il calendario mostra prima di lui abbiano il loro pallino; la lista
+  // invece parte dal giorno scelto, come «I miei». La fine resta dentro il
+  // tetto che il server applica comunque: almeno tre settimane dopo il giorno.
+  const planningFrom = monthGridStart(anchorDay);
+  const planningTo = [
+    addDaysToDate(anchorDay, PLANNING_WINDOW_DAYS),
+    addDaysToDate(planningFrom, PLANNING_MAX_DAYS),
+  ].sort()[0];
+  const planning = useStaffPlanning(planningFrom, planningTo, mode === "venue");
   const planningSections = useMemo(
-    () => groupByDay(planning.data ?? [], (s) => s.date),
-    [planning.data]
+    () =>
+      groupByDay(planning.data ?? [], (s) => s.date).filter(
+        (g) => (g.date ?? "") >= anchorDay
+      ),
+    [planning.data, anchorDay]
   );
 
   // Le proprie assenze approvate: un turno che ci cade dentro dice «Sei in
@@ -253,13 +309,13 @@ export default function WaiterShiftsScreen() {
   // I pallini del calendario seguono la vista: sono la mappa di **questa**
   // lista, e lasciarli sui propri turni mentre si guarda la sede indicherebbe
   // giorni che la lista sotto non ha.
-  const myDays = useMemo(() => daysWithShifts(items), [items]);
+  const myDays = useMemo(() => daysWithShifts(agendaItems), [agendaItems]);
   const planningDays = useMemo(
     () => new Set((planning.data ?? []).map((s) => s.date)),
     [planning.data]
   );
-  // In griglia i pallini comprendono anche i giorni passati della finestra,
-  // che i «prossimi» non hanno più.
+  // In griglia i pallini comprendono anche i giorni della sua finestra, che
+  // può uscire dal mese caricato per l'elenco.
   const weekDays = useMemo(
     () => new Set([...myDays, ...daysWithShifts(weekItems)]),
     [myDays, weekItems]
@@ -273,7 +329,7 @@ export default function WaiterShiftsScreen() {
         ? [planning.refetch()]
         : layout === "week"
           ? [assignedQuery.refetch(), weekQuery.refetch()]
-          : [assignedQuery.refetch()]
+          : [assignedQuery.refetch(), endedQuery.refetch()]
     )
   );
 
@@ -463,10 +519,17 @@ export default function WaiterShiftsScreen() {
               />
             </>
           )
-        ) : assignedQuery.isLoading ? (
+        ) : assignedQuery.isLoading ||
+          // Tornando indietro la lista parte da giorni che non ha ancora:
+          // meglio lo scheletro di una lista che si riempie dall'alto.
+          (pastAnchor && (endedQuery.isLoading || endedQuery.isPlaceholderData)) ? (
           <ListSkeleton className="px-5 pt-2" label="Caricamento dei tuoi turni…" />
-        ) : assignedQuery.isError ? (
-          <QueryError onRetry={() => assignedQuery.refetch()} />
+        ) : assignedQuery.isError || (pastAnchor && endedQuery.isError) ? (
+          <QueryError
+            onRetry={() =>
+              Promise.all([assignedQuery.refetch(), endedQuery.refetch()])
+            }
+          />
         ) : (
           <SectionList
             ref={listRef}
@@ -511,13 +574,21 @@ export default function WaiterShiftsScreen() {
             )}
             renderItem={({ item }) => (
               <View className="pb-3">
+                {/* Un turno finito non si conferma né si rifiuta più: senza
+                    le due azioni la card resta un promemoria. */}
                 <MyShiftCard
                   shift={item.shift}
                   status={item.status}
                   role={item.role?.name}
                   onPress={() => router.push(`/(waiter)/shift/${item.shift.id}`)}
-                  onConfirm={() => onConfirm(item.id)}
-                  onDecline={() => setDeclining(item.id)}
+                  onConfirm={
+                    endedIds.has(item.id) ? undefined : () => onConfirm(item.id)
+                  }
+                  onDecline={
+                    endedIds.has(item.id)
+                      ? undefined
+                      : () => setDeclining(item.id)
+                  }
                   pending={
                     respond.isPending && respond.variables?.id === item.id
                   }

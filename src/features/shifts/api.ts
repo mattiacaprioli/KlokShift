@@ -54,15 +54,7 @@ export async function getOwnerShifts(
   if (venueIds.length === 0) return [];
   const { data, error } = await supabase
     .from("shifts")
-    .select(
-      // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
-      // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
-      // ragiona per ruolo e ignora chi ha rifiutato.
-      // `venue_member_id` non serve alla copertura: serve al filtro «I miei
-      // turni» dell'agenda, da quando chi gestisce la sede può esserci sopra.
-      // È una colonna della riga già embeddata, non un join in più.
-      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, venue_member_id)"
-    )
+    .select(AGENDA_SELECT)
     .in("venue_id", venueIds)
     .gte("date", addDaysToDate(todayString(), -1))
     .order("date", { ascending: true })
@@ -74,6 +66,49 @@ export async function getOwnerShifts(
   if (error) throw new Error(error.message);
   return ((data as ShiftWithCount[] | null) ?? []).filter(
     (s) => !isShiftOver(s)
+  );
+}
+
+/**
+ * Le relazioni della copertura, non un conteggio grezzo degli assegnati: gli
+ * elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni ragiona per
+ * ruolo e ignora chi ha rifiutato.
+ *
+ * `venue_member_id` non serve alla copertura: serve al filtro «I miei turni»
+ * dell'agenda, da quando chi gestisce la sede può esserci sopra. È una colonna
+ * della riga già embeddata, non un join in più.
+ */
+const AGENDA_SELECT =
+  "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, venue_member_id)";
+
+/**
+ * Turni **già conclusi** dell'azienda fra `from` e `to`: il passato dell'agenda,
+ * quando dal calendario si torna indietro. È il complemento esatto di
+ * `getOwnerShifts` — stessa forma, stesso `isShiftOver` rovesciato — così le due
+ * liste si sommano senza che un turno compaia due volte.
+ *
+ * Non è lo storico (`getOwnerPastShiftsPage`): quello si cerca con i filtri dal
+ * server ed è paginato; questo è un intervallo di giorni, che i chip di sede
+ * possono filtrare a valle senza troncare niente.
+ */
+export async function getOwnerEndedShifts(
+  venueIds: string[],
+  from: string,
+  to: string
+): Promise<ShiftWithCount[]> {
+  if (venueIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("shifts")
+    .select(AGENDA_SELECT)
+    .in("venue_id", venueIds)
+    .gte("date", from)
+    .lte("date", to)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true })
+    .order("venue_id", { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data as ShiftWithCount[] | null) ?? []).filter((s) =>
+    isShiftOver(s)
   );
 }
 

@@ -102,7 +102,7 @@ editor amministrativo del dev, mai dalla sessione normale del cliente.
 ## 3. Setup e prova unica
 
 1. Aprire un'azienda dal nuovo account titolare e creare la prima sede.
-2. In Home/profilo dell'app o nel banner della dashboard compare **setup**:
+2. In Home/profilo dell'app o in «Piano e accesso» della dashboard compare **setup**:
    preparare la prima sede e avviare la prova. Nuovi turni e nuove persone non
    sono ancora autorizzati; una seconda sede è rifiutata dal server.
 3. Premere **Avvia la prova di 30 giorni**. Risultato: prova Team, una sede,

@@ -4,7 +4,6 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueCard } from "../venues/VenueCard";
 import { BreakPolicyCard } from "../venues/BreakPolicyCard";
 import { ClockMethodCard } from "../venues/ClockMethodCard";
-import { PlanningVisibilityCard } from "../venues/PlanningVisibilityCard";
 import {
   Button,
   PageHeader,
@@ -74,10 +73,11 @@ export function SedeDettaglioPage() {
       />
       {/* Il fallback resta solo per chi gestisce Ore ma non i dati sede. */}
       {!editable && clockEditable ? (
-        <ClockMethodCard venue={venue} />
+        <>
+          <ClockMethodCard venue={venue} />
+          <BreakPolicyCard venue={venue} />
+        </>
       ) : null}
-      {clockEditable ? <BreakPolicyCard venue={venue} /> : null}
-      {editable ? <PlanningVisibilityCard venue={venue} /> : null}
     </>
   );
 }

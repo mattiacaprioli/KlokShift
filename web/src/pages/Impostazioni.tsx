@@ -161,7 +161,7 @@ function StaffChatSection({ workspaceId }: { workspaceId: string }) {
  * utente.
  */
 function AccountSection() {
-  const { session, profile, refreshProfile, signOut } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(profile?.full_name ?? "");
@@ -240,13 +240,13 @@ function AccountSection() {
             name={profile?.full_name ?? session?.user.email ?? "?"}
             size={72}
           />
-          <div className="flex min-w-0 flex-col items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
             {editing ? null : (
-              <p className="truncate text-lg text-t1">
+              <p className="max-w-full truncate text-lg text-t1">
                 {profile?.full_name || "Nome non indicato"}
               </p>
             )}
-            <p className="truncate text-xs text-t3">{session?.user.email}</p>
+            <p className="max-w-full truncate text-xs text-t3">{session?.user.email}</p>
             {editing ? (
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -278,6 +278,17 @@ function AccountSection() {
               onChange={(e) => void onPickPhoto(e.target.files?.[0])}
             />
           </div>
+          {!editing ? (
+            <Button
+              className="shrink-0"
+              onClick={() => {
+                setName(profile?.full_name ?? "");
+                setEditing(true);
+              }}
+            >
+              Modifica
+            </Button>
+          ) : null}
         </div>
 
         {editing ? (
@@ -308,25 +319,8 @@ function AccountSection() {
                   «Annulla» prometterebbe di annullare anche quella. */}
               {dirty ? "Annulla" : "Chiudi"}
             </Button>
-            <Button className="ml-auto" onClick={() => void signOut()}>
-              Esci
-            </Button>
           </div>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={() => {
-                setName(profile?.full_name ?? "");
-                setEditing(true);
-              }}
-            >
-              Modifica
-            </Button>
-            <Button className="ml-auto" onClick={() => void signOut()}>
-              Esci
-            </Button>
-          </div>
-        )}
+        ) : null}
       </Card>
       <p className="mt-2 px-1 text-xs text-t4">
         È lo stesso profilo dell&apos;app: nome e foto si vedono in chat e sui

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Venue } from "@/features/venues/api";
 import { useToast } from "../ui/Toast";
-import { VenueFormCard } from "./VenueFormCard";
+import { VenueEditDialog } from "./VenueEditDialog";
 import { VenueInfoCard } from "./VenueInfoCard";
 
 /**
@@ -25,19 +25,23 @@ export function VenueCard({
   const [editing, setEditing] = useState(false);
   const toast = useToast();
 
-  if (!editable) return <VenueInfoCard venue={venue} />;
-  if (!editing) {
-    return <VenueInfoCard venue={venue} onEdit={() => setEditing(true)} />;
-  }
   return (
-    <VenueFormCard
-      venue={venue}
-      showClockMethod={clockEditable}
-      onCancel={() => setEditing(false)}
-      onSaved={() => {
-        toast.show("Sede aggiornata");
-        setEditing(false);
-      }}
-    />
+    <>
+      <VenueInfoCard
+        venue={venue}
+        onEdit={editable ? () => setEditing(true) : undefined}
+      />
+      {editable && editing ? (
+        <VenueEditDialog
+          venue={venue}
+          canManageHours={clockEditable}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            toast.show("Sede aggiornata");
+            setEditing(false);
+          }}
+        />
+      ) : null}
+    </>
   );
 }

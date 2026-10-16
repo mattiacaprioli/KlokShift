@@ -41,9 +41,13 @@ modo di riusare *un* turno tipo («Cena», «Pranzo sala», «Chiusura bar»).
   `can(venue,'shifts')`, `assert_shift_break` e `assert_role_in_venue`.
 - **Data layer condiviso**: `src/features/shiftTemplates/` (`api.ts`, `hooks.ts`,
   regole pure in `template.ts`, testate in `tests/unit/shiftTemplates/`).
-- **App**: `ShiftTemplatePicker` e `SaveTemplateModal`, usati da
-  `StaffShiftForm` e da `(manager)/shift/[id]`.
-- **Dashboard**: `ShiftTemplatesRow` e `SaveTemplateDialog` (in un portale: nasce
+- **App**: `ShiftTemplatesButton` («Modelli» in alto a destra nel nuovo
+  turno, con un pannello dal basso; eliminazione confermata sulla riga, senza un
+  secondo `Modal`) e `SaveTemplateModal`, usati da `StaffShiftForm` e da
+  `(manager)/shift/[id]`.
+- **Dashboard**: `ShiftTemplatesMenu` («Modelli» con menu a tendina
+  nell'intestazione del pannello, accanto a «Chiudi», scelta dell'utente del
+  16/10) e `SaveTemplateDialog` (in un portale: nasce
   dentro il form del turno, e Invio nel nome avrebbe creato il turno), usati da
   `ShiftPanel` e `ShiftDetails`.
 

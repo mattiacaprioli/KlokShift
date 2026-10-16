@@ -3,8 +3,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Display } from "@/components/ui/Display";
-import { Mono } from "@/components/ui/Mono";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { VenueDetailsCard } from "./VenueDetailsCard";
 import type { Venue } from "./api";
 
 /**
@@ -52,29 +52,7 @@ export function VenueInfoView({
           </Text>
         </View>
 
-        <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-          {venue.city ? (
-            <View className="gap-0.5">
-              <Mono>Città</Mono>
-              <Text className="text-sm text-t2">{venue.city}</Text>
-            </View>
-          ) : null}
-          {venue.address ? (
-            <View className="gap-0.5">
-              <Mono>Indirizzo</Mono>
-              <Text className="text-sm text-t2">{venue.address}</Text>
-            </View>
-          ) : null}
-          {venue.cuisine_type ? (
-            <View className="gap-0.5">
-              <Mono>Tipo di sede</Mono>
-              <Text className="text-sm text-t2">{venue.cuisine_type}</Text>
-            </View>
-          ) : null}
-          {venue.description ? (
-            <Text className="text-sm leading-5 text-t2">{venue.description}</Text>
-          ) : null}
-        </View>
+        <VenueDetailsCard venue={venue} />
 
         {footer}
       </ScrollView>

@@ -228,48 +228,50 @@ export function PromoteSection({
           onChange={setPerm}
         />
 
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-            Su quali sedi
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={scope === "all" ? "gold" : undefined}
-              disabled={locked}
-              onClick={() => setDraftScope("all")}
-            >
-              Tutte le sedi
-            </Button>
-            <Button
-              variant={scope === "selected" ? "gold" : undefined}
-              disabled={locked}
-              onClick={() => setDraftScope("selected")}
-            >
-              Solo alcune
-            </Button>
-          </div>
-          {scope === "selected" ? (
-            <div className="flex flex-wrap gap-2">
-              {venues.map((v) => (
-                <Button
-                  key={v.id}
-                  variant={scopeVenues.has(v.id) ? "gold" : undefined}
-                  disabled={locked}
-                  onClick={() => toggleVenue(v.id)}
-                >
-                  {v.name}
-                </Button>
-              ))}
-            </div>
-          ) : (
-            <span className="text-xs text-t4">
-              Comprende anche le sedi che aprirai in futuro.
+        {venues.length > 1 ? (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+              Su quali sedi
             </span>
-          )}
-          {!reading && scopeIncomplete ? (
-            <span className="text-xs text-warning">Scegli almeno una sede.</span>
-          ) : null}
-        </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={scope === "all" ? "gold" : undefined}
+                disabled={locked}
+                onClick={() => setDraftScope("all")}
+              >
+                Tutte le sedi
+              </Button>
+              <Button
+                variant={scope === "selected" ? "gold" : undefined}
+                disabled={locked}
+                onClick={() => setDraftScope("selected")}
+              >
+                Solo alcune
+              </Button>
+            </div>
+            {scope === "selected" ? (
+              <div className="flex flex-wrap gap-2">
+                {venues.map((v) => (
+                  <Button
+                    key={v.id}
+                    variant={scopeVenues.has(v.id) ? "gold" : undefined}
+                    disabled={locked}
+                    onClick={() => toggleVenue(v.id)}
+                  >
+                    {v.name}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <span className="text-xs text-t4">
+                Comprende anche le sedi che aprirai in futuro.
+              </span>
+            )}
+            {!reading && scopeIncomplete ? (
+              <span className="text-xs text-warning">Scegli almeno una sede.</span>
+            ) : null}
+          </div>
+        ) : null}
 
         {editing ? (
           <div className="flex flex-wrap gap-2 border-t border-border pt-4">

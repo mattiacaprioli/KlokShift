@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
 import { ScrollView, View } from "@/tw";
@@ -35,7 +35,7 @@ import { useShiftBreak } from "@/features/shifts/useShiftBreak";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftTemplate } from "@/features/shiftTemplates/api";
 import { SaveTemplateModal } from "@/features/shiftTemplates/SaveTemplateModal";
-import { ShiftTemplatePicker } from "@/features/shiftTemplates/ShiftTemplatePicker";
+import { ShiftTemplatesButton } from "@/features/shiftTemplates/ShiftTemplatesButton";
 import {
   applicableRoleTargets,
   type ShiftTemplateInput,
@@ -50,6 +50,12 @@ function defaultTime(hour: number) {
 type Props = {
   /** Il giorno da cui partire, se si arriva dall'agenda con una data scelta. */
   initialDate?: Date;
+  /**
+   * L'intestazione della schermata, con al posto giusto (in alto a destra) le
+   * azioni del form: oggi «Modelli». Il titolo resta della schermata, lo stato
+   * che quelle azioni riempiono è del form.
+   */
+  header: (actions: ReactNode) => ReactNode;
 };
 
 /**
@@ -62,7 +68,7 @@ type Props = {
  * selezionabili: `useVenueStaff`/`useVenueRoles` filtrano già per sede, e non
  * hanno avuto bisogno di cambiare di una riga.
  */
-export function StaffShiftForm({ initialDate }: Props) {
+export function StaffShiftForm({ initialDate, header }: Props) {
   const router = useRouter();
   const toast = useToast();
   const { venueId, choose } = useLastVenue();
@@ -254,6 +260,13 @@ export function StaffShiftForm({ initialDate }: Props) {
       style={{ flex: 1 }}
       behavior="padding"
     >
+      {header(
+        <ShiftTemplatesButton
+          venueId={venueId}
+          activeId={template?.id ?? null}
+          onApply={applyTemplate}
+        />
+      )}
       <ScrollView
         className="flex-1 bg-bg-0"
         contentContainerClassName="p-6 gap-7"
@@ -261,12 +274,6 @@ export function StaffShiftForm({ initialDate }: Props) {
       >
         {/* Primo campo: tutto il resto del form dipende da questa risposta. */}
         <VenuePicker value={venueId} onChange={chooseVenue} />
-
-        <ShiftTemplatePicker
-          venueId={venueId}
-          activeId={template?.id ?? null}
-          onApply={applyTemplate}
-        />
 
         <View className="gap-3">
           <Mono>Giorno</Mono>

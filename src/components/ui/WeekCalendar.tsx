@@ -27,8 +27,12 @@ const ROW_H = CELL + ROW_GAP;
 /** Sei righe coprono qualunque mese, anche febbraio che inizia di domenica. */
 const MONTH_ROWS = 6;
 
-/** Il lunedì da cui parte la griglia del mese che contiene `date`. */
-function monthGridStart(date: string): string {
+/**
+ * Il lunedì da cui parte la griglia del mese che contiene `date`: il giorno
+ * più lontano che il calendario mostra attorno a lui. Le agende caricano il
+ * passato da qui, così ogni giorno visibile ha il suo pallino.
+ */
+export function monthGridStart(date: string): string {
   return startOfWeek(`${date.slice(0, 7)}-01`);
 }
 

@@ -24,7 +24,6 @@ import {
   liveClockSummary,
   type LiveClockStatus,
 } from "@/features/clock/live";
-import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import {
   computeHomeStats,
   periodLabel,
@@ -361,9 +360,6 @@ export default function ManagerHome() {
             {venues.length === 0 ? (
               <NoVenuesState subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni." />
             ) : null}
-
-            {/* Stato e date dell’azienda */}
-            <WorkspaceAccessCard />
 
             {/* Il proprio turno prima di quelli degli altri: chi organizza i
                 turni e ci lavora apre l'app anche per sapere quando attacca. */}

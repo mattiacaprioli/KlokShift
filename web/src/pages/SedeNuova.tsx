@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { canCreateVenue } from "@/features/venues/gate";
 import { VenueFormCard } from "../venues/VenueFormCard";
-import { PageHeader, Placeholder } from "../ui/primitives";
+import { Button, PageHeader, Placeholder } from "../ui/primitives";
 
 /**
  * Creazione di una sede: la prima, o la terza.
@@ -17,6 +17,7 @@ import { PageHeader, Placeholder } from "../ui/primitives";
 export function SedeNuovaPage() {
   const { venues, isOwner, access } = useOwnerVenues();
   const navigate = useNavigate();
+  const back = <Button onClick={() => navigate("/sede")}>← Sedi</Button>;
 
   // Aprire una sede è del titolare e non si delega: `VenuesCard` già non mostra
   // il pulsante, ma questa pagina ha un indirizzo e ci si arriva anche da lì. La
@@ -25,7 +26,7 @@ export function SedeNuovaPage() {
   if (!isOwner) {
     return (
       <>
-        <PageHeader title="Nuova sede" />
+        <PageHeader title="Nuova sede" actions={back} />
         <Placeholder
           title="Solo il titolare può aprire una sede"
           detail="Come collaboratore puoi lavorare sulle sedi su cui ti hanno dato accesso."
@@ -41,7 +42,7 @@ export function SedeNuovaPage() {
   if (!gate.allowed) {
     return (
       <>
-        <PageHeader title="Nuova sede" />
+        <PageHeader title="Nuova sede" actions={back} />
         <Placeholder title="Nuova sede non disponibile" detail={gate.reason} />
       </>
     );
@@ -51,6 +52,7 @@ export function SedeNuovaPage() {
     <>
       <PageHeader
         title="Nuova sede"
+        actions={back}
         subtitle={
           venues.length > 0
             ? "Una sede in più: avrà un suo organico, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."

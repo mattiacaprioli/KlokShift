@@ -17,17 +17,22 @@ export default function NewShiftScreen() {
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
-      <View className="px-6 pb-4">
-        <ScreenHeader
-          eyebrow="Il tuo staff"
-          goldEyebrow
-          title="Nuovo turno"
-          icon="close"
-        />
-      </View>
-
-      {/* La sede la sceglie il form: è un campo del turno, non del contesto. */}
-      <StaffShiftForm initialDate={initialDate} />
+      {/* La sede la sceglie il form: è un campo del turno, non del contesto.
+          «Modelli», in alto a destra, lo mette il form per lo stesso motivo. */}
+      <StaffShiftForm
+        initialDate={initialDate}
+        header={(actions) => (
+          <View className="px-6 pb-4">
+            <ScreenHeader
+              eyebrow="Il tuo staff"
+              goldEyebrow
+              title="Nuovo turno"
+              icon="close"
+              right={actions}
+            />
+          </View>
+        )}
+      />
     </View>
   );
 }

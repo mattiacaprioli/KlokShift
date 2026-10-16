@@ -174,40 +174,42 @@ export function PromoteSection({
           disabled={locked}
         />
 
-        <View className="gap-2">
-          <Mono>Su quali sedi</Mono>
-          <View className="flex-row gap-2">
-            <Chip
-              label="Tutte le sedi"
-              gold
-              active={scope === "all"}
-              onPress={locked ? undefined : () => setDraftScope("all")}
-            />
-            <Chip
-              label="Solo alcune"
-              gold
-              active={scope === "selected"}
-              onPress={locked ? undefined : () => setDraftScope("selected")}
-            />
-          </View>
-          {scope === "selected" ? (
-            <View className="mt-1 flex-row flex-wrap gap-2">
-              {venues.map((v) => (
-                <Chip
-                  key={v.id}
-                  label={v.name}
-                  active={scopeVenues.has(v.id)}
-                  onPress={locked ? undefined : () => toggleVenue(v.id)}
-                />
-              ))}
+        {venues.length > 1 ? (
+          <View className="gap-2">
+            <Mono>Su quali sedi</Mono>
+            <View className="flex-row gap-2">
+              <Chip
+                label="Tutte le sedi"
+                gold
+                active={scope === "all"}
+                onPress={locked ? undefined : () => setDraftScope("all")}
+              />
+              <Chip
+                label="Solo alcune"
+                gold
+                active={scope === "selected"}
+                onPress={locked ? undefined : () => setDraftScope("selected")}
+              />
             </View>
-          ) : null}
-          {!reading && scopeIncomplete ? (
-            <Text className="text-[12px] text-warning">
-              Scegli almeno una sede.
-            </Text>
-          ) : null}
-        </View>
+            {scope === "selected" ? (
+              <View className="mt-1 flex-row flex-wrap gap-2">
+                {venues.map((v) => (
+                  <Chip
+                    key={v.id}
+                    label={v.name}
+                    active={scopeVenues.has(v.id)}
+                    onPress={locked ? undefined : () => toggleVenue(v.id)}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {!reading && scopeIncomplete ? (
+              <Text className="text-[12px] text-warning">
+                Scegli almeno una sede.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {!active ? (
           <Pressable

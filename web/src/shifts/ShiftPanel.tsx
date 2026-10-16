@@ -1,5 +1,6 @@
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { userErrorMessage } from "@/lib/errors";
 import { absencesOnDates } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
@@ -74,7 +75,7 @@ import { ShiftDetails } from "./ShiftDetails";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
-import { ShiftTemplatesRow } from "./ShiftTemplatesRow";
+import { ShiftTemplatesMenu } from "./ShiftTemplatesMenu";
 
 type RoleTarget = { role_id: string; count: number };
 
@@ -112,6 +113,14 @@ export function ShiftPanel({
   // perché un clic distratto su un nome toglieva qualcuno dal turno.
   const [editing, setEditing] = useState(!shift);
   const title = !shift ? "Nuovo turno" : editing ? "Modifica turno" : shift.title;
+  /**
+   * Il posto accanto a «Chiudi» per le azioni del form (oggi: «Modelli»). Il
+   * pulsante vive nell'intestazione ma lo stato che riempie è del form, quindi
+   * il form ce lo rende con un portale invece di risalire tutto fin qui.
+   */
+  const [headerActions, setHeaderActions] = useState<HTMLDivElement | null>(
+    null
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
@@ -135,9 +144,12 @@ export function ShiftPanel({
                 : "Con il tuo staff interno"}
             </p>
           </div>
-          <Button onClick={onClose} aria-label="Chiudi">
-            Chiudi
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <div ref={setHeaderActions} className="flex items-center gap-2" />
+            <Button onClick={onClose} aria-label="Chiudi">
+              Chiudi
+            </Button>
+          </div>
         </header>
 
         {shift && !editing ? (
@@ -151,6 +163,7 @@ export function ShiftPanel({
             date={date}
             shift={shift}
             initialPersonIds={initialPersonIds}
+            headerActions={headerActions}
             onClose={onClose}
             onCancelEdit={shift ? () => setEditing(false) : undefined}
           />
@@ -164,12 +177,15 @@ function InternalForm({
   date,
   shift,
   initialPersonIds,
+  headerActions,
   onClose,
   onCancelEdit,
 }: {
   date: string;
   shift?: Shift;
   initialPersonIds?: string[];
+  /** Il contenitore accanto a «Chiudi», dove il form mette «Modelli». */
+  headerActions: HTMLElement | null;
   onClose: () => void;
   /** Torna al dettaglio senza salvare. Solo in modifica. */
   onCancelEdit?: () => void;
@@ -741,14 +757,6 @@ function InternalForm({
               </Field>
             ) : null}
 
-            {!shift ? (
-              <ShiftTemplatesRow
-                venueId={formVenueId || undefined}
-                activeId={template?.id ?? null}
-                onApply={applyTemplate}
-              />
-            ) : null}
-
             <Field label="Titolo" error={errors.title?.message}>
               <Input {...register("title")} placeholder="Servizio serale" />
             </Field>
@@ -1100,6 +1108,19 @@ function InternalForm({
           onCancel={() => setPendingMove(null)}
         />
       ) : null}
+
+      {/* Solo in creazione: applicarlo a un turno esistente vorrebbe dire
+          riscriverlo, cosa diversa dal partire da un modello. */}
+      {!shift && headerActions
+        ? createPortal(
+            <ShiftTemplatesMenu
+              venueId={formVenueId || undefined}
+              activeId={template?.id ?? null}
+              onApply={applyTemplate}
+            />,
+            headerActions
+          )
+        : null}
 
       {savingTemplate && formVenueId ? (
         <SaveTemplateDialog

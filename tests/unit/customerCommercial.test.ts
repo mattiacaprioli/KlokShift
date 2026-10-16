@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PianoPage } from "../../web/src/pages/Piano";
-import { WorkspaceAccessBanner } from "../../web/src/WorkspaceAccessBanner";
 import type { WorkspaceAccess } from "@/features/workspace/access";
 
 const { context, mutate } = vi.hoisted(() => ({ context: vi.fn(), mutate: vi.fn() }));
@@ -92,11 +91,5 @@ describe("Piano e accesso del cliente", () => {
     expect(html).not.toContain("Situazione attuale");
     expect(html).not.toContain("Listino");
     expect(mutate).not.toHaveBeenCalled();
-  });
-  it("nel banner offre il dettaglio al titolare e lo evita nella pagina stessa", () => {
-    expect(render(WorkspaceAccessBanner, "/")).toContain('href="/piano"');
-    expect(render(WorkspaceAccessBanner)).toBe("");
-    context.mockReturnValue({ ...base, isOwner: false });
-    expect(render(WorkspaceAccessBanner, "/")).not.toContain('href="/piano"');
   });
 });

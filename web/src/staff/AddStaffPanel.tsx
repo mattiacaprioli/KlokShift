@@ -109,7 +109,7 @@ export function AddStaffPanel({
   );
   const [email, setEmail] = useState("");
   const [roleIds, setRoleIds] = useState<string[]>([]);
-  const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
+  const [empType, setEmpType] = useState<Enums<"employment_type">>("fisso");
   const [phone, setPhone] = useState("");
   const pending = add.isPending || addSelf.isPending;
 

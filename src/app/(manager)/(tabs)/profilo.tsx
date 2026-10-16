@@ -15,16 +15,8 @@ import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
+import { VenueDetailsCard } from "@/features/venues/VenueDetailsCard";
 import type { Venue } from "@/features/venues/api";
-
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="gap-0.5">
-      <Mono>{label}</Mono>
-      <Text className="text-sm text-t2">{value}</Text>
-    </View>
-  );
-}
 
 /**
  * Le sedi del titolare: l'elenco da cui si aprono, si modificano, se ne
@@ -220,7 +212,6 @@ export default function ManagerProfiloScreen() {
         {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
             di chi sta guardando, e non dipende da quante sedi ha. */}
         <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
-        {isOwner ? <WorkspaceAccessCard /> : null}
 
         {venueQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" className="mt-16" />
@@ -266,7 +257,7 @@ export default function ManagerProfiloScreen() {
               </View>
             </View>
 
-            {canEditVenue || canEditClock ? (
+            {!isOwner && (canEditVenue || canEditClock) ? (
               <GoldButton
                 label={canEditVenue ? "Gestisci sede" : "Gestisci timbrature"}
                 onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
@@ -293,24 +284,11 @@ export default function ManagerProfiloScreen() {
               />
             ) : null}
 
-            {venue.cuisine_type || venue.address || venue.description ? (
-              <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-                <Mono>La tua sede</Mono>
-                {venue.cuisine_type ? (
-                  <InfoLine label="Attività" value={venue.cuisine_type} />
-                ) : null}
-                {venue.address ? (
-                  <InfoLine label="Indirizzo" value={venue.address} />
-                ) : null}
-                {venue.description ? (
-                  <Text className="text-sm leading-5 text-t2">
-                    {venue.description}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
+            <VenueDetailsCard venue={venue} showCity={false} />
           </>
         )}
+
+        {isOwner ? <WorkspaceAccessCard /> : null}
       </ScrollView>
     </View>
   );

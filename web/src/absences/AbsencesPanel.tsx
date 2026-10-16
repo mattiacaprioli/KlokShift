@@ -288,7 +288,7 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
   const toast = useToast();
   const record = useRecordAbsence();
   const today = todayString();
-  const [kind, setKind] = useState<AbsenceKind>("malattia");
+  const [kind, setKind] = useState<AbsenceKind>("ferie");
   const [start, setStart] = useState(today);
   const [end, setEnd] = useState(today);
   const [hourly, setHourly] = useState(false);

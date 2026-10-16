@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
-import { WeekCalendar } from "@/components/ui/WeekCalendar";
+import { monthGridStart, WeekCalendar } from "@/components/ui/WeekCalendar";
 import { type DaySection, groupByDay } from "@/features/assignments/agenda";
 import { PeopleWeekList } from "@/features/assignments/PeopleWeekList";
 import { shiftCounts } from "@/features/assignments/coverage";
@@ -26,6 +26,7 @@ import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import {
+  useOwnerEndedShifts,
   useOwnerShifts,
   useOwnerShiftsRange,
 } from "@/features/shifts/hooks";
@@ -39,6 +40,15 @@ const SYNC_SETTLE_MS = 400;
 const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
 
 type ShiftSection = DaySection<ShiftWithCount>;
+
+/** L'ordine dell'agenda: lo stesso delle due query che la compongono. */
+function byAgendaOrder(a: ShiftWithCount, b: ShiftWithCount): number {
+  return (
+    a.date.localeCompare(b.date) ||
+    a.start_time.localeCompare(b.start_time) ||
+    a.venue_id.localeCompare(b.venue_id)
+  );
+}
 
 /** Un turno da coprire: manca qualcuno e non è stato annullato. */
 function isShort(shift: ShiftWithCount): boolean {
@@ -69,6 +79,12 @@ function isShort(shift: ShiftWithCount): boolean {
  * cioè una seconda lista degli stessi turni con gli stessi tap: si è rivelata
  * la stessa agenda detta peggio, e i suoi due contenuti — i ruoli e i buchi —
  * sono rientrati qui, nella card e in questo filtro.
+ *
+ * Dal 16/10/2026 il calendario torna anche indietro: scegliere un giorno
+ * passato mostra i turni da quel giorno in avanti, conclusi compresi. Prima i
+ * giorni passati restavano vuoti e i turni fatti stavano solo nello Storico,
+ * che non è il posto dove li si cerca guardando una settimana. I filtri dei
+ * buchi e dei «miei turni» restano sui turni in programma: sono cose da fare.
  */
 export default function ManagerShiftsScreen() {
   const router = useRouter();
@@ -87,6 +103,17 @@ export default function ManagerShiftsScreen() {
   const [anchorDay, setAnchorDay] = useState(today);
   /** Il giorno evidenziato: lo sposta anche lo scorrimento della lista. */
   const [visibleDay, setVisibleDay] = useState(today);
+  /**
+   * I turni conclusi, dall'inizio della griglia del mese scelto fino a oggi.
+   * Il mese e non il giorno: i pallini devono coprire tutto ciò che il
+   * calendario mostra, anche aperto, e la chiave cambia solo cambiando mese.
+   * Sfogliando in avanti resta il mese corrente, così i giorni passati di
+   * questo mese hanno il pallino e i turni finiti oggi stanno nella giornata.
+   */
+  const pastAnchor = anchorDay < today;
+  const endedQuery = useOwnerEndedShifts(
+    monthGridStart(pastAnchor ? anchorDay : today)
+  );
   const [expanded, setExpanded] = useState(false);
   /** L'agenda ridotta a ciò che manca da coprire. */
   const [onlyShort, setOnlyShort] = useState(false);
@@ -120,9 +147,8 @@ export default function ManagerShiftsScreen() {
   );
 
   /**
-   * Le anomalie guardano l'intera settimana selezionata, passato compreso.
-   * L'agenda principale invece resta intenzionalmente solo futura: così Andrea
-   * con un'uscita mancante emerge senza rimettere tutti i turni vecchi in lista.
+   * Le anomalie guardano l'intera settimana selezionata, passato compreso:
+   * Andrea con un'uscita mancante emerge anche se l'agenda parte da oggi.
    */
   const weekFrom = startOfWeek(visibleDay);
   const weekTo = addDaysToDate(weekFrom, 6);
@@ -136,7 +162,11 @@ export default function ManagerShiftsScreen() {
     [clockRangeQuery.data]
   );
   const pull = usePullToRefresh(() =>
-    Promise.all([upcomingQuery.refetch(), clockRangeQuery.refetch()])
+    Promise.all([
+      upcomingQuery.refetch(),
+      endedQuery.refetch(),
+      clockRangeQuery.refetch(),
+    ])
   );
 
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
@@ -160,17 +190,30 @@ export default function ManagerShiftsScreen() {
     [upcomingQuery.data, visible]
   );
 
+  /**
+   * L'agenda intera: i conclusi seguiti dai prossimi. Un turno finito fra le
+   * due letture sta in entrambe, e vale la riga dei prossimi.
+   */
+  const agenda = useMemo(() => {
+    const upcomingIds = new Set(upcoming.map((s) => s.id));
+    const ended = (endedQuery.data ?? []).filter(
+      (s) => visible(s) && !upcomingIds.has(s.id)
+    );
+    return ended.length === 0
+      ? upcoming
+      : [...ended, ...upcoming].sort(byAgendaOrder);
+  }, [endedQuery.data, upcoming, visible]);
+
   // I giorni con turni e, fra questi, quelli con un buco: i due insiemi che
-  // colorano i pallini del calendario.
+  // colorano i pallini del calendario. Il buco conta solo su ciò che è ancora
+  // in programma — un turno passato scoperto non si copre più.
   const { marked, alerts } = useMemo(() => {
     const m = new Set<string>();
     const a = new Set<string>();
-    for (const s of upcoming) {
-      m.add(s.date);
-      if (isShort(s)) a.add(s.date);
-    }
+    for (const s of agenda) m.add(s.date);
+    for (const s of upcoming) if (isShort(s)) a.add(s.date);
     return { marked: m, alerts: a };
-  }, [upcoming]);
+  }, [agenda, upcoming]);
 
   /** Quanti turni restano da coprire in tutto: decide se il filtro esiste. */
   const shortCount = useMemo(() => upcoming.filter(isShort).length, [upcoming]);
@@ -201,19 +244,14 @@ export default function ManagerShiftsScreen() {
   // compare, e se l'ultimo turno proprio sparisce si spegne da sé.
   const filteringMine = onlyMine && mineCount > 0;
 
-  const dayGroups = useMemo(
-    () => groupByDay(upcoming, (s) => s.date),
-    [upcoming]
-  );
-
   const sections = useMemo<ShiftSection[]>(() => {
-    const future = dayGroups.filter((g) => (g.date ?? "") >= anchorDay);
     if (filtering || filteringMine) {
       // Un giorno rimasto senza turni scoperti non è un giorno vuoto da
       // mostrare: è un giorno a posto, e sparisce insieme ai suoi turni.
       // I due filtri si sommano (scoperti **e** miei), che è l'unica lettura
       // sensata di due comandi accesi insieme.
-      return future
+      return groupByDay(upcoming, (s) => s.date)
+        .filter((g) => (g.date ?? "") >= anchorDay)
         .map((g) => ({
           ...g,
           data: g.data.filter(
@@ -225,23 +263,25 @@ export default function ManagerShiftsScreen() {
     // Fino al 14/09/2026 lo storico chiudeva l'agenda come sezione in coda.
     // Adesso è una schermata sua (`(manager)/storico`), perché i suoi filtri
     // devono passare dal server: qui i chip di sede filtrano le righe già
-    // scaricate — va bene per i prossimi turni, che sono tutti in cache, ma su
-    // una lista paginata accorcia le pagine e tronca la lista.
-    return future;
-  }, [dayGroups, anchorDay, filtering, filteringMine, isMine]);
+    // scaricate — va bene per un intervallo di giorni, che è tutto in cache, ma
+    // su una lista paginata accorcia le pagine e tronca la lista.
+    return groupByDay(agenda, (s) => s.date).filter(
+      (g) => (g.date ?? "") >= anchorDay
+    );
+  }, [agenda, upcoming, anchorDay, filtering, filteringMine, isMine]);
 
-  // Il quadro della settimana di cui si sta guardando un giorno.
+  // Il quadro della settimana di cui si sta guardando un giorno: quanti turni
+  // in tutto, e quanti di quelli ancora in programma restano da coprire.
   const week = useMemo(() => {
     const from = startOfWeek(visibleDay);
     const to = addDaysToDate(from, 7);
-    const inWeek = upcoming.filter(
-      (s) => s.date >= from && s.date < to && s.status !== "cancelled"
-    );
+    const inWeek = (s: ShiftWithCount) =>
+      s.date >= from && s.date < to && s.status !== "cancelled";
     return {
-      total: inWeek.length,
-      short: inWeek.filter((s) => shiftCounts(s).short).length,
+      total: agenda.filter(inWeek).length,
+      short: upcoming.filter((s) => inWeek(s) && shiftCounts(s).short).length,
     };
-  }, [upcoming, visibleDay]);
+  }, [agenda, upcoming, visibleDay]);
 
   function goToDay(date: string, browsing?: boolean) {
     syncing.current = true;
@@ -385,8 +425,9 @@ export default function ManagerShiftsScreen() {
               </Pressable>
             );
           })}
-          {/* L'agenda guarda avanti; i turni già fatti si cercano, non si
-              scorrono. Da qui perché è dove si cercano — non in fondo alla
+          {/* I turni già fatti si sfogliano dal calendario; lo Storico resta
+              per cercarli con i filtri (sede, persona, stato) su tutto il
+              passato. Da qui perché è dove si cercano — non in fondo alla
               lista, dove stavano prima. */}
           <Pressable
             onPress={() => router.push("/(manager)/storico")}
@@ -507,11 +548,16 @@ export default function ManagerShiftsScreen() {
           onOpenShift={openShift}
           paddingBottom={insets.bottom + 96}
         />
-      ) : upcomingQuery.isLoading ? (
+      ) : upcomingQuery.isLoading ||
+        // Tornando indietro la lista parte da giorni che non ha ancora:
+        // meglio lo scheletro di una lista che si riempie dall'alto.
+        (pastAnchor && (endedQuery.isLoading || endedQuery.isPlaceholderData)) ? (
         <ListSkeleton className="px-5 pt-2" label="Caricamento turni…" />
-      ) : upcomingQuery.isError ? (
+      ) : upcomingQuery.isError || (pastAnchor && endedQuery.isError) ? (
         <QueryError
-          onRetry={() => upcomingQuery.refetch()}
+          onRetry={() =>
+            Promise.all([upcomingQuery.refetch(), endedQuery.refetch()])
+          }
           subtitle="Non siamo riusciti a caricare i turni. Riprova."
         />
       ) : (
