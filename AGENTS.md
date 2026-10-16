@@ -107,6 +107,17 @@ restano solo su `shift_assignments`: non introdurre una seconda fonte di ore. I
 turni nati così non notificano (`app.unplanned_clock`) e i colleghi li vedono solo
 dopo l'approvazione. Dettagli in [plans/UNPLANNED-CLOCK.md](plans/UNPLANNED-CLOCK.md).
 
+## Pausa (2026-10-16)
+
+La sede (chi ha «Ore») decide se la pausa è retribuita: retribuita resta nelle
+ore lavorate, non retribuita si toglie; l'export la dice in colonne a parte. Il
+turno porta `break_minutes` e la **copia** `shifts.break_paid`, così cambiare la
+scelta non riscrive i turni conclusi. Il professionista timbra inizio/fine pausa
+(`shift_clock_breaks`); vale la correzione di chi gestisce, poi la pausa
+timbrata, poi la pianificata. ⚠️ `shiftCountedHours` e `effectiveClockBreak`
+sono gemelli **manuali** di `shift_counted_hours` e `clock_record_break`. Dettagli
+in [plans/BREAKS.md](plans/BREAKS.md).
+
 ## Monetizzazione e dashboard personale (2026-10-05)
 
 Le regole approvate sono in [docs/MONETIZATION.md](docs/MONETIZATION.md);

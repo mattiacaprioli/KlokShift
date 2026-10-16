@@ -55,6 +55,15 @@ Il prodotto deve tenere separati tre dati:
 - Un periodo non può essere conteggiato contemporaneamente come lavoro e come
   assenza riconosciuta senza una segnalazione da risolvere.
 
+## Pausa (2026-10-16)
+
+La sede decide se la pausa è retribuita. Le **ore lavorate** comprendono la
+pausa retribuita ed escludono quella non retribuita: una pausa pagata è tempo
+retribuito come il lavoro, una non pagata non lo è. In entrambi i casi la pausa
+compare in colonne proprie nel riepilogo e nell'export («di cui pausa
+retribuita», «pausa non retribuita esclusa»), senza entrare in un altro totale.
+Regole e calcolo in [BREAKS.md](BREAKS.md).
+
 ## Totali mostrati
 
 Il riepilogo mensile deve evitare un unico numero ambiguo e mostrare almeno:

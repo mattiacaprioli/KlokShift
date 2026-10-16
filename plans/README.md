@@ -1,5 +1,11 @@
 # Piani e decisioni
 
+## Pausa nei turni — 2026-10-16
+
+[BREAKS.md](BREAKS.md): la sede decide se la pausa è retribuita (resta nelle
+ore) o no (si toglie); pausa pianificata sul turno e timbrata dall'app, export
+a parte. Implementata in `20261016000000_shift_breaks.sql`.
+
 ## Timbratura senza turno — 2026-10-10
 
 [UNPLANNED-CLOCK.md](UNPLANNED-CLOCK.md): chi è abilitato timbra anche senza un

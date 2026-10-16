@@ -141,8 +141,8 @@ Decisioni prese con l'utente:
 - Campi di annullamento: `voided_at timestamptz`, `voided_by uuid`,
   `void_reason text`; o sono tutti nulli oppure tutti valorizzati.
 - Una sola riga **attiva** per assegnazione, tramite indice unique parziale su
-  `assignment_id where voided_at is null` (MVP: niente pause / timbrature
-  multiple). Le righe annullate restano come audit e non contano come
+  `assignment_id where voided_at is null` (niente timbrature multiple; la
+  pausa sta in `shift_clock_breaks` dal 2026-10-16, vedi `plans/BREAKS.md`). Le righe annullate restano come audit e non contano come
   timbratura.
 - RLS select: professionista collegato (stesso predicato di `"shift_assignments: linked waiter read"`) oppure `can_manage_venue(venue, 'hours')` o `'shifts'` via join `shift_assignments → shifts`. **Nessuna** policy di scrittura: solo RPC. Così non serve toccare `freeze_assignment_payroll`.
 
@@ -276,7 +276,8 @@ Applicare via MCP Supabase + allineare history (vedi memoria supabase-cli-no-tok
 - Copy: "professionista", "sede" (AGENTS.md).
 
 ## 5. Fuori scope MVP (annotare)
-Pause/timbrature multiple, solleciti push ripetuti, escalation automatica al
+Timbrature multiple (la pausa è arrivata il 2026-10-16: `plans/BREAKS.md`),
+solleciti push ripetuti, escalation automatica al
 titolare/collaboratore, colonne orari nell'export CSV/PDF (`src/lib/export.ts`),
 posizione in background, kiosk.
 
