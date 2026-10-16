@@ -4,16 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Rilascio manuale di tutto (dashboard, sito e migration). Serve perché i
-  # deploy guardano solo i file dell'ultimo push: se un push fallisce e il
-  # successivo corregge solo i test, quello che il primo portava non esce mai.
+  # Rilascio manuale di tutto (dashboard, sito e migration). Serve perché la
+  # dashboard si pubblica solo se l'ultimo push tocca i suoi file (`changes`).
   workflow_dispatch:
 
 # Un run alla volta per ref, in ordine: due push ravvicinati non pubblicano più
 # l'artifact vecchio sopra il nuovo. `false` è voluto: un `db push` non va mai
 # interrotto a metà. GitHub tiene in coda solo l'ultimo run in attesa (come già
 # fanno i gruppi dei deploy): se un push intermedio salta, i suoi file non
-# entrano nel filtro del successivo, e il rimedio resta `workflow_dispatch`.
+# entrano nel filtro del successivo. Per questo le migration non passano dal
+# filtro (vedi `deploy-database`); per la dashboard il rimedio resta
+# `workflow_dispatch`.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: false
@@ -26,13 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pages: ${{ steps.filter.outputs.pages }}
-      database: ${{ steps.filter.outputs.database }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # I deploy restano selettivi, ma i gate sotto girano su ogni PR e push.
+      # Il deploy della dashboard resta selettivo; i gate sotto girano su ogni
+      # PR e push.
       # Sul primo push del branch GitHub usa uno SHA `before` tutto zero: in
       # quel caso l'albero corrente è l'unica base affidabile.
       - id: filter
@@ -41,11 +42,9 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           pages=false
-          database=false
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             pages=true
-            database=true
           elif [ "${{ github.event_name }}" = "push" ]; then
             if [[ "$BEFORE_SHA" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE_SHA^{commit}"; then
               mapfile -t files < <(git ls-tree -r --name-only "$GITHUB_SHA")
@@ -59,16 +58,10 @@ jobs:
                   pages=true
                   ;;
               esac
-              case "$file" in
-                supabase/migrations/*|.github/workflows/ci.yml|.github/workflows/supabase.yml)
-                  database=true
-                  ;;
-              esac
             done
           fi
 
           echo "pages=$pages" >> "$GITHUB_OUTPUT"
-          echo "database=$database" >> "$GITHUB_OUTPUT"
 
   client:
     runs-on: ubuntu-latest
@@ -175,8 +168,12 @@ jobs:
         working-directory: supabase/functions
         run: deno task check
 
+  # Dopo le migration: una dashboard che legge colonne o tabelle nuove non deve
+  # andare online prima che il database le abbia (400 su ogni lettura, il
+  # 16/10 con la pausa). Se il `db push` fallisce, la dashboard resta quella di
+  # prima.
   deploy-pages:
-    needs: [changes, client, database, edge]
+    needs: [changes, client, database, edge, deploy-database]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.changes.outputs.pages == 'true'
     uses: ./.github/workflows/deploy-web.yml
     permissions:
@@ -184,9 +181,13 @@ jobs:
       pages: write
       id-token: write
 
+  # A ogni rilascio, senza filtro: `supabase db push` applica solo le migration
+  # che il remoto non ha, e senza niente da applicare non tocca nulla. Con il
+  # filtro, una migration arrivata in un push il cui run è stato scavalcato in
+  # coda non usciva mai (successo con i commit C e con la pausa).
   deploy-database:
-    needs: [changes, client, database, edge]
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.changes.outputs.database == 'true'
+    needs: [client, database, edge]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/supabase.yml
     # Solo i due segreti dichiarati da supabase.yml, non tutti quelli del repo.
     secrets:
