@@ -99,3 +99,50 @@ describe("accept-invite: input ed esito", () => {
     expect(await response.json()).toEqual({ error: "email_taken" });
   });
 });
+
+describe("accept-invite: lettura del link (peek) e regole della password", () => {
+  it("peek valido: dice a chi e per quale azienda, senza creare nulla", async () => {
+    const f = fixture();
+    const response = await f.request({ op: "peek" });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      email: f.invite.email, displayName: f.invite.display_name, workspaceName: "Azienda",
+    });
+    expect(f.createUser).not.toHaveBeenCalled();
+    // Al database arriva l'hash, mai il token in chiaro.
+    const [, args] = f.rpc.mock.calls[0];
+    expect(args.p_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(f.rpc.mock.calls)).not.toContain("fixture-token-secret");
+  });
+
+  it.each([
+    ["invite_not_found", 404],
+    ["invite_expired", 410],
+    ["invite_used", 409],
+  ])("peek rifiutato dal database (%s) → %i, senza creare account", async (code, status) => {
+    const f = fixture();
+    f.rpc.mockResolvedValue({ data: null, error: { message: code } });
+    const response = await f.request({ op: "peek" });
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ error: code });
+    expect(f.createUser).not.toHaveBeenCalled();
+  });
+
+  it("senza token risponde «non trovato» e non interroga il database", async () => {
+    const f = fixture();
+    const response = await f.request({ op: "peek", token: "   " });
+    expect(response.status).toBe(404);
+    expect(f.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["password1", "PASSWORD1", "Password", "Pa1"])(
+    "accept con password debole (%s): nessun account",
+    async (password) => {
+      const f = fixture();
+      const response = await f.request({ password });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "weak_password" });
+      expect(f.createUser).not.toHaveBeenCalled();
+    }
+  );
+});

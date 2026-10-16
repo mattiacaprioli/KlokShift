@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { qk } from "@/lib/queryKeys";
-import { createTestQueryClient } from "../helpers/async";
 
 describe("cache dei report per azienda", () => {
   const workspaceA = "workspace-a";
@@ -21,18 +20,5 @@ describe("cache dei report per azienda", () => {
     expect(qk.absences.company(workspaceA)).not.toEqual(
       qk.absences.company(workspaceB)
     );
-  });
-
-  it("mantiene separati i risultati quando si cambia azienda", () => {
-    const client = createTestQueryClient();
-    const keyA = qk.absences.company(workspaceA);
-    const keyB = qk.absences.company(workspaceB);
-
-    client.setQueryData(keyA, ["assenza-a"]);
-    client.setQueryData(keyB, ["assenza-b"]);
-
-    expect(client.getQueryData(keyA)).toEqual(["assenza-a"]);
-    expect(client.getQueryData(keyB)).toEqual(["assenza-b"]);
-    client.clear();
   });
 });

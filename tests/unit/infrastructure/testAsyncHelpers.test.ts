@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   controlledPromise,
   createTestQueryClient,
-} from "../helpers/async";
+} from "../../helpers/async";
 
 describe("utility asincrone dei test", () => {
   it("permette di risolvere B prima di A con cache isolate", async () => {

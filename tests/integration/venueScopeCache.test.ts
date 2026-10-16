@@ -1,26 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { qk } from "@/lib/queryKeys";
-import { controlledPromise, createTestQueryClient } from "../helpers/async";
+import { createTestQueryClient } from "../helpers/async";
 
 describe("cache sedi per ambito", () => {
-  it("usa una cache nuova quando il contesto passa da A ad A+B", async () => {
-    const client = createTestQueryClient();
-    const expanded = controlledPromise<string[]>();
-    const keyA = qk.venues.mineByIds(["A"]);
-    const keyAB = qk.venues.mineByIds(["B", "A"]);
-
-    await client.fetchQuery({ queryKey: keyA, queryFn: async () => ["A"] });
-    const resultAB = client.fetchQuery({
-      queryKey: keyAB,
-      queryFn: () => expanded.promise,
-    });
-
-    expect(client.getQueryData(keyA)).toEqual(["A"]);
-    expect(client.getQueryData(keyAB)).toBeUndefined();
-    expanded.resolve(["A", "B"]);
-    await expect(resultAB).resolves.toEqual(["A", "B"]);
-    client.clear();
+  it("ambiti diversi hanno chiavi diverse: A non è A+B", () => {
+    expect(qk.venues.mineByIds(["A"])).not.toEqual(qk.venues.mineByIds(["B", "A"]));
   });
 
   it("canonicalizza ordine e duplicati degli id", () => {

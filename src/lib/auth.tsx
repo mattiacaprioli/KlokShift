@@ -13,6 +13,7 @@ import { queryClient } from "@/lib/queryClient";
 import { unregisterCurrentPushToken } from "@/features/push/api";
 import type { Tables } from "@/types/database";
 import { createAuthRequestGate, type AuthRequestTicket } from "@/lib/authRequestGate";
+import { accountChanged, classifyAuthEvent } from "@/lib/authEvents";
 import {
   authErrorMessage,
   runChangePassword,
@@ -220,7 +221,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const previous = sessionRef.current;
     const previousId = previous?.user.id ?? null;
     const nextId = next?.user.id ?? null;
-    if (previous !== undefined && previousId !== nextId) queryClient.clear();
+    if (accountChanged(previous !== undefined, previousId, nextId)) queryClient.clear();
     if (previousId !== nextId) {
       setProfile(null);
       setError(null);
@@ -317,23 +318,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const hadInitialSession = sessionRef.current !== undefined;
       const previousId = sessionRef.current?.user.id ?? null;
       const nextId = next?.user.id ?? null;
-      const shouldLoadProfile =
-        !hadInitialSession ||
-        previousId !== nextId ||
-        event === "INITIAL_SESSION" ||
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "USER_UPDATED";
-      // La stessa persona che si riautentica (la verifica della password
-      // attuale) o che cambia la password: il profilo si rilegge senza
-      // rimettere `loading`. ⚠️ Con `loading` il RootNavigator dell'app torna
-      // `null` e smonta lo Stack, e il web mostra lo spinner: chi cambiava la
-      // password dalle impostazioni si ritrovava sulla home.
-      const silent =
-        hadInitialSession &&
-        nextId !== null &&
-        previousId === nextId &&
-        (event === "SIGNED_IN" || event === "USER_UPDATED");
+      // Le regole (profilo da rileggere, rilettura silenziosa) stanno in
+      // `authEvents.ts`, testate; la cache la svuota `syncSession`.
+      const { loadProfile: shouldLoadProfile, silent } = classifyAuthEvent({
+        event,
+        previousUserId: previousId,
+        nextUserId: nextId,
+        hadInitialSession,
+      });
       // Invalida subito bootstrap e letture in volo, prima del setTimeout. Un
       // semplice TOKEN_REFRESHED della stessa persona non deve interrompere il
       // profilo che si sta già caricando.
