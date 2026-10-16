@@ -7,6 +7,7 @@ import {
 import {
   effectiveClockTimes,
   formatClockTime,
+  openClockBreak,
   type ClockRecordWithCorrections,
 } from "./hours";
 import { effectiveClockMethod } from "./methods";
@@ -19,13 +20,14 @@ export const CLOCK_IN_GRACE_MIN = 15;
 
 /**
  * Lo stato di una persona **durante** la giornata, per chi gestisce: gli stessi
- * stati delle viste «chi sta lavorando» dei concorrenti, senza la pausa, che
- * KlokShift non traccia. Il consuntivo a turno finito resta `assignmentActual`.
+ * stati delle viste «chi sta lavorando» dei concorrenti, pausa compresa. Il
+ * consuntivo a turno finito resta `assignmentActual`.
  */
 export type LiveClockStatus =
   | { kind: "upcoming"; startTime: string }
   | { kind: "late" }
   | { kind: "in"; since: string }
+  | { kind: "break"; since: string }
   | { kind: "out"; at: string };
 
 /**
@@ -46,8 +48,10 @@ export function liveClockStatus(
   }
   if (assignment.clock) {
     const times = effectiveClockTimes(assignment.clock);
-    return times.outAt
-      ? { kind: "out", at: times.outAt }
+    if (times.outAt) return { kind: "out", at: times.outAt };
+    const pause = openClockBreak(assignment.clock);
+    return pause
+      ? { kind: "break", since: pause.started_at }
       : { kind: "in", since: times.inAt };
   }
   const lateFrom =
@@ -75,6 +79,11 @@ export function liveClockLabel(status: LiveClockStatus): {
         label: `In servizio dalle ${formatClockTime(status.since)}`,
         tone: "success",
       };
+    case "break":
+      return {
+        label: `In pausa dalle ${formatClockTime(status.since)}`,
+        tone: "neutral",
+      };
     case "out":
       return { label: `Uscita alle ${formatClockTime(status.at)}`, tone: "neutral" };
   }
@@ -88,6 +97,7 @@ export function liveClockSummary(
     statuses.filter((s) => s?.kind === kind).length;
   const parts = [
     [count("in"), "in servizio"],
+    [count("break"), "in pausa"],
     [count("late"), "in ritardo"],
   ] as const;
   const text = parts

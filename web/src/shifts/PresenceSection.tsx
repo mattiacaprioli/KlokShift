@@ -11,18 +11,22 @@ import { userErrorMessage } from "@/lib/errors";
 import {
   formatHours,
   formatHoursVariance,
-  shiftDurationHours,
+  shiftCountedHours,
+  type ShiftBreak,
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Button, Input, Select } from "../ui/primitives";
 import {
   useApproveClockRecord,
   useApproveClockRecords,
+  useCorrectClockBreak,
   useCorrectClockRecord,
   useVoidClockRecord,
 } from "@/features/clock/hooks";
 import {
-  clockedHours,
+  clockBreakText,
+  clockRecordHours,
+  effectiveClockBreak,
   effectiveClockTimes,
   formatClockTime,
   isRegularPendingClock,
@@ -94,12 +98,15 @@ export function RomeDateTimeField({
 function ClockReview({
   assignment,
   plannedHours,
+  shiftBreak,
   locked,
   unplanned,
 }: {
   assignment: AssignmentWithStaff;
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
   plannedHours: number;
+  /** Pausa pianificata e scelta della sede, copiate sul turno. */
+  shiftBreak: ShiftBreak;
   locked: boolean;
   /** Turno nato dalla timbratura: annullarla lo toglie. */
   unplanned: boolean;
@@ -107,6 +114,7 @@ function ClockReview({
   const clock = assignment.clock;
   const approve = useApproveClockRecord();
   const correct = useCorrectClockRecord();
+  const correctBreak = useCorrectClockBreak();
   const voidClock = useVoidClockRecord();
   const [mode, setMode] = useState<"correct" | "void" | null>(null);
   const times = clock ? effectiveClockTimes(clock) : null;
@@ -117,15 +125,21 @@ function ClockReview({
   const [inChoice, setInChoice] = useState<0 | 1 | undefined>();
   const [outChoice, setOutChoice] = useState<0 | 1 | undefined>();
   const [reason, setReason] = useState("");
+  const pause = clock ? effectiveClockBreak(clock, shiftBreak.break_minutes) : null;
+  const [breakDraft, setBreakDraft] = useState(() => String(pause?.minutes ?? 0));
 
-  if (!clock || !times) {
+  if (!clock || !times || !pause) {
     return <p className="mt-1 text-[11px] text-t4">Non timbrato</p>;
   }
 
-  const hours = times.outAt ? clockedHours(times.inAt, times.outAt) : null;
+  const hours = clockRecordHours(clock, shiftBreak);
   const delta = hours != null ? formatHoursVariance(hours - plannedHours) : null;
-  const pending = approve.isPending || correct.isPending || voidClock.isPending;
-  const error = approve.error ?? correct.error ?? voidClock.error;
+  const pauseText = clockBreakText(pause, shiftBreak.break_paid);
+  const pending =
+    approve.isPending || correct.isPending || correctBreak.isPending || voidClock.isPending;
+  const error = approve.error ?? correct.error ?? correctBreak.error ?? voidClock.error;
+  const breakValue = Number(breakDraft);
+  const breakValid = breakDraft.trim() !== "" && Number.isInteger(breakValue) && breakValue >= 0;
 
   // Il campo non toccato salva l'istante di prima, così com'era.
   const inResult = romeFieldToIso(inAt, { originalIso: times.inAt, ambiguousChoice: inChoice });
@@ -150,6 +164,7 @@ function ClockReview({
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-mono text-t2">
           Timbrato {formatClockTime(times.inAt)}–{times.outAt ? formatClockTime(times.outAt) : "uscita mancante"}
+          {pauseText ? ` · ${pauseText}` : ""}
           {hours != null ? ` · ${formatHours(hours)}` : ""}
         </span>
         {delta ? (
@@ -187,11 +202,12 @@ function ClockReview({
             onClick={() => {
               setInAt(romeDateTimeLocal(times.inAt));
               setOutAt(times.outAt ? romeDateTimeLocal(times.outAt) : "");
+              setBreakDraft(String(pause.minutes));
               setMode("correct");
             }}
             className="px-3 py-1.5 text-xs"
           >
-            {times.outAt ? "Correggi orari" : "Inserisci uscita"}
+            {times.outAt ? "Correggi orari e pausa" : "Inserisci uscita"}
           </Button>
           <Button
             type="button"
@@ -223,29 +239,58 @@ function ClockReview({
             onChoice={setOutChoice}
             result={outResult}
           />
+          <label className="text-[11px] text-t3">
+            Pausa (minuti)
+            <Input
+              type="number"
+              min={0}
+              step={5}
+              value={breakDraft}
+              onChange={(event) => setBreakDraft(event.target.value)}
+              className="mt-1"
+            />
+          </label>
           <Input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             placeholder="Motivo della correzione"
-            className="sm:col-span-2"
+            className="self-end"
           />
           <div className="flex gap-2 sm:col-span-2">
             <Button type="button" onClick={close}>Annulla</Button>
             <Button
               type="button"
               variant="gold"
-              disabled={pending || !reason.trim() || !inResult.ok || !outResult.ok}
-              onClick={() => {
+              disabled={
+                pending || !reason.trim() || !inResult.ok || !outResult.ok || !breakValid
+              }
+              onClick={async () => {
                 if (!inResult.ok || !outResult.ok) return;
-                correct.mutate(
-                  {
-                    recordId: clock.id,
-                    inAt: inResult.iso,
-                    outAt: outResult.iso,
-                    reason: reason.trim(),
-                  },
-                  { onSuccess: close }
-                );
+                // Due RPC, ognuna solo se il suo dato è cambiato: una pausa
+                // corretta da sola non deve riscrivere entrata e uscita.
+                const timesChanged =
+                  inResult.iso !== times.inAt || outResult.iso !== times.outAt;
+                const breakChanged = breakValue !== pause.minutes;
+                try {
+                  if (timesChanged || !breakChanged) {
+                    await correct.mutateAsync({
+                      recordId: clock.id,
+                      inAt: inResult.iso,
+                      outAt: outResult.iso,
+                      reason: reason.trim(),
+                    });
+                  }
+                  if (breakChanged) {
+                    await correctBreak.mutateAsync({
+                      recordId: clock.id,
+                      minutes: breakValue,
+                      reason: reason.trim(),
+                    });
+                  }
+                  close();
+                } catch {
+                  // L'errore resta nello stato della mutation e si mostra sotto.
+                }
               }}
             >
               Salva correzione
@@ -317,6 +362,7 @@ export function PresenceSection({
   venueId,
   startTime,
   endTime,
+  shiftBreak,
   unplanned = false,
 }: {
   shiftId: string;
@@ -324,13 +370,19 @@ export function PresenceSection({
   venueId: string;
   startTime: string;
   endTime: string;
+  /** Pausa pianificata e scelta della sede, copiate sul turno. */
+  shiftBreak: ShiftBreak;
   /** Turno nato da una timbratura senza turno. */
   unplanned?: boolean;
 }) {
   const { data, isPending } = useShiftAssignments(shiftId);
   const presence = useSetAssignmentPresence(shiftId);
   const approveRegular = useApproveClockRecords();
-  const planned = shiftDurationHours(startTime, endTime);
+  const planned = shiftCountedHours({
+    start_time: startTime,
+    end_time: endTime,
+    ...shiftBreak,
+  });
   /**
    * La propria riga, per chi gestisce e lavora.
    *
@@ -350,7 +402,7 @@ export function PresenceSection({
   // La mia riga, e non sono io a poterla consuntivare.
   const isMineLocked = (a: AssignmentWithStaff) =>
     locked && self.isSelf(a.staff_member?.waiter_id);
-  const times = { start_time: startTime, end_time: endTime };
+  const times = { start_time: startTime, end_time: endTime, ...shiftBreak };
   const approvable = rows.filter(
     (a) =>
       !isMineLocked(a) &&
@@ -389,10 +441,7 @@ export function PresenceSection({
       <div className="flex flex-col gap-1">
         {rows.map((a) => {
           const absent = a.status === "no_show";
-          const hours = assignmentHours(a.status, a.worked_hours, {
-            start_time: startTime,
-            end_time: endTime,
-          });
+          const hours = assignmentHours(a.status, a.worked_hours, times);
           const mineLocked = isMineLocked(a);
           return (
             <div
@@ -470,6 +519,7 @@ export function PresenceSection({
               <ClockReview
                 assignment={a}
                 plannedHours={planned}
+                shiftBreak={shiftBreak}
                 locked={mineLocked}
                 unplanned={unplanned}
               />
@@ -479,7 +529,9 @@ export function PresenceSection({
       </div>
       <p className="mt-2 text-[11px] text-t4">
         Senza timbratura, le ore del turno concluso compaiono automaticamente in Ore.
-        Durata prevista {planned.toString().replace(".", ",")} h: correggi il numero se le ore svolte sono diverse.
+        {shiftBreak.break_minutes > 0 && !shiftBreak.break_paid
+          ? ` Ore previste ${formatHours(planned)}, al netto della pausa non retribuita: correggi il numero se le ore svolte sono diverse.`
+          : ` Durata prevista ${formatHours(planned)}: correggi il numero se le ore svolte sono diverse.`}
       </p>
       {locked && rows.some((a) => self.isSelf(a.staff_member?.waiter_id)) ? (
         <p className="mt-1 text-[11px] text-t4">

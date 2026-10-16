@@ -4,16 +4,20 @@ import {
   addMonthsToKey,
   daysInMonth,
   formatBirthday,
+  formatBreak,
+  formatBreakMinutes,
   formatDayLabel,
   formatHours,
   formatHoursVariance,
   formatMonthKey,
   formatRelativeStart,
   formatShiftRange,
+  formatShiftSummary,
   isOvernightShift,
   isShiftOver,
   isValidShiftRange,
   monthKey,
+  shiftCountedHours,
   shiftDurationHours,
   shiftEndsAt,
   shiftSlotLabel,
@@ -167,5 +171,48 @@ describe("mesi come chiave «YYYY-MM» (pagine Ore di app e dashboard)", () => {
 
   it("si legge in italiano, minuscolo", () => {
     expect(formatMonthKey("2026-09")).toBe("settembre 2026");
+  });
+});
+
+describe("pausa del turno", () => {
+  const evening = { start_time: "18:00", end_time: "00:00", break_minutes: 30 };
+
+  it("le ore conteggiate tolgono solo la pausa non retribuita", () => {
+    expect(shiftCountedHours({ ...evening, break_paid: false })).toBe(5.5);
+    expect(shiftCountedHours({ ...evening, break_paid: true })).toBe(6);
+    expect(
+      shiftCountedHours({ ...evening, break_minutes: 0, break_paid: false })
+    ).toBe(6);
+  });
+
+  it("minuti leggibili", () => {
+    expect(formatBreakMinutes(30)).toBe("30 min");
+    expect(formatBreakMinutes(60)).toBe("1 h");
+    expect(formatBreakMinutes(75)).toBe("1 h 15 min");
+    expect(formatBreak(30)).toBe("Pausa 30 min");
+    expect(formatBreak(30, true)).toBe("Pausa 30 min retribuita");
+    expect(formatBreak(30, false)).toBe("Pausa 30 min non retribuita");
+  });
+
+  it("il riepilogo del form dice la pausa e le ore che contano", () => {
+    expect(formatShiftSummary("2026-09-24", "10:00", "16:00")).toBe("Durata 6 h");
+    expect(
+      formatShiftSummary("2026-09-24", "10:00", "16:00", {
+        break_minutes: 30,
+        break_paid: false,
+      })
+    ).toBe("Durata 6 h · pausa 30 min non retribuita · 5,5 h conteggiate");
+    expect(
+      formatShiftSummary("2026-09-24", "10:00", "16:00", {
+        break_minutes: 30,
+        break_paid: true,
+      })
+    ).toBe("Durata 6 h · pausa 30 min retribuita");
+    expect(
+      formatShiftSummary("2026-09-24", "10:00", "16:00", {
+        break_minutes: 0,
+        break_paid: false,
+      })
+    ).toBe("Durata 6 h");
   });
 });

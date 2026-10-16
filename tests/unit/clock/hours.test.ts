@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   actualChipText,
   assignmentActual,
+  clockBreakText,
   clockedHours,
+  clockRecordHours,
+  effectiveClockBreak,
   effectiveClockTimes,
   isRegularPendingClock,
+  openClockBreak,
   shiftDeviations,
   type ClockRecordWithCorrections,
 } from "@/features/clock/hours";
@@ -21,6 +25,19 @@ describe("clockedHours", () => {
     expect(
       clockedHours("2026-09-24T20:00:00Z", "2026-09-25T02:00:00Z")
     ).toBe(6);
+  });
+
+  it("toglie la pausa non retribuita prima di arrotondare", () => {
+    // 8 h 10 min − 30 min = 7 h 40 min → 7,75 h
+    expect(
+      clockedHours("2026-09-24T12:00:00Z", "2026-09-24T20:10:00Z", 30)
+    ).toBe(7.75);
+  });
+
+  it("non scende sotto zero", () => {
+    expect(
+      clockedHours("2026-09-24T12:00:00Z", "2026-09-24T12:20:00Z", 30)
+    ).toBe(0);
   });
 });
 
@@ -60,6 +77,8 @@ const AFTERNOON = {
   date: "2026-09-24",
   start_time: "14:00:00",
   end_time: "22:00:00",
+  break_minutes: 0,
+  break_paid: false,
 };
 const DURING = new Date("2026-09-24T18:00:00");
 const AFTER = new Date("2026-09-25T08:00:00");
@@ -69,6 +88,7 @@ function punch(outAt: string | null): ClockRecordWithCorrections {
     clock_in_at: "2026-09-24T12:00:00Z",
     clock_out_at: outAt,
     corrections: [],
+    breaks: [],
   } as unknown as ClockRecordWithCorrections;
 }
 
@@ -276,5 +296,148 @@ describe("actualChipText", () => {
     [{ kind: "missing_out" }, "Uscita mancante"],
   ] as const)("%o", (actual, text) => {
     expect(actualChipText(actual, 8)).toBe(text);
+  });
+});
+
+describe("pausa", () => {
+  // 14:00–22:00 con 30 minuti di pausa pianificata.
+  const WITH_BREAK = { ...AFTERNOON, break_minutes: 30 };
+  const PAID = { ...WITH_BREAK, break_paid: true };
+
+  function withBreaks(
+    outAt: string | null,
+    breaks: [string, string | null][],
+    corrections: { created_at: string; minutes: number }[] = []
+  ): ClockRecordWithCorrections {
+    return {
+      clock_in_at: "2026-09-24T12:00:00Z",
+      clock_out_at: outAt,
+      corrections: corrections.map((c, i) => ({
+        id: String(i),
+        created_at: c.created_at,
+        corrected_in_at: null,
+        corrected_out_at: null,
+        corrected_break_minutes: c.minutes,
+      })),
+      breaks: breaks.map(([started_at, ended_at], i) => ({
+        id: `b${i}`,
+        started_at,
+        ended_at,
+      })),
+    } as unknown as ClockRecordWithCorrections;
+  }
+
+  it("senza pause timbrate vale la pianificata", () => {
+    expect(
+      effectiveClockBreak(withBreaks("2026-09-24T20:00:00Z", []), 30)
+    ).toEqual({ minutes: 30, source: "planned" });
+  });
+
+  it("le pause timbrate prevalgono e si sommano", () => {
+    const record = withBreaks("2026-09-24T20:00:00Z", [
+      ["2026-09-24T15:00:00Z", "2026-09-24T15:20:00Z"],
+      ["2026-09-24T17:00:00Z", "2026-09-24T17:25:00Z"],
+    ]);
+    expect(effectiveClockBreak(record, 30)).toEqual({
+      minutes: 45,
+      source: "clocked",
+    });
+  });
+
+  it("una pausa rimasta aperta si chiude all'uscita", () => {
+    const record = withBreaks("2026-09-24T20:00:00Z", [
+      ["2026-09-24T19:40:00Z", null],
+    ]);
+    expect(effectiveClockBreak(record, 30).minutes).toBe(20);
+  });
+
+  it("con la timbratura aperta la pausa conta fino ad ora", () => {
+    const record = withBreaks(null, [["2026-09-24T15:00:00Z", null]]);
+    expect(
+      effectiveClockBreak(record, 30, new Date("2026-09-24T15:12:00Z")).minutes
+    ).toBe(12);
+    expect(openClockBreak(record)?.id).toBe("b0");
+    expect(openClockBreak(withBreaks("2026-09-24T20:00:00Z", [
+      ["2026-09-24T15:00:00Z", null],
+    ]))).toBeNull();
+  });
+
+  it("l'ultima correzione prevale su tutto", () => {
+    const record = withBreaks(
+      "2026-09-24T20:00:00Z",
+      [["2026-09-24T15:00:00Z", "2026-09-24T15:20:00Z"]],
+      [
+        { created_at: "2026-09-24T21:00:00Z", minutes: 40 },
+        { created_at: "2026-09-24T22:00:00Z", minutes: 0 },
+      ]
+    );
+    expect(effectiveClockBreak(record, 30)).toEqual({
+      minutes: 0,
+      source: "corrected",
+    });
+  });
+
+  it("la frase dice durata, origine e se è retribuita", () => {
+    expect(clockBreakText({ minutes: 32, source: "clocked" }, false)).toBe(
+      "pausa 32 min timbrata, non retribuita"
+    );
+    expect(clockBreakText({ minutes: 30, source: "planned" }, true)).toBe(
+      "pausa 30 min pianificata, retribuita"
+    );
+    expect(clockBreakText({ minutes: 0, source: "planned" }, false)).toBeNull();
+    expect(clockBreakText({ minutes: 0, source: "corrected" }, false)).toBe(
+      "pausa 0 min corretta, non retribuita"
+    );
+  });
+
+  it("la proposta toglie solo la pausa non retribuita", () => {
+    const record = withBreaks("2026-09-24T20:00:00Z", []);
+    expect(clockRecordHours(record, WITH_BREAK)).toBe(7.5);
+    expect(clockRecordHours(record, PAID)).toBe(8);
+    expect(clockRecordHours(withBreaks(null, []), WITH_BREAK)).toBeNull();
+  });
+
+  it("in orario con la pausa pianificata: si approva in blocco", () => {
+    const pending = {
+      status: "confirmed" as const,
+      attendance_reviewed_at: null,
+      clock: withBreaks("2026-09-24T20:00:00Z", []),
+    };
+    expect(isRegularPendingClock(WITH_BREAK, pending)).toBe(true);
+    expect(isRegularPendingClock(PAID, pending)).toBe(true);
+  });
+
+  it("una pausa non retribuita più corta cambia le ore: occhiata a parte", () => {
+    const pending = {
+      status: "confirmed" as const,
+      attendance_reviewed_at: null,
+      clock: withBreaks("2026-09-24T20:00:00Z", [
+        ["2026-09-24T15:00:00Z", "2026-09-24T15:10:00Z"],
+      ]),
+    };
+    expect(isRegularPendingClock(WITH_BREAK, pending)).toBe(false);
+    // Retribuita, la durata della pausa non tocca le ore.
+    expect(isRegularPendingClock(PAID, pending)).toBe(true);
+  });
+
+  it("lo scostamento si misura sulle ore conteggiate", () => {
+    expect(
+      shiftDeviations(
+        {
+          ...WITH_BREAK,
+          shift_assignments: [
+            {
+              status: "confirmed",
+              worked_hours: 7.5,
+              hours_source: "manual",
+              attendance_reviewed_at: null,
+              clock: null,
+              staff_member: { display_name: "Marco" },
+            },
+          ],
+        },
+        AFTER
+      )
+    ).toEqual({ measured: 1, deviations: [] });
   });
 });

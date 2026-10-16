@@ -23,6 +23,7 @@ function clock(outAt: string | null): ClockRecordWithCorrections {
     void_reason: null,
     created_at: "2026-09-24T12:00:00Z",
     corrections: [],
+    breaks: [],
   };
 }
 
@@ -32,6 +33,7 @@ function shift(input: {
   workedHours?: number | null;
   hoursSource?: string | null;
   clock?: ClockRecordWithCorrections | null;
+  breakMinutes?: number;
 }): LoadShift {
   return {
     id: input.id,
@@ -40,6 +42,8 @@ function shift(input: {
     date: input.date,
     start_time: "14:00:00",
     end_time: "22:00:00",
+    break_minutes: input.breakMinutes ?? 0,
+    break_paid: false,
     status: "open",
     shift_assignments: [
       {
@@ -93,6 +97,21 @@ describe("computeWeekLoad: confronto programmato/effettivo", () => {
     expect(andrea.approvedHours).toBe(9);
     expect(andrea.approvedPlannedHours).toBe(8);
     expect(andrea.approvedCount).toBe(1);
+  });
+
+  it("il carico toglie la pausa non retribuita, turno per turno", () => {
+    const [andrea] = computeWeekLoad(
+      [
+        shift({ id: "a", date: "2026-09-26", breakMinutes: 30 }),
+        shift({ id: "b", date: "2026-09-27", breakMinutes: 60 }),
+      ],
+      roster,
+      { actualVenueIds, now }
+    );
+
+    expect(andrea.hours).toBe(14.5);
+    expect(andrea.overlapHours).toBe(0);
+    expect(andrea.byDay.get("2026-09-26")?.[0].hours).toBe(7.5);
   });
 
   it("tiene separate le proposte da approvare dalle ore definitive", () => {

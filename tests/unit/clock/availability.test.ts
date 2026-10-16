@@ -36,6 +36,7 @@ function item(
         voided_at: null,
         voided_by: null,
         corrections: [],
+        breaks: [],
       } as AgendaItem["clock"])
     : null;
 

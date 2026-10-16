@@ -21,12 +21,14 @@ const at = (hhmm: string) => new Date(`2026-09-24T${hhmm}:00`);
 function punch(
   inAt: string,
   outAt: string | null = null,
-  corrections: Partial<ClockRecordWithCorrections["corrections"][number]>[] = []
+  corrections: Partial<ClockRecordWithCorrections["corrections"][number]>[] = [],
+  breaks: Partial<ClockRecordWithCorrections["breaks"][number]>[] = []
 ): ClockRecordWithCorrections {
   return {
     clock_in_at: inAt,
     clock_out_at: outAt,
     corrections,
+    breaks,
   } as unknown as ClockRecordWithCorrections;
 }
 
@@ -81,6 +83,23 @@ describe("liveClockStatus", () => {
       },
     ]);
     expect(liveClockStatus(SHIFT, confirmed(clock), "app", at("15:00"))).toEqual({
+      kind: "in",
+      since: "2026-09-24T12:00:00Z",
+    });
+  });
+
+  it("con una pausa aperta è in pausa; chiusa torna in servizio", () => {
+    const open = punch("2026-09-24T12:00:00Z", null, [], [
+      { id: "b1", started_at: "2026-09-24T15:00:00Z", ended_at: null },
+    ]);
+    expect(liveClockStatus(SHIFT, confirmed(open), "app", at("17:10"))).toEqual({
+      kind: "break",
+      since: "2026-09-24T15:00:00Z",
+    });
+    const closed = punch("2026-09-24T12:00:00Z", null, [], [
+      { id: "b1", started_at: "2026-09-24T15:00:00Z", ended_at: "2026-09-24T15:30:00Z" },
+    ]);
+    expect(liveClockStatus(SHIFT, confirmed(closed), "app", at("17:40"))).toEqual({
       kind: "in",
       since: "2026-09-24T12:00:00Z",
     });
@@ -154,6 +173,9 @@ describe("liveClockLabel e liveClockSummary", () => {
         null,
       ])
     ).toBe("2 in servizio · 1 in ritardo");
+    expect(
+      liveClockSummary([{ kind: "in", since: "x" }, { kind: "break", since: "y" }])
+    ).toBe("1 in servizio · 1 in pausa");
     expect(liveClockSummary([{ kind: "late" }])).toBe("1 in ritardo");
     expect(liveClockSummary([null, { kind: "upcoming", startTime: "14:00" }])).toBeNull();
   });

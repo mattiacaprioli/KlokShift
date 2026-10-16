@@ -25,6 +25,7 @@ function clock(outAt: string | null): ClockRecordWithCorrections {
     void_reason: null,
     created_at: "2026-09-25T12:00:00Z",
     corrections: [],
+    breaks: [],
   };
 }
 
@@ -40,6 +41,8 @@ function shift(input?: {
     date: input?.date ?? "2026-09-25",
     start_time: "14:00:00",
     end_time: "15:00:00",
+    break_minutes: 0,
+    break_paid: false,
     title: "Pomeriggio",
     description: null,
     venue_id: "venue-1",

@@ -1,7 +1,7 @@
-import { shiftDurationHours } from "@/lib/format";
+import { shiftCountedHours, type ShiftBreak } from "@/lib/format";
 import type { Enums } from "@/types/database";
 
-type ShiftSlot = { start_time: string; end_time: string } | null;
+type ShiftSlot = ({ start_time: string; end_time: string } & ShiftBreak) | null;
 
 /** Un assegnato conta come "svolto" se non è rifiutato né assente. */
 export function isWorked(status: Enums<"assignment_status">): boolean {
@@ -11,7 +11,8 @@ export function isWorked(status: Enums<"assignment_status">): boolean {
 /**
  * Ore effettive di un assegnato:
  * 0 se rifiutato/assente, altrimenti `worked_hours` (variazione manuale) oppure
- * la durata pianificata del turno. Nessun dato economico: solo ore.
+ * le ore che il turno conta (durata meno la pausa non retribuita). Nessun dato
+ * economico: solo ore.
  *
  * Nel database la durata predefinita passa inoltre da
  * `private.effective_assignment_hours`: gli intervalli sovrapposti della stessa
@@ -26,5 +27,5 @@ export function assignmentHours(
   if (!isWorked(status)) return 0;
   if (workedHours != null) return workedHours;
   if (!shift) return 0;
-  return shiftDurationHours(shift.start_time, shift.end_time);
+  return shiftCountedHours(shift);
 }

@@ -83,9 +83,11 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Pause timbrate
 -- ---------------------------------------------------------------------------
+-- `venue_id` è la copia di quello della timbratura: serve al filtro del realtime.
 create table public.shift_clock_breaks (
   id              uuid primary key default gen_random_uuid(),
   clock_record_id uuid not null references public.shift_clock_records (id) on delete cascade,
+  venue_id        uuid not null,
   started_at      timestamptz not null,
   ended_at        timestamptz,
   created_at      timestamptz not null default now(),
@@ -102,6 +104,9 @@ grant select on public.shift_clock_breaks to authenticated;
 create policy "shift_clock_breaks: clock readers read" on public.shift_clock_breaks
   for select to authenticated
   using (clock_record_id in (select private.visible_clock_record_ids()));
+
+-- Inizio e fine pausa aggiornano dal vivo «In pausa dalle…» di chi gestisce.
+alter publication supabase_realtime add table public.shift_clock_breaks;
 
 -- Chi gestisce le ore corregge la pausa come entrata e uscita: una riga
 -- append-only, l'ultima vince.
@@ -244,7 +249,7 @@ begin
   end if;
 
   perform 1 from public.shift_clock_records where id = p_record for update;
-  select c.id, c.voided_at, v.workspace_id
+  select c.id, c.voided_at, c.venue_id, v.workspace_id
     into r
     from public.shift_clock_records c
     join public.venues v on v.id = c.venue_id
@@ -267,8 +272,8 @@ begin
     if t.clock_out_at is not null then
       raise exception 'clock_already_closed' using errcode = '23514';
     end if;
-    insert into public.shift_clock_breaks (clock_record_id, started_at)
-    values (p_record, clock_timestamp())
+    insert into public.shift_clock_breaks (clock_record_id, venue_id, started_at)
+    values (p_record, r.venue_id, clock_timestamp())
     returning * into v_row;
     return v_row;
   end if;

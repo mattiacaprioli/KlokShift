@@ -13,6 +13,19 @@ export async function punchClock(
   return data;
 }
 
+/** Inizio o fine pausa sulla propria timbratura aperta (con o senza turno). */
+export async function clockBreak(
+  recordId: string,
+  action: "start" | "end"
+): Promise<Tables<"shift_clock_breaks">> {
+  const { data, error } = await supabase.rpc("clock_break", {
+    p_record: recordId,
+    p_action: action,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function approveClockRecord(
   assignmentId: string
 ): Promise<Tables<"shift_assignments">> {
@@ -39,6 +52,21 @@ export async function correctClockRecord(input: {
   return data;
 }
 
+/** La pausa corretta da chi gestisce le ore: vale più di quella timbrata. */
+export async function correctClockBreak(input: {
+  recordId: string;
+  minutes: number;
+  reason: string;
+}): Promise<Tables<"shift_clock_corrections">> {
+  const { data, error } = await supabase.rpc("correct_clock_break", {
+    p_record: input.recordId,
+    p_minutes: input.minutes,
+    p_reason: input.reason,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function voidClockRecord(
   assignmentId: string,
   reason: string
@@ -46,6 +74,26 @@ export async function voidClockRecord(
   const { data, error } = await supabase.rpc("void_clock_record", {
     p_assignment: assignmentId,
     p_reason: reason,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Pausa retribuita o no, e la regola che la propone nei turni lunghi. I turni
+ * già conclusi tengono la scelta con cui si sono svolti.
+ */
+export async function setVenueBreakPolicy(input: {
+  venueId: string;
+  paid: boolean;
+  ruleAfterMinutes: number | null;
+  ruleMinutes: number | null;
+}): Promise<Tables<"venues">> {
+  const { data, error } = await supabase.rpc("set_venue_break_policy", {
+    p_venue: input.venueId,
+    p_paid: input.paid,
+    p_rule_after_minutes: input.ruleAfterMinutes ?? undefined,
+    p_rule_minutes: input.ruleMinutes ?? undefined,
   });
   if (error) throw new Error(error.message);
   return data;

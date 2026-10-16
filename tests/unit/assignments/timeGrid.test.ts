@@ -15,7 +15,14 @@ const shift = (
   status: Enums<"shift_status"> = "open"
 ) => ({
   id,
-  shift: { date, start_time: `${start}:00`, end_time: `${end}:00`, status },
+  shift: {
+    date,
+    start_time: `${start}:00`,
+    end_time: `${end}:00`,
+    status,
+    break_minutes: 0,
+    break_paid: false,
+  },
 });
 
 // Lunedì 5 – domenica 11 ottobre 2026.
@@ -165,6 +172,23 @@ describe("plannedHours", () => {
       expect(byDay.get("2026-10-11")?.[0].item.shift.status).toBe("cancelled");
     }
   );
+
+  it("toglie la pausa non retribuita", () => {
+    const item = shift("a", "2026-10-06", "09:00", "17:00");
+    expect(
+      plannedHours(
+        [
+          { ...item, shift: { ...item.shift, break_minutes: 60 } },
+          {
+            ...item,
+            id: "b",
+            shift: { ...item.shift, break_minutes: 60, break_paid: true },
+          },
+        ],
+        WEEK
+      )
+    ).toBe(15);
+  });
 
   it("restituisce zero per una settimana con soli turni annullati", () => {
     expect(

@@ -1,9 +1,11 @@
 import type { Tables } from "@/types/database";
 import {
+  formatBreakMinutes,
   formatHours,
   formatHoursVariance,
   isShiftOver,
-  shiftDurationHours,
+  shiftCountedHours,
+  type ShiftBreak,
   type ShiftTimes,
 } from "@/lib/format";
 import {
@@ -15,17 +17,24 @@ export type ClockCorrection = Tables<"shift_clock_corrections"> & {
   corrector?: { full_name: string | null } | null;
 };
 export type ClockRecord = Tables<"shift_clock_records">;
+export type ClockBreak = Tables<"shift_clock_breaks">;
 export type ClockRecordWithCorrections = ClockRecord & {
   corrections: ClockCorrection[];
+  breaks: ClockBreak[];
 };
 
-/** L'audit è append-only: l'ultima correzione non-null prevale per campo. */
-export function effectiveClockTimes(record: ClockRecordWithCorrections) {
-  const corrections = [...record.corrections].sort((a, b) =>
+/** Dalla più recente: stesso ordine di `private.clock_record_times`. */
+function latestFirst(record: ClockRecordWithCorrections): ClockCorrection[] {
+  return [...record.corrections].sort((a, b) =>
     a.created_at === b.created_at
       ? b.id.localeCompare(a.id)
       : b.created_at.localeCompare(a.created_at)
   );
+}
+
+/** L'audit è append-only: l'ultima correzione non-null prevale per campo. */
+export function effectiveClockTimes(record: ClockRecordWithCorrections) {
+  const corrections = latestFirst(record);
   return {
     inAt:
       corrections.find((c) => c.corrected_in_at != null)?.corrected_in_at ??
@@ -36,10 +45,100 @@ export function effectiveClockTimes(record: ClockRecordWithCorrections) {
   };
 }
 
-/** Proposta al quarto d'ora, identica al calcolo della RPC di approvazione. */
-export function clockedHours(inAt: string, outAt: string): number {
-  const hours = (new Date(outAt).getTime() - new Date(inAt).getTime()) / 3_600_000;
-  return Math.round(hours * 4) / 4;
+export type ClockBreakSource = "corrected" | "clocked" | "planned";
+
+/**
+ * La pausa che vale per una timbratura, in ordine: l'ultima correzione di chi
+ * gestisce le ore, la somma delle pause timbrate (tagliate fra entrata e uscita
+ * effettive; una pausa ancora aperta conta fino a `now`), la pausa pianificata
+ * del turno. ⚠️ Gemello manuale di `private.clock_record_break`
+ * (20261016000000): se cambia lì, cambia qui.
+ */
+export function effectiveClockBreak(
+  record: ClockRecordWithCorrections,
+  plannedMinutes: number,
+  now: Date = new Date()
+): { minutes: number; source: ClockBreakSource } {
+  const corrected = latestFirst(record).find(
+    (c) => c.corrected_break_minutes != null
+  );
+  if (corrected) {
+    return {
+      minutes: corrected.corrected_break_minutes as number,
+      source: "corrected",
+    };
+  }
+  if (record.breaks.length > 0) {
+    const times = effectiveClockTimes(record);
+    const from = new Date(times.inAt).getTime();
+    const cap = times.outAt ? new Date(times.outAt).getTime() : now.getTime();
+    let ms = 0;
+    for (const b of record.breaks) {
+      const end = Math.min(b.ended_at ? new Date(b.ended_at).getTime() : cap, cap);
+      ms += Math.max(0, end - Math.max(new Date(b.started_at).getTime(), from));
+    }
+    return { minutes: Math.round(ms / 60_000), source: "clocked" };
+  }
+  return { minutes: plannedMinutes, source: "planned" };
+}
+
+const BREAK_SOURCE_LABEL: Record<ClockBreakSource, string> = {
+  corrected: "corretta",
+  clocked: "timbrata",
+  planned: "pianificata",
+};
+
+/**
+ * «pausa 32 min timbrata, non retribuita»: la stessa frase in app e dashboard
+ * accanto alla timbratura. `null` quando non c'è nessuna pausa da dire.
+ */
+export function clockBreakText(
+  pause: { minutes: number; source: ClockBreakSource },
+  paid: boolean
+): string | null {
+  if (pause.minutes <= 0 && pause.source === "planned") return null;
+  return `pausa ${formatBreakMinutes(pause.minutes)} ${
+    BREAK_SOURCE_LABEL[pause.source]
+  }, ${paid ? "retribuita" : "non retribuita"}`;
+}
+
+/** La pausa aperta adesso, se il professionista è in pausa. */
+export function openClockBreak(
+  record: ClockRecordWithCorrections
+): ClockBreak | null {
+  if (effectiveClockTimes(record).outAt) return null;
+  return record.breaks.find((b) => b.ended_at == null) ?? null;
+}
+
+/**
+ * Proposta al quarto d'ora, identica al calcolo della RPC di approvazione
+ * (`private.clock_record_counted_hours`): arco timbrato meno la pausa non
+ * retribuita.
+ */
+export function clockedHours(
+  inAt: string,
+  outAt: string,
+  unpaidBreakMinutes: number = 0
+): number {
+  const hours =
+    (new Date(outAt).getTime() - new Date(inAt).getTime()) / 3_600_000 -
+    unpaidBreakMinutes / 60;
+  return Math.max(0, Math.round(hours * 4) / 4);
+}
+
+/** Le ore proposte da una timbratura chiusa, con la pausa che vale per lei. */
+export function clockRecordHours(
+  record: ClockRecordWithCorrections,
+  shift: ShiftBreak
+): number | null {
+  const times = effectiveClockTimes(record);
+  if (!times.outAt) return null;
+  const pause = effectiveClockBreak(record, shift.break_minutes);
+  return clockedHours(
+    times.inAt,
+    times.outAt,
+    shift.break_paid ? 0 : pause.minutes
+  );
 }
 
 /**
@@ -89,7 +188,7 @@ export function isDefinitiveWorkedHours(assignment: ActualInput): boolean {
 }
 
 export function assignmentActual(
-  shift: ShiftTimes,
+  shift: ShiftTimes & ShiftBreak,
   assignment: ActualInput,
   now: Date = new Date()
 ): AssignmentActual {
@@ -98,9 +197,9 @@ export function assignmentActual(
     return { kind: "approved", hours: assignment.worked_hours as number };
   }
   if (assignment.clock) {
-    const times = effectiveClockTimes(assignment.clock);
-    if (times.outAt) {
-      return { kind: "proposed", hours: clockedHours(times.inAt, times.outAt) };
+    const hours = clockRecordHours(assignment.clock, shift);
+    if (hours != null) {
+      return { kind: "proposed", hours };
     }
     // Prima della fine prevista un'entrata aperta è normale.
     return isShiftOver(shift, now) ? { kind: "missing_out" } : null;
@@ -132,10 +231,12 @@ export function actualChipText(
  * Timbratura completa, da approvare, con esattamente le ore del turno: è il caso
  * normale, quello che si approva in blocco. La proposta è già al quarto d'ora
  * (`clockedHours`), quindi qualche minuto di anticipo o ritardo resta «in
- * orario»; tutto il resto chiede un'occhiata persona per persona.
+ * orario»; tutto il resto chiede un'occhiata persona per persona. Il confronto è
+ * fra ore conteggiate: una pausa non retribuita più corta o più lunga della
+ * pianificata cambia le ore, e la timbratura esce dal blocco da sola.
  */
 export function isRegularPendingClock(
-  shift: Pick<ShiftTimes, "start_time" | "end_time">,
+  shift: Pick<ShiftTimes, "start_time" | "end_time"> & ShiftBreak,
   assignment: {
     status: AssignmentStatus;
     attendance_reviewed_at: string | null;
@@ -146,12 +247,8 @@ export function isRegularPendingClock(
   if (!assignment.clock || assignment.attendance_reviewed_at != null) {
     return false;
   }
-  const times = effectiveClockTimes(assignment.clock);
-  if (!times.outAt) return false;
-  return (
-    clockedHours(times.inAt, times.outAt) ===
-    shiftDurationHours(shift.start_time, shift.end_time)
-  );
+  const hours = clockRecordHours(assignment.clock, shift);
+  return hours != null && hours === shiftCountedHours(shift);
 }
 
 export type HoursDeviation = {
@@ -172,14 +269,15 @@ export type HoursDeviation = {
  * niente da confrontare, non che sono tutti in orario.
  */
 export function shiftDeviations(
-  shift: ShiftTimes & {
+  shift: ShiftTimes &
+    ShiftBreak & {
     shift_assignments: (Parameters<typeof assignmentActual>[1] & {
       staff_member: { display_name: string } | null;
     })[];
   },
   now: Date = new Date()
 ): { measured: number; deviations: HoursDeviation[] } {
-  const planned = shiftDurationHours(shift.start_time, shift.end_time);
+  const planned = shiftCountedHours(shift);
   let measured = 0;
   const deviations: HoursDeviation[] = [];
   for (const assignment of shift.shift_assignments) {

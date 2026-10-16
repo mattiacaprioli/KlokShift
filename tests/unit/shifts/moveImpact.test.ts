@@ -40,6 +40,8 @@ function shift(
   return {
     created_at: "2026-09-01T00:00:00Z",
     description: null,
+    break_minutes: 0,
+    break_paid: false,
     positions_filled: 0,
     positions_total: 1,
     require_confirmation: true,

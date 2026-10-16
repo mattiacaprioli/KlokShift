@@ -3,13 +3,16 @@ import { qk } from "@/lib/queryKeys";
 import { invalidateWorkViews } from "@/features/shifts/invalidation";
 import {
   approveClockRecord,
+  clockBreak,
   closeUnplannedClock,
+  correctClockBreak,
   correctClockRecord,
   getMyUnplannedClock,
   getOpenUnplannedClocks,
   punchClock,
   punchUnplannedClock,
   setMemberClockUnplanned,
+  setVenueBreakPolicy,
   setVenueClockMethod,
   setMemberClockMethod,
   voidClockRecord,
@@ -30,6 +33,15 @@ export function usePunchClock() {
   return useMutation({
     mutationFn: (vars: { assignmentId: string; action: "in" | "out" }) =>
       punchClock(vars.assignmentId, vars.action),
+    onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+export function useClockBreak() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { recordId: string; action: "start" | "end" }) =>
+      clockBreak(vars.recordId, vars.action),
     onSuccess: () => invalidateClockViews(qc),
   });
 }
@@ -65,6 +77,14 @@ export function useCorrectClockRecord() {
   });
 }
 
+export function useCorrectClockBreak() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: correctClockBreak,
+    onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
 export function useVoidClockRecord() {
   const qc = useQueryClient();
   return useMutation({
@@ -83,6 +103,17 @@ export function useSetVenueClockMethod() {
       venueId: string;
       method: Parameters<typeof setVenueClockMethod>[1];
     }) => setVenueClockMethod(vars.venueId, vars.method),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
+      invalidateWorkViews(qc);
+    },
+  });
+}
+
+export function useSetVenueBreakPolicy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: setVenueBreakPolicy,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.venues.mine });
       invalidateWorkViews(qc);

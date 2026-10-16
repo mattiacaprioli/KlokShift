@@ -8,6 +8,8 @@ describe("assignmentHours", () => {
       assignmentHours("confirmed", null, {
         start_time: "18:00",
         end_time: "23:00",
+        break_minutes: 0,
+        break_paid: false,
       })
     ).toBe(5);
   });
@@ -17,6 +19,8 @@ describe("assignmentHours", () => {
       assignmentHours("assigned", null, {
         start_time: "22:00",
         end_time: "04:00",
+        break_minutes: 0,
+        break_paid: false,
       })
     ).toBe(6);
   });
@@ -26,8 +30,20 @@ describe("assignmentHours", () => {
       assignmentHours("confirmed", 3.5, {
         start_time: "18:00",
         end_time: "23:00",
+        break_minutes: 30,
+        break_paid: false,
       })
     ).toBe(3.5);
+  });
+
+  it("toglie la pausa non retribuita, tiene quella retribuita", () => {
+    const evening = { start_time: "18:00", end_time: "00:00", break_minutes: 30 };
+    expect(
+      assignmentHours("confirmed", null, { ...evening, break_paid: false })
+    ).toBe(5.5);
+    expect(
+      assignmentHours("confirmed", null, { ...evening, break_paid: true })
+    ).toBe(6);
   });
 
   it.each(["declined", "no_show"] as const)(

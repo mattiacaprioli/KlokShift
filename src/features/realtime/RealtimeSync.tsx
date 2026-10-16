@@ -235,6 +235,17 @@ export function RealtimeSync({
           }
         }
       );
+      // Inizio e fine pausa: la riga non porta il turno, quindi si aggiornano
+      // tutte le viste di lavoro, come per una timbratura senza turno.
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shift_clock_breaks", filter },
+        () => {
+          for (const queryKey of workEventQueryKeys({})) {
+            invalidate(queryKey);
+          }
+        }
+      );
     }
 
     // Le persone dell'azienda: nuovi arrivi, inviti accettati, permessi.

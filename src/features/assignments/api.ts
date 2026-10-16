@@ -27,7 +27,7 @@ import {
 export type Assignment = Tables<"shift_assignments">;
 
 const CLOCK_EMBED =
-  "clock:shift_clock_records(*, corrections:shift_clock_corrections(*, corrector:profiles(full_name)))";
+  "clock:shift_clock_records(*, corrections:shift_clock_corrections(*, corrector:profiles(full_name)), breaks:shift_clock_breaks(*))";
 
 function activeClock(
   rows: ClockRecordWithCorrections[] | null | undefined

@@ -1,8 +1,9 @@
 import {
   addDaysToDate,
   isOvernightShift,
-  shiftDurationHours,
+  shiftCountedHours,
   todayString,
+  type ShiftBreak,
   type ShiftTimes,
 } from "@/lib/format";
 import type { Enums } from "@/types/database";
@@ -141,15 +142,20 @@ export function initialScrollHour<T>(
   return Math.max(0, hour - 1);
 }
 
-/** Le ore pianificate dei turni non annullati che **iniziano** nei giorni dati. */
-export function plannedHours<T extends { shift: ShiftTimes & { status: Enums<"shift_status"> } }>(
+/**
+ * Le ore pianificate dei turni non annullati che **iniziano** nei giorni dati,
+ * al netto della pausa non retribuita.
+ */
+export function plannedHours<
+  T extends { shift: ShiftTimes & ShiftBreak & { status: Enums<"shift_status"> } },
+>(
   items: readonly T[],
   days: readonly string[]
 ): number {
   return items
     .filter((i) => i.shift.status !== "cancelled" && days.includes(i.shift.date))
     .reduce(
-      (sum, i) => sum + shiftDurationHours(i.shift.start_time, i.shift.end_time),
+      (sum, i) => sum + shiftCountedHours(i.shift),
       0
     );
 }

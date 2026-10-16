@@ -1,4 +1,4 @@
-import { shiftDurationHours } from "@/lib/format";
+import { shiftCountedHours, type ShiftBreak } from "@/lib/format";
 import type { Contract } from "@/features/staff/contract";
 import {
   assignmentActual,
@@ -74,7 +74,7 @@ export type LoadShift = {
   end_time: string;
   status: string;
   shift_assignments: LoadAssignment[];
-};
+} & ShiftBreak;
 
 /** Un turno visto dal lato della persona. */
 export type PersonShift = {
@@ -98,8 +98,13 @@ export type PersonShift = {
   status: AssignmentStatus;
   /** In che ruolo ci lavora quel giorno (null se non ancora deciso). */
   role: string | null;
-  /** Ore che questo turno aggiunge al carico: 0 se la persona non viene. */
+  /**
+   * Ore che questo turno aggiunge al carico, al netto della pausa non
+   * retribuita: 0 se la persona non viene.
+   */
   hours: number;
+  /** La pausa non retribuita del turno, che il carico della persona toglie. */
+  unpaidBreakMinutes: number;
   /**
    * Consuntivo confrontabile con questo turno: solo `approved` è definitivo
    * (vedi `assignmentActual`).
@@ -231,7 +236,7 @@ export function computeWeekLoad(
       const person = row(member);
       const active = isActiveAssignment(assignment.status);
       const hours = active
-        ? shiftDurationHours(shift.start_time, shift.end_time)
+        ? shiftCountedHours(shift)
         : 0;
       const actual: PersonShift["actual"] =
         active && options.actualVenueIds.has(shift.venue_id)
@@ -253,6 +258,7 @@ export function computeWeekLoad(
         status: assignment.status,
         role: assignment.role?.name ?? null,
         hours,
+        unpaidBreakMinutes: shift.break_paid ? 0 : shift.break_minutes,
         actual,
         overlaps: false,
       };
@@ -302,7 +308,9 @@ export function computeWeekLoad(
 
     // Le ore sono tempo della persona, non posti coperti: 14–22 più 18–23
     // valgono 14–23, cioè 9 ore. I due turni restano distinti per responsabilità
-    // e copertura, ma il tratto comune entra nel carico una volta sola.
+    // e copertura, ma il tratto comune entra nel carico una volta sola. Le pause
+    // non retribuite si tolgono una per turno, come in
+    // `private.effective_assignment_hours`.
     let unionMinutes = 0;
     let mergedStart: number | null = null;
     let mergedEnd: number | null = null;
@@ -322,7 +330,11 @@ export function computeWeekLoad(
       unionMinutes += mergedEnd - mergedStart;
     }
 
-    person.hours = unionMinutes / 60;
+    const unpaidBreaks = shifts.reduce(
+      (sum, shift) => sum + shift.unpaidBreakMinutes,
+      0
+    );
+    person.hours = Math.max(0, unionMinutes - unpaidBreaks) / 60;
     person.overlapHours = Math.max(
       0,
       shifts.reduce((sum, shift) => sum + shift.hours, 0) - person.hours

@@ -44,6 +44,8 @@ const stats = (over: Partial<StatsShift>): StatsShift => ({
   date: "2026-09-24",
   start_time: "10:00",
   end_time: "14:00",
+  break_minutes: 0,
+  break_paid: false,
   status: "open",
   positions_filled: 0,
   positions_total: 0,

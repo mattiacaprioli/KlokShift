@@ -605,9 +605,45 @@ export type Database = {
           },
         ]
       }
+      shift_clock_breaks: {
+        Row: {
+          clock_record_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          started_at: string
+          venue_id: string
+        }
+        Insert: {
+          clock_record_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          started_at: string
+          venue_id: string
+        }
+        Update: {
+          clock_record_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_clock_breaks_clock_record_id_fkey"
+            columns: ["clock_record_id"]
+            isOneToOne: false
+            referencedRelation: "shift_clock_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_clock_corrections: {
         Row: {
           clock_record_id: string
+          corrected_break_minutes: number | null
           corrected_by: string
           corrected_in_at: string | null
           corrected_out_at: string | null
@@ -617,6 +653,7 @@ export type Database = {
         }
         Insert: {
           clock_record_id: string
+          corrected_break_minutes?: number | null
           corrected_by: string
           corrected_in_at?: string | null
           corrected_out_at?: string | null
@@ -626,6 +663,7 @@ export type Database = {
         }
         Update: {
           clock_record_id?: string
+          corrected_break_minutes?: number | null
           corrected_by?: string
           corrected_in_at?: string | null
           corrected_out_at?: string | null
@@ -767,6 +805,8 @@ export type Database = {
       }
       shifts: {
         Row: {
+          break_minutes: number
+          break_paid: boolean
           created_at: string
           date: string
           description: string | null
@@ -782,6 +822,8 @@ export type Database = {
           venue_id: string
         }
         Insert: {
+          break_minutes?: number
+          break_paid?: boolean
           created_at?: string
           date: string
           description?: string | null
@@ -797,6 +839,8 @@ export type Database = {
           venue_id: string
         }
         Update: {
+          break_minutes?: number
+          break_paid?: boolean
           created_at?: string
           date?: string
           description?: string | null
@@ -1076,6 +1120,9 @@ export type Database = {
       venues: {
         Row: {
           address: string | null
+          break_paid: boolean
+          break_rule_after_minutes: number | null
+          break_rule_minutes: number | null
           city: string | null
           clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
@@ -1090,6 +1137,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          break_paid?: boolean
+          break_rule_after_minutes?: number | null
+          break_rule_minutes?: number | null
           city?: string | null
           clock_method?: Database["public"]["Enums"]["clock_method"]
           closed_at?: string | null
@@ -1104,6 +1154,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          break_paid?: boolean
+          break_rule_after_minutes?: number | null
+          break_rule_minutes?: number | null
           city?: string | null
           clock_method?: Database["public"]["Enums"]["clock_method"]
           closed_at?: string | null
@@ -1478,6 +1531,23 @@ export type Database = {
         }[]
       }
       claim_invites: { Args: never; Returns: number }
+      clock_break: {
+        Args: { p_action: string; p_record: string }
+        Returns: {
+          clock_record_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          started_at: string
+          venue_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_breaks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       clock_punch: {
         Args: { p_action: string; p_assignment: string }
         Returns: {
@@ -1562,6 +1632,25 @@ export type Database = {
         Args: { p_hash: string; p_user: string }
         Returns: string
       }
+      correct_clock_break: {
+        Args: { p_minutes: number; p_reason: string; p_record: string }
+        Returns: {
+          clock_record_id: string
+          corrected_break_minutes: number | null
+          corrected_by: string
+          corrected_in_at: string | null
+          corrected_out_at: string | null
+          created_at: string
+          id: string
+          reason: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_clock_corrections"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       correct_clock_record: {
         Args: {
           p_in: string
@@ -1571,6 +1660,7 @@ export type Database = {
         }
         Returns: {
           clock_record_id: string
+          corrected_break_minutes: number | null
           corrected_by: string
           corrected_in_at: string | null
           corrected_out_at: string | null
@@ -1813,6 +1903,8 @@ export type Database = {
           p_venue_ids: string[]
         }
         Returns: {
+          break_minutes: number
+          break_paid: boolean
           created_at: string
           date: string
           description: string | null
@@ -1890,10 +1982,12 @@ export type Database = {
           hours: number
           member_id: string
           member_name: string
+          paid_break_hours: number
           proposed_hours: number
           roles: string
           shifts_count: number
           to_review_count: number
+          unpaid_break_hours: number
           untracked_hours: number
           venue_closed: boolean
           venue_id: string
@@ -2140,6 +2234,37 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_venue_break_policy: {
+        Args: {
+          p_paid: boolean
+          p_rule_after_minutes?: number
+          p_rule_minutes?: number
+          p_venue: string
+        }
+        Returns: {
+          address: string | null
+          break_paid: boolean
+          break_rule_after_minutes: number | null
+          break_rule_minutes: number | null
+          city: string | null
+          clock_method: Database["public"]["Enums"]["clock_method"]
+          closed_at: string | null
+          created_at: string
+          cuisine_type: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          staff_sees_planning: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "venues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_venue_clock_method: {
         Args: {
           p_method: Database["public"]["Enums"]["clock_method"]
@@ -2147,6 +2272,9 @@ export type Database = {
         }
         Returns: {
           address: string | null
+          break_paid: boolean
+          break_rule_after_minutes: number | null
+          break_rule_minutes: number | null
           city: string | null
           clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
@@ -2169,6 +2297,15 @@ export type Database = {
       set_venue_closed: {
         Args: { p_closed: boolean; p_venue: string }
         Returns: undefined
+      }
+      shift_counted_hours: {
+        Args: {
+          p_break_minutes: number
+          p_break_paid: boolean
+          p_end: string
+          p_start: string
+        }
+        Returns: number
       }
       shift_duration_hours: {
         Args: { p_end: string; p_start: string }

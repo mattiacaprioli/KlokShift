@@ -148,7 +148,7 @@ begin
   brk := public.clock_break(rec.id, 'start');
   brk2 := public.clock_break(rec.id, 'start');
   perform tests.eq(brk2.id, brk.id, 'doppio inizio pausa idempotente');
-  perform tests.raises(format('insert into public.shift_clock_breaks (clock_record_id, started_at) values (%L, now())', rec.id),
+  perform tests.raises(format('insert into public.shift_clock_breaks (clock_record_id, venue_id, started_at) values (%L, %L, now())', rec.id, tests.id('V1')),
     'permission denied', 'nessuna scrittura diretta sulle pause');
 
   perform tests.login('Emp2');

@@ -7,10 +7,11 @@ import {
   addDaysToDate,
   isShiftOver,
   MONTH_NAMES,
-  shiftDurationHours,
+  shiftCountedHours,
   startOfWeek,
   toDateString,
   todayString,
+  type ShiftBreak,
   type ShiftTimes,
 } from "@/lib/format";
 import type { Enums } from "@/types/database";
@@ -121,7 +122,8 @@ export function periodLabel(
  * che è ciò che torna `getOwnerShiftsRange`, lo soddisfa senza conversioni.
  */
 export type StatsShift = CountableShift &
-  ShiftTimes & {
+  ShiftTimes &
+  ShiftBreak & {
     status: Enums<"shift_status">;
     shift_assignments: { status: AssignmentStatus }[];
   };
@@ -177,7 +179,7 @@ export function computeHomeStats(
     const working = shift.shift_assignments.filter((a) =>
       isActiveAssignment(a.status)
     ).length;
-    hours += shiftDurationHours(shift.start_time, shift.end_time) * working;
+    hours += shiftCountedHours(shift) * working;
   }
 
   return {

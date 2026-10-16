@@ -201,6 +201,24 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "L'uscita è già stata registrata. Aggiorna la pagina.",
   },
   {
+    match: ["clock_break_not_started"],
+    message: "Non c’è una pausa da chiudere.",
+  },
+  {
+    // assert_shift_break e correct_clock_break; nei form lo anticipa shiftBreakError.
+    match: ["break_too_long"],
+    message: "La pausa deve essere più corta del turno.",
+  },
+  {
+    match: ["break_invalid"],
+    message: "Durata della pausa non valida.",
+  },
+  {
+    match: ["break_rule_invalid"],
+    message:
+      "Regola della pausa non valida: soglia da 1 a 24 ore, pausa da 5 a 240 minuti.",
+  },
+  {
     match: ["clock_open_too_long"],
     message:
       "L’entrata è aperta da troppe ore: l’uscita la registra chi gestisce.",

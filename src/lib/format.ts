@@ -49,6 +49,39 @@ export function shiftDurationHours(start: string, end: string): number {
   return mins / 60;
 }
 
+/** La pausa pianificata del turno e la copia della scelta della sede. */
+export type ShiftBreak = { break_minutes: number; break_paid: boolean };
+
+// Ore che il turno conta: la durata, meno la pausa se non è retribuita. La
+// durata (`shiftDurationHours`) resta l'arco orario, da mostrare come tale.
+// ⚠️ Gemello manuale di `public.shift_counted_hours` (20261016000000): se cambia
+// lì, cambia qui.
+export function shiftCountedHours(
+  shift: { start_time: string; end_time: string } & ShiftBreak
+): number {
+  const unpaid = shift.break_paid ? 0 : shift.break_minutes / 60;
+  return Math.max(
+    0,
+    shiftDurationHours(shift.start_time, shift.end_time) - unpaid
+  );
+}
+
+// Minuti di pausa leggibili: "30 min", "1 h", "1 h 15 min".
+export function formatBreakMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
+// "Pausa 30 min" — con `paid` aggiunge se è retribuita. Al professionista non
+// si dice: decide la sede, e a lui serve sapere solo quanto dura.
+export function formatBreak(minutes: number, paid?: boolean): string {
+  const label = `Pausa ${formatBreakMinutes(minutes)}`;
+  if (paid === undefined) return label;
+  return `${label} ${paid ? "retribuita" : "non retribuita"}`;
+}
+
 // Istante in cui il turno finisce davvero: se l'orario di fine non è successivo
 // a quello di inizio il turno scavalca la mezzanotte e finisce il giorno dopo
 // (stessa convenzione di shiftDurationHours).
@@ -79,15 +112,25 @@ export function isShiftOver(
 // "Finisce gio 12 set alle 04:00 · 6 h" quando il turno scavalca la mezzanotte.
 // Il giorno si nomina solo quando cambia: è lì che serve una conferma, ed è il
 // momento in cui si intercetta un 04:00 digitato per sbaglio al posto di 16:00.
+// Con una pausa aggiunge quanto dura e, se non è retribuita, le ore che contano:
+// "Durata 6 h · pausa 30 min non retribuita · 5,5 h conteggiate".
 export function formatShiftSummary(
   date: string,
   start: string,
-  end: string
+  end: string,
+  brk?: ShiftBreak
 ): string {
   const hours = formatHours(shiftDurationHours(start, end));
-  if (!isOvernightShift(start, end)) return `Durata ${hours}`;
-  const endsOn = toDateString(shiftEndsAt(date, start, end));
-  return `Finisce ${formatDate(endsOn)} alle ${formatTime(end)} · ${hours}`;
+  const base = isOvernightShift(start, end)
+    ? `Finisce ${formatDate(toDateString(shiftEndsAt(date, start, end)))} alle ${formatTime(end)} · ${hours}`
+    : `Durata ${hours}`;
+  if (!brk || brk.break_minutes <= 0) return base;
+  const pause = formatBreak(brk.break_minutes, brk.break_paid).toLowerCase();
+  if (brk.break_paid) return `${base} · ${pause}`;
+  const counted = formatHours(
+    shiftCountedHours({ start_time: start, end_time: end, ...brk })
+  );
+  return `${base} · ${pause} · ${counted} conteggiate`;
 }
 
 // Ore in italiano, 1 decimale con virgola, senza decimale se intero: "5 h", "12,5 h".
