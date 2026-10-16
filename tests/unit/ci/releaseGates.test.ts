@@ -21,10 +21,26 @@ describe("release workflows", () => {
   const deno = repoFile("supabase/functions/deno.json");
 
   it("rende tutti i gate prerequisiti di entrambi i deploy", () => {
-    expect(
-      ci.match(/needs: \[changes, client, database, edge\]/g)
-    ).toHaveLength(2);
-    expect(ci.slice(ci.indexOf("  deploy-pages:"))).not.toMatch(/always\(\)/);
+    const job = (name: string) => {
+      const start = ci.indexOf(`  ${name}:`);
+      const end = ci.indexOf("\n  deploy-", start + 1);
+      return ci.slice(start, end === -1 ? undefined : end);
+    };
+    expect(job("deploy-database")).toContain("needs: [client, database, edge]");
+    // La dashboard esce dopo le migration: mai una versione che legge colonne
+    // che il database non ha ancora (16/10, la pausa).
+    expect(job("deploy-pages")).toContain(
+      "needs: [changes, client, database, edge, deploy-database]"
+    );
+    expect(ci.slice(ci.indexOf("  deploy-pages:"))).not.toMatch(/always\(\)|cancelled\(\)/);
+  });
+
+  it("applica le migration a ogni rilascio, senza filtro sui file del push", () => {
+    // Una migration in un push il cui run è fallito o è stato scavalcato in
+    // coda non usciva mai (C08). `db push` senza niente da applicare è innocuo.
+    const deploy = ci.slice(ci.indexOf("  deploy-database:"));
+    expect(deploy).not.toContain("needs.changes.outputs");
+    expect(ci).not.toContain("outputs.database");
   });
 
   it("non permette di avviare i deploy fuori dal workflow verificato", () => {
