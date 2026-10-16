@@ -361,12 +361,3 @@ export async function updateShift(
   });
   if (error) throw new Error(error.message);
 }
-
-/**
- * Elimina un turno (RPC `delete_shift`). Un turno già finito **con persone**
- * resta: è storico, ore, presenze (`finished_shift_locked`).
- */
-export async function deleteShift(id: string): Promise<void> {
-  const { error } = await supabase.rpc("delete_shift", { p_shift: id });
-  if (error) throw new Error(error.message);
-}

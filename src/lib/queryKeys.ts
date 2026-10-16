@@ -118,8 +118,6 @@ export const qk = {
     byVenue: (venueId: string) => ["roles", "byVenue", venueId] as const,
     /** I ruoli di tutte le sedi dell'azienda. `scope` è `venuesKey`. */
     byOwner: (scope: string) => ["roles", "byOwner", scope] as const,
-    byStaffMember: (staffMemberId: string) =>
-      ["roles", "byStaffMember", staffMemberId] as const,
   },
   staff: {
     all: ["staff"] as const,

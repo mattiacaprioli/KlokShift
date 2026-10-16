@@ -1500,11 +1500,6 @@
   dependencies:
     invariant "^2.2.4"
 
-"@react-native-community/slider@5.2.0":
-  version "5.2.0"
-  resolved "https://registry.yarnpkg.com/@react-native-community/slider/-/slider-5.2.0.tgz#c154ac4ec10537160462d7a9f3e2e43098257302"
-  integrity sha512-484sH8aWEaSjxaZ7HT3YZ8CKDcNes2synko1vdEz5DFEdvKAduxKJTj22L/qBMD7rtIkfbX69DMzWDAGbOAV6w==
-
 "@react-native-masked-view/masked-view@0.3.2", "@react-native-masked-view/masked-view@^0.3.2":
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/@react-native-masked-view/masked-view/-/masked-view-0.3.2.tgz#7064533a573e3539ec912f59c1f457371bf49dd9"
@@ -3922,11 +3917,6 @@ expo-blur@~56.0.3:
   version "56.0.3"
   resolved "https://registry.yarnpkg.com/expo-blur/-/expo-blur-56.0.3.tgz#4420700813be7ed47298b9280d83fdfb32d04cdb"
   integrity sha512-KDDtrpWc2tYlm1WCPaOgBtv+YEGqe5ELheFPIgSNgHt28NQUDcfBcFsA9Us2StDh6osmSD6NbKxOt5bU6PcDbQ==
-
-expo-clipboard@~56.0.4:
-  version "56.0.4"
-  resolved "https://registry.yarnpkg.com/expo-clipboard/-/expo-clipboard-56.0.4.tgz#b15ea42f4d0b149c76a34a19c899136e2049068e"
-  integrity sha512-qb4DYlkiowHYHaUYVT2FN9nk/nI1xShXOUYsI7J9dVpQCOHcGFjCBPX1VAvEW4Ye4/Aagd6IuhOVAq/+scBOiA==
 
 expo-constants@~56.0.18:
   version "56.0.18"

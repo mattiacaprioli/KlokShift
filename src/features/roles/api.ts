@@ -108,22 +108,6 @@ export async function archiveVenueRole(id: string): Promise<void> {
   await updateRole(id, { archived_at: new Date().toISOString() });
 }
 
-/** Le mansioni di una riga di organico (`venue_members.id`). */
-export async function getStaffMemberRoles(
-  venueMemberId: string
-): Promise<VenueRole[]> {
-  const { data, error } = await supabase
-    .from("venue_member_roles")
-    .select("role:venue_roles(*)")
-    .eq("venue_member_id", venueMemberId);
-  if (error) throw new Error(error.message);
-  const rows = (data as { role: VenueRole | null }[] | null) ?? [];
-  return rows
-    .map((r) => r.role)
-    .filter((r): r is VenueRole => !!r)
-    .sort((a, b) => a.sort_order - b.sort_order);
-}
-
 /**
  * Sostituisce per intero le mansioni di una riga di organico: è una lista, non
  * righe indipendenti, e chi chiama ha sempre in mano l'elenco completo. Una

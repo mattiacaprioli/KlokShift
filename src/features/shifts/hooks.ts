@@ -9,7 +9,6 @@ import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import { useOwnerVenues, venuesKeyOf } from "@/features/venues/OwnerVenues";
 import type { Enums } from "@/types/database";
 import {
-  deleteShift,
   getOwnerPastShiftsCount,
   getOwnerPastShiftsPage,
   getOwnerShifts,
@@ -202,17 +201,5 @@ export function useMoveShiftToDate() {
 
     onSettled: (_data, _error, { shiftId }) =>
       invalidateShiftViews(qc, shiftId),
-  });
-}
-
-/** Elimina un turno; aggiorna ogni vista che lo mostrava. */
-export function useDeleteShift(shiftId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => deleteShift(shiftId),
-    onSuccess: () => {
-      invalidateShiftViews(qc, shiftId);
-      qc.invalidateQueries({ queryKey: qk.assignments.all });
-    },
   });
 }

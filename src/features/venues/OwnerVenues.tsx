@@ -56,8 +56,6 @@ export type OwnerVenuesState = {
   myMemberId: string | undefined;
   authority: Authority | undefined;
   workspaceName: string | undefined;
-  /** Piano dell'azienda (chi paga), non di chi guarda. */
-  plan: "free" | "pro" | undefined;
   access: WorkspaceAccess | undefined;
   accessPending: boolean;
   accessError: boolean;
@@ -133,11 +131,6 @@ export function useOwnerVenues(): OwnerVenuesState {
     );
   }
   return ctx;
-}
-
-/** Per chi vuole solo gli id da passare a una query già scopata per azienda. */
-export function useVenueIds(): string[] {
-  return useOwnerVenues().venueIds;
 }
 
 const NO_MEMBERSHIPS: Membership[] = [];
@@ -236,7 +229,6 @@ export function OwnerVenuesProvider({ children }: PropsWithChildren) {
       myMemberId: current?.member_id,
       authority: current?.authority,
       workspaceName: current?.workspace_name,
-      plan: current?.plan,
       access: commercial.access,
       accessPending: commercial.isAccessPending,
       accessError: commercial.isError,

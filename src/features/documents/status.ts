@@ -35,21 +35,3 @@ export function documentStatusLabel(
   if (status === "expired") return `Scaduto il ${formatDate(expiresAt)}`;
   return `Scade il ${formatDate(expiresAt)}`;
 }
-
-/**
- * Lo stato peggiore di un elenco: è quello che va mostrato sulla scheda della
- * persona, perché è l'unica cosa che il gestore deve notare senza aprire nulla.
- */
-export function worstDocumentStatus(
-  docs: { expires_at: string | null }[],
-  today: string = todayString()
-): DocumentStatus {
-  let worst: DocumentStatus = "none";
-  for (const doc of docs) {
-    const status = documentStatus(doc.expires_at, today);
-    if (status === "expired") return "expired";
-    if (status === "expiring") worst = "expiring";
-    else if (status === "valid" && worst === "none") worst = "valid";
-  }
-  return worst;
-}

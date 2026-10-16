@@ -37,6 +37,11 @@ export type Membership = {
   member_id: string;
   workspace_id: string;
   workspace_name: string;
+  /**
+   * @deprecated Non è un diritto commerciale: capacità e operatività vengono
+   * dall'accesso aziendale (`get_workspace_access`). Resta finché
+   * `get_my_context` lo restituisce.
+   */
   plan: "free" | "pro";
   authority: Authority;
   status: MemberStatus;

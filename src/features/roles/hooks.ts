@@ -5,7 +5,6 @@ import {
   archiveVenueRole,
   createVenueRole,
   getOwnerVenueRoles,
-  getStaffMemberRoles,
   getVenueRoles,
   renameVenueRole,
   setStaffMemberRoles,
@@ -45,15 +44,6 @@ export function useOwnerVenueRoles() {
     queryKey: qk.roles.byOwner(venuesKey),
     queryFn: () => getOwnerVenueRoles(venueIds),
     enabled: venueIds.length > 0,
-  });
-}
-
-/** Le mansioni di una riga di organico (`venue_members.id`). */
-export function useStaffMemberRoles(venueMemberId: string | undefined) {
-  return useQuery({
-    queryKey: qk.roles.byStaffMember(venueMemberId ?? ""),
-    queryFn: () => getStaffMemberRoles(venueMemberId as string),
-    enabled: !!venueMemberId,
   });
 }
 

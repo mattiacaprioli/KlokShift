@@ -317,29 +317,6 @@ export async function respondToAssignment(
   return data;
 }
 
-/** Aggiunge una persona (riga di organico) a un turno, nel ruolo indicato. */
-export async function assignToShift(
-  shiftId: string,
-  venueMemberId: string,
-  roleId?: string | null
-): Promise<string> {
-  const { data, error } = await supabase.rpc("assign", {
-    p_shift: shiftId,
-    p_venue_member: venueMemberId,
-    p_role: roleId ?? undefined,
-  });
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/** Toglie una persona dal turno. */
-export async function unassignFromShift(assignmentId: string): Promise<void> {
-  const { error } = await supabase.rpc("unassign", {
-    p_assignment: assignmentId,
-  });
-  if (error) throw new Error(error.message);
-}
-
 /**
  * Passa un'assegnazione a un'altra persona della stessa sede.
  *

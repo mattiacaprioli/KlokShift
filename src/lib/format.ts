@@ -40,11 +40,6 @@ export function isValidShiftRange(start: string, end: string): boolean {
 // diverse agli occhi di chi le legge.
 export const SHIFT_RANGE_ERROR = "Inizio e fine non possono coincidere.";
 
-export function formatRate(rate: number | null): string {
-  if (rate == null) return "Da concordare";
-  return `${rate.toFixed(2).replace(".", ",")} €/h`;
-}
-
 // Durata del turno in ore (gestisce i turni che scavalcano la mezzanotte).
 export function shiftDurationHours(start: string, end: string): number {
   const [sh, sm] = start.split(":").map(Number);
@@ -93,20 +88,6 @@ export function formatShiftSummary(
   if (!isOvernightShift(start, end)) return `Durata ${hours}`;
   const endsOn = toDateString(shiftEndsAt(date, start, end));
   return `Finisce ${formatDate(endsOn)} alle ${formatTime(end)} · ${hours}`;
-}
-
-// Stima del compenso lordo del turno = paga oraria × durata.
-export function shiftTotal(
-  rate: number | null,
-  start: string,
-  end: string
-): number | null {
-  if (rate == null) return null;
-  return rate * shiftDurationHours(start, end);
-}
-
-export function formatEuro(n: number): string {
-  return `€${Math.round(n)}`;
 }
 
 // Ore in italiano, 1 decimale con virgola, senza decimale se intero: "5 h", "12,5 h".

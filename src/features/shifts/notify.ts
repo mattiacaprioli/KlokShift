@@ -1,60 +1,18 @@
-import {
-  isActiveAssignment,
-  type AssignmentStatus,
-} from "@/features/assignments/status";
+import type { AssignmentStatus } from "@/features/assignments/status";
 import { toDateString } from "@/lib/format";
-import type { ShiftWithAssignees } from "./types";
 
 /**
- * Chi riceve una notifica se cambia la data (o l'orario) di un turno.
- *
- * Gemello client di `notify_on_shift_change()`
+ * Chi riceve una notifica se cambia la data (o l'orario) di un turno. Il conto
+ * lo fa `moveImpact.ts`, gemello client di `notify_on_shift_change()`
  * (`supabase/migrations/20260920000800_shifts.sql`): gli assegnati attivi **con
- * account collegato**. Le due condizioni vanno tenute allineate a mano — se il
- * trigger cambia destinatari, questo file va cambiato con lui, o l'interfaccia
- * prometterà avvisi che nessuno riceve.
- *
- * Serve a dire la verità prima di trascinare un turno su un altro giorno: lo
- * spostamento non è mai solo uno spostamento, è una notifica sul telefono di
- * qualcuno. Il conto completo delle conseguenze — chi dovrà riconfermare, chi
- * quel giorno non c'è — sta in `moveImpact.ts`.
+ * account collegato**, tolto chi modifica. Se il trigger cambia destinatari,
+ * va cambiato con lui, o l'interfaccia prometterà avvisi che nessuno riceve.
  */
 export type ShiftNotifyRecipients = {
   /** Nomi di chi è assegnato e verrà avvisato, per poterli nominare. */
   assignees: string[];
   total: number;
 };
-
-export const NO_RECIPIENTS: ShiftNotifyRecipients = {
-  assignees: [],
-  total: 0,
-};
-
-export function shiftNotifyRecipients(
-  shift: ShiftWithAssignees | undefined,
-  /**
-   * Chi sta spostando il turno, se è anche in organico: da `20260919100200` il
-   * trigger salta chi coincide con `auth.uid()` — la notifica direbbe a uno
-   * l'orario che ha scritto lui, e la sua conferma non va riaperta. Senza
-   * questo la finestra promette un avviso in più di quelli che partono.
-   */
-  myWaiterId?: string
-): ShiftNotifyRecipients {
-  if (!shift) return NO_RECIPIENTS;
-  // Un turno annullato non genera notifiche: il trigger si ferma prima.
-  if (shift.status === "cancelled") return NO_RECIPIENTS;
-
-  const assignees = shift.shift_assignments
-    .filter(
-      (a) =>
-        isActiveAssignment(a.status) &&
-        a.staff_member?.waiter_id &&
-        a.staff_member.waiter_id !== myWaiterId
-    )
-    .map((a) => a.staff_member?.display_name ?? "");
-
-  return { assignees, total: assignees.length };
-}
 
 /** Perché chi lascia il turno non riceve la revoca. */
 export type ReassignSkip = "declined" | "no-account" | "past" | "cancelled";
