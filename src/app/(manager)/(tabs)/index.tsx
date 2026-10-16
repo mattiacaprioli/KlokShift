@@ -83,7 +83,8 @@ export default function ManagerHome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const userId = session!.user.id;
-  const firstName = (profile?.full_name ?? "").split(" ")[0] || "Ristoratore";
+  // Senza nome un saluto neutro, mai un mestiere al posto della persona.
+  const firstName = (profile?.full_name ?? "").split(" ")[0];
 
   const venueQuery = useOwnerVenues();
   const { venues, isMultiVenue, can, canAny, workspaceId } = venueQuery;
@@ -257,7 +258,9 @@ export default function ManagerHome() {
       >
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
-          <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
+          <Display className="mt-1 text-4xl">
+            {firstName ? `Ciao, ${firstName}` : "Ciao"}
+          </Display>
           {/* Non più uno switcher: non c'è più una sede da scegliere. Con un
               sede sola è il suo nome, come è sempre stato; con più sedi è il
               conteggio, e porta dove si gestiscono — il Profilo. */}

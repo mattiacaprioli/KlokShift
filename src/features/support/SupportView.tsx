@@ -10,11 +10,12 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { cn } from "@/lib/cn";
 import { Pressable, ScrollView, Text, View } from "@/tw";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   SUPPORT_EMAIL,
   SUPPORT_PENDING_NOTE,
-  SUPPORT_SCOPE_NOTE,
   faqFor,
+  supportScopeNote,
   supportMailto,
   type SupportFaq,
   type SupportMailContext,
@@ -42,6 +43,7 @@ export function SupportView({
   workspace?: SupportMailContext["workspace"];
 }) {
   const insets = useSafeAreaInsets();
+  const { isOwner } = useOwnerVenues();
   const faq = faqFor(audience);
 
   return (
@@ -82,7 +84,7 @@ export function SupportView({
           <SectionHeader title="Contattaci" />
           <Card className="gap-4">
             <Text className="text-[14px] leading-5 text-t2">
-              {SUPPORT_SCOPE_NOTE}
+              {supportScopeNote({ isOwner })}
             </Text>
             <ContactAction workspace={workspace} />
           </Card>

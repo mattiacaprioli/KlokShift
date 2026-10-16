@@ -193,9 +193,10 @@ export function RegistrazionePage() {
 function CheckYourMail({ email }: { email: string }) {
   // `true`: l'email della registrazione è appena partita, quindi il contatore
   // parte da fermo. Offrire subito il bottone vorrebbe dire offrire un 429.
+  // Come la conferma della registrazione: la dashboard, non la radice del sito.
   const resend = useResendConfirmation(
     email,
-    `${window.location.origin}/`,
+    `${window.location.origin}${window.location.pathname}`,
     true
   );
 

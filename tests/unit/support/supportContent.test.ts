@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  SUPPORT_DATA_NOTE,
   SUPPORT_FAQ,
   faqFor,
   supportMailto,
+  supportScopeNote,
 } from "@/features/support/supportContent";
 
 describe("supportMailto", () => {
@@ -55,5 +57,28 @@ describe("faqFor", () => {
     for (const item of native) {
       expect(`${item.q} ${item.a}`).not.toMatch(/€|prezz|piano|acquist|abbonament|checkout/i);
     }
+  });
+});
+
+describe("supportScopeNote", () => {
+  it("dice a tutti cosa vede l'assistenza, senza promettere che non vede niente", () => {
+    for (const isOwner of [true, false]) {
+      const note = supportScopeNote({ isOwner });
+      expect(note).toContain(SUPPORT_DATA_NOTE);
+      expect(note).not.toMatch(/non vede i dati/);
+    }
+  });
+
+  it("rimanda alla sede solo chi non è il titolare", () => {
+    expect(supportScopeNote({ isOwner: false })).toMatch(/scrivi alla tua sede/);
+    expect(supportScopeNote({ isOwner: true })).not.toMatch(/scrivi alla tua sede/);
+  });
+});
+
+describe("FAQ della timbratura", () => {
+  it("racconta anche la timbratura senza turno", () => {
+    const clock = SUPPORT_FAQ.find((item) => item.q === "Come timbro entrata e uscita?");
+    expect(clock?.a).toMatch(/senza un turno/);
+    expect(clock?.a).toMatch(/Fuori turno/);
   });
 });

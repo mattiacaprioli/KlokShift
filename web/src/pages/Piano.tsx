@@ -4,7 +4,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useStartWorkspaceTrial } from "@/features/workspace/hooks";
 import { workspaceAccessMessage } from "@/features/workspace/access";
 import { userErrorMessage } from "@/lib/errors";
-import { formatEuro, quotePlan, type BillingCycle } from "../../../shared/pricing";
+import { EXTRA_VENUE_PRICES, formatEuro, quotePlan, type BillingCycle } from "../../../shared/pricing";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
@@ -122,7 +122,7 @@ function PlanPreview() {
             </div>
           ))}
         </div>
-        <p className="mt-4 text-xs text-t3">IVA esclusa. Ogni sede oltre la prima costa 15 € al mese o 150 € all’anno. L’annuale costa 10 mensilità e copre 12 mesi consecutivi.</p>
+        <p className="mt-4 text-xs text-t3">IVA esclusa. Ogni sede oltre la prima costa {formatEuro(EXTRA_VENUE_PRICES.monthly)} al mese o {formatEuro(EXTRA_VENUE_PRICES.annual)} all’anno. L’annuale costa 10 mensilità e copre 12 mesi consecutivi.</p>
       </details>
     </Card>
   );

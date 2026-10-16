@@ -8,8 +8,8 @@ import { ABSENCE_MANAGER_TUTORIAL } from "@/features/absences/tutorialContent";
 import {
   SUPPORT_EMAIL,
   SUPPORT_PENDING_NOTE,
-  SUPPORT_SCOPE_NOTE,
   faqFor,
+  supportScopeNote,
   supportMailto,
 } from "@/features/support/supportContent";
 import { Card, PageHeader } from "../ui/primitives";
@@ -46,7 +46,7 @@ export function AiutoPage() {
                 <TutorialSection
                   tutorial={ABSENCE_MANAGER_TUTORIAL}
                   subtitle="Richieste, turni in conflitto ed export"
-                  link={{ to: "/staff", label: "Vai allo staff" }}
+                  link={{ to: "/assenze", label: "Vai alle assenze" }}
                 />
               ) : null}
             </div>
@@ -77,7 +77,9 @@ export function AiutoPage() {
         <section>
           <SectionTitle>Contattaci</SectionTitle>
           <Card className="flex flex-col gap-4">
-            <p className="text-sm leading-6 text-t2">{SUPPORT_SCOPE_NOTE}</p>
+            <p className="text-sm leading-6 text-t2">
+              {supportScopeNote({ isOwner })}
+            </p>
             {SUPPORT_EMAIL ? (
               <div className="flex flex-wrap items-center gap-3">
                 <a

@@ -248,7 +248,7 @@ export default function WaiterProfiloScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
-  const name = profile?.full_name ?? "Cameriere";
+  const name = profile?.full_name ?? null;
   const userId = session!.user.id;
 
   const profileQuery = useMyWaiterProfile(userId);
@@ -302,7 +302,9 @@ export default function WaiterProfiloScreen() {
 
           <View className="min-w-0 flex-1 gap-1.5">
             <View className="flex-row items-center gap-2">
-              <Display className="shrink text-2xl">{name}</Display>
+              <Display className="shrink text-2xl">
+                {name ?? "Il tuo profilo"}
+              </Display>
               <View className="shrink-0">
                 <Icon name="verified" size={18} color="#EAB54C" />
               </View>

@@ -1233,7 +1233,8 @@ function ShiftCell({
           ))}
           {people.length > 2 ? (
             <span className="text-[10px] text-t4">
-              +{people.length - 2} altre persone
+              +{people.length - 2}{" "}
+              {people.length - 2 === 1 ? "altra persona" : "altre persone"}
             </span>
           ) : null}
         </div>

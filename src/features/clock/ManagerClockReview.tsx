@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Modal, ScrollView } from "react-native";
+import { Modal } from "react-native";
 import { useRouter } from "expo-router";
-import { Pressable, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";

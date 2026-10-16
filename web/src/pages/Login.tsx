@@ -34,8 +34,12 @@ export function LoginPage() {
   /**
    * Il link deve tornare su questa dashboard, non al Site URL che porta
    * all'app: vale la stessa allowlist della conferma alla registrazione.
+   * Con il percorso: la dashboard vive sotto `/app/`, la radice è il sito.
    */
-  const resend = useResendConfirmation(email, `${window.location.origin}/`);
+  const resend = useResendConfirmation(
+    email,
+    `${window.location.origin}${window.location.pathname}`
+  );
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

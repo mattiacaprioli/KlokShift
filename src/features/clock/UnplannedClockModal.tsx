@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Modal, ScrollView } from "react-native";
+import { Modal } from "react-native";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { TimeField } from "@/features/shifts/TimeField";
 import { userErrorMessage } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
 import { useToast } from "@/providers/Toast";
-import { Pressable, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import type { OpenUnplannedClock } from "./api";
 import { useCloseUnplannedClock, useVoidUnplannedClock } from "./hooks";
 import { formatClockTime } from "./hours";

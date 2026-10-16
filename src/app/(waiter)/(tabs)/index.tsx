@@ -77,7 +77,8 @@ export default function WaiterHomeScreen() {
   // Un'entrata ancora aperta resta nella query anche oltre la fine pianificata,
   // perché la Home deve offrire l'uscita. Non è però il «prossimo turno».
   const upcomingItems = items.filter((item) => !isShiftOver(item.shift));
-  const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
+  // Senza nome un saluto neutro, mai un mestiere al posto della persona.
+  const firstName = (profile?.full_name ?? "").split(" ")[0];
 
   // Quanti turni deve ancora confermare: è la sola cosa in questa schermata su
   // cui c'è qualcosa da fare, quindi ha un avviso suo.
@@ -126,7 +127,9 @@ export default function WaiterHomeScreen() {
       >
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
-          <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
+          <Display className="mt-1 text-4xl">
+            {firstName ? `Ciao, ${firstName}` : "Ciao"}
+          </Display>
         </View>
         <NotificationBell
           count={unread}

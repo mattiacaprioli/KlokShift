@@ -4,7 +4,7 @@ import { Eyebrow } from "../ui/Section";
 import { Logo } from "../ui/Logo";
 import { Button } from "../ui/Button";
 import { Footer } from "./Footer";
-import { ANDROID_URL, IOS_URL, SIGNUP_URL } from "../config";
+import { ANDROID_URL, IOS_URL } from "../config";
 import { t } from "../content";
 
 /*
@@ -16,15 +16,9 @@ import { t } from "../content";
  * già preparato. Tutto il resto della pagina è contorno; quella frase è la
  * pagina.
  *
- * Due inviti, una pagina: `?r=gestione` è il collaboratore che gestirà il
- * sede, tutto il resto è la persona in organico. Un secondo entry HTML
- * avrebbe voluto dire un secondo file in `rollupOptions.input` e due `<head>`
- * da tenere allineati, per una pagina che cambia solo il copy.
- *
- * ⚠️ Il parametro **non autorizza niente**: decide solo quale testo leggere. È
- * l'email confermata a collegare l'account (`link_venue_access_for_user`), e
- * chi arriva qui con il parametro sbagliato vede la pagina sbagliata, non un
- * accesso sbagliato.
+ * Solo per la persona in organico: il collaboratore riceve un link monouso
+ * alla dashboard (`#/invito`) e non passa da qui. Il collegamento lo fa l'email
+ * confermata (`private.link_member_invites`), non questa pagina.
  *
  * Niente `<Nav />`: le sue voci sono ancore verso sezioni che qui non esistono.
  */
@@ -33,10 +27,7 @@ export function InvitePage() {
     document.documentElement.lang = t.lang;
   }, []);
 
-  // Letto una volta al render: la pagina non cambia mentre la si guarda.
-  const isManager =
-    new URLSearchParams(window.location.search).get("r") === "gestione";
-  const c = isManager ? t.inviteManager : t.invite;
+  const c = t.invite;
 
   return (
     <>
@@ -87,10 +78,6 @@ export function InvitePage() {
             <p className="mt-2 text-t2">{c.calloutBody}</p>
           </div>
 
-          {/* Il collaboratore non aspetta gli store: la dashboard esiste già, e
-              da una scrivania è anche il posto giusto per fare i turni. */}
-          {isManager ? <WebCta /> : null}
-
           <StoreBadges />
 
           <section className="mt-14">
@@ -113,21 +100,6 @@ export function InvitePage() {
 
       <Footer />
     </>
-  );
-}
-
-/* Il rimando alla dashboard, solo per chi è stato invitato a gestire. */
-function WebCta() {
-  return (
-    <div className="mt-8 rounded-2xl border border-border bg-bg-card p-6">
-      <h2 className="font-semibold">{t.inviteManager.webTitle}</h2>
-      <p className="mt-2 text-t2">{t.inviteManager.webBody}</p>
-      <div className="mt-4">
-        <Button href={SIGNUP_URL} variant="primary">
-          {t.inviteManager.webLabel}
-        </Button>
-      </div>
-    </div>
   );
 }
 

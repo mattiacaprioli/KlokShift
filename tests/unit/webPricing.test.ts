@@ -23,6 +23,19 @@ describe("Listino web approvato", () => {
     expect(content.plans.options[1].monthly.amount).toBe(formatEuro(49));
     expect(content.plans.options[1].annual.amount).toBe(formatEuro(490));
   });
+  it("gli importi in prosa della vetrina derivano dal listino, senza cifre scritte a mano", () => {
+    const [base, team] = content.plans.options;
+    expect(base.annual.equivalent).toContain(formatEuro(290 / 12));
+    expect(base.annual.saving).toBe("Risparmi 58\u00a0€ all'anno");
+    expect(team.annual.equivalent).toContain(formatEuro(490 / 12));
+    expect(team.annual.saving).toBe("Risparmi 98\u00a0€ all'anno");
+    expect(content.plans.extraVenue.monthly).toBe("Sede aggiuntiva: 15\u00a0€ al mese.");
+    expect(content.plans.extraVenue.annual).toBe("Sede aggiuntiva: 150\u00a0€ all'anno — risparmi 30\u00a0€.");
+    const faq = content.faq.items.map((item) => item.a).join(" ");
+    expect(faq).toContain("290\u00a0€ all'anno");
+    expect(faq).toContain("invece di 180\u00a0€");
+    expect(faq).not.toMatch(/\d €/);
+  });
   it("la beta non pubblicizza un acquisto attivo o un piano gratuito illimitato nei metadata", () => {
     const html = readFileSync(new URL("../../web-site/index.html", import.meta.url), "utf8");
     const schema = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]);

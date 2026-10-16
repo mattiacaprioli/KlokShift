@@ -49,7 +49,7 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
   },
   {
     q: "Come timbro entrata e uscita?",
-    a: "Se la tua sede usa la timbratura dall'app, quando è ora del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se non lo vedi, la sede registra le ore senza timbratura.",
+    a: "Se la tua sede usa la timbratura dall'app, quando è ora del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se la sede ti ha abilitato, puoi timbrare anche senza un turno: all'uscita nasce un turno «Fuori turno» che chi gestisce le ore deve approvare. Se non vedi niente, la sede registra le ore senza timbratura.",
     audience: ["waiter"],
   },
   {
@@ -85,9 +85,19 @@ export function faqFor(
   );
 }
 
-/** Detto una volta, vale per tutti: l'assistenza non vede i dati dell'azienda. */
-export const SUPPORT_SCOPE_NOTE =
-  "Per turni, ore e assenze scrivi alla tua sede dalla chat: l'assistenza KlokShift non vede i dati della tua azienda.";
+/**
+ * Cosa vede l'assistenza, detto a tutti. Allineato all'area del fondatore
+ * (`docs/FOUNDER-DASHBOARD.md`): dati amministrativi sì, dati di lavoro no.
+ */
+export const SUPPORT_DATA_NOTE =
+  "L'assistenza KlokShift vede solo i dati amministrativi dell'account e dell'azienda (nomi, email, sedi): non legge turni, ore, chat o documenti.";
+
+/** Il rimando alla sede, per chi non è il titolare: lui la sede la gestisce. */
+export function supportScopeNote({ isOwner }: { isOwner: boolean }): string {
+  return isOwner
+    ? SUPPORT_DATA_NOTE
+    : `Per turni, ore e assenze scrivi alla tua sede dalla chat. ${SUPPORT_DATA_NOTE}`;
+}
 
 export const SUPPORT_PENDING_NOTE =
   "Il recapito dell'assistenza sarà disponibile a breve.";

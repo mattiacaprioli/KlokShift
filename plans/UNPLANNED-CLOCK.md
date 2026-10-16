@@ -36,7 +36,9 @@ quella scelta: assenze finte da ricollegare a mano.
    - c'è un turno pianificato in corso o che attacca entro un'ora
      (`clock_planned_shift`): si timbra quello;
    - c'è già un'entrata aperta dello stesso account, in qualunque sede o
-     azienda (`clock_already_open`).
+     azienda (`clock_already_open`). Vale anche al contrario: con un fuori
+     turno aperto `clock_punch` rifiuta l'entrata di un turno pianificato (C05).
+     Non conta l'entrata di una scheda non più attiva o di una sede chiusa (C13).
 3. **Uscita** — chiude la timbratura e crea, nella stessa transazione, il turno
    `Fuori turno` (`shifts.unplanned = true`) con gli orari al minuto,
    un'assegnazione confermata con `hours_source = 'clock_expected'` e il
@@ -44,8 +46,9 @@ quella scelta: assenze finte da ricollegare a mano.
    con il flusso normale (`approve_clock_record`), mai d'ufficio.
 4. **Oltre 16 ore** il professionista non chiude più da sé
    (`clock_open_too_long`). L'uscita la registra chi ha «Ore» con
-   `close_unplanned_clock`: è una correzione con motivo, e l'uscita originale
-   resta vuota nell'audit.
+   `close_unplanned_clock`, **fino a 24 ore dopo l'entrata** (dopo, nel futuro o
+   prima dell'entrata → `invalid_clock_interval`): è una correzione con motivo,
+   e l'uscita originale resta vuota nell'audit.
 5. **Entrata per errore** — `void_unplanned_clock` (aperta) o
    `void_clock_record` (già diventata turno). Nel secondo caso viene tolto anche
    il turno, che esisteva solo per quella timbratura. Il record annullato resta.

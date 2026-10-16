@@ -1,5 +1,15 @@
 import type { Content } from "./types";
-import { PLAN_PRICES, formatEuro } from "../../../shared/pricing";
+import { EXTRA_VENUE_PRICES, PLAN_PRICES, formatEuro } from "../../../shared/pricing";
+
+/**
+ * Importi in prosa, derivati dal listino unico (`shared/pricing.ts`): senza
+ * decimali quando sono interi («15 €»). Mai scriverli a mano: cambiato il
+ * listino, il testo deve seguirlo da sé.
+ */
+const euro = (amount: number) => formatEuro(amount).replace(/,00(?=\s€)/u, "");
+/** Quanto si risparmia in un anno pagando l'annuale invece di 12 mensilità. */
+const annualSaving = (prices: { monthly: number; annual: number }) =>
+  prices.monthly * 12 - prices.annual;
 
 /*
  * TUTTO il copy della vetrina sta qui. Nessuna stringa nei componenti: è la
@@ -213,8 +223,8 @@ export const it: Content = {
         annual: {
           amount: formatEuro(PLAN_PRICES.base.annual),
           period: "all'anno",
-          equivalent: "Equivale a 24,17 € al mese, con fatturazione annuale.",
-          saving: "Risparmi 58 € all'anno",
+          equivalent: `Equivale a ${formatEuro(PLAN_PRICES.base.annual / 12)} al mese, con fatturazione annuale.`,
+          saving: `Risparmi ${euro(annualSaving(PLAN_PRICES.base))} all'anno`,
         },
         details: ["30 persone uniche nell'intera azienda", "1 sede inclusa", "Prezzo IVA esclusa"],
         badge: "Per iniziare",
@@ -228,8 +238,8 @@ export const it: Content = {
         annual: {
           amount: formatEuro(PLAN_PRICES.team.annual),
           period: "all'anno",
-          equivalent: "Equivale a 40,83 € al mese, con fatturazione annuale.",
-          saving: "Risparmi 98 € all'anno",
+          equivalent: `Equivale a ${formatEuro(PLAN_PRICES.team.annual / 12)} al mese, con fatturazione annuale.`,
+          saving: `Risparmi ${euro(annualSaving(PLAN_PRICES.team))} all'anno`,
         },
         details: ["1 sede inclusa", "Prezzo IVA esclusa"],
       },
@@ -243,8 +253,8 @@ export const it: Content = {
       "Messaggi e notifiche",
     ],
     extraVenue: {
-      monthly: "Sede aggiuntiva: 15 € al mese.",
-      annual: "Sede aggiuntiva: 150 € all'anno — risparmi 30 €.",
+      monthly: `Sede aggiuntiva: ${euro(EXTRA_VENUE_PRICES.monthly)} al mese.`,
+      annual: `Sede aggiuntiva: ${euro(EXTRA_VENUE_PRICES.annual)} all'anno — risparmi ${euro(annualSaving(EXTRA_VENUE_PRICES))}.`,
       detail: "Una sede con il proprio planning e organico, nella stessa azienda. Chi lavora in più sedi conta una sola volta nel limite persone.",
     },
     note: "Crea l'account e la prima sede, poi avvia la prova. Nessun addebito automatico alla scadenza.",
@@ -269,7 +279,7 @@ export const it: Content = {
       },
       {
         q: "Quanto risparmio con il pagamento annuale?",
-        a: "Paghi 10 mesi invece di 12: 290 € all'anno per il piano fino a 30 dipendenti e 490 € per quello senza limiti. Anche una sede aggiuntiva costa 150 € all'anno invece di 180 €.",
+        a: `Paghi 10 mesi invece di 12: ${euro(PLAN_PRICES.base.annual)} all'anno per il piano fino a 30 dipendenti e ${euro(PLAN_PRICES.team.annual)} per quello senza limiti. Anche una sede aggiuntiva costa ${euro(EXTRA_VENUE_PRICES.annual)} all'anno invece di ${euro(EXTRA_VENUE_PRICES.monthly * 12)}.`,
       },
       {
         q: "E se chiudo per la stagione, o non rinnovo?",
@@ -277,7 +287,7 @@ export const it: Content = {
       },
       {
         q: "Ho più sedi. Come funziona?",
-        a: "Ogni piano include una sede; ogni sede aggiuntiva costa 15 € al mese oppure 150 € all'anno. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.",
+        a: `Ogni piano include una sede; ogni sede aggiuntiva costa ${euro(EXTRA_VENUE_PRICES.monthly)} al mese oppure ${euro(EXTRA_VENUE_PRICES.annual)} all'anno. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.`,
       },
       {
         q: "Devo installare qualcosa?",
@@ -304,8 +314,8 @@ export const it: Content = {
 
   footer: {
     tagline: "Turni, presenze e ore per chi lavora su turni.",
-    // ⚠️ Da confermare: stesso indirizzo va messo in `public/privacy.html`,
-    // dove oggi c'è il placeholder `[EMAIL DI CONTATTO]`.
+    // ⚠️ Il recapito privacy di `public/privacy.html` (§10) è ancora «in corso
+    // di conferma» (A14): quando arriva, va confermato anche questo indirizzo.
     email: "info@klokshift.com",
     emailLabel: "Scrivici",
     links: [
@@ -346,38 +356,5 @@ export const it: Content = {
       "I messaggi con la sede, per cambi e imprevisti.",
     ],
     homeLabel: "Scopri KlokShift",
-  },
-
-  inviteManager: {
-    eyebrow: "Invito",
-    title: "Ti hanno dato accesso a una sede.",
-    lead: "Chi gestisce la sede ti ha aggiunto ai suoi collaboratori: da KlokShift organizzi i turni e segui l'organico.",
-    steps: [
-      {
-        title: "Registrati come sede",
-        body: "Dall'app scegli «Gestisco una sede». Dalla dashboard l'account è già quello.",
-      },
-      {
-        title: "Usa l'email dell'invito",
-        body: "È quella a cui è arrivato il messaggio che ti ha portato qui.",
-      },
-      {
-        title: "Trovi la sede già pronta",
-        body: "Niente da accettare: l'accesso e i permessi li ha già scelti chi ti ha invitato.",
-      },
-    ],
-    calloutTitle: "Registrati come sede, non come professionista",
-    calloutBody:
-      "Con un account da professionista, o con un indirizzo diverso, entri in KlokShift ma non nella gestione della sede che ti ha invitato.",
-    webTitle: "Anche dal computer",
-    webBody:
-      "La gestione dei turni si fa dall'app o dalla dashboard, con la stessa registrazione.",
-    webLabel: "Apri la dashboard",
-    whatTitle: "Cosa ci trovi",
-    whatItems: [
-      "L'agenda dei turni delle sedi su cui ti hanno dato accesso.",
-      "L'organico della sede, con ruoli e disponibilità.",
-      "Solo quello che il titolare ti ha abilitato: il resto non compare.",
-    ],
   },
 };
