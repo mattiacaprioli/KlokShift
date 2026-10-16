@@ -201,6 +201,85 @@ scrive direttamente audit/periodi/etichette. I byte concessi sono dichiarati,
 non ancora enforcement quota upload. Procedura:
 [TEST-FOUNDER-M06A.md](../docs/TEST-FOUNDER-M06A.md).
 
+## Deploy Edge Functions
+
+Le quattro funzioni si rilasciano manualmente: il job `edge` della CI verifica
+tipi e lock, ma non esegue il deploy. Gli import fissano le versioni già risolte
+in `functions/deno.lock`: `@supabase/supabase-js@2.117.0` per tutte le funzioni,
+`expo-server-sdk@7.2.0` per `push`; SMTP usa `denomailer@1.6.0`.
+
+Prima del rilascio, verifica il checkout con Deno **2.9.6** (come in CI):
+
+```bash
+cd supabase/functions
+deno task check
+cd ../..
+yarn test:unit
+yarn typecheck
+yarn web:typecheck
+yarn site:typecheck
+CI=1 yarn lint
+```
+
+`deno task check` usa il lock congelato. Per cambiare intenzionalmente una
+dipendenza, modifica l'import, rigenera il lock con
+`deno check --frozen=false accept-invite/index.ts delete-account/index.ts invite-staff/index.ts push/index.ts`
+da `supabase/functions`, rivedi il diff e ripeti `deno task check`.
+
+Se una funzione usa una RPC nuova o un contratto SQL aggiornato, rilascia e
+verifica **prima le migration**, poi la funzione compatibile. La presenza del
+file nel repository non prova che la migration sia applicata sul remoto.
+
+Esegui dalla radice del repository, con la CLI installata dal progetto e una
+sessione Supabase autorizzata, un comando per funzione:
+
+```bash
+yarn supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg
+yarn supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
+yarn supabase functions deploy delete-account --project-ref rmlobxjlqlpixkvrzmfg
+yarn supabase functions deploy push --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
+```
+
+`invite-staff` e `delete-account` mantengono la verifica JWT e rivalidano
+il chiamante con `auth.getUser()`. `accept-invite` disabilita la verifica JWT:
+chi accetta non ha ancora un account; il token dell'invito e le RPC di consumo
+controllano l'accesso. `push` la disabilita perché è chiamata da `pg_net`,
+autenticato dal segreto condiviso nell'header `x-push-secret`; senza il segreto
+configurato la funzione rifiuta la richiesta. Riferimento:
+[flag di deploy della CLI](https://supabase.com/docs/reference/cli/supabase-functions-deploy).
+
+Variabili lette dalle funzioni (qui si riportano solo i nomi):
+
+| Funzione | Variabili |
+| --- | --- |
+| Tutte | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| `invite-staff`, `delete-account` | `SUPABASE_ANON_KEY` |
+| `invite-staff` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SITE_URL`, `DASHBOARD_URL` |
+| `push` | `PUSH_HOOK_SECRET`, `EXPO_ACCESS_TOKEN` |
+
+Le variabili `SUPABASE_*` sono fornite dall'ambiente Edge del progetto;
+le altre vanno configurate come segreti del progetto. `SMTP_PORT` usa `465` se
+omessa; `EXPO_ACCESS_TOKEN` è opzionale nel codice e serve quando il progetto
+Expo richiede l'autenticazione delle push. `SITE_URL` e `DASHBOARD_URL` devono
+puntare rispettivamente al sito pubblico e alla dashboard: generano due link
+diversi per l'invito del professionista e quello del collaboratore. Riferimento:
+[variabili e segreti Edge](https://supabase.com/docs/guides/functions/secrets).
+
+Per `push`, il valore di `PUSH_HOOK_SECRET` deve coincidere con il segreto Vault
+`push_hook_secret` letto dal trigger `notify_push_on_notification`. Senza la
+voce Vault il trigger non invia richieste; con valori diversi la funzione
+risponde `401`. Verifica inviti, cancellazione e una push su un account di test
+dopo il rilascio; questi controlli reali non sono coperti dal solo typecheck.
+
+La risposta di `push` conta in `sent` soltanto i ticket `ok`, cioè richieste
+accettate da Expo, e in `removed` soltanto i token effettivamente cancellati.
+I ticket in errore e gli errori di invio/pulizia sono registrati senza token o
+contenuto della notifica. **Resta da implementare un job separato per le
+ricevute Expo**: un ticket `ok` non conferma la consegna al dispositivo e la
+pulizia immediata riguarda soltanto gli errori `DeviceNotRegistered` presenti
+nei ticket. Riferimento:
+[ticket e ricevute Expo](https://docs.expo.dev/push-notifications/sending-notifications/#check-push-receipts-for-errors).
+
 ## Banco di prova locale
 
 Il banco `supabase/tests/run.sh` fa da `db reset`
