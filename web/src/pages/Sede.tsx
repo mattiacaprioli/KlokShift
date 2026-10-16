@@ -2,6 +2,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
 import { VenueCard } from "../venues/VenueCard";
 import { VenuesCard } from "../venues/VenuesCard";
+import { BreakPolicyCard } from "../venues/BreakPolicyCard";
 import { ClockMethodCard } from "../venues/ClockMethodCard";
 import { PlanningVisibilityCard } from "../venues/PlanningVisibilityCard";
 import { PageHeader } from "../ui/primitives";
@@ -56,6 +57,7 @@ export function SedePage() {
         {!editable && clockEditable ? (
           <ClockMethodCard venue={venues[0]} />
         ) : null}
+        {clockEditable ? <BreakPolicyCard venue={venues[0]} /> : null}
         {editable ? <PlanningVisibilityCard venue={venues[0]} /> : null}
         {/* Con una sede sola l'elenco ripeterebbe la scheda che sta già sopra:
             `VenuesCard` allora non la elenca e resta solo «Aggiungi sede» (e le

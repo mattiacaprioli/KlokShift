@@ -74,6 +74,17 @@ export function formatBreakMinutes(minutes: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
+// Le ore di un turno nelle card: "5,5 h · pausa 30 min". Le ore sono quelle che
+// il turno conta (vedi `shiftCountedHours`); la pausa si nomina solo se c'è.
+export function formatShiftHours(
+  shift: { start_time: string; end_time: string } & ShiftBreak
+): string {
+  const hours = formatHours(shiftCountedHours(shift));
+  return shift.break_minutes > 0
+    ? `${hours} · pausa ${formatBreakMinutes(shift.break_minutes)}`
+    : hours;
+}
+
 // "Pausa 30 min" — con `paid` aggiunge se è retribuita. Al professionista non
 // si dice: decide la sede, e a lui serve sapere solo quanto dura.
 export function formatBreak(minutes: number, paid?: boolean): string {

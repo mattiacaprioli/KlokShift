@@ -21,7 +21,7 @@ import {
   formatHoursVariance,
   formatShiftRange,
 } from "@/lib/format";
-import { clockedHours, formatClockTime } from "@/features/clock/hours";
+import { formatClockTime } from "@/features/clock/hours";
 import {
   useMyWorkHistory,
   useMyWorkHistoryRange,
@@ -282,9 +282,7 @@ function sourceLine(
         : "Ore inserite da chi gestisce";
     case "pending": {
       const proposed =
-        i.clockInAt && i.clockOutAt
-          ? ` (${formatHours(clockedHours(i.clockInAt, i.clockOutAt))})`
-          : "";
+        i.proposedHours != null ? ` (${formatHours(i.proposedHours)})` : "";
       return `${clock ?? "Timbratura"}${proposed} · finché non è approvata valgono le ore del turno`;
     }
     case "planned":

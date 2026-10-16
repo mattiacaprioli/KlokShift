@@ -9,14 +9,25 @@ import { Pill } from "@/components/ui/Pill";
 import { TimeField } from "@/features/shifts/TimeField";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import { userErrorMessage } from "@/lib/errors";
-import { formatHours, formatHoursVariance } from "@/lib/format";
+import {
+  formatHours,
+  formatHoursVariance,
+  type ShiftBreak,
+} from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import {
   useApproveClockRecord,
+  useCorrectClockBreak,
   useCorrectClockRecord,
   useVoidClockRecord,
 } from "./hooks";
-import { clockedHours, effectiveClockTimes, formatClockTime } from "./hours";
+import {
+  clockBreakText,
+  clockRecordHours,
+  effectiveClockBreak,
+  effectiveClockTimes,
+  formatClockTime,
+} from "./hours";
 import { UNPLANNED_VOID_NOTICE } from "./unplanned";
 
 type EditMode = "correct" | "void" | null;
@@ -42,6 +53,7 @@ export function ManagerClockReview({
   assignment,
   scheduledOutAt,
   plannedHours,
+  shiftBreak,
   locked = false,
   unplanned = false,
 }: {
@@ -50,6 +62,8 @@ export function ManagerClockReview({
   scheduledOutAt: Date;
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
   plannedHours: number;
+  /** Pausa pianificata e scelta della sede, copiate sul turno. */
+  shiftBreak: ShiftBreak;
   locked?: boolean;
   /** Turno nato dalla timbratura: annullarla lo toglie. */
   unplanned?: boolean;
@@ -58,6 +72,7 @@ export function ManagerClockReview({
   const router = useRouter();
   const approve = useApproveClockRecord();
   const correct = useCorrectClockRecord();
+  const correctBreak = useCorrectClockBreak();
   const voidClock = useVoidClockRecord();
   const clock = assignment.clock;
   const times = clock ? effectiveClockTimes(clock) : null;
@@ -66,6 +81,7 @@ export function ManagerClockReview({
   const [inAt, setInAt] = useState(() => new Date());
   const [outAt, setOutAt] = useState(() => scheduledOutAt);
   const [reason, setReason] = useState("");
+  const [breakDraft, setBreakDraft] = useState("");
   const [showHistory, setShowHistory] = useState(false);
 
   if (!clock || !times) {
@@ -79,15 +95,21 @@ export function ManagerClockReview({
   // Alias non-null stabili anche dentro i callback asincroni.
   const activeClock = clock;
   const activeTimes = times;
-  const hours = activeTimes.outAt
-    ? clockedHours(activeTimes.inAt, activeTimes.outAt)
-    : null;
+  const hours = clockRecordHours(activeClock, shiftBreak);
   const delta = hours != null ? formatHoursVariance(hours - plannedHours) : null;
+  const pause = effectiveClockBreak(activeClock, shiftBreak.break_minutes);
+  const pauseText = clockBreakText(pause, shiftBreak.break_paid);
   const reviewed = assignment.attendance_reviewed_at != null;
-  const pending = approve.isPending || correct.isPending || voidClock.isPending;
+  const pending =
+    approve.isPending ||
+    correct.isPending ||
+    correctBreak.isPending ||
+    voidClock.isPending;
   const invalidRange = outAt.getTime() <= inAt.getTime();
+  const breakValue = Number(breakDraft);
+  const breakValid = breakDraft !== "" && Number.isInteger(breakValue);
   const canSaveCorrection =
-    reason.trim().length > 0 && !invalidRange && !pending;
+    reason.trim().length > 0 && !invalidRange && breakValid && !pending;
   const corrections = [...activeClock.corrections].sort((a, b) =>
     b.created_at.localeCompare(a.created_at)
   );
@@ -105,6 +127,7 @@ export function ManagerClockReview({
         ? new Date(activeTimes.outAt)
         : new Date(scheduledOutAt)
     );
+    setBreakDraft(String(pause.minutes));
     setReason("");
     setMode("correct");
   }
@@ -120,30 +143,46 @@ export function ManagerClockReview({
     });
   }
 
-  function onCorrect() {
+  async function onCorrect() {
     if (!canSaveCorrection) return;
-    correct.mutate(
-      {
-        recordId: activeClock.id,
-        inAt: inAt.toISOString(),
-        outAt: outAt.toISOString(),
-        reason: reason.trim(),
-      },
-      {
-        onSuccess: () => {
-          setMode(null);
-          setReason("");
-          toast.show(
-            activeTimes.outAt ? "Orari corretti" : "Uscita inserita"
-          );
-        },
-        onError: (error) =>
-          toast.show(
-            userErrorMessage(error, "Impossibile salvare la correzione."),
-            "error"
-          ),
+    // Due RPC, ognuna solo se il suo dato è cambiato: una pausa corretta da
+    // sola non deve riscrivere entrata e uscita.
+    const timesChanged =
+      !activeTimes.outAt ||
+      inAt.getTime() !== new Date(activeTimes.inAt).getTime() ||
+      outAt.getTime() !== new Date(activeTimes.outAt).getTime();
+    const breakChanged = breakValue !== pause.minutes;
+    try {
+      if (timesChanged || !breakChanged) {
+        await correct.mutateAsync({
+          recordId: activeClock.id,
+          inAt: inAt.toISOString(),
+          outAt: outAt.toISOString(),
+          reason: reason.trim(),
+        });
       }
-    );
+      if (breakChanged) {
+        await correctBreak.mutateAsync({
+          recordId: activeClock.id,
+          minutes: breakValue,
+          reason: reason.trim(),
+        });
+      }
+      setMode(null);
+      setReason("");
+      toast.show(
+        !activeTimes.outAt
+          ? "Uscita inserita"
+          : timesChanged
+            ? "Orari corretti"
+            : "Pausa corretta"
+      );
+    } catch (error) {
+      toast.show(
+        userErrorMessage(error, "Impossibile salvare la correzione."),
+        "error"
+      );
+    }
   }
 
   function onVoid() {
@@ -188,6 +227,11 @@ export function ManagerClockReview({
                   ? formatClockTime(activeTimes.outAt)
                   : "uscita mancante"}
               </Text>
+              {pauseText ? (
+                <Text className="mt-0.5 text-xs text-t3">
+                  {pauseText.charAt(0).toUpperCase() + pauseText.slice(1)}
+                </Text>
+              ) : null}
               {hours != null ? (
                 <Text className="mt-0.5 text-xs text-t3">
                   Totale proposto: {formatHours(hours)}
@@ -238,7 +282,7 @@ export function ManagerClockReview({
               className="items-center rounded-xl border border-border-2 py-2.5"
             >
               <Text className="text-sm font-sans-semibold text-gold">
-                {activeTimes.outAt ? "Correggi orari" : "Inserisci uscita"}
+                {activeTimes.outAt ? "Correggi orari e pausa" : "Inserisci uscita"}
               </Text>
             </Pressable>
             <Pressable
@@ -351,6 +395,20 @@ export function ManagerClockReview({
                 <Text className="mt-2 text-xs font-sans-semibold text-error">
                   L’uscita deve essere successiva all’entrata.
                 </Text>
+              ) : null}
+
+              {mode === "correct" ? (
+                <View className="mt-5">
+                  <Input
+                    label="Pausa (minuti)"
+                    value={breakDraft}
+                    onChangeText={(text) =>
+                      setBreakDraft(text.replace(/\D/g, "").slice(0, 4))
+                    }
+                    keyboardType="number-pad"
+                    placeholder="0"
+                  />
+                </View>
               ) : null}
 
               <View className="mt-5">

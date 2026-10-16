@@ -46,3 +46,21 @@ export function shiftBreakError(
   }
   return null;
 }
+
+/** Le soglie della regola, in minuti: «oltre 4, 6 o 8 ore». */
+export const BREAK_RULE_THRESHOLDS = [240, 360, 480] as const;
+
+/** Le durate della regola, in minuti. */
+export const BREAK_RULE_MINUTES = [15, 30, 45, 60] as const;
+
+/** Accendendo la regola: oltre 6 ore, mezz'ora — il caso più comune. */
+export const DEFAULT_BREAK_RULE = { afterMinutes: 360, minutes: 30 } as const;
+
+/** Le frasi dell'impostazione, uguali in app e dashboard. */
+export const BREAK_POLICY_COPY = {
+  paid: "Retribuita: resta nelle ore lavorate. Nell’export compare a parte.",
+  unpaid:
+    "Non retribuita: si toglie dalle ore lavorate. Nell’export compare a parte.",
+  rule: "La regola propone la pausa quando crei un turno; chi lo crea può sempre cambiarla.",
+  note: "Vale per i turni non ancora conclusi: quelli già conclusi restano come sono stati registrati. KlokShift non conosce il tuo contratto: verifica con il consulente del lavoro se la pausa va retribuita.",
+} as const;

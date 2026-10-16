@@ -28,6 +28,8 @@ export type WorkHistoryItem = {
   workedHours: number | null;
   clockInAt: string | null;
   clockOutAt: string | null;
+  /** Le ore proposte dalla timbratura chiusa, pausa compresa. */
+  proposedHours: number | null;
   /** Null = non si sa (database non migrato): meglio tacere che indovinare. */
   source: WorkHoursSource | null;
 };
@@ -69,6 +71,7 @@ function toItem(r: WorkHistoryRow): WorkHistoryItem {
     workedHours: r.worked_hours,
     clockInAt: r.clock_in_at,
     clockOutAt: r.clock_out_at,
+    proposedHours: r.proposed_hours ?? null,
     source: r.hours_source,
   };
 }

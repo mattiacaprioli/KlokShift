@@ -25,6 +25,18 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
+/**
+ * La pausa nel PDF: quanta è già dentro le ore lavorate e quanta ne è rimasta
+ * fuori. Due quantità diverse, mai sommate a niente.
+ */
+function breakCell(paidHours: number, unpaidHours: number): string {
+  const parts = [
+    paidHours > 0 ? `${hoursNumber(paidHours)} h retribuita (inclusa)` : null,
+    unpaidHours > 0 ? `${hoursNumber(unpaidHours)} h non retribuita (esclusa)` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "—";
+}
+
 /** Le stesse anomalie per cui il CSV scrive «Da verificare», a parole. */
 function reviewCell(conflictHours: number, untrackedHours: number, toReviewCount: number): string {
   const parts = [
@@ -58,6 +70,8 @@ export function buildHoursHtml(
   const totalShifts = rows.reduce((s, p) => s + p.shifts_count, 0);
   const totalJustified = rows.reduce((s, p) => s + p.justified_hours, 0);
   const totalCoveredHours = rows.reduce((s, p) => s + p.covered_hours, 0);
+  const totalPaidBreak = rows.reduce((s, p) => s + p.paid_break_hours, 0);
+  const totalUnpaidBreak = rows.reduce((s, p) => s + p.unpaid_break_hours, 0);
 
   const body = rows
     .map(
@@ -66,6 +80,7 @@ export function buildHoursHtml(
         `<td>${escapeHtml(p.roles ?? "—")}</td>` +
         `<td class="n">${p.shifts_count}</td>` +
         `<td class="n">${hoursNumber(p.worked_hours)}</td>` +
+        `<td class="n">${breakCell(p.paid_break_hours, p.unpaid_break_hours)}</td>` +
         `<td class="n">${hoursNumber(p.justified_hours)}</td>` +
         `<td class="n">${hoursNumber(p.covered_hours)}</td>` +
         `<td class="n">${reviewCell(p.conflict_hours, p.untracked_hours, p.to_review_count)}</td></tr>`
@@ -94,12 +109,12 @@ export function buildHoursHtml(
     <h1>Ore tracciate</h1>
     <div class="sub">${sub}</div>
     <table>
-      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore lavorate effettive</th><th class="n">Ore di assenza giustificata</th><th class="n">Totale ore coperte</th><th class="n">Da verificare</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore lavorate effettive</th><th class="n">Pausa</th><th class="n">Ore di assenza giustificata</th><th class="n">Totale ore coperte</th><th class="n">Da verificare</th></tr></thead>
       <tbody>${body}</tbody>
-      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(totalHours)}</td><td class="n">${hoursNumber(totalJustified)}</td><td class="n">${hoursNumber(totalCoveredHours)}</td><td></td></tr></tfoot>
+      <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(totalHours)}</td><td class="n">${breakCell(totalPaidBreak, totalUnpaidBreak)}</td><td class="n">${hoursNumber(totalJustified)}</td><td class="n">${hoursNumber(totalCoveredHours)}</td><td></td></tr></tfoot>
     </table>
     ${absences.length > 0 ? absencesHtmlSection(absences) : ""}
-    <div class="foot">Documento generato da KlokShift · Il totale indica ore coperte, non un importo o un trattamento retributivo. Le ore da verificare sono escluse. I codici evento del CSV vanno confermati con il consulente in base al contratto applicato.</div>
+    <div class="foot">Documento generato da KlokShift · Il totale indica ore coperte, non un importo o un trattamento retributivo. Le ore da verificare sono escluse. La pausa retribuita è già compresa nelle ore lavorate, quella non retribuita ne è esclusa. I codici evento del CSV vanno confermati con il consulente in base al contratto applicato.</div>
   </body></html>`;
 }
 
@@ -157,15 +172,19 @@ function csvText(v: string): string {
  * per sede serve al titolare per allocare i costi, e sta nella pagina Ore e nel PDF.
  *
  * Le colonne evento sono distinte: nessuna assenza entra nelle ore ordinarie.
+ * Le due colonne di pausa accanto alle ore lavorate dicono quanta pausa è già
+ * dentro (retribuita) e quanta ne è rimasta fuori (non retribuita).
  */
 export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow[] = []): string {
-  const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale ore coperte;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
+  const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Di cui pausa retribuita;Pausa non retribuita esclusa;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale ore coperte;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
   const lines = monthlyReportRows(people, absences).map((p) =>
     [
       csvText(p.person_name),
       csvText(p.roles ?? ""),
       String(p.shifts_count),
       hoursNumber(p.worked_hours),
+      hoursNumber(p.paid_break_hours),
+      hoursNumber(p.unpaid_break_hours),
       hoursNumber(p.ferie_hours),
       hoursNumber(p.malattia_hours),
       hoursNumber(p.permesso_hours),

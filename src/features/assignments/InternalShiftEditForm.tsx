@@ -37,6 +37,8 @@ import {
 } from "@/features/assignments/status";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
+import { shiftBreakError } from "@/features/shifts/breaks";
+import { useShiftBreak } from "@/features/shifts/useShiftBreak";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import {
   hasMoveImpact,
@@ -100,6 +102,13 @@ function EditForm({
   const [requireConfirmation, setRequireConfirmation] = useState(
     shift.require_confirmation
   );
+  // La pausa salvata non la riscrive la regola della sede: parte già scelta.
+  const pause = useShiftBreak(
+    venueById(shift.venue_id) ?? null,
+    toTimeString(start),
+    toTimeString(end),
+    shift.break_minutes
+  );
 
   function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
@@ -161,6 +170,15 @@ function EditForm({
     }
     if (!isValidShiftRange(toTimeString(start), toTimeString(end))) {
       toast.show(SHIFT_RANGE_ERROR, "error");
+      return;
+    }
+    const pauseError = shiftBreakError(
+      toTimeString(start),
+      toTimeString(end),
+      pause.minutes
+    );
+    if (pauseError) {
+      toast.show(pauseError, "error");
       return;
     }
     const to = {
@@ -236,6 +254,7 @@ function EditForm({
         end_time: toTimeString(end),
         description: note.trim() || null,
         require_confirmation: requireConfirmation,
+        break_minutes: pause.minutes,
         roleTargets: roles.map((role) => ({
           role_id: role.id,
           count: targets[role.id] ?? 0,
@@ -296,6 +315,11 @@ function EditForm({
           end={end}
           onStartChange={setStart}
           onEndChange={setEnd}
+          pause={{
+            minutes: pause.minutes,
+            paid: shift.break_paid,
+            onChange: pause.setMinutes,
+          }}
         />
 
         <RoleRequirementsField

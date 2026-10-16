@@ -132,7 +132,12 @@ export function ShiftDetails({
                 {formatShiftRange(shift.start_time, shift.end_time)}
               </p>
               <p className="mt-0.5 text-xs text-t4">
-                {formatShiftSummary(shift.date, shift.start_time, shift.end_time)}
+                {formatShiftSummary(
+                  shift.date,
+                  shift.start_time,
+                  shift.end_time,
+                  shift
+                )}
               </p>
             </Info>
 

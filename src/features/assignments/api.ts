@@ -134,6 +134,11 @@ export type InternalShiftPlan = {
    * straordinario, festivo — e vale per tutti. Fa parte della ricetta.
    */
   require_confirmation: boolean;
+  /**
+   * Pausa pianificata in minuti. Se è retribuita lo decide la sede: il server
+   * ne copia la scelta sul turno, il client non la manda.
+   */
+  break_minutes: number;
   roleTargets: RoleTargetInput[];
   staff: StaffAssignmentInput[];
 };
@@ -148,6 +153,7 @@ function planPayload(p: InternalShiftPlan) {
     start_time: p.start_time,
     end_time: p.end_time,
     require_confirmation: p.require_confirmation,
+    break_minutes: p.break_minutes,
     role_targets: p.roleTargets.filter((t) => t.count > 0),
     staff: p.staff,
   };
@@ -175,10 +181,14 @@ export async function createInternalShifts(
 
 /** Crea un turno interno e lo assegna alle persone indicate. */
 export async function createInternalShift(
-  input: Omit<InternalShiftPlan, "require_confirmation" | "roleTargets"> & {
+  input: Omit<
+    InternalShiftPlan,
+    "require_confirmation" | "roleTargets" | "break_minutes"
+  > & {
     /** Fabbisogno per ruolo (es. 2 Cameriere + 1 Sommelier). */
     roleTargets?: RoleTargetInput[];
     require_confirmation?: boolean;
+    break_minutes?: number;
   }
 ): Promise<string> {
   const [id] = await createInternalShifts([
@@ -186,6 +196,7 @@ export async function createInternalShift(
       ...input,
       roleTargets: input.roleTargets ?? [],
       require_confirmation: input.require_confirmation ?? false,
+      break_minutes: input.break_minutes ?? 0,
     },
   ]);
   return id;
@@ -199,7 +210,7 @@ export async function getInternalShiftPlans(
   const { data, error } = await supabase
     .from("shifts")
     .select(
-      "venue_id, title, date, start_time, end_time, description, require_confirmation, shift_role_requirements(role_id, count), shift_assignments(venue_member_id, role_id, status)"
+      "venue_id, title, date, start_time, end_time, description, require_confirmation, break_minutes, shift_role_requirements(role_id, count), shift_assignments(venue_member_id, role_id, status)"
     )
     .in("id", shiftIds)
     .order("date", { ascending: true })
@@ -214,6 +225,7 @@ export async function getInternalShiftPlans(
     end_time: s.end_time,
     description: s.description,
     require_confirmation: s.require_confirmation,
+    break_minutes: s.break_minutes,
     roleTargets: (s.shift_role_requirements ?? []).map((r) => ({
       role_id: r.role_id,
       count: r.count,
@@ -248,6 +260,8 @@ export async function updateInternalShift(
     description: string | null;
     /** Vedi `InternalShiftPlan.require_confirmation`. */
     require_confirmation: boolean;
+    /** Vedi `InternalShiftPlan.break_minutes`. */
+    break_minutes: number;
     roleTargets: RoleTargetInput[];
     staff: StaffAssignmentInput[];
   }
@@ -486,6 +500,11 @@ export type WorkHistoryRow = {
   clock_in_at: string | null;
   clock_out_at: string | null;
   hours_source: WorkHoursSource | null;
+  /**
+   * Ore proposte da una timbratura chiusa, come le calcola l'approvazione
+   * (pausa non retribuita compresa). Null senza timbratura o senza uscita.
+   */
+  proposed_hours: number | null;
 };
 
 export type WorkHistoryCursor = { date: string; key: string };

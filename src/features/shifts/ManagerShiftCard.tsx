@@ -12,10 +12,9 @@ import {
 } from "@/features/assignments/coverage";
 import {
   formatDayLabel,
-  formatHours,
+  formatShiftHours,
   formatTime,
   isOvernightShift,
-  shiftDurationHours,
   shiftSlotLabel,
 } from "@/lib/format";
 import type { ShiftWithCount } from "./types";
@@ -178,9 +177,7 @@ export function ManagerShiftCard({
                 legge come un turno che finisce sedici ore prima di iniziare. */}
             {overnight ? <Mono gold>+1</Mono> : null}
           </View>
-          <Mono className="mt-1">
-            {formatHours(shiftDurationHours(shift.start_time, shift.end_time))}
-          </Mono>
+          <Mono className="mt-1">{formatShiftHours(shift)}</Mono>
         </View>
 
         <View className="flex-1">

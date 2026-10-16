@@ -8,10 +8,9 @@ import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
 import {
   formatDayLabel,
-  formatHours,
+  formatShiftHours,
   formatTime,
   isOvernightShift,
-  shiftDurationHours,
 } from "@/lib/format";
 import type { ShiftWithVenue } from "@/features/shifts/types";
 import type { Enums } from "@/types/database";
@@ -91,9 +90,7 @@ export function MyShiftCard({
     : STATUS[status];
   const venueName = shift.venue?.name ?? "Sede";
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
-  const duration = formatHours(
-    shiftDurationHours(shift.start_time, shift.end_time)
-  );
+  const duration = formatShiftHours(shift);
   const spent = cancelled || status === "declined" || status === "no_show";
   const canRespond = !cancelled && status === "assigned" && onConfirm != null;
 

@@ -6,7 +6,11 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
-import { exportAvailability, monthlyReportRows } from "@/features/assignments/monthlyReport";
+import {
+  breakSummaryText,
+  exportAvailability,
+  monthlyReportRows,
+} from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import { ABSENCE_SUMMARY_NOTE } from "@/features/absences/summary";
 import {
@@ -233,6 +237,11 @@ export function OrePage() {
                   </td>
                   <td className="px-5 py-2.5 text-right font-mono text-t1">
                     {formatHours(p.worked_hours)}
+                    {breakSummaryText(p, formatHours) ? (
+                      <span className="block font-sans text-[11px] text-t4">
+                        {breakSummaryText(p, formatHours)}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">{formatHours(p.justified_hours)}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-gold">{formatHours(p.covered_hours)}</td>

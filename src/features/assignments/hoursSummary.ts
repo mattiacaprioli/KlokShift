@@ -24,6 +24,10 @@ export type OwnerHoursRow = {
   proposed_hours: number;
   /** Ore non definitive per il metodo di rilevazione usato, escluse dal lavorato. */
   untracked_hours: number;
+  /** Pausa retribuita delle ore definitive: già dentro `hours`. */
+  paid_break_hours: number;
+  /** Pausa non retribuita delle ore definitive: già tolta da `hours`. */
+  unpaid_break_hours: number;
 };
 
 /**
@@ -47,6 +51,8 @@ export type PersonHours = {
   to_review_count: number;
   proposed_hours: number;
   untracked_hours: number;
+  paid_break_hours: number;
+  unpaid_break_hours: number;
   /**
    * ⚠️ **Interno: non si mostra.** Le righe per sede da cui il totale è
    * composto, tenute perché servono a `mergeRoles`. Dal 14/09/2026 né la pagina
@@ -79,6 +85,8 @@ export function groupHoursByPerson(rows: OwnerHoursRow[]): PersonHours[] {
       person.to_review_count += row.to_review_count;
       person.proposed_hours += row.proposed_hours;
       person.untracked_hours += row.untracked_hours;
+      person.paid_break_hours += row.paid_break_hours;
+      person.unpaid_break_hours += row.unpaid_break_hours;
       person.venues.push(row);
       continue;
     }
@@ -92,6 +100,8 @@ export function groupHoursByPerson(rows: OwnerHoursRow[]): PersonHours[] {
       to_review_count: row.to_review_count,
       proposed_hours: row.proposed_hours,
       untracked_hours: row.untracked_hours,
+      paid_break_hours: row.paid_break_hours,
+      unpaid_break_hours: row.unpaid_break_hours,
       venues: [row],
     });
   }

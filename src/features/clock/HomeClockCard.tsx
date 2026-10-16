@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import type { AgendaItem } from "@/features/assignments/agenda";
@@ -9,8 +10,9 @@ import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { Text, View } from "@/tw";
 import { homeClockState } from "./availability";
+import { ClockBreakButton } from "./ClockBreakButton";
 import { usePunchClock } from "./hooks";
-import { effectiveClockTimes, formatClockTime } from "./hours";
+import { effectiveClockTimes, formatClockTime, openClockBreak } from "./hours";
 
 /**
  * `inBlocked` lo decide la Home (`blocksPlannedClockIn`): con un'entrata senza
@@ -31,6 +33,7 @@ export function HomeClockCard({
   const state = homeClockState(item);
   const blocked = state === "in" && inBlocked;
   const times = item.clock ? effectiveClockTimes(item.clock) : null;
+  const pause = item.clock ? openClockBreak(item.clock) : null;
   const venueName = item.shift.venue?.name ?? "Sede";
 
   if (!state) return null;
@@ -64,7 +67,7 @@ export function HomeClockCard({
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1">
             <Mono gold>
-              {state === "in" ? "Da timbrare" : "In servizio"}
+              {state === "in" ? "Da timbrare" : pause ? "In pausa" : "In servizio"}
             </Mono>
             <Text className="mt-1 text-lg font-sans-bold text-t1" numberOfLines={1}>
               {venueName}
@@ -81,6 +84,7 @@ export function HomeClockCard({
         {times ? (
           <Text className="mt-4 text-sm text-t2">
             Entrata registrata alle {formatClockTime(times.inAt)}.
+            {pause ? ` In pausa dalle ${formatClockTime(pause.started_at)}.` : ""}
           </Text>
         ) : blocked ? (
           <Text className="mt-4 text-sm leading-5 text-t2">
@@ -92,18 +96,40 @@ export function HomeClockCard({
           </Text>
         )}
 
-        <GoldButton
-          className="mt-4"
-          label={
-            punch.isPending
-              ? "Registrazione…"
-              : state === "in"
-                ? "Timbra entrata"
-                : "Timbra uscita"
-          }
-          disabled={punch.isPending || blocked}
-          onPress={() => setConfirming(state)}
-        />
+        {/* In pausa l'azione principale è riprendere; l'uscita resta, sotto. */}
+        {state === "out" && item.clock && pause ? (
+          <>
+            <ClockBreakButton className="mt-4" recordId={item.clock.id} onBreak />
+            <GhostButton
+              className="mt-3"
+              label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
+              disabled={punch.isPending}
+              onPress={() => setConfirming("out")}
+            />
+          </>
+        ) : (
+          <>
+            <GoldButton
+              className="mt-4"
+              label={
+                punch.isPending
+                  ? "Registrazione…"
+                  : state === "in"
+                    ? "Timbra entrata"
+                    : "Timbra uscita"
+              }
+              disabled={punch.isPending || blocked}
+              onPress={() => setConfirming(state)}
+            />
+            {state === "out" && item.clock ? (
+              <ClockBreakButton
+                className="mt-3"
+                recordId={item.clock.id}
+                onBreak={false}
+              />
+            ) : null}
+          </>
+        )}
       </Card>
 
       <ConfirmModal

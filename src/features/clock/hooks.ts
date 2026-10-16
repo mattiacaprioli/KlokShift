@@ -7,6 +7,7 @@ import {
   closeUnplannedClock,
   correctClockBreak,
   correctClockRecord,
+  getClockBreaks,
   getMyUnplannedClock,
   getOpenUnplannedClocks,
   punchClock,
@@ -43,6 +44,18 @@ export function useClockBreak() {
     mutationFn: (vars: { recordId: string; action: "start" | "end" }) =>
       clockBreak(vars.recordId, vars.action),
     onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+/**
+ * Le pause di una timbratura aperta senza turno: `get_my_unplanned_clock` dice
+ * solo l'entrata. Si rileggono con `qk.clock.all`, come il resto.
+ */
+export function useClockBreaks(recordId: string | null | undefined) {
+  return useQuery({
+    queryKey: qk.clock.breaks(recordId ?? ""),
+    queryFn: () => getClockBreaks(recordId as string),
+    enabled: !!recordId,
   });
 }
 

@@ -17,6 +17,8 @@ function row(person_id: string, venue: string, extra: Partial<OwnerHoursRow> = {
     to_review_count: 0,
     proposed_hours: 0,
     untracked_hours: 0,
+    paid_break_hours: 0,
+    unpaid_break_hours: 0,
     ...extra,
   };
 }

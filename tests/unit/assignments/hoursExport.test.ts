@@ -8,7 +8,7 @@ function person(extra: Partial<PersonHours> = {}): PersonHours {
   return {
     person_id: "p", person_name: "Anna", roles: "Sala", shifts_count: 1,
     hours: 8, planned_hours: 8, to_review_count: 0, proposed_hours: 0, untracked_hours: 0,
-    venues: [], ...extra,
+    paid_break_hours: 0, unpaid_break_hours: 0, venues: [], ...extra,
   };
 }
 
@@ -45,6 +45,19 @@ describe("disponibilità degli export del mese (B06)", () => {
   });
 });
 
+describe("pausa nel PDF", () => {
+  it("dice quanta pausa è inclusa e quanta esclusa, senza sommarla", () => {
+    const html = buildHoursHtml(
+      "Osteria",
+      "ottobre 2026",
+      [person({ hours: 7.5, paid_break_hours: 1, unpaid_break_hours: 0.5 })],
+      7.5
+    );
+    expect(html).toContain("1 h retribuita (inclusa) · 0,5 h non retribuita (esclusa)");
+    expect(html).toContain('<td class="n">7,5</td>');
+  });
+});
+
 describe("anomalie nel PDF (B06)", () => {
   it("segnala le timbrature da verificare come il CSV, senza contarle nel lavorato", () => {
     const pending = person({ hours: 0, shifts_count: 1, to_review_count: 2, proposed_hours: 8 });
@@ -52,7 +65,7 @@ describe("anomalie nel PDF (B06)", () => {
     expect(html).toContain("2 turni da verificare");
     expect(html).not.toMatch(/<td class="n">—<\/td><\/tr><\/tbody>/);
     expect(lines(buildHoursCsv([pending]))[1].split(";")).toEqual([
-      "Anna", "Sala", "1", "0", "0", "0", "0", "0", "0", "0", "0", "Da verificare",
+      "Anna", "Sala", "1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "Da verificare",
     ]);
   });
 

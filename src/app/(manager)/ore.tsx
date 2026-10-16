@@ -28,7 +28,11 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
-import { exportAvailability, monthlyReportRows } from "@/features/assignments/monthlyReport";
+import {
+  breakSummaryText,
+  exportAvailability,
+  monthlyReportRows,
+} from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import {
   ABSENCE_SUMMARY_NOTE,
@@ -195,6 +199,11 @@ export default function VenueHoursScreen() {
                           {formatHours(p.worked_hours)}
                         </Text>
                       </View>
+                      {breakSummaryText(p, formatHours) ? (
+                        <Text className="text-xs text-t3">
+                          Ore lavorate: {breakSummaryText(p, formatHours)}
+                        </Text>
+                      ) : null}
                       <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale ore coperte {formatHours(p.covered_hours)}</Text>
                       {p.conflict_hours > 0 ? <Text className="text-xs text-warning">Da verificare: {formatHours(p.conflict_hours)} di assenza</Text> : null}
                       {p.untracked_hours > 0 ? <Text className="text-xs text-warning">Senza timbratura: {formatHours(p.untracked_hours)} escluse</Text> : null}

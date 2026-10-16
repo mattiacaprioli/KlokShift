@@ -5,10 +5,9 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import {
-  formatHours,
+  formatShiftHours,
   formatRelativeStart,
   formatShiftRange,
-  shiftDurationHours,
 } from "@/lib/format";
 import { Text, View } from "@/tw";
 import type { AgendaItem } from "./agenda";
@@ -54,9 +53,7 @@ export function NextShiftCard({
       >
         {formatShiftRange(shift.start_time, shift.end_time)}
       </Text>
-      <Mono className="mt-1">
-        {formatHours(shiftDurationHours(shift.start_time, shift.end_time))}
-      </Mono>
+      <Mono className="mt-1">{formatShiftHours(shift)}</Mono>
 
       <View className="mt-4 flex-row items-center gap-3">
         <Avatar uri={shift.venue?.logo_url} name={venueName} size={40} />

@@ -28,6 +28,9 @@ import {
 import { useCreateInternalShift } from "@/features/assignments/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
+import { shiftBreakError } from "@/features/shifts/breaks";
+import { useShiftBreak } from "@/features/shifts/useShiftBreak";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -54,6 +57,8 @@ export function StaffShiftForm({ initialDate }: Props) {
   const router = useRouter();
   const toast = useToast();
   const { venueId, choose } = useLastVenue();
+  const { venues } = useOwnerVenues();
+  const venue = venues.find((v) => v.id === venueId) ?? null;
   const staffQuery = useVenueStaff(venueId);
   // Solo staff confermato: gli inviti ancora da accettare non sono assegnabili.
   const staff = (staffQuery.data ?? []).filter(
@@ -72,6 +77,7 @@ export function StaffShiftForm({ initialDate }: Props) {
   const [note, setNote] = useState("");
   const [targets, setTargets] = useState<Record<string, number>>({});
   const [requireConfirmation, setRequireConfirmation] = useState(false);
+  const pause = useShiftBreak(venue, toTimeString(start), toTimeString(end));
 
   function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
@@ -135,6 +141,15 @@ export function StaffShiftForm({ initialDate }: Props) {
       toast.show(SHIFT_RANGE_ERROR, "error");
       return;
     }
+    const pauseError = shiftBreakError(
+      toTimeString(start),
+      toTimeString(end),
+      pause.minutes
+    );
+    if (pauseError) {
+      toast.show(pauseError, "error");
+      return;
+    }
     const dateStr = toDateString(date);
     const roleTargets = roles
       .map((role) => ({ role_id: role.id, count: targets[role.id] ?? 0 }))
@@ -151,6 +166,7 @@ export function StaffShiftForm({ initialDate }: Props) {
         end_time: toTimeString(end),
         description: note.trim() || null,
         require_confirmation: requireConfirmation,
+        break_minutes: pause.minutes,
         staff: selectedIds.map((id) => ({
           venue_member_id: id,
           role_id: selected[id],
@@ -195,6 +211,11 @@ export function StaffShiftForm({ initialDate }: Props) {
           end={end}
           onStartChange={setStart}
           onEndChange={setEnd}
+          pause={{
+            minutes: pause.minutes,
+            paid: venue?.break_paid ?? false,
+            onChange: pause.setMinutes,
+          }}
         />
 
         <RoleRequirementsField

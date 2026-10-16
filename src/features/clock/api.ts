@@ -26,6 +26,19 @@ export async function clockBreak(
   return data;
 }
 
+/** Le pause di una timbratura, dalla prima. */
+export async function getClockBreaks(
+  recordId: string
+): Promise<Tables<"shift_clock_breaks">[]> {
+  const { data, error } = await supabase
+    .from("shift_clock_breaks")
+    .select("*")
+    .eq("clock_record_id", recordId)
+    .order("started_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function approveClockRecord(
   assignmentId: string
 ): Promise<Tables<"shift_assignments">> {

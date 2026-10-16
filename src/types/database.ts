@@ -1818,6 +1818,7 @@ export type Database = {
           key: string
           logo_url: string
           planned_hours: number
+          proposed_hours: number
           role_name: string
           shift_id: string
           start_time: string
@@ -1838,6 +1839,7 @@ export type Database = {
           key: string
           logo_url: string
           planned_hours: number
+          proposed_hours: number
           role_name: string
           shift_id: string
           start_time: string

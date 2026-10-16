@@ -18,13 +18,15 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import { cn } from "@/lib/cn";
 import {
+  formatBreakMinutes,
   formatDate,
   formatHours,
   formatShiftRange,
   isShiftOver,
   shiftStartsAt,
   shiftEndsAt,
-  shiftDurationHours,
+  shiftCountedHours,
+  type ShiftBreak,
 } from "@/lib/format";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -156,6 +158,7 @@ function AssignedRow({
 function PresenceRow({
   assignment,
   plannedHours,
+  shiftBreak,
   shiftId,
   scheduledOutAt,
   locked,
@@ -163,6 +166,7 @@ function PresenceRow({
 }: {
   assignment: AssignmentWithStaff;
   plannedHours: number;
+  shiftBreak: ShiftBreak;
   shiftId: string;
   scheduledOutAt: Date;
   locked?: boolean;
@@ -259,6 +263,7 @@ function PresenceRow({
         assignment={assignment}
         scheduledOutAt={scheduledOutAt}
         plannedHours={plannedHours}
+        shiftBreak={shiftBreak}
         locked={locked}
         unplanned={unplanned}
       />
@@ -468,7 +473,7 @@ export default function ShiftDetailScreen() {
     now >= shiftStartsAt(shift.date, shift.start_time) &&
     (can(shift.venue_id, "can_manage_shifts") ||
       can(shift.venue_id, "can_view_hours"));
-  const plannedHours = shiftDurationHours(shift.start_time, shift.end_time);
+  const plannedHours = shiftCountedHours(shift);
   // A consuntivo si segna solo chi il turno l'ha accettato: un rifiuto non è
   // un'assenza, e nella riga presenza si leggerebbe come tale.
   const presenceRows = assignments.filter((a) => a.status !== "declined");
@@ -547,6 +552,14 @@ export default function ShiftDetailScreen() {
               shift.end_time
             )}`}
           />
+          {shift.break_minutes > 0 ? (
+            <InfoRow
+              label="Pausa"
+              value={`${formatBreakMinutes(shift.break_minutes)} · ${
+                shift.break_paid ? "retribuita" : "non retribuita"
+              }`}
+            />
+          ) : null}
           <InfoRow
             label="Staff"
             value={`${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`}
@@ -699,6 +712,7 @@ export default function ShiftDetailScreen() {
                   key={a.id}
                   assignment={a}
                   plannedHours={plannedHours}
+                  shiftBreak={shift}
                   shiftId={id}
                   scheduledOutAt={shiftEndsAt(
                     shift.date,

@@ -16,6 +16,10 @@ export type MonthlyReportRow = {
   conflict_hours: number;
   to_review_count: number;
   untracked_hours: number;
+  /** Già dentro `worked_hours`: si dice a parte, non si somma. */
+  paid_break_hours: number;
+  /** Già fuori da `worked_hours`: si dice a parte, non si somma. */
+  unpaid_break_hours: number;
 };
 
 /** Un'unica composizione per dashboard, CSV e PDF; include chi ha solo assenze. */
@@ -27,10 +31,10 @@ export function monthlyReportRows(
   const rows = people.map((p) => {
     const a = byId.get(p.person_id);
     byId.delete(p.person_id);
-    return reportRow(p.person_id, p.person_name, p.roles, p.shifts_count, p.hours, p.to_review_count, p.untracked_hours, a);
+    return reportRow(p.person_id, p.person_name, p.roles, p.shifts_count, p.hours, p.to_review_count, p.untracked_hours, p.paid_break_hours, p.unpaid_break_hours, a);
   });
   for (const a of byId.values()) {
-    rows.push(reportRow(a.person_id, a.person_name, null, 0, 0, 0, 0, a));
+    rows.push(reportRow(a.person_id, a.person_name, null, 0, 0, 0, 0, 0, 0, a));
   }
   return rows;
 }
@@ -43,6 +47,8 @@ function reportRow(
   worked_hours: number,
   to_review_count: number,
   untracked_hours: number,
+  paid_break_hours: number,
+  unpaid_break_hours: number,
   a?: AbsenceSummaryRow
 ): MonthlyReportRow {
   const ferie_hours = a?.ferie_hours ?? 0;
@@ -56,7 +62,29 @@ function reportRow(
     conflict_hours: a?.conflict_hours ?? 0,
     to_review_count,
     untracked_hours,
+    paid_break_hours,
+    unpaid_break_hours,
   };
+}
+
+/**
+ * La pausa accanto alle ore lavorate, nelle pagine Ore: «di cui pausa
+ * retribuita 1 h · pausa non retribuita esclusa 0,5 h». `null` senza pause.
+ * `formatHours` arriva da fuori perché questo modulo resta senza dipendenze.
+ */
+export function breakSummaryText(
+  row: Pick<MonthlyReportRow, "paid_break_hours" | "unpaid_break_hours">,
+  formatHours: (hours: number) => string
+): string | null {
+  const parts = [
+    row.paid_break_hours > 0
+      ? `di cui pausa retribuita ${formatHours(row.paid_break_hours)}`
+      : null,
+    row.unpaid_break_hours > 0
+      ? `pausa non retribuita esclusa ${formatHours(row.unpaid_break_hours)}`
+      : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 /**

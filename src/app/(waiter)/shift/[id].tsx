@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import {
+  formatBreakMinutes,
   formatDate,
   formatShiftRange,
   isShiftOver,
@@ -34,10 +35,12 @@ import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { usePunchClock } from "@/features/clock/hooks";
 import { isClockWindowOpen } from "@/features/clock/availability";
+import { ClockBreakButton } from "@/features/clock/ClockBreakButton";
 import {
-  clockedHours,
+  clockRecordHours,
   effectiveClockTimes,
   formatClockTime,
+  openClockBreak,
 } from "@/features/clock/hours";
 import type { Enums } from "@/types/database";
 
@@ -202,6 +205,8 @@ export default function WaiterShiftDetailScreen() {
   const venueName = shift.venue?.name ?? "Sede";
   const clock = myAssignment?.clock ?? null;
   const clockTimes = clock ? effectiveClockTimes(clock) : null;
+  const openPause = clock ? openClockBreak(clock) : null;
+  const clockHours = clock ? clockRecordHours(clock, shift) : null;
   const clockMethod = myAssignment?.clock_method ?? shift.venue?.clock_method ?? "manual";
   const canClock =
     !!myAssignment &&
@@ -255,6 +260,13 @@ export default function WaiterShiftDetailScreen() {
               shift.end_time
             )}`}
           />
+          {/* Quanto dura e basta: se è retribuita lo decide la sede. */}
+          {shift.break_minutes > 0 ? (
+            <InfoRow
+              label="Pausa"
+              value={formatBreakMinutes(shift.break_minutes)}
+            />
+          ) : null}
         </Card>
 
         {shift.description ? (
@@ -358,7 +370,7 @@ export default function WaiterShiftDetailScreen() {
                       {formatClockTime(clockTimes.inAt)}–{formatClockTime(clockTimes.outAt)}
                     </Text>
                     <Text className="mt-1 text-sm text-t3">
-                      {clockedHours(clockTimes.inAt, clockTimes.outAt)
+                      {(clockHours ?? 0)
                         .toString()
                         .replace(".", ",")} h · {myAssignment.attendance_reviewed_at
                         ? "ore approvate"
@@ -369,14 +381,36 @@ export default function WaiterShiftDetailScreen() {
                   <>
                     <Text className="text-sm text-t2">
                       In servizio dalle {formatClockTime(clockTimes.inAt)}
+                      {openPause
+                        ? ` · in pausa dalle ${formatClockTime(openPause.started_at)}`
+                        : ""}
                     </Text>
-                    {clockWindowOpen ? (
-                      <GoldButton
-                        className="mt-4"
-                        label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
-                        disabled={punch.isPending}
-                        onPress={() => setPunchAction("out")}
-                      />
+                    {clockWindowOpen && clock ? (
+                      openPause ? (
+                        <>
+                          <ClockBreakButton className="mt-4" recordId={clock.id} onBreak />
+                          <GhostButton
+                            className="mt-3"
+                            label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
+                            disabled={punch.isPending}
+                            onPress={() => setPunchAction("out")}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <GoldButton
+                            className="mt-4"
+                            label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
+                            disabled={punch.isPending}
+                            onPress={() => setPunchAction("out")}
+                          />
+                          <ClockBreakButton
+                            className="mt-3"
+                            recordId={clock.id}
+                            onBreak={false}
+                          />
+                        </>
+                      )
                     ) : (
                       <Text className="mt-2 text-sm text-error">
                         La finestra di timbratura è terminata: contatta la sede per inserire l’uscita.

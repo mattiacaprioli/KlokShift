@@ -204,6 +204,8 @@ export const qk = {
     myUnplanned: ["clock", "myUnplanned"] as const,
     openUnplanned: (workspaceId: string) =>
       ["clock", "openUnplanned", workspaceId] as const,
+    /** Le pause di una timbratura senza turno (quella col turno le incorpora). */
+    breaks: (recordId: string) => ["clock", "breaks", recordId] as const,
   },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
   chat: {

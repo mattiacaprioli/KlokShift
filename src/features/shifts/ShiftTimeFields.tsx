@@ -6,6 +6,8 @@ import {
   toDateString,
   toTimeString,
 } from "@/lib/format";
+import { BreakField } from "./BreakField";
+import { shiftBreakError } from "./breaks";
 import { TimeField } from "./TimeField";
 
 type Props = {
@@ -15,6 +17,15 @@ type Props = {
   end: Date;
   onStartChange: (d: Date) => void;
   onEndChange: (d: Date) => void;
+  /**
+   * La pausa pianificata e la scelta della sede: con lei il riepilogo dice
+   * anche le ore che il turno conta.
+   */
+  pause?: {
+    minutes: number;
+    paid: boolean;
+    onChange: (minutes: number) => void;
+  };
 };
 
 /**
@@ -23,7 +34,8 @@ type Props = {
  * Stanno insieme perché un turno notturno (22:00–04:00) letto come due orari
  * slegati sembra finire diciotto ore prima di iniziare: è il riepilogo a dire
  * che la fine cade il giorno dopo, ed è lì che si intercetta un orario digitato
- * per sbaglio. Condiviso dai tre form dell'app che scelgono un orario.
+ * per sbaglio. Condiviso dai tre form dell'app che scelgono un orario. Con la
+ * pausa il riepilogo dice anche le ore che il turno conta.
  */
 export function ShiftTimeFields({
   date,
@@ -31,8 +43,13 @@ export function ShiftTimeFields({
   end,
   onStartChange,
   onEndChange,
+  pause,
 }: Props) {
   const valid = isValidShiftRange(toTimeString(start), toTimeString(end));
+  const pauseError =
+    valid && pause
+      ? shiftBreakError(toTimeString(start), toTimeString(end), pause.minutes)
+      : null;
 
   return (
     <View className="gap-2.5">
@@ -50,12 +67,20 @@ export function ShiftTimeFields({
           onChange={onEndChange}
         />
       </View>
-      {valid ? (
+      {pause ? (
+        <BreakField minutes={pause.minutes} onChange={pause.onChange} />
+      ) : null}
+      {pauseError ? (
+        <Text className="text-xs font-sans-semibold text-error">
+          {pauseError}
+        </Text>
+      ) : valid ? (
         <Text className="text-xs text-t3">
           {formatShiftSummary(
             toDateString(date),
             toTimeString(start),
-            toTimeString(end)
+            toTimeString(end),
+            pause ? { break_minutes: pause.minutes, break_paid: pause.paid } : undefined
           )}
         </Text>
       ) : (

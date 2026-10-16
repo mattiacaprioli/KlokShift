@@ -50,6 +50,8 @@ import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useLastVenue } from "@/features/venues/useLastVenue";
+import { MAX_BREAK_MINUTES, shiftBreakError } from "@/features/shifts/breaks";
+import { useShiftBreak } from "@/features/shifts/useShiftBreak";
 import { dayLabel, startOfWeek, weekDays } from "../lib/week";
 import {
   Button,
@@ -232,6 +234,20 @@ function InternalForm({
   const formDate = watch("date");
   const formStart = watch("start_time");
   const formEnd = watch("end_time");
+  // La pausa vive fuori dal form, come nell'app: finché non la si tocca segue
+  // la regola della sede scelta; in modifica parte da quella salvata.
+  const formVenue = venues.find((v) => v.id === formVenueId) ?? null;
+  const pause = useShiftBreak(
+    formVenue,
+    formStart ?? "",
+    formEnd ?? "",
+    shift?.break_minutes
+  );
+  const pausePaid = shift?.break_paid ?? formVenue?.break_paid ?? false;
+  const pauseError =
+    formStart && formEnd
+      ? shiftBreakError(formStart, formEnd, pause.minutes)
+      : null;
   const impactWindow = moveImpactWindow(formDate);
   // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
   const [extraDates, setExtraDates] = useState<string[]>([]);
@@ -515,6 +531,7 @@ function InternalForm({
       end_time: values.end_time,
       description: values.description.trim() || null,
       require_confirmation: values.require_confirmation,
+      break_minutes: pause.minutes,
       staff: staffIds.map((id) => ({
         venue_member_id: id,
         role_id: staffRoles[id] ?? null,
@@ -552,6 +569,10 @@ function InternalForm({
   }
 
   function onSubmit(values: InternalShiftForm) {
+    if (pauseError) {
+      toast.show(pauseError, "error");
+      return;
+    }
     // Solo in modifica, e solo se è davvero cambiato *quando*: aggiungere una
     // persona o correggere una nota non riapre niente.
     const moved =
@@ -684,9 +705,34 @@ function InternalForm({
               </Field>
             </div>
 
+            <Field label="Pausa (minuti)" error={pauseError ?? undefined}>
+              <Input
+                type="number"
+                min={0}
+                max={MAX_BREAK_MINUTES}
+                step={5}
+                value={pause.minutes}
+                onChange={(event) =>
+                  pause.setMinutes(
+                    Math.max(
+                      0,
+                      Math.min(
+                        MAX_BREAK_MINUTES,
+                        Math.round(Number(event.target.value) || 0)
+                      )
+                    )
+                  )
+                }
+                className="w-28"
+              />
+            </Field>
+
             {formDate && formStart && formEnd ? (
               <p className="-mt-2 text-xs text-t4">
-                {formatShiftSummary(formDate, formStart, formEnd)}
+                {formatShiftSummary(formDate, formStart, formEnd, {
+                  break_minutes: pause.minutes,
+                  break_paid: pausePaid,
+                })}
               </p>
             ) : null}
 

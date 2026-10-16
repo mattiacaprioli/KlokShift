@@ -2,6 +2,7 @@ import { DetailSkeleton } from "../ui/Skeleton";
 import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueCard } from "../venues/VenueCard";
+import { BreakPolicyCard } from "../venues/BreakPolicyCard";
 import { ClockMethodCard } from "../venues/ClockMethodCard";
 import { PlanningVisibilityCard } from "../venues/PlanningVisibilityCard";
 import {
@@ -75,6 +76,7 @@ export function SedeDettaglioPage() {
       {!editable && clockEditable ? (
         <ClockMethodCard venue={venue} />
       ) : null}
+      {clockEditable ? <BreakPolicyCard venue={venue} /> : null}
       {editable ? <PlanningVisibilityCard venue={venue} /> : null}
     </>
   );

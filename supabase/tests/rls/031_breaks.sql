@@ -197,6 +197,11 @@ begin
   perform public.correct_clock_break(rec.id, 30, 'Pausa pranzo comunicata');
   perform tests.eq(tests.br_break(rec.id), 'corrected:30',
     'la correzione prevale');
+  perform tests.login('Emp');
+  perform tests.eq((select proposed_hours from public.get_my_work_history_range(today - 1, today - 1)
+    where title = 'Pausa'), 3.75::numeric,
+    'nello storico la proposta da approvare toglie la pausa');
+  perform tests.login('Co2');
   reviewed := public.approve_clock_record(a);
   perform tests.eq(reviewed.worked_hours, 3.75::numeric,
     'approvazione: 4 h 10 − 30 min, al quarto d''ora');

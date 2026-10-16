@@ -10,7 +10,8 @@ import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { Text, View } from "@/tw";
 import type { MyUnplannedClock } from "./api";
-import { usePunchUnplannedClock } from "./hooks";
+import { ClockBreakButton } from "./ClockBreakButton";
+import { useClockBreaks, usePunchUnplannedClock } from "./hooks";
 import { formatClockTime } from "./hours";
 
 /**
@@ -40,6 +41,8 @@ export function UnplannedClockCard({
   const [confirming, setConfirming] = useState<"in" | "out" | null>(null);
 
   const open = entry.open;
+  const breaks = useClockBreaks(open?.recordId);
+  const pause = breaks.data?.find((b) => b.ended_at == null) ?? null;
   if (!open && !canStart) return null;
 
   const roleName = open?.roleId
@@ -82,7 +85,13 @@ export function UnplannedClockCard({
   return (
     <>
       <Card className="rounded-3xl border-border-gold bg-bg-card p-5">
-        <Mono gold>{open ? "Fuori turno · In servizio" : "Senza turno"}</Mono>
+        <Mono gold>
+          {open
+            ? pause
+              ? "Fuori turno · In pausa"
+              : "Fuori turno · In servizio"
+            : "Senza turno"}
+        </Mono>
         <Text className="mt-1 text-lg font-sans-bold text-t1" numberOfLines={1}>
           {entry.venueName}
         </Text>
@@ -92,13 +101,33 @@ export function UnplannedClockCard({
             <Text className="mt-4 text-sm text-t2">
               Entrata registrata alle {formatClockTime(open.clockInAt)}
               {roleName ? ` · ${roleName}` : ""}.
+              {pause ? ` In pausa dalle ${formatClockTime(pause.started_at)}.` : ""}
             </Text>
-            <GoldButton
-              className="mt-4"
-              label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
-              disabled={punch.isPending}
-              onPress={() => setConfirming("out")}
-            />
+            {pause ? (
+              <>
+                <ClockBreakButton className="mt-4" recordId={open.recordId} onBreak />
+                <GhostButton
+                  className="mt-3"
+                  label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
+                  disabled={punch.isPending}
+                  onPress={() => setConfirming("out")}
+                />
+              </>
+            ) : (
+              <>
+                <GoldButton
+                  className="mt-4"
+                  label={punch.isPending ? "Registrazione…" : "Timbra uscita"}
+                  disabled={punch.isPending}
+                  onPress={() => setConfirming("out")}
+                />
+                <ClockBreakButton
+                  className="mt-3"
+                  recordId={open.recordId}
+                  onBreak={false}
+                />
+              </>
+            )}
           </>
         ) : preparing ? (
           <View className="mt-4 gap-4">
