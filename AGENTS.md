@@ -202,23 +202,31 @@ npx expo export --platform ios   # verifica bundle
 ## Struttura
 ```
 src/
-├── app/                  # Expo Router
-│   ├── _layout.tsx       # AuthProvider + RootNavigator (Stack.Protected) + SplashScreen
-│   ├── (auth)/           # welcome, login, signup
-│   ├── (waiter)/         # home camerieri (M5)
-│   ├── (manager)/        # index, venue, shift/new, shift/[id]
-│   └── (dev)/            # components.tsx — demo design system
-├── components/ui/        # primitive: GoldButton, GhostButton, BlurCard, Card,
-│                         #   Avatar, Pill, Chip, Input, SectionHeader, EmptyState,
-│                         #   ShimmerText, Icon, Logo, LogoBadge, Mono, Display
-├── lib/                  # supabase.ts, auth.tsx, manager.ts, format.ts, cn.ts
+├── app/                  # Expo Router: solo routing, schermate che usano hook di feature
+│   ├── _layout.tsx       # AppProviders + RootNavigator (Stack.Protected) + SplashScreen
+│   ├── (auth)/           # welcome, login, signup, signup-account
+│   ├── (onboarding)/     # primo accesso del professionista
+│   ├── (waiter)/         # vista «lavoro»: (tabs), shift, assenze, documenti, chat…
+│   ├── (manager)/        # vista «gestione»: (tabs), shift, staff, venue, ore, team, chat…
+│   └── (dev)/            # components.tsx — demo design system, solo con __DEV__
+├── features/<dominio>/   # api.ts (Supabase), hooks.ts (React Query), componenti,
+│                         #   regole pure testate (es. shifts/moveImpact.ts)
+├── components/           # ui/ primitive (GoldButton, Card, Avatar, Pill, Icon…),
+│                         #   form/ campi react-hook-form, nav/ FloatingTabBar
+├── providers/            # AppProviders (Query, Auth, OwnerVenues, ViewMode, Toast,
+│                         #   ErrorBoundary), ErrorFallback
+├── lib/                  # supabase.ts, auth.tsx, queryKeys.ts, errors.ts, format.ts, cn.ts…
 ├── tw/                   # wrapper CSS-class (index/image/animated) per NativeWind
-├── types/database.ts     # tipi DB generati
-├── constants/theme.ts    # colori, spacing, font (palette AURA)
-└── global.css            # import Tailwind v4 + @theme token
+├── types/database.ts     # tipi DB generati (supabase/tests/gen-types.sh), mai a mano
+├── constants/            # colors.ts, fonts.ts
+└── global.css            # import Tailwind v4 + @theme token (la palette AURA è qui)
 
-web/        # dashboard desktop delle sedi (Vite+React, /app/ su Pages)
+web/src/    # dashboard desktop delle sedi (Vite+React, /app/ su Pages); admin/ = area fondatore
 web-site/   # sito vetrina pubblico + pagine legali (radice su Pages)
+shared/     # solo web: listino (pricing.ts) condiviso da dashboard e sito, mai nell'app nativa
+supabase/   # migrations/ (baseline + successive), functions/ (Edge), tests/ (banco SQL)
+tests/      # vitest: unit/, integration/ (client Supabase finti), helpers/
+docs/ plans/ # decisioni di prodotto, piani e audit
 ```
 
 ⚠️ Il copy del sito vetrina sta tutto in `web-site/src/content/it.ts` e non può

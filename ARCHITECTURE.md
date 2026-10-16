@@ -8,7 +8,9 @@ riferimento per come è organizzato il codice e come si aggiunge una feature.
 
 ```
 src/
-  app/            # SOLO routing (Expo Router). Schermate sottili: chiamano hook di feature.
+  app/            # SOLO routing (Expo Router). Obiettivo: schermate sottili che chiamano
+                  # hook di feature (oggi alcune superano le mille righe: estrarre regole
+                  # e sezioni quando le si tocca).
   components/
     ui/           # design-system primitives (GoldButton, Input, Mono, Display, Icon, …)
     form/         # wrapper RHF: ControlledInput, ControlledPicker
@@ -55,8 +57,11 @@ hook di feature. Le funzioni grezze stanno in `features/*/api.ts`.
 ## Provider & affidabilità
 
 - [src/providers/AppProviders.tsx](src/providers/AppProviders.tsx) compone:
-  `SafeAreaProvider > QueryClientProvider > AuthProvider > ToastProvider >
-  ErrorBoundary`. È montato una sola volta nel root layout.
+  `SafeAreaProvider > QueryClientProvider > AuthProvider > OwnerVenuesProvider >
+  ViewModeProvider > ToastProvider > ErrorBoundary`. È montato una sola volta nel
+  root layout. `OwnerVenuesProvider` legge appartenenze e accesso aziendale,
+  `ViewModeProvider` ne ricava la vista (gestione / lavoro): entrambi servono a
+  `RootNavigator` per scegliere il gruppo di rotte.
 - `ErrorBoundary` mostra un fallback recuperabile e inoltra a Sentry.
 - Auth: vedi [src/lib/auth.tsx](src/lib/auth.tsx) e la nota sul deadlock di
   `onAuthStateChange` (mai `await` di query Supabase dentro quel callback).

@@ -282,6 +282,9 @@ nei ticket. Riferimento:
 
 ## Banco di prova locale
 
+Lo schema è la somma delle migration: non esiste un dump versionato (il vecchio
+`supabase/schema.sql`, fermo a prima del refactor, è stato tolto il 2026-10-16).
+
 Il banco `supabase/tests/run.sh` fa da `db reset`
 su un Postgres 17 di Supabase in Docker (stessa major del progetto).
 

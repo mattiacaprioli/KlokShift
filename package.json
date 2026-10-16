@@ -90,7 +90,6 @@
     "site:preview": "vite preview web-site",
     "site:typecheck": "tsc -p web-site --noEmit",
     "test:unit": "tsc -p tests/tsconfig.json --noEmit && vitest run",
-    "db:dump": "supabase db dump --schema public -f supabase/schema.sql",
     "db:types": "supabase gen types typescript --project-id rmlobxjlqlpixkvrzmfg > src/types/database.ts"
   },
   "private": true
