@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { FlatList, RefreshControl } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
@@ -85,6 +86,13 @@ export function PeopleWeekList({
   const { workspaceId, venues, isMultiVenue, can } = useOwnerVenues();
   const shiftsQuery = useOwnerShiftsRange(from, to, scope);
   const peopleQuery = useOwnerPeople(workspaceId);
+  const avatarByPerson = useMemo(
+    () => new Map((peopleQuery.data ?? []).map((person) => [
+      person.id,
+      person.waiter?.avatar_url ?? null,
+    ])),
+    [peopleQuery.data]
+  );
   // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
   const self = useSelfStaff();
   // Chi non c'è in settimana, senza il perché (`get_absence_availability`).
@@ -197,6 +205,7 @@ export function PeopleWeekList({
       renderItem={({ item }) => (
         <PersonWeekCard
           person={item}
+          avatarUri={avatarByPerson.get(item.personId)}
           days={days}
           absences={absencesByPerson.get(item.personId) ?? []}
           venueOf={venueOf}
@@ -239,6 +248,7 @@ export function PeopleWeekList({
  */
 function PersonWeekCard({
   person,
+  avatarUri,
   days,
   absences,
   venueOf,
@@ -247,6 +257,7 @@ function PersonWeekCard({
   isMe,
 }: {
   person: PersonLoad;
+  avatarUri?: string | null;
   days: string[];
   /** Le assenze della persona in settimana: date e stato, mai il tipo. */
   absences: AbsenceAvailability[];
@@ -276,12 +287,22 @@ function PersonWeekCard({
       >
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1">
-            <Text className="text-[15px] font-sans-semibold text-t1">
-              {isMe ? `${person.name} (tu)` : person.name}
-            </Text>
-            <Text className="mt-0.5 text-xs text-t3" numberOfLines={1}>
-              {person.roles ?? "Ruoli non indicati"}
-            </Text>
+            <View className="flex-row items-center gap-2.5">
+              <View className={cn(
+                "shrink-0 rounded-full border-2",
+                isMe ? "border-border-gold" : "border-bg-card"
+              )}>
+                <Avatar uri={avatarUri} name={person.name} size={26} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-[15px] font-sans-semibold text-t1">
+                  {isMe ? `${person.name} (tu)` : person.name}
+                </Text>
+                <Text className="mt-0.5 text-xs text-t3" numberOfLines={1}>
+                  {person.roles ?? "Ruoli non indicati"}
+                </Text>
+              </View>
+            </View>
             {person.contract ? (
               <Text className="mt-0.5 font-mono text-[10px] text-t4">
                 {formatContract(person.contract)}
