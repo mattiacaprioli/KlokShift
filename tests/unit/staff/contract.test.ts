@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  contractChanged,
+  contractHoursInput,
   formatContract,
   loadTone,
+  parseContractHours,
   personContract,
   targetExplainer,
   weeklyTarget,
@@ -47,5 +50,34 @@ describe("target settimanale", () => {
       "173 h al mese ≈ 39,9 h a settimana"
     );
     expect(targetExplainer({ hours: 8, period: "day" }, null)).toBeNull();
+  });
+});
+
+describe("modulo del contratto (app e dashboard)", () => {
+  it("accetta la virgola e il punto, e il campo vuoto vuol dire nessun contratto", () => {
+    expect(parseContractHours(" 37,5 ")).toEqual({ hours: 37.5, invalid: false });
+    expect(parseContractHours("40.5")).toEqual({ hours: 40.5, invalid: false });
+    expect(parseContractHours("   ")).toEqual({ hours: null, invalid: false });
+  });
+
+  it("rifiuta zero, negativi, oltre 400 e testo", () => {
+    for (const input of ["0", "-5", "400,5", "abc", "1,5,5"]) {
+      expect(parseContractHours(input).invalid).toBe(true);
+    }
+    expect(parseContractHours("400").invalid).toBe(false);
+  });
+
+  it("il valore iniziale usa la virgola", () => {
+    expect(contractHoursInput({ hours: 37.5, period: "week" })).toBe("37,5");
+    expect(contractHoursInput(null)).toBe("");
+  });
+
+  it("senza ore cambiare solo il periodo non è una modifica", () => {
+    const current = { hours: 40, period: "week" as const };
+    expect(contractChanged(current, 40, "week")).toBe(false);
+    expect(contractChanged(current, 40, "month")).toBe(true);
+    expect(contractChanged(current, 38, "week")).toBe(true);
+    expect(contractChanged(current, null, "week")).toBe(true);
+    expect(contractChanged(null, null, "month")).toBe(false);
   });
 });

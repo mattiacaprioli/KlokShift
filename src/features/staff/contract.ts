@@ -58,6 +58,44 @@ export function isContractPeriod(value: string): value is ContractPeriod {
   return (CONTRACT_PERIODS as string[]).includes(value);
 }
 
+/** Il valore iniziale del campo ore: "37,5", vuoto senza contratto. */
+export function contractHoursInput(contract: Contract | null): string {
+  return contract ? String(contract.hours).replace(".", ",") : "";
+}
+
+/** Il massimo di ore accettato dal modulo, per qualunque periodo. */
+export const MAX_CONTRACT_HOURS = 400;
+
+/**
+ * Il campo ore del modulo contratto, uguale in app e dashboard. È testo e non
+ * numero: su una tastiera italiana i decimali si scrivono con la virgola, e
+ * "37,5" non deve diventare NaN e cancellare in silenzio il contratto.
+ * `hours` null = campo vuoto = nessun contratto.
+ */
+export function parseContractHours(input: string): {
+  hours: number | null;
+  invalid: boolean;
+} {
+  const trimmed = input.trim();
+  const hours = trimmed ? Number(trimmed.replace(",", ".")) : null;
+  const invalid =
+    hours != null &&
+    (!Number.isFinite(hours) || hours <= 0 || hours > MAX_CONTRACT_HOURS);
+  return { hours, invalid };
+}
+
+/** C'è da salvare? Senza ore il periodo non si salva: cambiarlo da solo non conta. */
+export function contractChanged(
+  current: Contract | null,
+  hours: number | null,
+  period: ContractPeriod
+): boolean {
+  return (
+    hours !== (current?.hours ?? null) ||
+    (hours != null && period !== current?.period)
+  );
+}
+
 /** "40 h a settimana". */
 export function formatContract(contract: Contract): string {
   return `${formatHours(contract.hours)} ${CONTRACT_PERIOD_LABEL[contract.period]}`;

@@ -56,7 +56,10 @@ import { suggestedRoleIds } from "@/features/roles/suggestions";
 import {
   CONTRACT_PERIOD_SHORT,
   CONTRACT_PERIODS,
+  contractChanged,
+  contractHoursInput,
   formatContract,
+  parseContractHours,
   personContract,
   type ContractPeriod,
 } from "@/features/staff/contract";
@@ -957,23 +960,15 @@ function PersonContractForm({
   const toast = useToast();
   const update = useUpdateStaffPerson();
   const contract = personContract(person);
-  const [hours, setHours] = useState(
-    contract ? String(contract.hours).replace(".", ",") : ""
-  );
+  const [hours, setHours] = useState(contractHoursInput(contract));
   const [period, setPeriod] = useState<ContractPeriod>(
     contract?.period ?? "week"
   );
 
-  // Campo di testo e non numerico puro: su una tastiera italiana i decimali si
-  // scrivono con la virgola, e "37,5" non deve diventare NaN e cancellare in
-  // silenzio il contratto.
-  const parsed = hours.trim() ? Number(hours.trim().replace(",", ".")) : null;
-  const invalid =
-    parsed != null && (!Number.isFinite(parsed) || parsed <= 0 || parsed > 400);
-  // Senza ore il periodo non si salva: cambiarlo da solo non è una modifica.
-  const dirty =
-    parsed !== (contract?.hours ?? null) ||
-    (parsed != null && period !== contract?.period);
+  // Le regole del campo (virgola, limiti, cosa conta come modifica) sono in
+  // `features/staff/contract.ts`, le stesse della dashboard.
+  const { hours: parsed, invalid } = parseContractHours(hours);
+  const dirty = contractChanged(contract, parsed, period);
   useUnsavedEdit("contratto", dirty);
 
   async function onSave() {
