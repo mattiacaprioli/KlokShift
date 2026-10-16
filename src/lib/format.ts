@@ -175,6 +175,25 @@ export function formatMonthLabel(date: string): string {
   return monthFmt.format(new Date(`${date}T00:00:00`));
 }
 
+// Il mese "YYYY-MM" di un istante, in ora **locale**: il primo del mese all'01:00
+// è già il mese nuovo (con `toISOString()` la pagina Ore si apriva ancora sul
+// precedente). Uno solo per app e dashboard.
+export function monthKey(now: Date = new Date()): string {
+  return todayString(now).slice(0, 7);
+}
+
+// Un mese "YYYY-MM" spostato di `delta` mesi: passa dal giorno 1, così il 31
+// non scivola nel mese dopo.
+export function addMonthsToKey(month: string, delta: number): string {
+  const [y, m] = month.split("-").map(Number);
+  return monthKey(new Date(y, m - 1 + delta, 1));
+}
+
+// "settembre 2026" da "2026-09".
+export function formatMonthKey(month: string): string {
+  return formatMonthLabel(`${month}-01`);
+}
+
 // I mesi per esteso, come li scriverebbe una persona. Scritti a mano e non presi
 // da `Intl`: servono anche come **elenco da scegliere** nel campo compleanno, e
 // dodici `DateTimeFormat` costruiti al volo per riempire dodici chip sono un

@@ -1,13 +1,12 @@
-import { toDateString } from "@/lib/format";
+import { startOfWeek as mondayOf, toDateString } from "@/lib/format";
 
-/** Lunedì della settimana che contiene `d` (settimana IT: lun–dom). */
+/**
+ * Lunedì della settimana che contiene `d` (settimana IT: lun–dom), come `Date`
+ * a mezzanotte locale. La regola è una sola, `startOfWeek` di `lib/format`,
+ * che lavora sulle date DB.
+ */
 export function startOfWeek(d: Date): Date {
-  const out = new Date(d);
-  out.setHours(0, 0, 0, 0);
-  // getDay(): 0=dom … 6=sab → offset per tornare a lunedì.
-  const offset = (out.getDay() + 6) % 7;
-  out.setDate(out.getDate() - offset);
-  return out;
+  return new Date(`${mondayOf(toDateString(d))}T00:00:00`);
 }
 
 export function addDays(d: Date, n: number): Date {
@@ -147,12 +146,5 @@ export const WEEKDAY_NAMES = Array.from({ length: 7 }, (_, i) =>
   DAY_LABEL.format(addDays(startOfWeek(new Date()), i))
 );
 
-/** Mesi come "YYYY-MM" per il selettore del riepilogo ore. */
-export function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-export function monthLabel(key: string): string {
-  const [y, m] = key.split("-").map(Number);
-  return MONTH_YEAR.format(new Date(y, m - 1, 1));
-}
+/** Mesi come "YYYY-MM" per il selettore del riepilogo ore: le regole sono in `lib/format`. */
+export { monthKey, formatMonthKey as monthLabel } from "@/lib/format";

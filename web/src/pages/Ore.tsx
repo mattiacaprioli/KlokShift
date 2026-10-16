@@ -16,7 +16,7 @@ import {
   buildHoursHtml,
   hoursFileName,
 } from "@/lib/exportBuilders";
-import { formatHours } from "@/lib/format";
+import { addMonthsToKey, formatHours } from "@/lib/format";
 import { monthKey, monthLabel } from "../lib/week";
 import {
   Button,
@@ -40,10 +40,7 @@ export function OrePage() {
   const { profile } = useAuth();
   const { workspaceId, venues, historyVenues } = useOwnerVenues();
   const [month, setMonth] = useState(monthKey(new Date()));
-  const adjacentMonth = (offset: number) => {
-    const [year, number] = month.split("-").map(Number);
-    return monthKey(new Date(year, number - 1 + offset, 1));
-  };
+  const adjacentMonth = (offset: number) => addMonthsToKey(month, offset);
   const { data, isPending, isError, error } = useOwnerHoursSummary(
     workspaceId,
     month

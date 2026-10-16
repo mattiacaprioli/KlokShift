@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   addDaysToDate,
+  addMonthsToKey,
   daysInMonth,
   formatBirthday,
   formatDayLabel,
   formatHours,
   formatHoursVariance,
+  formatMonthKey,
   formatRelativeStart,
   formatShiftRange,
   isOvernightShift,
   isShiftOver,
   isValidShiftRange,
+  monthKey,
   shiftDurationHours,
   shiftEndsAt,
   shiftSlotLabel,
@@ -148,5 +151,21 @@ describe("compleanno senza anno", () => {
     expect(formatBirthday(12, 3)).toBe("12 marzo");
     expect(formatBirthday(null, 3)).toBeNull();
     expect(formatBirthday(1, 13)).toBeNull();
+  });
+});
+
+describe("mesi come chiave «YYYY-MM» (pagine Ore di app e dashboard)", () => {
+  it("il mese è quello locale anche il primo del mese subito dopo mezzanotte", () => {
+    expect(monthKey(at("2026-10-01T00:30:00"))).toBe("2026-10");
+  });
+
+  it("si sposta passando dal giorno 1, attraverso gli anni", () => {
+    expect(addMonthsToKey("2026-01", -1)).toBe("2025-12");
+    expect(addMonthsToKey("2026-12", 1)).toBe("2027-01");
+    expect(addMonthsToKey("2026-03", -1)).toBe("2026-02");
+  });
+
+  it("si legge in italiano, minuscolo", () => {
+    expect(formatMonthKey("2026-09")).toBe("settembre 2026");
   });
 });

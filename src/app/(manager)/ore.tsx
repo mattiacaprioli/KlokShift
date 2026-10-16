@@ -11,7 +11,12 @@ import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { formatHours, todayString } from "@/lib/format";
+import {
+  addMonthsToKey,
+  formatHours,
+  formatMonthKey,
+  monthKey,
+} from "@/lib/format";
 import {
   exportAbsencesCsv,
   exportHoursCsv,
@@ -30,27 +35,10 @@ import {
   formatSummaryDays,
 } from "@/features/absences/summary";
 
-const monthFmt = new Intl.DateTimeFormat("it-IT", {
-  month: "long",
-  year: "numeric",
-});
-
-function currentMonth(): string {
-  // Ora locale, non UTC: col vecchio `toISOString()` il primo del mese, fino
-  // alle 01:00 (o alle 02:00 con l'ora legale), la pagina si apriva ancora sul
-  // mese precedente.
-  return todayString().slice(0, 7); // "YYYY-MM"
-}
-
-function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split("-").map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
+// Le regole del mese (ora locale, spostamenti) sono in `lib/format`, le stesse
+// della dashboard. Qui solo l'iniziale maiuscola dell'intestazione.
 function monthLabel(month: string): string {
-  const [y, m] = month.split("-").map(Number);
-  const label = monthFmt.format(new Date(y, m - 1, 1));
+  const label = formatMonthKey(month);
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
@@ -71,8 +59,8 @@ export default function VenueHoursScreen() {
   const { profile } = useAuth();
   const { workspaceId, venues, historyVenues } = useOwnerVenues();
 
-  const [month, setMonth] = useState(currentMonth());
-  const atCurrentMonth = month >= currentMonth();
+  const [month, setMonth] = useState(monthKey());
+  const atCurrentMonth = month >= monthKey();
 
   const query = useOwnerHoursSummary(workspaceId, month);
   const rows = query.data ?? [];
@@ -134,7 +122,7 @@ export default function VenueHoursScreen() {
         {/* Selettore mese — pillola unica per non confondersi col back */}
         <View className="self-center flex-row items-center rounded-full border border-border-2 bg-bg-1">
           <Pressable
-            onPress={() => setMonth((m) => shiftMonth(m, -1))}
+            onPress={() => setMonth((m) => addMonthsToKey(m, -1))}
             hitSlop={8}
             className="px-4 py-2.5"
           >
@@ -148,7 +136,7 @@ export default function VenueHoursScreen() {
           </Text>
           <Pressable
             disabled={atCurrentMonth}
-            onPress={() => setMonth((m) => shiftMonth(m, 1))}
+            onPress={() => setMonth((m) => addMonthsToKey(m, 1))}
             hitSlop={8}
             className="px-4 py-2.5"
             style={atCurrentMonth ? { opacity: 0.3 } : undefined}
