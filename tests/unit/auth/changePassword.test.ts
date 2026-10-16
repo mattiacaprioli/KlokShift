@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   authErrorMessage,
+  CODE_INVALID_MESSAGE,
+  CODE_REQUIRED_MESSAGE,
+  FACTORS_UNAVAILABLE_MESSAGE,
+  hasVerifiedTotp,
   runChangePassword,
   type ChangePasswordAuth,
 } from "@/features/auth/changePassword";
@@ -12,6 +16,10 @@ function fakeAuth(options: {
   signIn?: Failure;
   update?: Failure;
   signOut?: Failure | "throws";
+  /** Un'app di autenticazione verificata sull'account. */
+  totp?: boolean;
+  factorsError?: Failure;
+  verify?: Failure;
 } = {}) {
   const signInWithPassword = vi.fn(async () => ({
     data: {},
@@ -22,12 +30,21 @@ function fakeAuth(options: {
     if (options.signOut === "throws") throw new Error("Network request failed");
     return { error: options.signOut ?? null };
   });
-  const auth = { signInWithPassword, updateUser, signOut } as unknown as ChangePasswordAuth;
-  return { auth, signInWithPassword, updateUser, signOut };
+  const factor = { id: "factor-1", factor_type: "totp", status: "verified" };
+  const listFactors = vi.fn(async () =>
+    options.factorsError
+      ? { data: null, error: options.factorsError }
+      : { data: { all: options.totp ? [factor] : [], totp: options.totp ? [factor] : [], phone: [] }, error: null }
+  );
+  const challengeAndVerify = vi.fn(async () => ({ data: {}, error: options.verify ?? null }));
+  const auth = {
+    signInWithPassword, updateUser, signOut, mfa: { listFactors, challengeAndVerify },
+  } as unknown as ChangePasswordAuth;
+  return { auth, signInWithPassword, updateUser, signOut, listFactors, challengeAndVerify };
 }
 
-const run = (auth: ChangePasswordAuth) =>
-  runChangePassword(auth, "ow@t.test", "Vecchia123", "Nuova1234");
+const run = (auth: ChangePasswordAuth, code?: string) =>
+  runChangePassword(auth, "ow@t.test", "Vecchia123", "Nuova1234", code);
 
 describe("cambio password", () => {
   it("con la password attuale sbagliata non cambia niente", async () => {
@@ -65,6 +82,57 @@ describe("cambio password", () => {
     expect(await run(f.auth)).toEqual({ error: null });
     expect(f.signInWithPassword).toHaveBeenCalledWith({ email: "ow@t.test", password: "Vecchia123" });
     expect(f.updateUser).toHaveBeenCalledWith({ password: "Nuova1234" });
+  });
+});
+
+describe("cambio password con il secondo fattore (D5)", () => {
+  it("senza app di autenticazione non chiede codici", async () => {
+    const f = fakeAuth();
+    expect(await run(f.auth)).toEqual({ error: null });
+    expect(f.challengeAndVerify).not.toHaveBeenCalled();
+  });
+
+  it("con l'app verificata e senza codice non cambia la password", async () => {
+    const f = fakeAuth({ totp: true });
+    expect(await run(f.auth)).toEqual({ error: CODE_REQUIRED_MESSAGE, codeRequired: true });
+    expect(f.updateUser).not.toHaveBeenCalled();
+    expect(f.signOut).not.toHaveBeenCalled();
+  });
+
+  it("un codice malformato non arriva nemmeno a GoTrue", async () => {
+    const f = fakeAuth({ totp: true });
+    expect(await run(f.auth, "12ab")).toEqual({ error: CODE_INVALID_MESSAGE, codeRequired: true });
+    expect(f.challengeAndVerify).not.toHaveBeenCalled();
+    expect(f.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("un codice rifiutato non cambia la password", async () => {
+    const f = fakeAuth({ totp: true, verify: { message: "Invalid TOTP code entered", code: "mfa_verification_failed" } });
+    expect(await run(f.auth, "123456")).toEqual({ error: CODE_INVALID_MESSAGE, codeRequired: true });
+    expect(f.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("con il codice giusto verifica il fattore, poi cambia la password", async () => {
+    const f = fakeAuth({ totp: true });
+    expect(await run(f.auth, " 123 456 ")).toEqual({ error: null });
+    expect(f.challengeAndVerify).toHaveBeenCalledWith({ factorId: "factor-1", code: "123456" });
+    expect(f.challengeAndVerify.mock.invocationCallOrder[0])
+      .toBeLessThan(f.updateUser.mock.invocationCallOrder[0]);
+  });
+
+  it("se i fattori non si leggono si ferma: il dato mancante non sblocca", async () => {
+    const f = fakeAuth({ factorsError: { message: "Failed to fetch" } });
+    expect(await run(f.auth)).toEqual({ error: FACTORS_UNAVAILABLE_MESSAGE });
+    expect(f.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("legge il secondo fattore dalla sessione solo se verificato", () => {
+    expect(hasVerifiedTotp(null)).toBe(false);
+    expect(hasVerifiedTotp({ factors: [] })).toBe(false);
+    const factor = (status: "verified" | "unverified") =>
+      ({ id: "f", factor_type: "totp", status, created_at: "", updated_at: "" }) as never;
+    expect(hasVerifiedTotp({ factors: [factor("unverified")] })).toBe(false);
+    expect(hasVerifiedTotp({ factors: [factor("verified")] })).toBe(true);
   });
 });
 

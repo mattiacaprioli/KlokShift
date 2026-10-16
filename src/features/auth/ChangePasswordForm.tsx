@@ -11,6 +11,11 @@ import {
   type ChangePasswordForm as ChangePasswordValues,
 } from "./schema";
 import { PasswordChecklist } from "./PasswordChecklist";
+import { hasVerifiedTotp } from "./changePassword";
+
+/** L'app non chiede codici TOTP: il secondo fattore si usa dalla dashboard (D5). */
+const USE_DASHBOARD_MESSAGE =
+  "Questo account usa il codice di verifica: cambia la password dalla dashboard web, in Impostazioni.";
 
 /**
  * Cambio password da loggati, condiviso dalle impostazioni dei due lati.
@@ -22,9 +27,12 @@ import { PasswordChecklist } from "./PasswordChecklist";
  * Se la password cambia ma gli altri dispositivi non si disconnettono, il form
  * resta aperto con un avviso (non un errore) finché non lo si chiude: chi cambia
  * password per un sospetto deve saperlo, e un toast sparirebbe da solo.
+ *
+ * Un account con il secondo fattore (oggi solo il fondatore) non cambia la
+ * password da qui: serve il codice, che chiede solo la dashboard.
  */
 export function ChangePasswordForm({ onDone }: { onDone: () => void }) {
-  const { changePassword } = useAuth();
+  const { changePassword, session } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,7 +59,7 @@ export function ChangePasswordForm({ onDone }: { onDone: () => void }) {
     const res = await changePassword(values.currentPassword, values.password);
     setLoading(false);
     if (res.error) {
-      setApiError(res.error);
+      setApiError(res.codeRequired ? USE_DASHBOARD_MESSAGE : res.error);
       return;
     }
     if (res.warning) {
@@ -60,6 +68,17 @@ export function ChangePasswordForm({ onDone }: { onDone: () => void }) {
     }
     onDone();
   });
+
+  if (hasVerifiedTotp(session?.user)) {
+    return (
+      <View className="gap-4">
+        <Text className="font-sans text-sm leading-5 text-t2">
+          {USE_DASHBOARD_MESSAGE}
+        </Text>
+        <GoldButton className="mt-2" size="lg" label="Ho capito" onPress={onDone} />
+      </View>
+    );
+  }
 
   if (warning) {
     return (

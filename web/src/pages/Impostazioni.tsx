@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { userErrorMessage } from "@/lib/errors";
 import { changePasswordSchema } from "@/features/auth/schema";
+import { hasVerifiedTotp } from "@/features/auth/changePassword";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   useSetStaffCanChat,
@@ -344,17 +345,25 @@ function AccountSection() {
  * ⚠️ Non è `NuovaPassword.tsx`: là la prova d'identità è il link ricevuto per
  * email, qui la sessione da sola non basta e si chiede la password attuale.
  *
+ * Con il secondo fattore (D5) chiede anche il codice TOTP: la verifica della
+ * password attuale apre una sessione `aal1`, e il cambio passa solo col codice.
+ *
  * Se la password cambia ma gli altri dispositivi non si disconnettono,
  * `warning` resta scritto nella sezione (non come errore) finché non si riapre
  * il modulo: un toast sparirebbe da solo.
  */
 function PasswordSection() {
-  const { changePassword } = useAuth();
+  const { changePassword, session } = useAuth();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [code, setCode] = useState("");
+  // Il campo del codice si vede subito per chi ha il secondo fattore; se la
+  // sessione non lo sa ancora, compare quando il cambio lo chiede.
+  const [codeAsked, setCodeAsked] = useState(false);
+  const needsCode = codeAsked || hasVerifiedTotp(session?.user);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -364,6 +373,8 @@ function PasswordSection() {
     setCurrent("");
     setPassword("");
     setConfirm("");
+    setCode("");
+    setCodeAsked(false);
     setError(null);
   }
 
@@ -381,9 +392,10 @@ function PasswordSection() {
     }
     setError(null);
     setBusy(true);
-    const res = await changePassword(current, password);
+    const res = await changePassword(current, password, needsCode ? code : undefined);
     setBusy(false);
     if (res.error) {
+      if (res.codeRequired) setCodeAsked(true);
       setError(res.error);
       return;
     }
@@ -448,6 +460,20 @@ function PasswordSection() {
             </Field>
 
             <PasswordChecklist value={password} />
+
+            {needsCode ? (
+              <Field label="Codice dell'app di autenticazione">
+                <Input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                />
+              </Field>
+            ) : null}
 
             <p className="text-xs leading-5 text-t3">
               Gli altri dispositivi dove hai fatto l&apos;accesso verranno

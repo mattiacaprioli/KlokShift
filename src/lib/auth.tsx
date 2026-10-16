@@ -100,10 +100,13 @@ type AuthState = {
    * sola non prova chi sta tenendo in mano il telefono sbloccato. A cambio
    * riuscito chiude le sessioni sugli altri dispositivi — chi cambia password
    * spesso lo fa perché qualcun altro potrebbe conoscerla.
+   *
+   * `code`: il codice TOTP, per gli account con il secondo fattore (D5).
    */
   changePassword: (
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
+    code?: string
   ) => Promise<ChangePasswordResult>;
   signOut: () => Promise<void>;
   /** Re-fetch the profile row after an edit, without blanking the UI. */
@@ -440,13 +443,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   async function changePassword(
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
+    code?: string
   ): Promise<ChangePasswordResult> {
     const email = sessionRef.current?.user.email;
     if (!email) return { error: "Sessione scaduta. Esci e accedi di nuovo." };
     // La sequenza (verifica, cambio, chiusura delle altre sessioni) sta in un
     // modulo puro, testato: vedi `features/auth/changePassword.ts`.
-    return runChangePassword(supabase.auth, email, currentPassword, newPassword);
+    return runChangePassword(supabase.auth, email, currentPassword, newPassword, code);
   }
 
   async function signOut() {

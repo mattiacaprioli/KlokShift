@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { passwordUnchangedMessage } from "./schema";
 
 /**
@@ -9,9 +9,37 @@ import { passwordUnchangedMessage } from "./schema";
 export type ChangePasswordAuth = Pick<
   SupabaseClient["auth"],
   "signInWithPassword" | "updateUser" | "signOut"
->;
+> & {
+  mfa: Pick<SupabaseClient["auth"]["mfa"], "listFactors" | "challengeAndVerify">;
+};
 
-export type ChangePasswordResult = { error: string | null; warning?: string };
+/**
+ * `codeRequired`: l'account ha il secondo fattore e il codice manca o è
+ * sbagliato. La dashboard mostra il campo; l'app rimanda alla dashboard.
+ */
+export type ChangePasswordResult = {
+  error: string | null;
+  warning?: string;
+  codeRequired?: boolean;
+};
+
+/**
+ * L'account ha un'app di autenticazione verificata? Dal `user` della sessione,
+ * senza rete: serve solo a decidere cosa mostrare prima dell'invio. Il
+ * controllo che conta lo rifà `runChangePassword` con `listFactors`.
+ */
+export function hasVerifiedTotp(user: Pick<User, "factors"> | null | undefined): boolean {
+  return (user?.factors ?? []).some(
+    (f) => f.factor_type === "totp" && f.status === "verified"
+  );
+}
+
+export const CODE_REQUIRED_MESSAGE =
+  "Inserisci il codice a 6 cifre dell'app di autenticazione.";
+export const CODE_INVALID_MESSAGE =
+  "Codice non valido o scaduto. Controlla l'app di autenticazione e riprova.";
+export const FACTORS_UNAVAILABLE_MESSAGE =
+  "Non riusciamo a verificare il secondo fattore dell'account. Riprova.";
 
 /** Il cambio è riuscito ma le altre sessioni no: un avviso, non un errore. */
 export const OTHER_SESSIONS_WARNING =
@@ -21,7 +49,8 @@ export async function runChangePassword(
   auth: ChangePasswordAuth,
   email: string,
   current: string,
-  next: string
+  next: string,
+  code?: string
 ): Promise<ChangePasswordResult> {
   // La verifica è un accesso vero e proprio: GoTrue non ha un «controlla la
   // password» a parte, e così vale anche il suo limite ai tentativi. Il
@@ -37,6 +66,26 @@ export async function runChangePassword(
         ? "La password attuale non è corretta."
         : authErrorMessage(check.error.message, check.error.code),
     };
+  }
+
+  // Secondo fattore (D5, oggi solo l'account del fondatore). L'accesso qui
+  // sopra ha prodotto una sessione `aal1`: senza il codice la password di un
+  // account protetto cambierebbe con la sola password vecchia. Il dato
+  // mancante non sblocca: se i fattori non si leggono, ci si ferma.
+  const factors = await auth.mfa.listFactors();
+  if (factors.error) return { error: FACTORS_UNAVAILABLE_MESSAGE };
+  const totp = factors.data.totp.find((f) => f.status === "verified");
+  if (totp) {
+    const trimmed = (code ?? "").replace(/\s+/g, "");
+    if (!trimmed) return { error: CODE_REQUIRED_MESSAGE, codeRequired: true };
+    if (!/^\d{6}$/.test(trimmed)) {
+      return { error: CODE_INVALID_MESSAGE, codeRequired: true };
+    }
+    const verified = await auth.mfa.challengeAndVerify({
+      factorId: totp.id,
+      code: trimmed,
+    });
+    if (verified.error) return { error: CODE_INVALID_MESSAGE, codeRequired: true };
   }
 
   const { error } = await auth.updateUser({ password: next });
