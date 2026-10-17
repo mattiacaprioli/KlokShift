@@ -11,12 +11,24 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/ui/StatCard";
 import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
-import { useOwnerTodayAssignments } from "@/features/assignments/hooks";
+import { withShift } from "@/features/assignments/agenda";
+import {
+  useMyAssignedUpcoming,
+  useOwnerTodayAssignments,
+} from "@/features/assignments/hooks";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import type { OpenUnplannedClock } from "@/features/clock/api";
-import { useOpenUnplannedClocks } from "@/features/clock/hooks";
+import {
+  blocksPlannedClockIn,
+  homeClockState,
+} from "@/features/clock/availability";
+import { HomeClockCard } from "@/features/clock/HomeClockCard";
+import {
+  useMyUnplannedClock,
+  useOpenUnplannedClocks,
+} from "@/features/clock/hooks";
 import { LiveClockLine } from "@/features/clock/LiveClockLine";
 import { UnplannedClockModal } from "@/features/clock/UnplannedClockModal";
 import {
@@ -144,6 +156,30 @@ export default function ManagerHome() {
     );
   }, [shiftsQuery.data, mine]);
 
+  /**
+   * Le proprie timbrature da fare, con la stessa card della vista «lavoro»:
+   * chi gestisce e si mette in turno non deve cambiare cappello per timbrare.
+   * Solo i turni di quest'azienda (`mine`): quelli di un'altra si timbrano
+   * dalla vista lavoro. Le stesse regole della Home del professionista
+   * (`homeClockState`, `blocksPlannedClockIn`).
+   */
+  const inRoster = mine.size > 0;
+  const myAssignedQuery = useMyAssignedUpcoming(inRoster ? userId : undefined);
+  const myUnplannedQuery = useMyUnplannedClock(inRoster);
+  const myClockItems = useMemo(
+    () =>
+      withShift(myAssignedQuery.data ?? []).filter(
+        (item) =>
+          mine.has(item.venue_member_id) && homeClockState(item) != null,
+      ),
+    [myAssignedQuery.data, mine],
+  );
+  const plannedInBlocked = blocksPlannedClockIn(myUnplannedQuery.data ?? []);
+  // Il prossimo turno ha già la sua card se è da timbrare: non due volte.
+  const showMyNextShift =
+    myNextShift != null &&
+    !myClockItems.some((item) => item.shift_id === myNextShift.id);
+
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
   const venueBadge = (venueId: string | undefined) => {
     if (!isMultiVenue || !venueId) return undefined;
@@ -246,6 +282,9 @@ export default function ManagerHome() {
       periodQuery.refetch(),
       assignQuery.refetch(),
       unplannedQuery.refetch(),
+      ...(inRoster
+        ? [myAssignedQuery.refetch(), myUnplannedQuery.refetch()]
+        : []),
     ]),
   );
 
@@ -363,40 +402,49 @@ export default function ManagerHome() {
 
             {/* Il proprio turno prima di quelli degli altri: chi organizza i
                 turni e ci lavora apre l'app anche per sapere quando attacca. */}
-            {myNextShift ? (
+            {myClockItems.length > 0 || showMyNextShift ? (
               <View className="gap-2.5">
                 <Mono>I tuoi turni</Mono>
-                <Card
-                  className="rounded-3xl border-border-gold p-5"
-                  onPress={() =>
-                    router.push(`/(manager)/shift/${myNextShift.id}`)
-                  }
-                >
-                  <Mono gold>
-                    {formatRelativeStart(
-                      myNextShift.date,
-                      myNextShift.start_time,
-                    )}
-                  </Mono>
-                  <Text
-                    className="mt-2 text-2xl font-sans-bold text-t1"
-                    style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
+                {myClockItems.map((item) => (
+                  <HomeClockCard
+                    key={item.id}
+                    item={item}
+                    inBlocked={plannedInBlocked}
+                  />
+                ))}
+                {myNextShift && showMyNextShift ? (
+                  <Card
+                    className="rounded-3xl border-border-gold p-5"
+                    onPress={() =>
+                      router.push(`/(manager)/shift/${myNextShift.id}`)
+                    }
                   >
-                    {formatShiftRange(
-                      myNextShift.start_time,
-                      myNextShift.end_time,
-                    )}
-                  </Text>
-                  <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
-                    {[
-                      "Il tuo turno",
-                      myNextShift.title,
-                      venueBadge(myNextShift.venue_id)?.name,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </Text>
-                </Card>
+                    <Mono gold>
+                      {formatRelativeStart(
+                        myNextShift.date,
+                        myNextShift.start_time,
+                      )}
+                    </Mono>
+                    <Text
+                      className="mt-2 text-2xl font-sans-bold text-t1"
+                      style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}
+                    >
+                      {formatShiftRange(
+                        myNextShift.start_time,
+                        myNextShift.end_time,
+                      )}
+                    </Text>
+                    <Text className="mt-1 text-[13px] text-t2" numberOfLines={1}>
+                      {[
+                        "Il tuo turno",
+                        myNextShift.title,
+                        venueBadge(myNextShift.venue_id)?.name,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </Text>
+                  </Card>
+                ) : null}
               </View>
             ) : null}
 

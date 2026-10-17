@@ -28,8 +28,8 @@ export function DeleteAccountSection() {
   const [pending, setPending] = useState(false);
 
   const message = isOwner
-    ? "Foto, recapiti del profilo e file caricati vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative e lo storico restano alle aziende, scollegati dall'account. Se sei l'unico titolare, l'azienda si chiude: le sedi vengono chiuse e i turni futuri annullati, con una notifica al personale assegnato. Se ci sono altri titolari, esci e l'azienda continua. Al termine l'operazione non è reversibile."
-    : "Foto, recapiti del profilo e file caricati vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative, i documenti caricati da altri e lo storico restano alle aziende, scollegati dall'account. Al termine l'operazione non è reversibile.";
+    ? "Foto e recapiti del profilo vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative, i loro documenti e lo storico restano alle aziende, scollegati dall'account. Se sei l'unico titolare, l'azienda si chiude: le sedi vengono chiuse e i turni futuri annullati, con una notifica al personale assegnato. Se ci sono altri titolari, esci e l'azienda continua. Al termine l'operazione non è reversibile."
+    : "Foto e recapiti del profilo vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative, i loro documenti e lo storico restano alle aziende, scollegati dall'account. Al termine l'operazione non è reversibile.";
 
   async function onConfirm() {
     setPending(true);

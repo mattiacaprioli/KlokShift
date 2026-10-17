@@ -618,9 +618,9 @@ function DeleteAccountSection() {
       <Card className="border-error/30">
         <p className="text-sm font-semibold text-t1">Elimina l&apos;account</p>
         <p className="mt-1 text-xs leading-5 text-t3">
-          Foto, recapiti del profilo e file caricati vengono rimossi; il nome
-          del profilo diventa «Utente eliminato». Le schede nominative, i
-          documenti caricati da altri e lo storico restano alle aziende,
+          Foto e recapiti del profilo vengono rimossi; il nome del profilo
+          diventa «Utente eliminato». Le schede nominative, i loro documenti
+          e lo storico restano alle aziende,
           scollegati dall&apos;account. Al termine non potrai più accedere e
           <b> l&apos;operazione non sarà reversibile.</b>
         </p>

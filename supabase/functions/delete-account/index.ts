@@ -5,9 +5,9 @@
 //
 // Flusso: si verifica il JWT del chiamante (nessun parametro con l'id, così
 // nessuno può cancellare l'account di un altro), poi con la service_role si
-// accodano gli avatar e si esegue `public.delete_account(uuid)`. La RPC accoda
-// atomicamente i documenti prima di eliminarne i metadati e anonimizza il
-// profilo conservando lo storico altrui. La coda viene svuotata tramite le API
+// accodano gli avatar e si esegue `public.delete_account(uuid)`, che anonimizza
+// il profilo conservando lo storico altrui. I documenti delle schede aziendali
+// restano all'azienda (20261017000000). La coda viene svuotata tramite le API
 // Storage e soltanto alla fine si rimuove l'utente da auth.users.
 //
 // L'ordine conta: i riferimenti persistono finché Storage non conferma la
