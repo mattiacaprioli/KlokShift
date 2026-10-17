@@ -18,7 +18,7 @@ export default function ManagerMessaggiScreen() {
       <View className="flex-row items-center justify-between px-5 pb-2">
         <View>
           <Mono gold>Chat</Mono>
-          <Display className="mt-1 text-4xl">Messaggi</Display>
+          <Display className="mt-1 text-4xl leading-[46px]">Messaggi</Display>
         </View>
         {/* Scrivere a una persona dell'azienda senza passare dalla sua scheda. */}
         <Pressable

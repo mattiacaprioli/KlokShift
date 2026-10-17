@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import type { AgendaItem } from "@/features/assignments/agenda";
 import { formatShiftRange } from "@/lib/format";
@@ -19,13 +20,19 @@ import { effectiveClockTimes, formatClockTime, openClockBreak } from "./hours";
  * turno ancora aperta l'entrata del turno non si offre, perché le ore si
  * conterebbero due volte (la RPC la rifiuta con `clock_already_open`).
  * L'uscita di un turno già timbrato resta sempre disponibile.
+ *
+ * `onPress` apre il dettaglio del turno: in Home questo turno non si ripete
+ * sotto «Il tuo prossimo turno», quindi descrizione e colleghi si raggiungono
+ * da qui.
  */
 export function HomeClockCard({
   item,
   inBlocked = false,
+  onPress,
 }: {
   item: AgendaItem;
   inBlocked?: boolean;
+  onPress?: () => void;
 }) {
   const toast = useToast();
   const punch = usePunchClock();
@@ -63,7 +70,7 @@ export function HomeClockCard({
 
   return (
     <>
-      <Card className="rounded-3xl border-border-gold bg-bg-card p-5">
+      <Card className="rounded-3xl border-border-gold bg-bg-card p-5" onPress={onPress}>
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1">
             <Mono gold>
@@ -79,6 +86,7 @@ export function HomeClockCard({
               )}
             </Text>
           </View>
+          {onPress ? <Icon name="chevR" size={18} color="#8C857A" /> : null}
         </View>
 
         {times ? (

@@ -337,7 +337,7 @@ export default function ManagerShiftsScreen() {
   const title = (
     <View>
       <Mono gold>{isMultiVenue ? "Le tue sedi" : "La tua sede"}</Mono>
-      <Display className="mt-1 text-3xl">I tuoi turni</Display>
+      <Display className="mt-1 text-3xl leading-[38px]">I tuoi turni</Display>
     </View>
   );
 

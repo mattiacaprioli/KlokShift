@@ -47,7 +47,7 @@ export function ScreenHeader({
       </Pressable>
       <View className="flex-1">
         <Mono gold={goldEyebrow}>{eyebrow}</Mono>
-        <Display className={cn("mt-1 text-3xl", titleClassName)}>{title}</Display>
+        <Display className={cn("mt-1 text-3xl leading-[38px]", titleClassName)}>{title}</Display>
       </View>
       {right}
     </View>

@@ -86,9 +86,13 @@ export default function WaiterHomeScreen() {
     (a) => a.status === "assigned"
   ).length;
 
-  const next = upcomingItems[0];
+  // Il turno che si sta timbrando sta già nella sezione Timbratura (e la sua
+  // card apre il dettaglio): qui riparte dal successivo, non lo ripete.
+  const clockIds = new Set(clockItems.map((item) => item.id));
+  const laterItems = upcomingItems.filter((item) => !clockIds.has(item.id));
+  const next = laterItems[0];
   // Il primo sta già nella card grande: la lista sotto riprende da lì.
-  const following = upcomingItems.slice(1, 1 + PREVIEW_COUNT);
+  const following = laterItems.slice(1, 1 + PREVIEW_COUNT);
 
   function onConfirm(id: string) {
     respond.mutate(
@@ -127,7 +131,7 @@ export default function WaiterHomeScreen() {
       >
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
-          <Display className="mt-1 text-4xl">
+          <Display className="mt-1 text-4xl leading-[46px]">
             {firstName ? `Ciao, ${firstName}` : "Ciao"}
           </Display>
         </View>
@@ -187,13 +191,17 @@ export default function WaiterHomeScreen() {
                   key={item.id}
                   item={item}
                   inBlocked={plannedInBlocked}
+                  onPress={() => router.push(`/(waiter)/shift/${item.shift.id}`)}
                 />
               ))}
+              {/* Accanto a un turno da timbrare il fuori turno è l'eccezione:
+                  una riga, non una seconda card. Aperto resta una card. */}
               {unplanned.map((entry) => (
                 <UnplannedClockCard
                   key={entry.venueMemberId}
                   entry={entry}
                   canStart={canStartUnplanned(entry.venueMemberId)}
+                  compact={clockItems.length > 0}
                 />
               ))}
               {/* Senza questa lettura non si sa se c'è un'entrata aperta da
@@ -221,7 +229,11 @@ export default function WaiterHomeScreen() {
             <QueryError onRetry={() => assignedQuery.refetch()} />
           ) : next == null ? (
             <EmptyState
-              title="Nessun turno in programma"
+              title={
+                clockItems.length > 0
+                  ? "Nessun altro turno in programma"
+                  : "Nessun turno in programma"
+              }
               subtitle="Quando una sede ti assegna un turno lo trovi qui."
             />
           ) : (

@@ -408,7 +408,7 @@ export default function WaiterShiftsScreen() {
                         : "Nessun turno nella settimana"
                       : `${items.length} in programma`}
               </Mono>
-              <Display className="mt-1 text-3xl">
+              <Display className="mt-1 text-3xl leading-[38px]">
                 {mode === "venue" ? "Turni della sede" : "I miei turni"}
               </Display>
             </View>

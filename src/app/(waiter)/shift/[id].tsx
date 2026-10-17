@@ -217,30 +217,35 @@ export default function WaiterShiftDetailScreen() {
 
   return (
     <View className="flex-1 bg-bg-0">
-      <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
+      {/* Un'unica riga in alto, come `ScreenHeader`: indietro, sede, turno. */}
+      <View
+        className="shrink-0 flex-row items-center gap-3 px-5 pb-5"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
-          className="mb-5 h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+          className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
           <Icon name="chevL" size={22} color="#F8F4ED" />
         </Pressable>
-
-        <View className="flex-row items-center gap-3.5">
-          <View
-            style={{
-              borderWidth: 2,
-              borderColor: "rgba(234,181,76,0.5)",
-              borderRadius: 999,
-              padding: 2,
-            }}
-          >
-            <Avatar uri={shift.venue?.logo_url} name={venueName} size={52} />
-          </View>
-          <View className="flex-1">
-            <Display className="text-2xl">{venueName}</Display>
-            <Text className="mt-0.5 text-sm text-t3">{shift.title}</Text>
-          </View>
+        <View
+          style={{
+            borderWidth: 2,
+            borderColor: "rgba(234,181,76,0.5)",
+            borderRadius: 999,
+            padding: 2,
+          }}
+        >
+          <Avatar uri={shift.venue?.logo_url} name={venueName} size={40} />
+        </View>
+        <View className="flex-1">
+          <Display className="text-xl" numberOfLines={1}>
+            {venueName}
+          </Display>
+          <Text className="text-sm text-t3" numberOfLines={1}>
+            {shift.title}
+          </Text>
         </View>
       </View>
 

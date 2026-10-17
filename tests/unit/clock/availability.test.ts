@@ -4,6 +4,7 @@ import {
   blocksPlannedClockIn,
   blocksUnplannedClock,
   canStartUnplannedClock,
+  hasOpenPlannedClock,
   homeClockState,
   isClockWindowOpen,
 } from "../../../src/features/clock/availability";
@@ -198,5 +199,22 @@ describe("canStartUnplannedClock (C14)", () => {
 
   it("non la propone con un turno pianificato in corso sulla stessa scheda", () => {
     expect(canStartUnplannedClock([onCard("vm")], "vm", at)).toBe(false);
+  });
+  // Istanti costruiti in ora locale: la CI gira in UTC.
+  const iso = (local: string) => new Date(local).toISOString();
+  const clocked = (inAt: string, outAt?: string) =>
+    ({ ...item({ inAt: iso(inAt), outAt: outAt && iso(outAt) }), venue_member_id: "other" }) as AgendaItem;
+
+  it("non la propone in servizio su un turno, nemmeno di un'altra sede (clock_already_open)", () => {
+    const open = clocked("2026-09-24T18:30:00");
+    expect(hasOpenPlannedClock([open], at)).toBe(true);
+    expect(canStartUnplannedClock([open], "vm", at)).toBe(false);
+  });
+
+  it("la ripropone dopo l'uscita, e ignora un'entrata aperta da più di 24 ore", () => {
+    const closed = clocked("2026-09-24T12:00:00", "2026-09-24T16:00:00");
+    const forgotten = clocked("2026-09-23T18:00:00");
+    expect(hasOpenPlannedClock([closed, forgotten], at)).toBe(false);
+    expect(canStartUnplannedClock([closed, forgotten], "vm", at)).toBe(true);
   });
 });

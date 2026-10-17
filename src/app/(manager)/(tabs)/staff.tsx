@@ -135,7 +135,7 @@ export default function ManagerStaffScreen() {
         style={{ paddingTop: insets.top + 12 }}
       >
         <Mono gold>Organico</Mono>
-        <Display className="mt-1 text-4xl">Il mio staff</Display>
+        <Display className="mt-1 text-4xl leading-[46px]">Il mio staff</Display>
         {isMultiVenue && people.length > 0 ? (
           <Text className="mt-1 text-sm text-t3">
             {people.length === 1

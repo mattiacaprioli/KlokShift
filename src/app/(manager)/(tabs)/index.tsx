@@ -296,7 +296,7 @@ export default function ManagerHome() {
       >
         <View className="flex-1">
           <Mono gold>La tua area</Mono>
-          <Display className="mt-1 text-4xl">
+          <Display className="mt-1 text-4xl leading-[46px]">
             {firstName ? `Ciao, ${firstName}` : "Ciao"}
           </Display>
           {/* Non più uno switcher: non c'è più una sede da scegliere. Con un

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import { Text, View } from "@/tw";
+import { Pressable, Text, View } from "@/tw";
 import type { MyUnplannedClock } from "./api";
 import { ClockBreakButton } from "./ClockBreakButton";
 import { useClockBreaks, usePunchUnplannedClock } from "./hooks";
@@ -25,13 +25,19 @@ import { formatClockTime } from "./hours";
  * `canStart` è falso quando c'è già un turno pianificato da timbrare: si timbra
  * quello, e la RPC lo rifiuterebbe comunque (`clock_planned_shift`). Un'entrata
  * già aperta invece si mostra sempre, perché l'uscita va offerta.
+ *
+ * `compact`: sotto la card di un turno da timbrare il fuori turno è l'eccezione,
+ * quindi è una riga e non una seconda card che compete con quella. Toccata,
+ * apre lo stesso modulo della card intera.
  */
 export function UnplannedClockCard({
   entry,
   canStart,
+  compact = false,
 }: {
   entry: MyUnplannedClock;
   canStart: boolean;
+  compact?: boolean;
 }) {
   const toast = useToast();
   const punch = usePunchUnplannedClock();
@@ -79,6 +85,38 @@ export function UnplannedClockCard({
           );
         },
       }
+    );
+  }
+
+  const confirmModal = (
+    <ConfirmModal
+      visible={confirming != null}
+      title={
+        confirming === "out" ? "Timbrare l’uscita?" : "Timbrare l’entrata?"
+      }
+      message={`Verrà registrato l’orario corrente del server per ${entry.venueName}.`}
+      confirmLabel={
+        confirming === "out" ? "Timbra uscita" : "Timbra entrata"
+      }
+      pending={punch.isPending}
+      onConfirm={doPunch}
+      onCancel={() => setConfirming(null)}
+    />
+  );
+
+  if (compact && !open && !preparing) {
+    return (
+      <Pressable
+        onPress={() => setPreparing(true)}
+        accessibilityRole="button"
+        hitSlop={6}
+        className="px-1 py-1"
+      >
+        <Text className="text-sm text-t3">
+          Lavori fuori turno a {entry.venueName}?{" "}
+          <Text className="font-sans-semibold text-gold">Timbra senza turno</Text>
+        </Text>
+      </Pressable>
     );
   }
 
@@ -185,20 +223,7 @@ export function UnplannedClockCard({
           </>
         )}
       </Card>
-
-      <ConfirmModal
-        visible={confirming != null}
-        title={
-          confirming === "out" ? "Timbrare l’uscita?" : "Timbrare l’entrata?"
-        }
-        message={`Verrà registrato l’orario corrente del server per ${entry.venueName}.`}
-        confirmLabel={
-          confirming === "out" ? "Timbra uscita" : "Timbra entrata"
-        }
-        pending={punch.isPending}
-        onConfirm={doPunch}
-        onCancel={() => setConfirming(null)}
-      />
+      {confirmModal}
     </>
   );
 }

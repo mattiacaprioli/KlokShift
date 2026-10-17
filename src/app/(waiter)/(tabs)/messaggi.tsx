@@ -18,7 +18,7 @@ export default function WaiterMessaggiScreen() {
       <View className="flex-row items-center justify-between px-5 pb-2">
         <View>
           <Mono gold>Chat</Mono>
-          <Display className="mt-1 text-4xl">Messaggi</Display>
+          <Display className="mt-1 text-4xl leading-[46px]">Messaggi</Display>
         </View>
         {/* Scrivere a un collega, o a chi gestisce, senza passare da un turno. */}
         <Pressable

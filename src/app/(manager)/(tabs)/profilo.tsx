@@ -251,7 +251,7 @@ export default function ManagerProfiloScreen() {
                 <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={104} />
               </View>
               <View className="items-center gap-1.5">
-                <Display className="text-4xl">{venue.name}</Display>
+                <Display className="text-4xl leading-[46px]">{venue.name}</Display>
                 {venue.city ? (
                   <Text className="text-sm text-t2">{venue.city}</Text>
                 ) : null}

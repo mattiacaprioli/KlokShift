@@ -94,11 +94,37 @@ export function blocksUnplannedClock(
   return now.getTime() >= from && now.getTime() < to;
 }
 
+/** Per quanto un'entrata ancora aperta blocca un'altra entrata. */
+export const UNPLANNED_OPEN_BLOCK_HOURS = 24;
+
+/**
+ * C'è un turno pianificato timbrato in entrata e non ancora in uscita? Gemello
+ * **manuale** del controllo `clock_already_open` in `clock_punch_unplanned`
+ * (20261010000000): un'entrata aperta da meno di 24 ore, in qualunque sede o
+ * azienda, impedisce l'entrata senza turno. Il server misura le 24 ore
+ * sull'entrata timbrata e guarda l'uscita corretta: qui lo stesso.
+ */
+export function hasOpenPlannedClock(
+  items: readonly AgendaItem[],
+  now: Date = new Date()
+): boolean {
+  const since = now.getTime() - UNPLANNED_OPEN_BLOCK_HOURS * 3_600_000;
+  return items.some(
+    (item) =>
+      item.clock != null &&
+      effectiveClockTimes(item.clock).outAt == null &&
+      new Date(item.clock.clock_in_at).getTime() > since
+  );
+}
+
 /**
  * Si può proporre adesso l'entrata senza turno su questa scheda? `items`
  * `undefined` = i turni assegnati non sono ancora arrivati (caricamento o
  * errore): una lista che manca non vuol dire «nessun turno da timbrare», e il
  * dato mancante non sblocca.
+ *
+ * No se si è già in servizio su un turno (di qualunque sede), no se un turno
+ * della stessa scheda si timbra adesso: le due regole della RPC.
  */
 export function canStartUnplannedClock(
   items: readonly AgendaItem[] | undefined,
@@ -106,14 +132,12 @@ export function canStartUnplannedClock(
   now: Date = new Date()
 ): boolean {
   if (!items) return false;
+  if (hasOpenPlannedClock(items, now)) return false;
   return !items.some(
     (item) =>
       item.venue_member_id === venueMemberId && blocksUnplannedClock(item, now)
   );
 }
-
-/** Per quanto un'entrata senza turno aperta blocca ancora l'entrata di un turno. */
-export const UNPLANNED_OPEN_BLOCK_HOURS = 24;
 
 /**
  * Un'entrata senza turno ancora aperta impedisce adesso di timbrare l'entrata
