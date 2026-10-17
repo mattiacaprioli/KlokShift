@@ -39,6 +39,7 @@ type MyEmployer = {
   workspaceId: string;
   venueId: string;
   venueName: string;
+  logoUrl: string | null;
   employment_type: Membership["works"][number]["employment_type"];
 };
 
@@ -53,6 +54,8 @@ function employersOf(memberships: Membership[]): MyEmployer[] {
         workspaceId: m.workspace_id,
         venueId: w.venue_id,
         venueName: w.venue_name,
+        // `?? null`: un contesto in cache da prima della migration 20261017000100.
+        logoUrl: w.logo_url ?? null,
         employment_type: w.employment_type,
       }))
     );
@@ -120,7 +123,7 @@ function EmployerVenueRow({
           !standalone && "border-t border-border pt-3"
         )}
       >
-        <Avatar name={venueName} size={40} />
+        <Avatar uri={employer.logoUrl ?? undefined} name={venueName} size={40} />
         <View className="flex-1">
           <Text className="text-base font-sans-bold text-t1">{venueName}</Text>
         </View>

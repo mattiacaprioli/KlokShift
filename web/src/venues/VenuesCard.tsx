@@ -17,9 +17,9 @@ import { Button, Card } from "../ui/primitives";
  * Il pallino colorato è lo stesso con cui quella sede si riconosce nel planning —
  * questo è l'unico posto in cui quella legenda si può imparare.
  *
- * Con una sede sola la sua scheda è già la pagina (`SedePage`): ripeterla qui
- * sotto come riga era un doppione, quindi resta solo l'invito ad aggiungerne
- * un'altra.
+ * Con una sede sola la sua scheda è già la pagina (`SedePage`), e «Aggiungi
+ * sede» sta nell'intestazione: qui restano solo le sedi chiuse da riaprire, e
+ * se non ce ne sono la card non si vede.
  */
 export function VenuesCard() {
   const { session } = useAuth();
@@ -43,31 +43,22 @@ export function VenuesCard() {
   }
 
   const single = venues.length === 1;
+  if (single && closed.length === 0) return null;
 
   return (
     <Card>
-      <div className="flex items-center justify-between gap-4">
-        {single ? (
-          <span className="min-w-0">
-            <span className="block text-xs font-semibold uppercase tracking-wider text-t3">
-              Altre sedi
-            </span>
-            <span className="mt-1 block text-xs text-t4">
-              Hai più di una sede? Aggiungila: organico e turni restano in
-              un’unica azienda.
-            </span>
-          </span>
-        ) : (
+      {single ? null : (
+        <div className="flex items-center justify-between gap-4">
           <span className="text-xs font-semibold uppercase tracking-wider text-t3">
             Le tue sedi · {venues.length}
           </span>
-        )}
-        {isOwner ? (
-          <Button onClick={() => navigate("/sede/nuovo")}>
-            + Aggiungi sede
-          </Button>
-        ) : null}
-      </div>
+          {isOwner ? (
+            <Button onClick={() => navigate("/sede/nuovo")}>
+              + Aggiungi sede
+            </Button>
+          ) : null}
+        </div>
+      )}
 
       {single ? null : (
         <ul className="mt-3 flex flex-col gap-2">
@@ -106,7 +97,7 @@ export function VenuesCard() {
       )}
 
       {closed.length > 0 ? (
-        <details className="mt-4">
+        <details className={single ? undefined : "mt-4"}>
           <summary className="cursor-pointer text-xs text-t3">
             Sedi chiuse · {closed.length}
           </summary>

@@ -1,10 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
 import { VenueCard } from "../venues/VenueCard";
 import { VenuesCard } from "../venues/VenuesCard";
-import { BreakPolicyCard } from "../venues/BreakPolicyCard";
-import { ClockMethodCard } from "../venues/ClockMethodCard";
-import { PageHeader } from "../ui/primitives";
+import { Button, PageHeader } from "../ui/primitives";
 
 /**
  * Le sedi del titolare.
@@ -16,6 +15,7 @@ import { PageHeader } from "../ui/primitives";
  */
 export function SedePage() {
   const { venues, can, canAny, isOwner } = useOwnerVenues();
+  const navigate = useNavigate();
 
   if (venues.length === 0) {
     return (
@@ -40,9 +40,18 @@ export function SedePage() {
         <PageHeader
           title="Sede"
           subtitle={
-            editable
-              ? "Qui trovi i dati della sede. Usa Modifica per aggiornare dati e impostazioni."
+            editable || clockEditable
+              ? "Come si presenta la sede e come ci si lavora."
               : "Questi dati sono ciò che i professionisti vedono della sede."
+          }
+          // Con una sede sola l'elenco ripeterebbe la scheda: resta l'azione.
+          // Aprire una sede non si delega, quindi solo al titolare.
+          actions={
+            isOwner ? (
+              <Button onClick={() => navigate("/sede/nuovo")}>
+                + Aggiungi sede
+              </Button>
+            ) : null
           }
         />
         <VenueCard
@@ -50,21 +59,9 @@ export function SedePage() {
           editable={editable}
           clockEditable={clockEditable}
         />
-        {/* Chi può gestire i dati trova queste impostazioni dentro «Modifica».
-            Un collaboratore con il solo permesso Ore deve però conservarne
-            l'accesso anche se non può aprire il modulo anagrafico. */}
-        {!editable && clockEditable ? (
-          <>
-            <ClockMethodCard venue={venues[0]} />
-            <BreakPolicyCard venue={venues[0]} />
-          </>
-        ) : null}
-        {/* Con una sede sola l'elenco ripeterebbe la scheda che sta già sopra:
-            `VenuesCard` allora non la elenca e resta solo «Aggiungi sede» (e le
-            sedi chiuse da riaprire). Al titolare serve, a un collaboratore no:
-            aprire una sede non si delega. */}
+        {/* Le sedi chiuse da riaprire, se ce ne sono. */}
         {isOwner ? (
-          <div className="mt-6 max-w-2xl">
+          <div className="mt-8 max-w-4xl">
             <VenuesCard />
           </div>
         ) : null}

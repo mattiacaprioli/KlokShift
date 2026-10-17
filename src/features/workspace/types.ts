@@ -30,6 +30,7 @@ export type ContextWork = {
   venue_member_id: string;
   venue_id: string;
   venue_name: string;
+  logo_url: string | null;
   employment_type: EmploymentType;
 };
 

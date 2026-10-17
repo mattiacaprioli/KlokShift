@@ -11,23 +11,33 @@ import { ClockMethodCard } from "./ClockMethodCard";
 import { PlanningVisibilityCard } from "./PlanningVisibilityCard";
 import { VenueFormCard } from "./VenueFormCard";
 
-type TabId = "dati" | "timbrature" | "pausa" | "organico";
+export type VenueEditTab = "dati" | "timbrature" | "pausa" | "organico";
 
-/** Come la scheda staff: altezza stabile e form montati anche nei tab nascosti. */
+/**
+ * Come la scheda staff: altezza stabile e form montati anche nei tab nascosti.
+ *
+ * Si apre sulla scheda da cui si è partiti (`initialTab`): ogni sezione della
+ * pagina Sede ha il suo «Modifica». Chi ha solo il permesso Ore vede soltanto
+ * Timbrature e Pausa — i dati e l'organico sono `can_manage_venue`.
+ */
 export function VenueEditDialog({
   venue,
+  canManageVenue,
   canManageHours,
+  initialTab = "dati",
   onClose,
   onSaved,
 }: {
   venue: Venue;
+  canManageVenue: boolean;
   canManageHours: boolean;
+  initialTab?: VenueEditTab;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const id = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState<TabId>("dati");
+  const [selected, setSelected] = useState<VenueEditTab>(initialTab);
   const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<string>>(new Set());
   const [confirmClose, setConfirmClose] = useState(false);
   const reportUnsaved = useCallback((key: string, dirty: boolean) => {
@@ -44,17 +54,17 @@ export function VenueEditDialog({
     else onClose();
   }, [dirtyKeys, onClose]);
 
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "dati", label: "Dati sede" },
+  const tabs: { id: VenueEditTab; label: string }[] = [
+    ...(canManageVenue ? [{ id: "dati" as const, label: "Dati sede" }] : []),
     ...(canManageHours
       ? [
           { id: "timbrature" as const, label: "Timbrature" },
           { id: "pausa" as const, label: "Pausa" },
         ]
       : []),
-    { id: "organico", label: "Organico" },
+    ...(canManageVenue ? [{ id: "organico" as const, label: "Organico" }] : []),
   ];
-  const tab = tabs.some((item) => item.id === selected) ? selected : "dati";
+  const tab = tabs.some((item) => item.id === selected) ? selected : tabs[0].id;
 
   useEffect(() => {
     const previousFocus = document.activeElement;
@@ -178,7 +188,9 @@ export function VenueEditDialog({
             ))}
           </div>
           <p className="shrink-0 border-t border-border px-6 py-4 text-xs leading-5 text-t3">
-            I dati della sede si salvano con «Salva modifiche». Logo e impostazioni si salvano subito.
+            {canManageVenue
+              ? "I dati della sede si salvano con «Salva modifiche». Logo e impostazioni si salvano subito."
+              : "Le impostazioni si salvano subito."}
           </p>
         </div>
       </div>

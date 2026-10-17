@@ -2,8 +2,6 @@ import { DetailSkeleton } from "../ui/Skeleton";
 import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueCard } from "../venues/VenueCard";
-import { BreakPolicyCard } from "../venues/BreakPolicyCard";
-import { ClockMethodCard } from "../venues/ClockMethodCard";
 import {
   Button,
   PageHeader,
@@ -59,8 +57,8 @@ export function SedeDettaglioPage() {
       <PageHeader
         title={venue.name}
         subtitle={
-          editable
-            ? "Qui trovi i dati della sede. Usa Modifica per aggiornare dati e impostazioni."
+          editable || clockEditable
+            ? "Come si presenta la sede e come ci si lavora."
             : "Questi dati sono ciò che i professionisti vedono della sede."
         }
         actions={back}
@@ -71,13 +69,6 @@ export function SedeDettaglioPage() {
         editable={editable}
         clockEditable={clockEditable}
       />
-      {/* Il fallback resta solo per chi gestisce Ore ma non i dati sede. */}
-      {!editable && clockEditable ? (
-        <>
-          <ClockMethodCard venue={venue} />
-          <BreakPolicyCard venue={venue} />
-        </>
-      ) : null}
     </>
   );
 }
