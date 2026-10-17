@@ -30,6 +30,11 @@ import {
   setAbsenceHourCredits,
   withdrawAbsence,
 } from "./api";
+import {
+  periodBounds,
+  periodKey,
+  type ReportPeriod,
+} from "@/features/assignments/reportPeriod";
 
 export function useAbsenceHourCredits(absenceId: string | undefined) {
   return useQuery({
@@ -263,11 +268,11 @@ export function useRemoveFromShifts() {
  */
 export function useOwnerAbsenceSummary(
   workspaceId: string | undefined,
-  month: string
+  period: ReportPeriod
 ) {
   return useQuery({
-    queryKey: qk.absences.summary(workspaceId ?? "", month),
-    queryFn: () => getOwnerAbsenceSummary(workspaceId as string, month),
+    queryKey: qk.absences.summary(workspaceId ?? "", periodKey(period)),
+    queryFn: () => getOwnerAbsenceSummary(workspaceId as string, periodBounds(period)),
     enabled: !!workspaceId,
   });
 }

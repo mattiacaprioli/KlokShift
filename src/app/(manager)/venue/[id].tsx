@@ -24,7 +24,7 @@ export default function VenueEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
-  const { workspaceId, venues, can, isLoading, isError, refetch } =
+  const { workspaceId, venues, can, isOwner, isLoading, isError, refetch } =
     useOwnerVenues();
   const close = useSetVenueClosed(workspaceId ?? "");
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -103,11 +103,16 @@ export default function VenueEditScreen() {
             {canEditClock ? <VenueClockMethodCard venue={venue} /> : null}
             {canEditClock ? <VenueBreakCard venue={venue} /> : null}
             <VenuePlanningToggle venue={venue} ownerId={workspaceId ?? ""} />
-            <GhostButton
-              label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}
-              disabled={close.isPending}
-              onPress={() => setConfirmVisible(true)}
-            />
+            {/* Solo il titolare: `set_venue_closed` accetta lui e basta, e a
+                un collaboratore con «Dati della sede» il pulsante finiva in
+                «Impossibile chiudere la sede». */}
+            {isOwner ? (
+              <GhostButton
+                label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}
+                disabled={close.isPending}
+                onPress={() => setConfirmVisible(true)}
+              />
+            ) : null}
           </View>
         }
       />
@@ -118,8 +123,10 @@ export default function VenueEditScreen() {
         // cancellare la riga cascaterebbe su turni, organico, assegnazioni e
         // ruoli, distruggendo ore già lavorate da altre persone. Chiudere lo
         // toglie dalla circolazione e lascia tutto consultabile.
-        message="Sparisce dallo switcher e non potrai più programmarci turni. Lo storico di turni e ore resta consultabile, e puoi riaprirlo quando vuoi."
+        message="Sparisce dalla programmazione e non potrai più crearci turni. Lo storico di turni e ore resta consultabile, e puoi riaprirla quando vuoi dal Profilo, in «Sedi chiuse»."
         confirmLabel="Chiudi sede"
+        destructive
+        pending={close.isPending}
         onConfirm={doClose}
         onCancel={() => setConfirmVisible(false)}
       />

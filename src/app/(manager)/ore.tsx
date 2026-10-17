@@ -11,11 +11,14 @@ import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { Segmented } from "@/components/ui/Segmented";
+import { ChipRow, FilterChip } from "@/components/ui/FilterChip";
+import { PickerField } from "@/components/form/ControlledPicker";
 import {
   addMonthsToKey,
   formatHours,
-  formatMonthKey,
   monthKey,
+  toDateString,
 } from "@/lib/format";
 import {
   exportAbsencesCsv,
@@ -33,21 +36,34 @@ import {
   exportAvailability,
   monthlyReportRows,
 } from "@/features/assignments/monthlyReport";
+import {
+  filterByPeople,
+  monthAsRange,
+  peopleInReport,
+  periodLabel,
+  pruneSelection,
+  selectedNames,
+  togglePerson,
+  validateRange,
+  type ReportPeriod,
+} from "@/features/assignments/reportPeriod";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import {
   ABSENCE_SUMMARY_NOTE,
   formatSummaryDays,
 } from "@/features/absences/summary";
 
-// Le regole del mese (ora locale, spostamenti) sono in `lib/format`, le stesse
-// della dashboard. Qui solo l'iniziale maiuscola dell'intestazione.
-function monthLabel(month: string): string {
-  const label = formatMonthKey(month);
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
+const PERIOD_MODES = [
+  { id: "month", label: "Mese" },
+  { id: "range", label: "Date" },
+] as const;
+
+const asDate = (d: string) => new Date(`${d}T00:00:00`);
 
 /**
- * Le ore del mese di **tutta l'azienda**, una riga per persona.
+ * Le ore di **tutta l'azienda** in un mese o fra due date, una riga per
+ * persona; si può restringere a una persona o a un gruppo. Periodo e persone
+ * valgono per la pagina **e** per gli export: il file è quello che si vede.
  *
  * Nessun selettore di sede e nessuno split: chi lavora in due sedi dello stesso
  * titolare ha **una** busta paga, e il numero che serve è il totale. Fino al
@@ -65,17 +81,38 @@ export default function VenueHoursScreen() {
 
   const [month, setMonth] = useState(monthKey());
   const atCurrentMonth = month >= monthKey();
+  const [mode, setMode] = useState<"month" | "range">("month");
+  // `range` è quello nei campi, `applied` l'ultimo valido: con le date
+  // sbagliate la pagina resta sul periodo di prima, niente query a vuoto.
+  const [range, setRange] = useState(() => monthAsRange(monthKey()));
+  const [applied, setApplied] = useState(range);
+  const [chosen, setChosen] = useState<string[] | null>(null);
+  const rangeError = mode === "range" ? validateRange(range.from, range.to) : null;
+  const period: ReportPeriod =
+    mode === "month" ? { kind: "month", month } : { kind: "range", ...applied };
 
-  const query = useOwnerHoursSummary(workspaceId, month);
-  const rows = query.data ?? [];
+  function editRange(next: { from: string; to: string }) {
+    setRange(next);
+    if (!validateRange(next.from, next.to)) setApplied(next);
+  }
+
+  const query = useOwnerHoursSummary(workspaceId, period);
+  const absenceQuery = useOwnerAbsenceSummary(workspaceId, period);
+  const allRows = query.data ?? [];
+  const allAbsences = absenceQuery.data ?? [];
+  // Si sceglie fra chi nel periodo ha ore o assenze; chi non c'è più esce
+  // dalla selezione da solo.
+  const options = peopleInReport(allRows, allAbsences);
+  const selection = pruneSelection(chosen, options);
+  const names = selectedNames(selection, options);
+  const rows = filterByPeople(allRows, selection);
   // La RPC torna righe (persona × sede); `groupHoursByPerson` le somma per
   // persona, ed è quello che si mostra. **Lo split per sede non si espone più**:
   // la busta paga è una, e quante ore di quel totale siano state fatte a Roma
   // invece che a Milano non è una domanda che questa pagina deve rispondere.
   const people = groupHoursByPerson(rows);
-  // Ferie, permessi e malattia del mese: ore nel consuntivo, giorni nel dettaglio.
-  const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
-  const absences = absenceQuery.data ?? [];
+  // Ferie, permessi e malattia del periodo: ore nel consuntivo, giorni nel dettaglio.
+  const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
   const canExport = exportAvailability({
     hoursReady: query.isSuccess,
@@ -91,18 +128,18 @@ export default function VenueHoursScreen() {
   const totalUntracked = report.reduce((s, p) => s + p.untracked_hours, 0);
   const totalShifts = people.reduce((s, p) => s + p.shifts_count, 0);
   const maxHours = people.reduce((m, p) => Math.max(m, p.hours), 0);
-  const label = monthLabel(month);
+  const label = periodLabel(period);
 
   async function onExport(kind: "pdf" | "csv" | "absences") {
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
       const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
-        await exportHoursPdf(company, label, people, totalHours, absences);
+        await exportHoursPdf(company, label, people, totalHours, absences, names);
       } else if (kind === "csv") {
-        await exportHoursCsv(company, label, people, absences);
+        await exportHoursCsv(company, label, people, absences, names);
       } else {
-        await exportAbsencesCsv(company, label, absences);
+        await exportAbsencesCsv(company, label, absences, names);
       }
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
@@ -112,7 +149,7 @@ export default function VenueHoursScreen() {
   return (
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Organico" title="Ore del mese" />
+        <ScreenHeader eyebrow="Organico" title="Ore" />
       </View>
 
       <ScrollView
@@ -123,7 +160,40 @@ export default function VenueHoursScreen() {
           gap: 20,
         }}
       >
-        {/* Selettore mese — pillola unica per non confondersi col back */}
+        {/* Mese (il caso di tutti i mesi) o due date libere, per mandare al
+            consulente anche una quindicina o un periodo a cavallo. */}
+        <Segmented
+          options={PERIOD_MODES}
+          value={mode}
+          onChange={(id) => {
+            // Si entra in «Date» dal mese che si stava guardando.
+            if (id === "range" && mode === "month") editRange(monthAsRange(month));
+            setMode(id);
+          }}
+        />
+
+        {mode === "range" ? (
+          <View className="gap-3">
+            <PickerField
+              mode="date"
+              label="Dal"
+              value={asDate(range.from)}
+              onChange={(d) => editRange({ ...range, from: toDateString(d) })}
+            />
+            <PickerField
+              mode="date"
+              label="Al"
+              value={asDate(range.to)}
+              onChange={(d) => editRange({ ...range, to: toDateString(d) })}
+            />
+            {rangeError ? (
+              <Text className="text-xs text-error">{rangeError}</Text>
+            ) : (
+              <Text className="text-xs text-t3">{label}</Text>
+            )}
+          </View>
+        ) : (
+        /* Selettore mese — pillola unica per non confondersi col back */
         <View className="self-center flex-row items-center rounded-full border border-border-2 bg-bg-1">
           <Pressable
             onPress={() => setMonth((m) => addMonthsToKey(m, -1))}
@@ -148,6 +218,28 @@ export default function VenueHoursScreen() {
             <Icon name="chevR" size={18} color="#EAB54C" />
           </Pressable>
         </View>
+        )}
+
+        {/* Una persona o un gruppo, per mandare al consulente solo loro. */}
+        {options.length > 1 ? (
+          <ChipRow label="Persone">
+            <FilterChip
+              label="Tutte"
+              active={!selection}
+              onPress={() => setChosen(null)}
+            />
+            {options.map((o) => (
+              <FilterChip
+                key={o.id}
+                label={o.name}
+                active={!!selection?.includes(o.id)}
+                onPress={() =>
+                  setChosen(togglePerson(selection, o.id, options.length))
+                }
+              />
+            ))}
+          </ChipRow>
+        ) : null}
 
         {query.isLoading || absenceQuery.isLoading ? (
           <ListSkeleton variant="person" label="Caricamento ore…" />
@@ -168,7 +260,7 @@ export default function VenueHoursScreen() {
             {report.length > 0 ? (
               <>
                 <Card className="rounded-3xl border-border-2 px-5 py-4">
-                  <Mono>Riepilogo mese</Mono>
+                  <Mono>{selection ? "Riepilogo delle persone scelte" : "Riepilogo del periodo"}</Mono>
                   <View className="mt-3 flex-row flex-wrap gap-4">
                     <View><Text className="text-xs text-t3">Ore Lavorate Effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
                     <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
@@ -217,7 +309,7 @@ export default function VenueHoursScreen() {
             {absences.length > 0 ? (
               <View className="gap-3">
                 <View>
-                  <Mono gold>Assenze del mese</Mono>
+                  <Mono gold>Assenze del periodo</Mono>
                   <Text className="mt-1 text-xs leading-4 text-t3">
                     {ABSENCE_SUMMARY_NOTE}
                   </Text>

@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
-import { useAuth } from "@/lib/auth";
 import {
   useMyClosedVenues,
   useSetVenueClosed,
@@ -22,13 +21,14 @@ import { Button, Card } from "../ui/primitives";
  * se non ce ne sono la card non si vede.
  */
 export function VenuesCard() {
-  const { session } = useAuth();
-  const ownerId = session!.user.id;
   // Aprire una sede resta del titolare: un collaboratore vede l'elenco, non il
   // bottone. La difesa vera è il trigger `venues_owner_not_delegate`.
-  const { venues, isOwner } = useOwnerVenues();
-  const closed = useMyClosedVenues(ownerId).data ?? [];
-  const setClosed = useSetVenueClosed(ownerId);
+  // ⚠️ Le sedi chiuse sono dell'**azienda**: fino al 17/10/2026 qui passava
+  // l'id dell'account, la query cercava `workspace_id = <utente>` e «Sedi
+  // chiuse» restava vuota per sempre — una sede chiusa non si riapriva più.
+  const { venues, isOwner, workspaceId } = useOwnerVenues();
+  const closed = useMyClosedVenues(workspaceId ?? "").data ?? [];
+  const setClosed = useSetVenueClosed(workspaceId ?? "");
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -36,13 +36,15 @@ export function VenuesCard() {
     setClosed.mutate(
       { venueId, closed: false },
       {
-        onSuccess: () => toast.show(`${name} riaperto`),
+        onSuccess: () => toast.show(`${name} riaperta`),
         onError: () => toast.show("Impossibile riaprire. Riprova.", "error"),
       }
     );
   }
 
-  const single = venues.length === 1;
+  // Con zero o una sede aperta «Aggiungi sede» sta già sulla pagina: qui
+  // restano solo le sedi chiuse.
+  const single = venues.length <= 1;
   if (single && closed.length === 0) return null;
 
   return (

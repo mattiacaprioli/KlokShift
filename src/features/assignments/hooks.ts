@@ -13,6 +13,7 @@ import {
   invalidateWorkViews,
 } from "@/features/shifts/invalidation";
 import type { InternalShiftPlan } from "./api";
+import { periodBounds, periodKey, type ReportPeriod } from "./reportPeriod";
 import {
   createInternalShift,
   createInternalShifts,
@@ -408,11 +409,11 @@ export function usePersonWorkedShifts(
  */
 export function useOwnerHoursSummary(
   workspaceId: string | undefined,
-  month: string
+  period: ReportPeriod
 ) {
   return useQuery({
-    queryKey: qk.staff.ownerHours(workspaceId ?? "", month),
-    queryFn: () => getOwnerHoursSummary(workspaceId as string, month),
+    queryKey: qk.staff.ownerHours(workspaceId ?? "", periodKey(period)),
+    queryFn: () => getOwnerHoursSummary(workspaceId as string, periodBounds(period)),
     enabled: !!workspaceId,
   });
 }

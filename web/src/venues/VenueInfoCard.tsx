@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
-import type { Venue } from "@/features/venues/api";
 import {
   clockMethodDescription,
   clockMethodLabel,
 } from "@/features/clock/methods";
+import type { Venue } from "@/features/venues/api";
 import { cn } from "@/lib/cn";
 import { formatBreakMinutes } from "@/lib/format";
+import type { ReactNode } from "react";
 import { Avatar } from "../ui/Avatar";
 import { Button, Card, Pill } from "../ui/primitives";
 import type { VenueEditTab } from "./VenueEditDialog";
@@ -80,12 +80,6 @@ export function VenueInfoCard({
             + Aggiungi una descrizione
           </AddLink>
         ) : null}
-
-        <p className="mt-5 border-t border-border-2 pt-4 text-xs text-t4">
-          {canEditVenue
-            ? "Così la vedono i professionisti sui turni."
-            : "Così la vedono i professionisti sui turni. I dati della sede li cambia il titolare."}
-        </p>
       </Card>
 
       <section>
@@ -119,7 +113,10 @@ export function VenueInfoCard({
                   oltre {formatBreakMinutes(venue.break_rule_after_minutes!)}
                 </p>
               ) : canEditHours ? (
-                <AddLink className="mt-0.5 block" onClick={() => onEdit("pausa")}>
+                <AddLink
+                  className="mt-0.5 block"
+                  onClick={() => onEdit("pausa")}
+                >
                   + Imposta
                 </AddLink>
               ) : (
@@ -205,7 +202,7 @@ function AddLink({
       onClick={onClick}
       className={cn(
         "focus-gold rounded text-sm text-gold transition hover:text-gold-light",
-        className
+        className,
       )}
     >
       {children}

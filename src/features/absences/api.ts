@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { addDaysToDate, todayString } from "@/lib/format";
-import { monthBounds } from "@/features/assignments/api";
 import type { Membership } from "@/features/workspace/types";
 import type { Enums, Tables } from "@/types/database";
 import type { AbsenceSummaryRow } from "./summary";
@@ -501,15 +500,14 @@ export async function removeFromShifts(
 }
 
 /**
- * Le assenze approvate del mese per persona, per la pagina Ore e l'export.
+ * Le assenze approvate del periodo per persona, per la pagina Ore e l'export.
  * Stesso intervallo del riepilogo ore (fine esclusa). Il perimetro è
  * l'intersezione fra l'azienda corrente e il permesso Ore.
  */
 export async function getOwnerAbsenceSummary(
   workspaceId: string,
-  month: string
+  { start, end }: { start: string; end: string }
 ): Promise<AbsenceSummaryRow[]> {
-  const { start, end } = monthBounds(month);
   const { data, error } = await supabase.rpc("get_workspace_absence_summary", {
     p_workspace: workspaceId,
     p_from: start,

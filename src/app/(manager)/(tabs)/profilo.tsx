@@ -12,6 +12,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
+import { ClosedVenuesCard } from "@/features/venues/ClosedVenuesCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
@@ -172,7 +173,7 @@ export default function ManagerProfiloScreen() {
   const insets = useSafeAreaInsets();
 
   const venueQuery = useOwnerVenues();
-  const { venues, isOwner } = venueQuery;
+  const { venues, isOwner, workspaceId } = venueQuery;
   /**
    * Con **una** sede sola il Profilo resta quello di prima: la sua identità in
    * grande, la scheda da completare, i suoi dati. Con più sedi quella pagina
@@ -287,6 +288,12 @@ export default function ManagerProfiloScreen() {
             <VenueDetailsCard venue={venue} showCity={false} />
           </>
         )}
+
+        {/* Anche con zero sedi aperte: chi ha chiuso l'unica deve poterla
+            riaprire. */}
+        {isOwner && workspaceId && !venueQuery.isLoading ? (
+          <ClosedVenuesCard workspaceId={workspaceId} />
+        ) : null}
 
         {isOwner ? <WorkspaceAccessCard /> : null}
       </ScrollView>

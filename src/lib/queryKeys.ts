@@ -154,8 +154,9 @@ export const qk = {
      * `staff.all`, quindi già invalidata da `invalidateAfterShiftWrite` e da
      * `useSetAssignmentPresence`.
      */
-    ownerHours: (workspaceId: string, month: string) =>
-      ["staff", "ownerHours", workspaceId, month] as const,
+    /** `period`: `periodKey()` di `assignments/reportPeriod` (mese o intervallo). */
+    ownerHours: (workspaceId: string, period: string) =>
+      ["staff", "ownerHours", workspaceId, period] as const,
   },
   assignments: {
     all: ["assignments"] as const,
@@ -276,9 +277,9 @@ export const qk = {
     /** Tutta l'azienda, per la pagina Assenze. */
     company: (workspaceId: string) =>
       ["absences", "company", workspaceId] as const,
-    /** Il riepilogo del mese per il commercialista (pagina Ore). */
-    summary: (workspaceId: string, month: string) =>
-      ["absences", "summary", workspaceId, month] as const,
+    /** Il riepilogo del periodo per il commercialista (pagina Ore). */
+    summary: (workspaceId: string, period: string) =>
+      ["absences", "summary", workspaceId, period] as const,
     /** Chi non c'è, senza il perché: la fonte del planning. */
     availability: (from: string, to: string) =>
       ["absences", "availability", from, to] as const,

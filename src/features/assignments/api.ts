@@ -583,18 +583,9 @@ export async function getMyWorkTotals(
   return data ?? { total_count: 0, total_hours: 0 };
 }
 
-export function monthBounds(month: string): { start: string; end: string } {
-  const [y, m] = month.split("-").map(Number);
-  const nextY = m === 12 ? y + 1 : y;
-  const nextM = m === 12 ? 1 : m + 1;
-  return {
-    start: `${month}-01`,
-    end: `${nextY}-${String(nextM).padStart(2, "0")}-01`,
-  };
-}
-
 /**
- * Riepilogo ore di **tutta l'azienda** in un mese, righe (persona × sede).
+ * Riepilogo ore di **tutta l'azienda** in un periodo (`end` esclusa), righe
+ * (persona × sede).
  *
  * Le ore sono della persona, non della sede (20260913110100): chi fa 20 ore a Roma
  * e 20 a Milano per lo stesso titolare ha 40 ore e **una** busta paga. Il totale
@@ -610,9 +601,8 @@ export function monthBounds(month: string): { start: string; end: string } {
  */
 export async function getOwnerHoursSummary(
   workspaceId: string,
-  month: string
+  { start, end }: { start: string; end: string }
 ): Promise<OwnerHoursRow[]> {
-  const { start, end } = monthBounds(month);
   const { data, error } = await supabase.rpc("get_workspace_hours_summary", {
     p_workspace: workspaceId,
     p_from: start,

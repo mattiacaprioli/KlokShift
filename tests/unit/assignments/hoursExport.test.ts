@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { exportAvailability } from "@/features/assignments/monthlyReport";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
-import { buildAbsencesCsv, buildHoursCsv, buildHoursHtml } from "@/lib/exportBuilders";
+import {
+  absencesFileName,
+  buildAbsencesCsv,
+  buildHoursCsv,
+  buildHoursHtml,
+  hoursFileName,
+} from "@/lib/exportBuilders";
 
 function person(extra: Partial<PersonHours> = {}): PersonHours {
   return {
@@ -102,5 +108,21 @@ describe("celle CSV (B06)", () => {
   it("applica la stessa regola al CSV delle assenze", () => {
     const csv = buildAbsencesCsv([absence({ person_name: "=cmd", inps_protocols: "-123; 456" })]);
     expect(lines(csv)[1]).toBe(`'=cmd;1;0;0;0;"'-123; 456"`);
+  });
+});
+
+describe("export di una parte dell'organico", () => {
+  it("il PDF dice chi è incluso, e non lo dice per l'azienda intera", () => {
+    const anna = person({ person_name: "Anna <Rossi>" });
+    const filtered = buildHoursHtml("Osteria", "1–15 ottobre 2026", [anna], 8, [], ["Anna <Rossi>"]);
+    expect(filtered).toContain("Osteria · 1–15 ottobre 2026");
+    expect(filtered).toContain("Persone incluse: Anna &lt;Rossi&gt;");
+    expect(buildHoursHtml("Osteria", "Ottobre 2026", [anna], 8)).not.toContain("Persone incluse");
+  });
+
+  it("il nome file porta il periodo e la persona, o «selezione» per un gruppo", () => {
+    expect(hoursFileName("Osteria", "1–15 ottobre 2026", "csv")).toBe("ore-osteria-1-15-ottobre-2026.csv");
+    expect(hoursFileName("Osteria", "Ottobre 2026", "csv", ["Niccolò Bianchi"])).toBe("ore-osteria-ottobre-2026-niccolo-bianchi.csv");
+    expect(absencesFileName("Osteria", "Ottobre 2026", "csv", ["Anna", "Bruno"])).toBe("assenze-osteria-ottobre-2026-selezione.csv");
   });
 });

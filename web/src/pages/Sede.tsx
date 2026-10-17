@@ -3,6 +3,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
 import { VenueCard } from "../venues/VenueCard";
 import { VenuesCard } from "../venues/VenuesCard";
+import { CloseVenueSection } from "../venues/CloseVenueSection";
 import { Button, PageHeader } from "../ui/primitives";
 
 /**
@@ -25,6 +26,12 @@ export function SedePage() {
           subtitle="Serve una sede per organizzare i turni e gestire il personale."
         />
         <NoVenues detail="Serve per organizzare i turni e gestire il personale." />
+        {/* Chi ha chiuso l'unica sede deve poterla riaprire da qui. */}
+        {isOwner ? (
+          <div className="mx-auto mt-6 max-w-2xl">
+            <VenuesCard />
+          </div>
+        ) : null}
       </>
     );
   }
@@ -59,6 +66,7 @@ export function SedePage() {
           editable={editable}
           clockEditable={clockEditable}
         />
+        <CloseVenueSection venue={venues[0]} />
         {/* Le sedi chiuse da riaprire, se ce ne sono. */}
         {isOwner ? (
           <div className="mt-8 max-w-4xl">

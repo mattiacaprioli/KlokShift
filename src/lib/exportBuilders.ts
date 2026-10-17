@@ -60,11 +60,16 @@ function reviewCell(conflictHours: number, untrackedHours: number, toReviewCount
  */
 export function buildHoursHtml(
   companyName: string,
-  monthLabel: string,
+  periodLabel: string,
   people: PersonHours[],
   totalHours: number,
-  /** Ferie, permessi e malattia del mese: una seconda tabella, se ce ne sono. */
-  absences: AbsenceSummaryRow[] = []
+  /** Ferie, permessi e malattia del periodo: una seconda tabella, se ce ne sono. */
+  absences: AbsenceSummaryRow[] = [],
+  /**
+   * I nomi delle persone scelte; vuoto = tutto l'organico. Il documento lo
+   * dice, perché chi lo riceve deve sapere che non è l'azienda intera.
+   */
+  selection: readonly string[] = []
 ): string {
   const rows = monthlyReportRows(people, absences);
   const totalShifts = rows.reduce((s, p) => s + p.shifts_count, 0);
@@ -87,7 +92,11 @@ export function buildHoursHtml(
     )
     .join("");
 
-  const sub = `${escapeHtml(companyName)} · ${escapeHtml(monthLabel)}`;
+  const sub = `${escapeHtml(companyName)} · ${escapeHtml(periodLabel)}`;
+  const scope =
+    selection.length > 0
+      ? `<div class="sub">Persone incluse: ${selection.map(escapeHtml).join(", ")}</div>`
+      : "";
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     * { box-sizing: border-box; }
@@ -108,6 +117,7 @@ export function buildHoursHtml(
     <div class="accent"></div>
     <h1>Ore tracciate</h1>
     <div class="sub">${sub}</div>
+    ${scope}
     <table>
       <thead><tr><th>Nome</th><th>Ruolo</th><th class="n">Turni</th><th class="n">Ore lavorate effettive</th><th class="n">Pausa</th><th class="n">Ore di assenza giustificata</th><th class="n">Totale ore coperte</th><th class="n">Da verificare</th></tr></thead>
       <tbody>${body}</tbody>
@@ -247,26 +257,34 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
  */
 export function hoursFileName(
   companyName: string,
-  monthLabel: string,
-  ext: string
+  periodLabel: string,
+  ext: string,
+  selection: readonly string[] = []
 ): string {
-  return exportFileName("ore", companyName, monthLabel, ext);
+  return exportFileName("ore", companyName, periodLabel, ext, selection);
 }
 
 /** "assenze-osteria-milano-settembre-2026.csv": stessa regola di `hoursFileName`. */
 export function absencesFileName(
   companyName: string,
-  monthLabel: string,
-  ext: string
+  periodLabel: string,
+  ext: string,
+  selection: readonly string[] = []
 ): string {
-  return exportFileName("assenze", companyName, monthLabel, ext);
+  return exportFileName("assenze", companyName, periodLabel, ext, selection);
 }
 
+/**
+ * Con una persona sola il nome finisce nel file ("…-ottobre-2026-anna-rossi"),
+ * con più persone "-selezione": un file parziale non deve sembrare quello
+ * dell'azienda intera nella cartella Download.
+ */
 function exportFileName(
   prefix: string,
   companyName: string,
-  monthLabel: string,
-  ext: string
+  periodLabel: string,
+  ext: string,
+  selection: readonly string[]
 ): string {
   const slug = (v: string) =>
     v
@@ -276,5 +294,11 @@ function exportFileName(
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
-  return `${prefix}-${slug(companyName)}-${slug(monthLabel)}.${ext}`;
+  const scope =
+    selection.length === 1
+      ? `-${slug(selection[0])}`
+      : selection.length > 1
+        ? "-selezione"
+        : "";
+  return `${prefix}-${slug(companyName)}-${slug(periodLabel)}${scope}.${ext}`;
 }

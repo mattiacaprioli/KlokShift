@@ -2,6 +2,7 @@ import { DetailSkeleton } from "../ui/Skeleton";
 import { useNavigate, useParams } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { VenueCard } from "../venues/VenueCard";
+import { CloseVenueSection } from "../venues/CloseVenueSection";
 import {
   Button,
   PageHeader,
@@ -69,6 +70,7 @@ export function SedeDettaglioPage() {
         editable={editable}
         clockEditable={clockEditable}
       />
+      <CloseVenueSection venue={venue} onClosed={() => navigate("/sede")} />
     </>
   );
 }

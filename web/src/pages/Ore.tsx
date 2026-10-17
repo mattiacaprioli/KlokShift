@@ -20,11 +20,24 @@ import {
   buildHoursHtml,
   hoursFileName,
 } from "@/lib/exportBuilders";
-import { addMonthsToKey, formatHours } from "@/lib/format";
-import { monthKey, monthLabel } from "../lib/week";
+import {
+  filterByPeople,
+  monthAsRange,
+  peopleInReport,
+  periodLabel,
+  pruneSelection,
+  selectedNames,
+  validateRange,
+  type ReportPeriod,
+} from "@/features/assignments/reportPeriod";
+import { addMonthsToKey, formatHours, todayString } from "@/lib/format";
+import { cn } from "@/lib/cn";
+import { monthKey } from "../lib/week";
+import { PeopleSelect } from "../hours/PeopleSelect";
 import {
   Button,
   Card,
+  Input,
   PageHeader,
   Placeholder,
   QueryError,
@@ -32,7 +45,9 @@ import {
 } from "../ui/primitives";
 
 /**
- * Le ore del mese di **tutta l'azienda**, una riga per persona.
+ * Le ore di **tutta l'azienda** in un mese o fra due date, una riga per
+ * persona; si può restringere a una persona o a un gruppo. Periodo e persone
+ * valgono per la pagina **e** per gli export: il file è quello che si vede.
  *
  * Nessun selettore di sede e nessuno split: chi lavora in due sedi dello stesso
  * titolare ha **una** busta paga, e il numero che serve è il totale. Fino al
@@ -44,13 +59,35 @@ export function OrePage() {
   const { profile } = useAuth();
   const { workspaceId, venues, historyVenues } = useOwnerVenues();
   const [month, setMonth] = useState(monthKey(new Date()));
+  const [mode, setMode] = useState<"month" | "range">("month");
+  // `range` è quello nei campi, `applied` l'ultimo valido: con le date
+  // sbagliate la pagina resta sul periodo di prima, niente query a vuoto.
+  const [range, setRange] = useState(() => monthAsRange(monthKey(new Date())));
+  const [applied, setApplied] = useState(range);
+  const [chosen, setChosen] = useState<string[] | null>(null);
   const adjacentMonth = (offset: number) => addMonthsToKey(month, offset);
+  const rangeError = mode === "range" ? validateRange(range.from, range.to) : null;
+  const period: ReportPeriod =
+    mode === "month" ? { kind: "month", month } : { kind: "range", ...applied };
+
+  function editRange(next: { from: string; to: string }) {
+    setRange(next);
+    if (!validateRange(next.from, next.to)) setApplied(next);
+  }
   const { data, isPending, isError, error } = useOwnerHoursSummary(
     workspaceId,
-    month
+    period
   );
 
-  const rows = data ?? [];
+  const allRows = data ?? [];
+  const absenceQuery = useOwnerAbsenceSummary(workspaceId, period);
+  const allAbsences = absenceQuery.data ?? [];
+  // Si sceglie fra chi nel periodo ha ore o assenze; chi non c'è più esce
+  // dalla selezione da solo, senza effetti.
+  const options = peopleInReport(allRows, allAbsences);
+  const selection = pruneSelection(chosen, options);
+  const names = selectedNames(selection, options);
+  const rows = filterByPeople(allRows, selection);
   // La RPC torna righe (persona × sede); questa le somma per persona, ed è
   // quello che si mostra. Lo split resta nei dati (serve a comporre i ruoli) e
   // non arriva in pagina.
@@ -58,11 +95,10 @@ export function OrePage() {
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const toReview = people.reduce((s, p) => s + p.to_review_count, 0);
   const proposedHours = people.reduce((s, p) => s + p.proposed_hours, 0);
-  const label = monthLabel(month);
+  const label = periodLabel(period);
   const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
-  // Ferie, permessi e malattia del mese: ore nel consuntivo, giorni nel dettaglio.
-  const absenceQuery = useOwnerAbsenceSummary(workspaceId, month);
-  const absences = absenceQuery.data ?? [];
+  // Ferie, permessi e malattia del periodo: ore nel consuntivo, giorni nel dettaglio.
+  const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
   const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
@@ -88,21 +124,31 @@ export function OrePage() {
 
   function downloadCsv() {
     if (!canExport.monthly) return;
-    download(buildHoursCsv(people, absences), hoursFileName(company, label, "csv"));
+    download(
+      buildHoursCsv(people, absences),
+      hoursFileName(company, label, "csv", names)
+    );
   }
 
   function downloadAbsencesCsv() {
     if (!canExport.absences) return;
     download(
       buildAbsencesCsv(absences),
-      absencesFileName(company, label, "csv")
+      absencesFileName(company, label, "csv", names)
     );
   }
 
   function printPdf() {
     if (!canExport.monthly) return;
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
-    const html = buildHoursHtml(company, label, people, totalHours, absences);
+    const html = buildHoursHtml(
+      company,
+      label,
+      people,
+      totalHours,
+      absences,
+      names
+    );
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(html);
@@ -125,28 +171,91 @@ export function OrePage() {
         <div className="mb-5 flex flex-wrap justify-between gap-3 print:hidden">
           {/* Frecce per il mese accanto (il caso di tutti i mesi: chiudere il
               precedente), tendina per saltare. Le pillole andavano a capo. */}
-          <div className="flex gap-2">
-            <Button
-              aria-label="Mese precedente"
-              onClick={() => setMonth(adjacentMonth(-1))}
+          <div className="flex flex-wrap gap-2">
+            {/* Mese (il caso di tutti i mesi) o due date libere, per mandare
+                al consulente anche una quindicina o un periodo a cavallo. */}
+            <div
+              role="group"
+              aria-label="Periodo"
+              className="flex rounded-xl border border-border-2 bg-bg-2 p-0.5"
             >
-              ←
-            </Button>
-            <input
-              type="month"
-              aria-label="Mese"
-              value={month}
-              max={monthKey(new Date())}
-              onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setMonth(e.target.value); }}
-              className="rounded-xl border border-border-2 bg-bg-card px-3 text-sm text-t1"
-            />
-            <Button
-              aria-label="Mese successivo"
-              onClick={() => setMonth(adjacentMonth(1))}
-              disabled={month >= monthKey(new Date())}
-            >
-              →
-            </Button>
+              {(
+                [
+                  ["month", "Mese"],
+                  ["range", "Date"],
+                ] as const
+              ).map(([id, text]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={mode === id}
+                  onClick={() => {
+                    // Si entra in «Date» dal mese che si stava guardando.
+                    if (id === "range" && mode === "month") editRange(monthAsRange(month));
+                    setMode(id);
+                  }}
+                  className={cn(
+                    "focus-gold rounded-[10px] px-3 text-sm font-semibold transition",
+                    mode === id ? "bg-bg-card text-t1 shadow-sm" : "text-t3 hover:text-t1"
+                  )}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+
+            {mode === "month" ? (
+              <div className="flex gap-2">
+                <Button
+                  aria-label="Mese precedente"
+                  onClick={() => setMonth(adjacentMonth(-1))}
+                >
+                  ←
+                </Button>
+                <input
+                  type="month"
+                  aria-label="Mese"
+                  value={month}
+                  max={monthKey(new Date())}
+                  onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setMonth(e.target.value); }}
+                  className="rounded-xl border border-border-2 bg-bg-card px-3 text-sm text-t1"
+                />
+                <Button
+                  aria-label="Mese successivo"
+                  onClick={() => setMonth(adjacentMonth(1))}
+                  disabled={month >= monthKey(new Date())}
+                >
+                  →
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    aria-label="Dal"
+                    value={range.from}
+                    max={range.to || todayString()}
+                    onChange={(e) => editRange({ ...range, from: e.target.value })}
+                    className="w-auto"
+                  />
+                  <span className="text-sm text-t3">–</span>
+                  <Input
+                    type="date"
+                    aria-label="Al"
+                    value={range.to}
+                    min={range.from || undefined}
+                    onChange={(e) => editRange({ ...range, to: e.target.value })}
+                    className="w-auto"
+                  />
+                </div>
+                {rangeError ? (
+                  <p role="alert" className="text-xs text-error">{rangeError}</p>
+                ) : null}
+              </div>
+            )}
+
+            <PeopleSelect options={options} value={selection} onChange={setChosen} />
           </div>
 
           <div className="flex gap-2">
@@ -181,7 +290,7 @@ export function OrePage() {
       people.length === 0 &&
       absences.length === 0 ? (
         <Placeholder
-          title={`Nessuna ora registrata a ${label}`}
+          title={`Nessuna ora registrata in ${label}`}
           detail="Le ore dei turni senza timbratura compaiono automaticamente dopo la fine del turno. Le timbrature richiedono approvazione."
         />
       ) : null}
@@ -284,7 +393,7 @@ export function OrePage() {
       {absences.length > 0 ? (
         <section className="mt-8">
           <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-t3">
-            Assenze del mese
+            Assenze del periodo
           </h2>
           <p className="mb-3 text-xs text-t4">{ABSENCE_SUMMARY_NOTE}</p>
           <Card className="p-0">
