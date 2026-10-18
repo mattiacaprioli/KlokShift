@@ -36,6 +36,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
+import { AccessBanner } from "../billing/AccessBanner";
 import { LiveClockLine } from "../shifts/LiveClockLine";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { UnplannedClockDialog } from "../shifts/UnplannedClockDialog";
@@ -201,6 +202,7 @@ export function HomePage() {
   return (
     <>
       <PageHeader title={isMultiVenue ? "Home" : venues[0].name} />
+      <AccessBanner />
 
       {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non
           dice su quanto tempo, e la prima domanda di chi guarda è "in base a

@@ -840,6 +840,19 @@ subito: va gestito nel flusso di modifica), quota documenti.
   pagamento la pagina rilegge ogni 3 s finché arriva l'avviso firmato (90 s, poi messaggio).
   Con un abbonamento aperto: stato, rinnovo o ultimo giorno, rinnovo non riuscito; cambi e disdetta
   per ora via email (portale clienti in M09d). Test di logica e handler, pagina Piano, `deno task check`.
+- [x] **Prima prova end-to-end in sandbox, 18/10:** rilascio `6e28f16` (migration via CI, funzioni via
+  deploy), segreti configurati dal fondatore e verificati senza leggerli (risposte 401 attese). Azienda
+  di test «Hotel Tesoro» da un account nuovo: Base mensile, carta di prova, email di Paddle ricevuta;
+  avviso arrivato ~2 s dopo, abbonamento `active`, periodo pagato 18/10–18/11, azienda `operational`
+  da `subscription`, richiesta completata e collegata alla transazione.
+- [x] Difetto trovato nella prova: `subscription.created` e `subscription.activated` arrivano insieme;
+  il secondo, in coda sul lock, risultava `duplicate_subscription` (stato giusto, anomalia falsa nel
+  registro). Corretto con `20261018000100_billing_twin_events` (rilettura dopo il lock) e
+  `concurrency/090_billing_twin_events.sql`, che fallisce senza la correzione. La riga scartata del
+  primo acquisto resta nel registro come storia.
+- [x] Dashboard: avviso nella Home per azienda senza prova/abbonamento, rinnovo in sospeso o archivio;
+  `workspace_read_only` con testo neutro (vale anche nell'app); pagina di benvenuto con la creazione
+  dell'azienda al primo posto.
 - [ ] M09d: gestione dalla pagina Piano (portale clienti Paddle: carta, disdetta, ricevute) e cambi di
   piano/sedi con il controllo di compatibilità; link `_ptxn` delle email Paddle verso la dashboard.
 - ⚠️ Quando arriverà la CSP della dashboard (audit C17) deve ammettere Paddle.js

@@ -30,28 +30,33 @@ import { Button, Field, Input } from "../ui/primitives";
 export function NotForWaitersPage() {
   const { profile, signOut } = useAuth();
   const { pendingInvites } = useOwnerVenues();
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0];
+  const invited = pendingInvites.length > 0;
 
+  // Il caso normale è chi si è appena registrato per gestire un'azienda: la
+  // creazione viene prima, la nota per il professionista capitato qui dopo.
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-md text-center">
         <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold" />
         <h1 className="font-serif text-2xl text-t1">
-          Questa dashboard è per le sedi
+          {invited
+            ? "Hai un invito da un'azienda"
+            : firstName ? `Ciao ${firstName}, iniziamo` : "Iniziamo"}
         </h1>
         <p className="mt-3 text-sm leading-6 text-t2">
-          Ciao {profile?.full_name ?? ""}, il tuo account non gestisce ancora
-          nessuna azienda. Se lavori come professionista, turni e messaggi li
-          trovi nell&apos;app KlokShift sul telefono: è lì che funzionano
-          meglio.
+          {invited
+            ? "Accetta l'invito per entrare nell'azienda che ti ha aggiunto."
+            : "Per iniziare crea la tua azienda: insieme nasce anche la prima sede. Poi scegli tu quando avviare la prova di 30 giorni, senza carta."}
         </p>
 
-        {pendingInvites.length > 0 ? (
-          <PendingInvites />
-        ) : (
-          <OpenWorkspaceCard />
-        )}
+        {invited ? <PendingInvites /> : <OpenWorkspaceCard />}
 
-        <Button className="mt-6" onClick={() => void signOut()}>
+        <p className="mt-6 text-xs leading-5 text-t3">
+          Lavori in un&apos;azienda che usa già KlokShift? Turni e messaggi li
+          trovi nell&apos;app sul telefono: chiedi alla tua azienda di invitarti.
+        </p>
+        <Button className="mt-4" onClick={() => void signOut()}>
           Esci
         </Button>
       </div>
@@ -68,11 +73,11 @@ export function NotForWaitersPage() {
  *
  * L'appartenenza appena creata fa passare il gate e monta la dashboard.
  * Dopo il salvataggio portiamo il titolare al riepilogo per avviare la prova.
+ * Il modulo è già aperto: è il motivo per cui quasi tutti arrivano qui.
  */
 function OpenWorkspaceCard() {
   const navigate = useNavigate();
   const create = useCreateFirstVenue();
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -99,49 +104,37 @@ function OpenWorkspaceCard() {
 
   return (
     <div className="mt-6 rounded-2xl border border-border-2 bg-bg-1 p-5 text-left">
-      <p className="text-sm font-semibold text-t1">Gestisci una sede?</p>
-      <p className="mt-1 text-xs leading-5 text-t3">
-        Prepara qui la tua azienda e la prima sede. Poi scegli quando avviare
-        la prova Team di 30 giorni senza carta.
-      </p>
-
-      {open ? (
-        <form
-          className="mt-4 flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <Field
+          label="Come si chiama la tua azienda?"
+          hint="Lo usiamo anche per la prima sede. Puoi cambiare entrambi i nomi quando vuoi."
         >
-          <Field
-            label="Come si chiama"
-            hint="Diventa il nome della tua azienda e della prima sede. Puoi cambiarli dopo. La prova include una sede."
-          >
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Trattoria da Mario"
-              autoFocus
-            />
-          </Field>
-          {error ? (
-            <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
-              {error}
-            </p>
-          ) : null}
-          <Button
-            type="submit"
-            variant="gold"
-            disabled={create.isPending || !trimmed}
-          >
-            {create.isPending ? "Apertura…" : "Apri"}
-          </Button>
-        </form>
-      ) : (
-        <Button className="mt-4 w-full" onClick={() => setOpen(true)}>
-          Apri la tua azienda
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Trattoria da Mario"
+            autoFocus
+          />
+        </Field>
+        {error ? (
+          <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
+            {error}
+          </p>
+        ) : null}
+        <Button
+          type="submit"
+          variant="gold"
+          disabled={create.isPending || !trimmed}
+        >
+          {create.isPending ? "Creazione…" : "Crea l'azienda"}
         </Button>
-      )}
+      </form>
     </div>
   );
 }

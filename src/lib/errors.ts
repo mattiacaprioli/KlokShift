@@ -42,7 +42,9 @@ const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["admin_document_capacity"], message: "La quota documenti scelta è inferiore allo spazio già utilizzato." },
   { match: ["invalid_access_capacity"], message: "Scegli capacità valide: almeno una sede e una quota documenti positiva." },
   { match: ["invalid_access_plan"], message: "Scegli un piano valido per la concessione." },
-  { match: ["workspace_read_only"], message: "L'azienda non ha accesso operativo. Puoi consultare ed esportare lo storico." },
+  // Vale sia per l'azienda nuova (prova non avviata) sia per quella in archivio,
+  // e la legge anche l'app nativa: niente inviti all'acquisto (App Store 3.1.3).
+  { match: ["workspace_read_only"], message: "Il lavoro operativo non è attivo per questa azienda: chi la gestisce può attivarlo. Lo storico resta consultabile." },
   { match: ["workspace_people_capacity"], message: "La capacità di persone dell'azienda è raggiunta. Il lavoro esistente continua." },
   { match: ["workspace_venue_capacity"], message: "La capacità di sedi aperte dell'azienda è raggiunta. Chiudere una sede conserva lo storico." },
   { match: ["attendance_window_closed"], message: "La rettifica non rientra nella finestra per le presenze pregresse. Contatta l'assistenza." },
