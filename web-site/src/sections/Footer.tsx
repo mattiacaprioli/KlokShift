@@ -3,9 +3,10 @@ import { Logo } from "../ui/Logo";
 import { t } from "../content";
 
 /*
- * Privacy ed eliminazione account sono file statici serviti accanto a questa
- * pagina (`public/`), non rotte React: i loro URL stanno anche nell'app e nella
- * scheda dello store, quindi non devono dipendere dal bundle per aprirsi.
+ * Le pagine legali sono file statici serviti accanto a questa pagina
+ * (`public/`), non rotte React: i loro URL stanno anche nell'app, nella scheda
+ * dello store e nella revisione di Paddle, quindi non devono dipendere dal
+ * bundle per aprirsi.
  */
 export function Footer() {
   const year = new Date().getFullYear();
@@ -43,7 +44,7 @@ export function Footer() {
 
       <Container className="border-t border-border py-6">
         <p className="font-mono text-xs text-t4">
-          © {year} {t.brand.name} · {t.footer.rights}
+          © {year} {t.brand.name} · {t.footer.owner} · {t.footer.rights}
         </p>
       </Container>
     </footer>

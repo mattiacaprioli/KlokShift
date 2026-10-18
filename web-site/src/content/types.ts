@@ -126,6 +126,8 @@ export type Content = {
     email: string;
     emailLabel: string;
     links: Link[];
+    /** Chi vende e partita IVA: obbligatori nella home (art. 35 DPR 633/72). */
+    owner: string;
     rights: string;
   };
 

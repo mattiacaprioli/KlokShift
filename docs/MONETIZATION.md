@@ -1,6 +1,6 @@
 # Monetizzazione di KlokShift
 
-Aggiornato il **6 ottobre 2026**. Documento canonico delle decisioni commerciali e di prodotto approvate da Alisher; i dettagli ancora aperti sono indicati esplicitamente.
+Aggiornato il **18 ottobre 2026** (regola dei rimborsi, §6). Documento canonico delle decisioni commerciali e di prodotto approvate da Alisher; i dettagli ancora aperti sono indicati esplicitamente.
 
 **Stato dell'implementazione, 6 ottobre:** M03a/M03b forniscono modello e
 controlli server su operatività, capacità persone/sedi, rettifiche pregresse e
@@ -167,13 +167,14 @@ L'eccezione è limitata ai record pertinenti, con permessi e audit: nessun nuovo
 
 ### Errori, ripensamenti e contestazioni
 
-- Addebiti duplicati o successivi a una disdetta/pausa già efficace: rimborso, compresi gli extra addebitati per errore.
-- Disdetta ordinaria: periodo acquistato mantenuto, senza rimborso automatico del residuo.
-- Cortesia per **rinnovo annuale involontario segnalato entro 14 giorni**, senza nuova attività operativa nel periodo rinnovato: gestione assistita della restituzione dell'addebito e passaggio all'archivio. Semplici login o export non costituiscono nuova operatività.
+- **Ripensamento: rimborso completo di qualsiasi addebito chiesto entro 14 giorni dalla sua data**, senza motivazione: primo pagamento, rinnovi mensili e annuali, upgrade e sedi aggiuntive. Decisione del 18 ottobre 2026: Paddle approva il dominio solo con una finestra di ripensamento di 14–90 giorni e rifiuta formule come «nessun rimborso»; sostituisce la precedente cortesia limitata al rinnovo annuale senza nuova attività.
+- Dopo il rimborso il periodo coperto da quell'addebito termina: primo pagamento o rinnovo → archivio (consultazione/export); upgrade o sede → capacità precedente, senza cancellare nulla.
+- Addebiti duplicati o successivi a una disdetta/pausa già efficace: rimborso anche oltre i 14 giorni, compresi gli extra addebitati per errore.
+- Disdetta ordinaria dopo i 14 giorni: periodo acquistato mantenuto, senza rimborso automatico del residuo.
 - Disservizi gravi verificati: credito proporzionato al periodo inutilizzabile.
 - Contestazioni: stato, motivo, documentazione ed esito separati; nessuna cancellazione automatica dei dati come conseguenza della contestazione.
 
-La cortesia di 14 giorni è una policy commerciale, non un diritto legale universale, e non limita i diritti applicabili. Rimborsi e crediti devono essere compatibili con il provider/MoR scelto ed effettivamente eseguiti lì, con audit nella dashboard; un flag locale non restituisce il denaro.
+I 14 giorni sono una policy commerciale richiesta dal provider e non limitano i diritti di legge. Testo pubblico: `web-site/public/rimborsi.html`. Rimborsi e crediti sono eseguiti da Paddle (MoR), con audit nella dashboard; un flag locale non restituisce il denaro. Sono ammessi i rifiuti per frode o abuso evidente previsti dalla politica di Paddle.
 
 ## 7. Documenti, assistenza e recupero del controllo
 

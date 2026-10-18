@@ -128,8 +128,15 @@ occupava la radice.
 
 Il testo è allineato al comportamento di cancellazione implementato il 23/09:
 la scheda dell'organico resta nominativa e scollegata dall'account, mentre i file
-caricati dall'account vengono rimossi prima di eliminare le credenziali. Recapito
-privacy e dati fiscali restano da confermare prima della messa in esercizio.
+caricati dall'account vengono rimossi prima di eliminare le credenziali.
+
+`public/termini.html` e `public/rimborsi.html` (18/10) servono alla revisione del
+dominio di Paddle, che vuole termini, rimborsi e privacy **raggiungibili dalla
+navigazione** (il footer), il nome legale nei termini, la frase Merchant of
+Record di Paddle e una finestra di ripensamento di 14–90 giorni senza «nessun
+rimborso». Non togliere nessuno di questi elementi. Il recapito è
+`info@klokshift.com` in tutte le pagine; sede e partita IVA (anche nel footer
+della home, obbligatoria per legge) sono le stesse ovunque. Regole: [MONETIZATION.md §6](../docs/MONETIZATION.md).
 
 Il nuovo ciclo commerciale richiede inoltre condizioni del servizio e accordo
 sul trattamento dei dati coerenti con prova, pagamenti, archivio e cancellazione.

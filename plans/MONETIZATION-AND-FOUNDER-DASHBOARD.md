@@ -436,7 +436,7 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M05 | Dashboard personale: accesso protetto, panorama, aziende e schede | M03; riuso stack web | RILASCIATO; primo accesso MFA/panoramica verificato; restanti prove manuali pendenti |
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | IN CORSO: M06a concessioni/classificazioni/audit locale; economia e altri interventi pendenti |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
-| M08 | Verifica account/contratto e prova sandbox Paddle | M01–M02 per chiusura; indagine indipendente avviabile prima | RIMANDATO dal fondatore il 2026-10-10; scelta Paddle confermata, verifiche da riprendere |
+| M08 | Verifica account/contratto e prova sandbox Paddle | M01–M02 per chiusura; indagine indipendente avviabile prima | IN CORSO dal 2026-10-18: pagine legali scritte in locale, account sandbox/live da aprire, email del dominio da attivare |
 | M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | RIMANDATO dal fondatore il 2026-10-10; integrazione da realizzare dopo M08 |
 | M10 | KPI storici, anomalie, previsione e automazioni mirate | Dati raccolti da M05–M09 | PROPOSTO |
 | M11 | Primo mese, pausa stagionale, uscita, archivio/export e cancellazione verificata | Regole M01, modello M03, UI M04/M05, provider M09 | PROPOSTO; parte della V1 |
@@ -723,11 +723,27 @@ poi predisporre la sandbox (ambiente con pagamenti di prova). Rileggere stato
 Git, codice effettivo e risultati dei test manuali M04; consultare la
 documentazione ufficiale aggiornata del provider quando si esegue il lavoro.
 
+**Ripresa del 18 ottobre 2026.** Il fondatore non ha ancora alcun account
+Paddle. Requisiti della revisione del dominio verificati sulle pagine ufficiali
+([domain review](https://www.paddle.com/help/start/account-verification/what-is-domain-approval),
+[setup checklist](https://developer.paddle.com/build/set-up-checklist)): sito
+pubblico in HTTPS con descrizione, funzioni e prezzi; termini, rimborsi e privacy
+raggiungibili dalla navigazione; nome legale nei termini; frase Merchant of
+Record di Paddle; finestra di ripensamento di 14–90 giorni, senza «nessun
+rimborso». Verifica account in tre fasi: dominio, attività (non richiesta alle
+ditte individuali), identità. La sandbox è un account separato, senza verifica.
+
+- [x] Regola dei rimborsi riallineata al requisito Paddle: 14 giorni da ogni addebito ([MONETIZATION.md §6](../docs/MONETIZATION.md)).
+- [x] Pagine `web-site/public/termini.html` e `rimborsi.html`, privacy con Paddle come titolare autonomo e recapito `info@klokshift.com`, link nel footer e sitemap. Testi da far rivedere prima degli incassi (M02); in attesa di pubblicazione.
+- [x] Sandbox aperta il 18/10 (tipo «Individual»): Sales tax «Price excludes tax» a livello di account; catalogo con 3 prodotti `SaaS` (Base, Team, Sede aggiuntiva), ognuno con prezzo mensile e annuale in EUR, senza trial; quantità massima 1 per Base/Team. Prodotti sandbox: Base `pro_01m5774htp8k3bbfw7vxsye826`, Team `pro_01m5775a15aav82fn76qqpc637`, Sede aggiuntiva `pro_01m5776bv40gv4016t98x3h39v`; prezzi nella tabella del catalogo sotto.
+- [x] Sede e partita IVA inserite il 18/10 in termini, privacy e footer della home; in attesa di pubblicazione.
+- [x] Ricezione su `info@klokshift.com`: il 18/10 configurato l'inoltro ImprovMX (piano gratuito, alias `*` verso la Gmail del fondatore) con MX `mx1`/`mx2.improvmx.com` e SPF `include:spf.improvmx.com` su GoDaddy, verificati sui DNS autorevoli; `_dmarc` invariato. Consegna reale provata il 18/10 (arrivata nello spam di Gmail: rimedio con filtro «Non inviarlo mai a Spam» su `klokshift.com`). Invio dal dominio non configurato apposta: con `_dmarc` in `p=quarantine` il «Send mail as» gratuito di Gmail finirebbe in spam; da risolvere con un SMTP autenticato (DKIM), insieme alle email di Auth.
+
 - [x] Scegliere Paddle come unico provider iniziale.
 - [ ] Verificare account, dati dell'attività e verifiche applicabili al prodotto; registrare lo stato effettivo dell'approvazione.
 - [ ] Predisporre la sandbox e distinguere configurazione, credenziali e identificativi dall'ambiente live. Conservare i segreti fuori dai documenti e dal repository.
 - [ ] Verificare contratto, costo effettivo, dati fiscali, documenti provider e payout; coordinare con M02 la verifica ATECO/procedura fiscale prima dei primi incassi.
-- [ ] Preparare il catalogo dei due piani e delle sedi aggiuntive, ciascuno con ciclo mensile e annuale, usando il listino approvato sotto.
+- [ ] Preparare il catalogo dei due piani e delle sedi aggiuntive, ciascuno con ciclo mensile e annuale, usando il listino approvato sotto. **Sandbox fatta il 18/10** (identificativi sotto); live da ripetere.
 - [ ] Documentare identificativi prodotti/prezzi, quantità delle sedi extra e mapping fra stati Paddle e stati commerciali aziendali. Non ricavare diritti dal vecchio Free/Pro.
 - [ ] Provare in sandbox acquisto mensile/annuale e più sedi, cambio quantità, proration, downgrade, insoluti e disdetta; registrare effetto, importo e decorrenza effettivi.
 - [ ] Verificare acquisto dopo la prova unica già gestita da KlokShift: nessun secondo periodo gratuito o reset delle date. Chiarire il rapporto fra prova interna e stati del provider prima di integrarli.
@@ -740,6 +756,15 @@ documentazione ufficiale aggiornata del provider quando si esegue il lavoro.
 | Base | 29 € | 290 € | Una sede, fino a 30 persone uniche nell'azienda |
 | Team | 49 € | 490 € | Una sede, senza limite commerciale di persone |
 | Sede aggiuntiva | 15 € | 150 € | Quantità di sedi oltre quella inclusa |
+
+Identificativi della **sandbox** (18 ottobre 2026; non segreti, diversi da quelli
+dell'account live, che andranno registrati a parte):
+
+| Voce | Prodotto | Prezzo mensile | Prezzo annuale |
+|---|---|---|---|
+| Base | `pro_01m5774htp8k3bbfw7vxsye826` | `pri_01m577s3dchg2ctcrenkderz05` | `pri_01m577th8zt8x41cxk2p8m5n63` |
+| Team | `pro_01m5775a15aav82fn76qqpc637` | `pri_01m577vzt1b6qkyyf80pnq4aj9` | `pri_01m577wqj8atr0sjvy8xhybwf1` |
+| Sede aggiuntiva | `pro_01m5776bv40gv4016t98x3h39v` | `pri_01m577z2zz69jyw4r3hm53warm` | `pri_01m577zzw0kv3c91yqttd0kk6k` |
 
 Importi approvati IVA esclusa; annuale anticipato per 12 mesi consecutivi,
 equivalente a 10 mensilità. La dicitura fiscale effettiva del checkout va
@@ -865,7 +890,7 @@ Alisher ha approvato le raccomandazioni sugli otto punti e chiesto di consolidar
 | Scadenza e tolleranza | Insoluto: 7 giorni per aziende già paganti, avvisi e nessun reset; 7 giorni separati per rettifiche pregresse senza nuova operatività | Approvato; limite clock-out/chat e sincronizzazione provider da definire |
 | Variazioni piano/sedi | Upgrade esplicito e capacità dopo pagamento verificato; downgrade al rinnovo già compatibile, con capacità futura protetta e annullamento esplicito | Approvato; mapping provider/cambio ciclo da definire |
 | Prezzo alla ripartenza/listino futuro | Periodo pagato invariato; listino vigente accettato alla ripartenza; aumenti sui rinnovi con 60 giorni di preavviso | Approvato; da implementare |
-| Rimborsi e contestazioni | Errori rimborsati; disdetta ordinaria senza rimborso residuo automatico; cortesia per rinnovo annuale entro 14 giorni senza nuova attività; disservizio grave con credito proporzionale | Approvato; esecuzione e condizioni del provider da verificare |
+| Rimborsi e contestazioni | Ripensamento entro 14 giorni da ogni addebito (requisito Paddle, 18/10); errori rimborsati sempre; dopo i 14 giorni disdetta senza rimborso del residuo; disservizio grave con credito proporzionale | Approvato; testo in `rimborsi.html`, esecuzione Paddle da provare in sandbox |
 | Spazio e uso sostenibile | 10 MiB/file esistenti; base iniziale 2 GiB documenti per azienda, uguale nei piani; quota blocca solo nuovi upload | Regola approvata; quota da calibrare prima di pubblicarla |
 | Supporto e continuità | Email/modulo italiano, lun–ven; obiettivo prima risposta entro 2 giorni lavorativi; guida/call iniziale 30 minuti; prova ripristino DB+file prima della vendita | Approvato; canale e ripristino da predisporre/verificare |
 | Recupero controllo aziendale | Percorso assistito con verifica identità/autorità, distinto dal reset password e dalla carta che paga | Regola approvata; procedura operativa da predisporre |
@@ -921,6 +946,7 @@ fiscale/privacy rimane separata dall'approvazione delle condizioni commerciali.
 | 2026-10-05 | Completamento M03a e verifica coordinata locale | SQL/RLS/concorrenza superati; tipi rigenerati; 242 test client e typecheck app/web superati; lint senza errori con warning preesistente. Restano enforcement, interfacce, pagamenti e rollout |
 
 | 2026-10-05 | M03b e collegamento minimo client | Guard server/RLS/Storage, capacità con lock, compatibilità migration_pending, rettifiche limitate, storico sedi chiuse e mesi arbitrari. Verifica locale: 256 test client, typecheck app/web, lint (warning preesistente), build web/export iOS; suite SQL e concorrenza nel banco. Nessuna nuova migration remota o addebito. |
+| 2026-10-18 | Ripresa M08: nessun account Paddle; requisiti di revisione del dominio verificati | Rimborsi a 14 giorni da ogni addebito approvati; termini, rimborsi e privacy aggiornati in locale; email del dominio da attivare, indirizzo/partita IVA da pubblicare |
 
 Riferimenti interni da leggere prima di implementare: `AGENTS.md`, `ARCHITECTURE.md`, `supabase/README.md`, `web/README.md`, `web-site/README.md`, `CLOCK_IN_OUT.md`, `plans/HOURS-ABSENCES-ADJUSTMENTS.md` e stato corrente di `plans/AUDIT-2026-10-04.md`.
 

@@ -314,14 +314,21 @@ export const it: Content = {
 
   footer: {
     tagline: "Turni, presenze e ore per chi lavora su turni.",
-    // ⚠️ Il recapito privacy di `public/privacy.html` (§10) è ancora «in corso
-    // di conferma» (A14): quando arriva, va confermato anche questo indirizzo.
+    // Stesso recapito di `public/privacy.html`, `termini.html` e `rimborsi.html`:
+    // se cambia, va cambiato in tutte e quattro.
     email: "info@klokshift.com",
     emailLabel: "Scrivici",
+    // Termini, rimborsi e privacy devono restare raggiungibili da qui: Paddle li
+    // controlla nella revisione del dominio (plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md, M08).
     links: [
+      { href: "./termini.html", label: "Termini e condizioni" },
+      { href: "./rimborsi.html", label: "Politica di rimborso" },
       { href: "./privacy.html", label: "Informativa sulla privacy" },
       { href: "./elimina-account.html", label: "Elimina il tuo account" },
     ],
+    // La partita IVA va mostrata nella home di chi vende online (art. 35 DPR
+    // 633/72): stessi dati di termini.html e privacy.html.
+    owner: "Mattia Caprioli · P.IVA 01256680578",
     rights: "Tutti i diritti riservati.",
   },
 
