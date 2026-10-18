@@ -16,7 +16,7 @@ type ModuleRunner = (
 
 /** Handler originale, runtime Deno e provider simulati: nessuna rete o invio. */
 export function edgeRuntime(
-  name: "accept-invite" | "invite-staff" | "push" | "paddle-webhook" | "billing-checkout",
+  name: "accept-invite" | "invite-staff" | "push" | "paddle-webhook" | "billing-checkout" | "billing-manage",
   imports: Record<string, unknown>,
   envOverrides: Record<string, string | undefined> = {},
   globals: Record<string, unknown> = {}

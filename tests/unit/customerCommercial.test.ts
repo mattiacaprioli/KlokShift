@@ -16,6 +16,10 @@ vi.mock("@/features/workspace/hooks", () => ({
 }));
 // Il checkout vero carica Supabase e Paddle.js: qui conta solo che aprire la pagina non lo avvii.
 vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout: vi.fn() }));
+vi.mock("../../web/src/billing/manage", () => ({
+  openPortal: vi.fn(), resumeRenewals: vi.fn(), previewChange: vi.fn(), applyChange: vi.fn(),
+  formatCents: (cents: number) => `${cents / 100} €`,
+}));
 
 const access: WorkspaceAccess = {
   workspace_id: "azienda", state: "operational", source: "complimentary_lifetime", plan: "team",
@@ -136,5 +140,43 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("Team · annuale");
     expect(html).toContain("l’operatività continua per 7 giorni");
     expect(html).not.toContain("Procedi al pagamento");
+  });
+  const subscriptionAccess = () => context.mockReturnValue({ ...base, access: { ...trialAccess, source: "subscription" } });
+  const subscription = {
+    status: "active", plan: "base", billing_interval: "month", extra_venues: 0,
+    current_period_ends_at: "2026-11-18T10:00:00Z", scheduled_change: null, past_due_since: null, canceled_at: null,
+  };
+  it("abbonamento attivo: gestione dal portale e solo aumenti dalla pagina", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: subscription });
+    const html = render();
+    expect(html).toContain("Ricevute e metodo di pagamento");
+    expect(html).toContain("Ferma i rinnovi");
+    expect(html).toContain("Aumenta piano o sedi");
+    expect(html).toContain("Calcola l’importo");
+    expect(html).toContain("Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale");
+    expect(html).not.toContain("Riprendi i rinnovi");
+  });
+  it("disdetta programmata: ultimo giorno, riprendi i rinnovi, nessun aumento", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription,
+      scheduled_change: { action: "cancel", effective_at: "2026-11-18T10:00:00Z" } } });
+    const html = render();
+    expect(html).toContain("Ultimo giorno");
+    expect(html).toContain("Riprendi i rinnovi");
+    expect(html).not.toContain("Ferma i rinnovi");
+    expect(html).not.toContain("Aumenta piano o sedi");
+  });
+  it("rinnovo non riuscito: in evidenza l’aggiornamento della carta, nessun aumento", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, status: "past_due", past_due_since: "2026-11-18T10:00:00Z" } });
+    const html = render();
+    expect(html).toContain("Aggiorna il metodo di pagamento");
+    expect(html).not.toContain("Aumenta piano o sedi");
+  });
+  it("Team: il modulo non propone di tornare a Base", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team" } });
+    expect(render()).not.toContain("Base · fino a 30 persone");
   });
 });

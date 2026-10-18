@@ -1720,6 +1720,20 @@ export type Database = {
         Args: { p_checkout: string; p_transaction_id: string }
         Returns: undefined
       }
+      billing_manage_context: {
+        Args: { p_environment: string; p_user: string; p_workspace: string }
+        Returns: Json
+      }
+      billing_prepare_change: {
+        Args: {
+          p_environment: string
+          p_extra_venues: number
+          p_plan: string
+          p_user: string
+          p_workspace: string
+        }
+        Returns: Json
+      }
       billing_prepare_checkout: {
         Args: {
           p_environment: string

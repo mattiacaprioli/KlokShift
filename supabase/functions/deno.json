@@ -4,6 +4,6 @@
     "frozen": true
   },
   "tasks": {
-    "check": "deno check accept-invite/index.ts billing-checkout/index.ts delete-account/index.ts invite-staff/index.ts paddle-webhook/index.ts push/index.ts"
+    "check": "deno check accept-invite/index.ts billing-checkout/index.ts billing-manage/index.ts delete-account/index.ts invite-staff/index.ts paddle-webhook/index.ts push/index.ts"
   }
 }

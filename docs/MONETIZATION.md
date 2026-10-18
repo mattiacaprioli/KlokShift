@@ -92,6 +92,8 @@ Il limite deve essere controllato dal server sull'intera azienda, anche quando i
 - Le stesse verifiche valgono per le sedi. Chiusura, riapertura e riduzione degli extra devono preservare lo storico e rispettare la capacità futura.
 - Per un'azienda gratuita, l'aumento della concessione passa dalla decisione del fondatore.
 
+**Esecuzione attuale (18 ottobre 2026):** dalla pagina Piano il titolare fa da solo gli **aumenti** (Base→Team, sedi in più), con l'importo proporzionale calcolato da Paddle e mostrato prima della conferma; carta, ricevute e disdetta passano dal portale clienti di Paddle. **Riduzioni** (Team→Base, meno sedi) e **cambio mensile↔annuale** sono per ora assistiti via email: Paddle applica i cambi subito, e per rispettare la regola «al rinnovo» serve un'operazione pianificata non ancora costruita. La regola non cambia.
+
 I dettagli di proration, concorrenza e modifica dei cicli vanno provati con il provider scelto. Chiudere una sede non cancella automaticamente un extra già acquistato né genera un rimborso.
 
 ## 3. Prova gratuita e aziende gratuite a vita

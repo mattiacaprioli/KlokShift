@@ -853,8 +853,17 @@ subito: va gestito nel flusso di modifica), quota documenti.
 - [x] Dashboard: avviso nella Home per azienda senza prova/abbonamento, rinnovo in sospeso o archivio;
   `workspace_read_only` con testo neutro (vale anche nell'app); pagina di benvenuto con la creazione
   dell'azienda al primo posto.
-- [ ] M09d: gestione dalla pagina Piano (portale clienti Paddle: carta, disdetta, ricevute) e cambi di
-  piano/sedi con il controllo di compatibilità; link `_ptxn` delle email Paddle verso la dashboard.
+- [x] M09d (in locale, 18/10): migration `20261019000000_billing_manage` (`billing_manage_context`,
+  `billing_prepare_change`, solo service role: titolare, abbonamento aperto, solo aumenti, niente
+  cambi con rinnovo in sospeso o disdetta programmata), suite `rls/105_billing_manage.sql`. Edge
+  Function `billing-manage`: portale clienti (link nuovi a ogni clic, solo https), «Riprendi i
+  rinnovi» (`scheduled_change: null`), anteprima e conferma dell'aumento con `prorated_immediately` e
+  `prevent_change`; gli articoli invariati tengono il prezzo attuale letto da Paddle. Pagina Piano:
+  ricevute/metodo di pagamento, ferma o riprendi i rinnovi, aumento con importo prima della
+  conferma, attesa dell'avviso dopo ogni azione. Decisione del 18/10: riduzioni e cambio
+  mensile↔annuale via email per ora.
+- [ ] Riduzioni al rinnovo con un'operazione pianificata; link `_ptxn` delle email Paddle verso la
+  dashboard; disattivare, se possibile, il cambio piano dal portale Paddle.
 - ⚠️ Quando arriverà la CSP della dashboard (audit C17) deve ammettere Paddle.js
   (`cdn.paddle.com`) e il checkout in overlay di Paddle, altrimenti l'acquisto si rompe.
 - [ ] Implementare il checkout sul web con creazione/verifica server, autorizzazione del titolare, piano/ciclo/sedi e riepilogo prima della conferma. Prezzi e checkout restano fuori dall'app nativa.

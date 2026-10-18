@@ -9,6 +9,7 @@ import { LEGAL_URLS } from "@/features/account/legal";
 import { userErrorMessage } from "@/lib/errors";
 import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
 import { openCheckout, prepareCheckout } from "../billing/checkout";
+import { applyChange, formatCents, openPortal, previewChange, resumeRenewals } from "../billing/manage";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
@@ -105,47 +106,66 @@ const ACTIVATION_TIMEOUT_MS = 90_000;
  * Acquisto e abbonamento. Il diritto arriva solo dall'avviso firmato di Paddle:
  * dopo il pagamento la pagina rilegge lo stato finché l'abbonamento non c'è.
  */
+/** Cosa la pagina sta aspettando dall'avviso di Paddle dopo un'azione del titolare. */
+type Awaiting =
+  | { kind: "purchase" }
+  | { kind: "change"; plan: "base" | "team"; extraVenues: number }
+  | { kind: "resume" };
+
 function BillingSection({ workspaceId, access, refetchAccess }: {
   workspaceId: string; access: WorkspaceAccess | undefined; refetchAccess: () => Promise<unknown>;
 }) {
-  // idle → waiting (pagamento completato nel browser) → late (oltre il timeout).
-  const [phase, setPhase] = useState<"idle" | "waiting" | "late">("idle");
-  const waiting = phase !== "idle";
-  const billing = useWorkspaceBilling(workspaceId, { refetchInterval: waiting ? 3_000 : false });
+  const [awaiting, setAwaiting] = useState<Awaiting | null>(null);
+  const [late, setLate] = useState(false);
+  const billing = useWorkspaceBilling(workspaceId, { refetchInterval: awaiting ? 3_000 : false });
   const subscription = billing.data;
-  const activated = hasOpenSubscription(subscription) && access?.source === "subscription";
+  const done = !awaiting ? false
+    : awaiting.kind === "purchase" ? hasOpenSubscription(subscription) && access?.source === "subscription"
+    : awaiting.kind === "change" ? subscription?.plan === awaiting.plan && subscription.extra_venues === awaiting.extraVenues
+    : !!subscription && subscription.scheduled_change === null;
   // L'avviso è arrivato: si torna alla vista normale (aggiornamento in render,
   // non in un effetto, come suggerisce React per lo stato derivato).
-  if (waiting && activated) setPhase("idle");
+  if (awaiting && done) { setAwaiting(null); setLate(false); }
 
   useEffect(() => {
-    if (phase === "idle") return;
+    if (!awaiting) return;
     const poll = setInterval(() => void refetchAccess(), 3_000);
-    const timeout = phase === "waiting" ? setTimeout(() => setPhase("late"), ACTIVATION_TIMEOUT_MS) : undefined;
-    return () => { clearInterval(poll); if (timeout) clearTimeout(timeout); };
-  }, [phase, refetchAccess]);
+    const timeout = setTimeout(() => setLate(true), ACTIVATION_TIMEOUT_MS);
+    return () => { clearInterval(poll); clearTimeout(timeout); };
+  }, [awaiting, refetchAccess]);
+  const lateText = "L’aggiornamento sta richiedendo più del previsto. Aggiorna lo stato fra qualche minuto; se non cambia, scrivici a info@klokshift.com.";
 
   if (billing.isPending) return <Card><p className="text-sm text-t2">Verifica dell’abbonamento…</p></Card>;
   if (billing.isError) return <Card><p className="text-sm text-error" role="alert">{userErrorMessage(billing.error)}</p></Card>;
 
-  if (waiting && !activated) {
+  if (awaiting?.kind === "purchase") {
     return (
       <Card>
         <h2 className="font-semibold text-t1">Pagamento ricevuto</h2>
-        <p className="mt-2 text-sm text-t2" role="status">{phase === "late"
-          ? "L’attivazione sta richiedendo più del previsto. Aggiorna lo stato fra qualche minuto; se non cambia, scrivici a info@klokshift.com."
-          : "Stiamo attivando il piano: di solito bastano pochi secondi."}</p>
+        <p className="mt-2 text-sm text-t2" role="status">{late ? lateText : "Stiamo attivando il piano: di solito bastano pochi secondi."}</p>
       </Card>
     );
   }
-  if (hasOpenSubscription(subscription)) return <SubscriptionCard billing={subscription as WorkspaceBilling} />;
+  if (hasOpenSubscription(subscription)) {
+    const notice = !awaiting ? null : late ? lateText
+      : awaiting.kind === "change" ? "Aumento confermato: aggiorniamo il piano appena Paddle registra il pagamento."
+      : "Rinnovi ripresi: aggiorniamo lo stato fra pochi secondi.";
+    return <SubscriptionCard workspaceId={workspaceId} billing={subscription as WorkspaceBilling}
+      notice={notice} busy={!!awaiting} onAwait={(next) => { setLate(false); setAwaiting(next); }} />;
+  }
   if (!access || access.state === "expired") return null;
   if (access.source === "complimentary_lifetime" && access.state === "operational") return null;
-  return <PurchasePanel workspaceId={workspaceId} access={access} onPaid={() => setPhase("waiting")} />;
+  return <PurchasePanel workspaceId={workspaceId} access={access} onPaid={() => setAwaiting({ kind: "purchase" })} />;
 }
 
-function SubscriptionCard({ billing }: { billing: WorkspaceBilling }) {
+function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
+  workspaceId: string; billing: WorkspaceBilling; notice: string | null; busy: boolean;
+  onAwait: (next: Awaiting) => void;
+}) {
   const stopping = billing.scheduled_change?.action === "cancel" || billing.scheduled_change?.action === "pause";
+  const portal = useMutation({ mutationFn: (target: "overview" | "paymentMethod" | "cancel") => openPortal(workspaceId, target) });
+  const resume = useMutation({ mutationFn: () => resumeRenewals(workspaceId), onSuccess: () => onAwait({ kind: "resume" }) });
+  const error = portal.error ?? resume.error;
   return (
     <Card>
       <h2 className="font-semibold text-t1">Abbonamento</h2>
@@ -155,10 +175,77 @@ function SubscriptionCard({ billing }: { billing: WorkspaceBilling }) {
         <Value label="Sedi comprese" value={1 + billing.extra_venues} />
         {billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
       </dl>
+      {notice ? <p className="mt-5 text-sm text-t2" role="status">{notice}</p> : null}
       {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; l’operatività continua per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
       {stopping ? <p className="mt-5 text-sm text-t2">I rinnovi sono fermati: il servizio resta attivo fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi.</p> : null}
-      <p className="mt-5 text-xs text-t3">Per cambiare piano o sedi, aggiornare il metodo di pagamento o fermare i rinnovi scrivi a <a className="focus-gold text-gold underline" href="mailto:info@klokshift.com">info@klokshift.com</a>: la gestione diretta da questa pagina arriva a breve. Ricevute e rimborsi passano da Paddle.</p>
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        {billing.status === "past_due"
+          ? <Button variant="gold" disabled={portal.isPending} onClick={() => portal.mutate("paymentMethod")}>Aggiorna il metodo di pagamento</Button>
+          : null}
+        <Button disabled={portal.isPending} onClick={() => portal.mutate("overview")}>Ricevute e metodo di pagamento</Button>
+        {stopping
+          ? <Button variant="gold" disabled={resume.isPending || busy} onClick={() => resume.mutate()}>{resume.isPending ? "Ripresa…" : "Riprendi i rinnovi"}</Button>
+          : billing.status !== "paused"
+            ? <Button disabled={portal.isPending} onClick={() => portal.mutate("cancel")}>Ferma i rinnovi</Button>
+            : null}
+      </div>
+      {error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(error)}</p> : null}
+      <p className="mt-3 text-xs text-t3">Ricevute, metodo di pagamento e disdetta si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda.</p>
+
+      {billing.status === "active" && !stopping
+        ? <UpgradeForm workspaceId={workspaceId} billing={billing} busy={busy}
+            onApplied={(plan, extraVenues) => onAwait({ kind: "change", plan, extraVenues })} />
+        : null}
+      <p className="mt-5 text-xs text-t3">Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale scrivi a <a className="focus-gold text-gold underline" href="mailto:info@klokshift.com">info@klokshift.com</a>.</p>
     </Card>
+  );
+}
+
+/** Solo aumenti: piano non inferiore e sedi non meno di oggi. Importi calcolati da Paddle. */
+function UpgradeForm({ workspaceId, billing, busy, onApplied }: {
+  workspaceId: string; billing: WorkspaceBilling; busy: boolean;
+  onApplied: (plan: "base" | "team", extraVenues: number) => void;
+}) {
+  const currentVenues = 1 + billing.extra_venues;
+  const [plan, setPlan] = useState<"base" | "team">(billing.plan);
+  const [venues, setVenues] = useState(String(currentVenues));
+  const count = Number(venues);
+  const valid = venues.trim() !== "" && Number.isSafeInteger(count) && count >= currentVenues && count <= 1000;
+  const changed = valid && (plan !== billing.plan || count !== currentVenues);
+  const selection = { workspaceId, plan, extraVenues: count - 1 };
+  const preview = useMutation({ mutationFn: () => previewChange(selection) });
+  const apply = useMutation({ mutationFn: () => applyChange(selection), onSuccess: () => onApplied(plan, count - 1) });
+  const reset = () => { preview.reset(); apply.reset(); };
+  const quote = preview.data;
+
+  return (
+    <div className="mt-6 border-t border-border-2 pt-5">
+      <h3 className="font-semibold text-t1">Aumenta piano o sedi</h3>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Field label="Piano">
+          <Select value={plan} onChange={(e) => { setPlan(e.target.value as "base" | "team"); reset(); }}>
+            {billing.plan === "base" ? <option value="base">Base · fino a 30 persone</option> : null}
+            <option value="team">Team · senza limite di persone</option>
+          </Select>
+        </Field>
+        <Field label="Sedi totali" error={valid ? undefined : `Almeno ${currentVenues}: quelle già comprese.`}>
+          <Input type="number" min={currentVenues} step={1} value={venues} onChange={(e) => { setVenues(e.target.value); reset(); }} />
+        </Field>
+      </div>
+      {quote ? (
+        <div className="mt-4 rounded-xl bg-bg-2 p-4 text-sm">
+          <p className="text-t1">Paghi ora <strong>{formatCents(quote.dueNowCents, quote.currency)}</strong> per i giorni che restano del periodo.</p>
+          <p className="mt-1 text-t2">Dal prossimo rinnovo: {formatCents(quote.renewalCents, quote.currency)} {billing.billing_interval === "year" ? "all’anno" : "al mese"}. Importi con le imposte calcolate da Paddle.</p>
+        </div>
+      ) : null}
+      <div className="mt-4 flex flex-wrap gap-3">
+        {quote
+          ? <Button variant="gold" disabled={apply.isPending || busy} onClick={() => apply.mutate()}>{apply.isPending ? "Conferma…" : "Conferma l’aumento"}</Button>
+          : <Button disabled={!changed || preview.isPending || busy} onClick={() => preview.mutate()}>{preview.isPending ? "Calcolo…" : "Calcola l’importo"}</Button>}
+      </div>
+      {preview.error ?? apply.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(preview.error ?? apply.error)}</p> : null}
+    </div>
   );
 }
 
