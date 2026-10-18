@@ -10,6 +10,7 @@ import { userErrorMessage } from "@/lib/errors";
 import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
 import { openCheckout, prepareCheckout } from "../billing/checkout";
 import { applyChange, formatCents, openPortal, previewChange, resumeRenewals } from "../billing/manage";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
@@ -194,7 +195,8 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
       <p className="mt-3 text-xs text-t3">Ricevute, metodo di pagamento e disdetta si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda.</p>
 
       {billing.status === "active" && !stopping
-        ? <UpgradeForm workspaceId={workspaceId} billing={billing} busy={busy}
+        // La chiave rimonta il modulo quando l'avviso cambia piano o sedi: niente importo vecchio a schermo.
+        ? <UpgradeForm key={`${billing.plan}-${billing.extra_venues}`} workspaceId={workspaceId} billing={billing} busy={busy}
             onApplied={(plan, extraVenues) => onAwait({ kind: "change", plan, extraVenues })} />
         : null}
       <p className="mt-5 text-xs text-t3">Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale scrivi a <a className="focus-gold text-gold underline" href="mailto:info@klokshift.com">info@klokshift.com</a>.</p>
@@ -216,8 +218,10 @@ function UpgradeForm({ workspaceId, billing, busy, onApplied }: {
   const selection = { workspaceId, plan, extraVenues: count - 1 };
   const preview = useMutation({ mutationFn: () => previewChange(selection) });
   const apply = useMutation({ mutationFn: () => applyChange(selection), onSuccess: () => onApplied(plan, count - 1) });
+  const [confirming, setConfirming] = useState(false);
   const reset = () => { preview.reset(); apply.reset(); };
   const quote = preview.data;
+  const per = billing.billing_interval === "year" ? "all’anno" : "al mese";
 
   return (
     <div className="mt-6 border-t border-border-2 pt-5">
@@ -236,15 +240,25 @@ function UpgradeForm({ workspaceId, billing, busy, onApplied }: {
       {quote ? (
         <div className="mt-4 rounded-xl bg-bg-2 p-4 text-sm">
           <p className="text-t1">Paghi ora <strong>{formatCents(quote.dueNowCents, quote.currency)}</strong> per i giorni che restano del periodo.</p>
-          <p className="mt-1 text-t2">Dal prossimo rinnovo: {formatCents(quote.renewalCents, quote.currency)} {billing.billing_interval === "year" ? "all’anno" : "al mese"}. Importi con le imposte calcolate da Paddle.</p>
+          <p className="mt-1 text-t2">Dal prossimo rinnovo: {formatCents(quote.renewalCents, quote.currency)} {per}. Importi con le imposte calcolate da Paddle.</p>
         </div>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-3">
         {quote
-          ? <Button variant="gold" disabled={apply.isPending || busy} onClick={() => apply.mutate()}>{apply.isPending ? "Conferma…" : "Conferma l’aumento"}</Button>
+          ? <Button variant="gold" disabled={apply.isPending || busy} onClick={() => setConfirming(true)}>Conferma l’aumento</Button>
           : <Button disabled={!changed || preview.isPending || busy} onClick={() => preview.mutate()}>{preview.isPending ? "Calcolo…" : "Calcola l’importo"}</Button>}
       </div>
       {preview.error ?? apply.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(preview.error ?? apply.error)}</p> : null}
+      {confirming && quote ? (
+        <ConfirmDialog
+          title={`Passare a ${plan === "base" ? "Base" : "Team"} con ${count} ${count === 1 ? "sede" : "sedi"}?`}
+          message={`Paddle addebita subito ${formatCents(quote.dueNowCents, quote.currency)} sul metodo di pagamento salvato. Dal prossimo rinnovo paghi ${formatCents(quote.renewalCents, quote.currency)} ${per}.`}
+          confirmLabel="Conferma e paga"
+          pending={apply.isPending}
+          onConfirm={() => apply.mutate(undefined, { onSettled: () => setConfirming(false) })}
+          onCancel={() => setConfirming(false)}
+        />
+      ) : null}
     </div>
   );
 }

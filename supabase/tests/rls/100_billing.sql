@@ -184,6 +184,7 @@ begin
   perform tests.eq(a ->> 'plan', 'team', 'dopo l''upgrade: Team');
   perform tests.eq((a #>> '{limits,venues}')::integer, 2, 'sede inclusa più una aggiuntiva');
   perform tests.eq(a #>> '{limits,people}', null, 'Team senza limite di persone');
+  perform tests.eq((a ->> 'operational_from')::timestamptz, t0, 'l''inizio resta quello dell''acquisto, non dell''upgrade');
 
   -- Rinnovo pagato.
   perform tests.billing_service();
@@ -192,6 +193,7 @@ begin
   perform tests.logout();
   a := private.workspace_access_at(ws, e1 + interval '1 day');
   perform tests.eq((a ->> 'operational_until')::timestamptz, e2, 'il rinnovo sposta la fine al nuovo periodo');
+  perform tests.eq((a ->> 'operational_from')::timestamptz, t0, 'il rinnovo non sposta l''inizio');
 
   -- Rinnovo successivo non riuscito: 7 giorni con la stessa capacità, una volta sola.
   perform tests.billing_service();
@@ -205,6 +207,7 @@ begin
   a := private.workspace_access_at(ws, e2 + interval '3 days');
   perform tests.eq(a ->> 'source', 'payment_grace', 'nei 7 giorni si lavora ancora');
   perform tests.eq(a ->> 'plan', 'team', 'con la capacità dell''ultimo periodo pagato');
+  perform tests.eq((a ->> 'operational_from')::timestamptz, t0, 'la tolleranza continua lo stesso abbonamento');
   perform tests.eq((a ->> 'operational_until')::timestamptz, e2 + interval '168 hours', 'tolleranza di 7 giorni');
   a := private.workspace_access_at(ws, e2 + interval '8 days');
   perform tests.eq(a ->> 'state', 'archive', 'dopo i 7 giorni: sola consultazione');

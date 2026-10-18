@@ -437,7 +437,7 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | IN CORSO: M06a concessioni/classificazioni/audit locale; economia e altri interventi pendenti |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
 | M08 | Verifica account/contratto e prova sandbox Paddle | M01–M02 per chiusura; indagine indipendente avviabile prima | IN CORSO dal 2026-10-18: pagine legali scritte in locale, account sandbox/live da aprire, email del dominio da attivare |
-| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | IN CORSO dal 2026-10-18: M09a DB, M09b avvisi e M09c acquisto verificati in locale; rilascio e prova sandbox da fare, poi gestione (M09d) |
+| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | IN CORSO dal 2026-10-18: M09a–c rilasciati e acquisto provato in sandbox; M09d (gestione) rilasciato il 18/10, prova sandbox da fare; poi prove di disdetta/rinnovo/insoluto/rimborso e M11 |
 | M10 | KPI storici, anomalie, previsione e automazioni mirate | Dati raccolti da M05–M09 | PROPOSTO |
 | M11 | Primo mese, pausa stagionale, uscita, archivio/export e cancellazione verificata | Regole M01, modello M03, UI M04/M05, provider M09 | PROPOSTO; parte della V1 |
 
@@ -853,7 +853,7 @@ subito: va gestito nel flusso di modifica), quota documenti.
 - [x] Dashboard: avviso nella Home per azienda senza prova/abbonamento, rinnovo in sospeso o archivio;
   `workspace_read_only` con testo neutro (vale anche nell'app); pagina di benvenuto con la creazione
   dell'azienda al primo posto.
-- [x] M09d (in locale, 18/10): migration `20261019000000_billing_manage` (`billing_manage_context`,
+- [x] M09d (rilasciato 18/10: commit `145c5ee`, Edge Function `billing-manage` v1 pubblicata a parte; prova sandbox da fare): migration `20261019000000_billing_manage` (`billing_manage_context`,
   `billing_prepare_change`, solo service role: titolare, abbonamento aperto, solo aumenti, niente
   cambi con rinnovo in sospeso o disdetta programmata), suite `rls/105_billing_manage.sql`. Edge
   Function `billing-manage`: portale clienti (link nuovi a ogni clic, solo https), «Riprendi i
@@ -862,6 +862,14 @@ subito: va gestito nel flusso di modifica), quota documenti.
   ricevute/metodo di pagamento, ferma o riprendi i rinnovi, aumento con importo prima della
   conferma, attesa dell'avviso dopo ogni azione. Decisione del 18/10: riduzioni e cambio
   mensile↔annuale via email per ora.
+- [x] Prova sandbox M09d del 18/10 su Hotel Tesoro superata: Base→Team con 2 sedi (42,55 €), poi 3
+  sedi (18,23 €), portale con ricevute, disdetta dal portale («Ultimo giorno»), «Riprendi i rinnovi»;
+  ogni `subscription.updated` `applied`, periodi spezzati all'istante dell'avviso. Aggiunta la
+  finestra di conferma prima di pagare l'aumento.
+- [x] Difetto visto nella prova: dopo un aumento «Inizio accesso» mostrava l'ora dell'aumento (16:44)
+  invece dell'acquisto (13:02), perché ogni avviso apre un periodo nuovo. Migration
+  `20261019000100_access_from_subscription_start`: `operational_from` risale ai periodi contigui
+  dello stesso abbonamento (aumento, rinnovo, tolleranza); controlli in `rls/100_billing.sql`.
 - [ ] Riduzioni al rinnovo con un'operazione pianificata; link `_ptxn` delle email Paddle verso la
   dashboard; disattivare, se possibile, il cambio piano dal portale Paddle.
 - ⚠️ Quando arriverà la CSP della dashboard (audit C17) deve ammettere Paddle.js
