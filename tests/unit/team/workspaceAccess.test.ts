@@ -3,6 +3,7 @@ import {
   parseWorkspaceAccess,
   workspaceAccessRefetchDelay,
   canUseWorkspaceOperations,
+  workspaceAccessMessage,
 } from "@/features/workspace/access";
 import { canCreateVenue, venueNewMode } from "@/features/venues/gate";
 
@@ -151,6 +152,22 @@ describe("accesso commerciale aziendale", () => {
       archive_until: null, attendance_until: null,
     });
     expect(workspaceAccessRefetchDelay(access)).toBe(false);
+  });
+
+  it.each([
+    ["abbonamento", "subscription", "Abbonamento attivo."],
+    ["tolleranza di pagamento", "payment_grace", "Il rinnovo dell'abbonamento non è andato a buon fine. L'operatività continua per pochi giorni: il titolare può sistemarlo."],
+  ])("accetta l'origine %s, con scadenza e messaggio neutro", (_name, source, message) => {
+    const access = parseWorkspaceAccess({ ...trial(), source, plan: "base", limits: { people: 30, venues: 2 } });
+    expect(access.source).toBe(source);
+    expect(workspaceAccessMessage(access)).toBe(message);
+    // Nell'app nativa niente prezzi né inviti all'acquisto (App Store 3.1.3).
+    expect(workspaceAccessMessage(access)).not.toMatch(/€|acquist|compra|paga ora/i);
+  });
+
+  it("un abbonamento senza fine del periodo non è valido", () => {
+    expect(() => parseWorkspaceAccess({ ...trial(), source: "subscription", operational_until: null }))
+      .toThrow("workspace_access_invalid");
   });
 
   it.each([

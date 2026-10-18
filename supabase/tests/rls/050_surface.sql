@@ -75,9 +75,10 @@ begin
     (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
         and p.proname in ('claim_invite_send', 'peek_invite', 'consume_invite', 'delete_account',
-                         'grant_workspace_access')
+                         'grant_workspace_access', 'billing_apply_event', 'billing_prepare_checkout',
+                         'billing_attach_checkout_transaction')
         and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
-    '', 'inviti, delete_account e concessioni commerciali sono solo della service role');
+    '', 'inviti, delete_account, concessioni e pagamenti sono solo della service role');
   perform tests.eq(
     (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname in ('public', 'private') and p.prorettype = 'trigger'::regtype

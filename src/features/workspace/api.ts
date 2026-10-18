@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { parseWorkspaceAccess, type WorkspaceAccess } from "./access";
+import { parseWorkspaceBilling, type WorkspaceBilling } from "./billing";
 import type { MyContext } from "./types";
 
 /** Stato/capacità dell'azienda; la RPC verifica appartenenza e dati condivisibili. */
@@ -12,6 +13,14 @@ export async function getWorkspaceAccess(workspaceId: string): Promise<Workspace
   const access = parseWorkspaceAccess(data);
   if (access.workspace_id !== workspaceId) throw new Error("workspace_access_invalid");
   return access;
+}
+
+/** Riassunto dell'abbonamento; la RPC lo concede solo al titolare. */
+export async function getWorkspaceBilling(workspaceId: string): Promise<WorkspaceBilling | null> {
+  if (!workspaceId.trim()) throw new Error("workspace_billing_invalid");
+  const { data, error } = await supabase.rpc("get_workspace_billing", { p_workspace: workspaceId });
+  if (error) throw new Error(error.message);
+  return parseWorkspaceBilling(data);
 }
 
 /** Avvio esplicito del titolare; date e idempotenza appartengono al server. */

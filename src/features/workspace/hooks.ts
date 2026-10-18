@@ -5,6 +5,7 @@ import {
   getMyContext,
   getStaffCanChat,
   getWorkspaceAccess,
+  getWorkspaceBilling,
   respondToInvite,
   setStaffCanChat,
   startWorkspaceTrial,
@@ -43,6 +44,25 @@ export function useWorkspaceAccess(workspaceId: string | undefined) {
     canRead: access?.can_read ?? false,
     canCompleteAttendance: access?.can_complete_attendance ?? false,
   };
+}
+
+/**
+ * Abbonamento del titolare. Dopo un pagamento la pagina rilegge finché
+ * l'avviso di Paddle non è arrivato (`refetchInterval` passato dal chiamante).
+ */
+export function useWorkspaceBilling(
+  workspaceId: string | undefined,
+  options: { enabled?: boolean; refetchInterval?: number | false } = {}
+) {
+  const enabled = !!workspaceId && (options.enabled ?? true);
+  return useQuery({
+    queryKey: qk.workspaceBilling.byWorkspace(workspaceId ?? ""),
+    queryFn: () => getWorkspaceBilling(workspaceId as string),
+    enabled,
+    refetchOnWindowFocus: true,
+    refetchInterval: options.refetchInterval ?? false,
+    staleTime: 0,
+  });
 }
 
 /** Nessuna attivazione locale: l'esito valido invalida il read model server. */

@@ -437,7 +437,7 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | IN CORSO: M06a concessioni/classificazioni/audit locale; economia e altri interventi pendenti |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
 | M08 | Verifica account/contratto e prova sandbox Paddle | M01–M02 per chiusura; indagine indipendente avviabile prima | IN CORSO dal 2026-10-18: pagine legali scritte in locale, account sandbox/live da aprire, email del dominio da attivare |
-| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | RIMANDATO dal fondatore il 2026-10-10; integrazione da realizzare dopo M08 |
+| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | IN CORSO dal 2026-10-18: M09a DB, M09b avvisi e M09c acquisto verificati in locale; rilascio e prova sandbox da fare, poi gestione (M09d) |
 | M10 | KPI storici, anomalie, previsione e automazioni mirate | Dati raccolti da M05–M09 | PROPOSTO |
 | M11 | Primo mese, pausa stagionale, uscita, archivio/export e cancellazione verificata | Regole M01, modello M03, UI M04/M05, provider M09 | PROPOSTO; parte della V1 |
 
@@ -787,6 +787,63 @@ prima il collegamento server fra azienda, contratto, pagamenti e periodi di
 accesso; poi collegare il checkout alla pagina cliente Piano e accesso.
 Verificare cosa esiste realmente nel codice al momento della ripresa.
 
+**M09a, 18 ottobre 2026 — modello DB, in locale.** Migration
+`20261018000000_billing_subscriptions.sql`, suite `rls/100_billing.sql`.
+Un abbonamento non è un secondo motore di diritti: produce periodi
+`subscription` (periodo pagato, sedi = 1 + extra) e `payment_grace` (7 giorni
+dalla fine dell'ultimo periodo pagato, una sola volta per periodo: i tentativi
+non la allungano), letti dal solito `workspace_access_at`. Capacità, sola
+lettura, rettifiche e archivio valgono quindi senza altre modifiche.
+
+- Catalogo `private.billing_prices` per ambiente (sandbox seminata; live da
+  aggiungere con una migration nuova). Prezzi sconosciuti, piani doppi, cicli
+  misti, `trialing` di Paddle: evento registrato come scartato, nessun diritto.
+- `billing_apply_event` (solo service role): idempotenza per `event_id` con lock,
+  eventi più vecchi dell'ultimo applicato ignorati (Paddle non garantisce
+  l'ordine), primo evento collegato solo tramite `custom_data.klokshift_checkout`
+  di una richiesta preparata dal server; secondo abbonamento aperto sulla stessa
+  azienda scartato come anomalia. I confini usano l'istante dell'evento.
+- Cambi nello stesso ciclo (upgrade, sede in più) valgono dall'evento e la storia
+  resta; rinnovo e ripresa aprono un nuovo periodo; disdetta e pausa non tagliano
+  mai prima dell'evento, quindi la disdetta a fine periodo lascia intero il pagato
+  e una disdetta immediata (rimborso) chiude subito.
+- Ordine dell'oracolo: gratuità a vita, poi abbonamento, poi prova/transizione/
+  concessioni a tempo. Chi compra durante la prova ottiene subito ciò che ha
+  comprato; se tenere i giorni di prova residui si decide nel checkout (M09c).
+- `billing_prepare_checkout` (service role, per conto del titolare verificato
+  dalla Edge Function): solo titolare, nessun abbonamento aperto, niente acquisto
+  con gratuità a vita, capacità che contiene organico e sedi attuali, massimo 20
+  richieste l'ora; restituisce i prezzi da usare. `get_workspace_billing` per la
+  pagina Piano: solo titolare, nessun identificativo o importo Paddle.
+- Le concessioni del fondatore restano bloccate (`admin_provider_action_required`)
+  su un'azienda che ha avuto periodi pagati.
+- Client: nuove origini `subscription`/`payment_grace` nel parser condiviso,
+  nell'area fondatore e nella pagina Piano; messaggio neutro nell'app nativa.
+  ⚠️ Un'origine sconosciuta manda in errore il client per scelta: una build
+  nativa precedente a questo blocco non deve arrivare a un'azienda pagante.
+- Verifiche: suite SQL completa su banco azzerato, tipi rigenerati, 67 file /
+  573 test client, typecheck app/web, lint senza errori.
+
+Rimandati: transazioni e rettifiche (registrate come `ignored`, servono a
+riconciliazione ed economia), downgrade al rinnovo (Paddle cambia gli articoli
+subito: va gestito nel flusso di modifica), quota documenti.
+
+- [x] M09a: modello DB, applicazione eventi verificati e preparazione richieste d'acquisto, in locale.
+- [x] M09b (in locale, 18/10): Edge Function `paddle-webhook`, pubblica (`--no-verify-jwt`) e autenticata dalla firma `Paddle-Signature` (HMAC-SHA256 sul corpo grezzo, più `h1` durante la rotazione, tolleranza 30 s: ripetere un evento non ha effetto). 200 per ogni esito definitivo, compresi gli scarti; 401 firma; 500 errore imprevisto o configurazione mancante, così Paddle ritenta. Test di firma e handler, `deno task check`. Da fare: deploy, destinazione su Paddle sandbox, segreti `PADDLE_WEBHOOK_SECRET`/`PADDLE_ENVIRONMENT`.
+- [x] M09c (in locale, 18/10): Edge Function `billing-checkout` (JWT; utente dal token, mai dal body) →
+  `billing_prepare_checkout` → transazione Paddle con `custom_data.klokshift_checkout` →
+  `billing_attach_checkout_transaction`; restituisce transazione, ambiente e token client, così la
+  dashboard non ha configurazione Paddle nel bundle. Chiave API e token client devono essere dello
+  stesso ambiente. Pagina Piano: scelta piano/periodo/sedi (Base nascosto oltre 30 persone, sedi
+  non sotto quelle aperte), totale + IVA, avviso sui giorni di prova persi (decisione 18/10:
+  l'abbonamento parte subito), termini e rimborsi; Paddle.js caricato solo all'acquisto; dopo il
+  pagamento la pagina rilegge ogni 3 s finché arriva l'avviso firmato (90 s, poi messaggio).
+  Con un abbonamento aperto: stato, rinnovo o ultimo giorno, rinnovo non riuscito; cambi e disdetta
+  per ora via email (portale clienti in M09d). Test di logica e handler, pagina Piano, `deno task check`.
+- [ ] M09d: gestione dalla pagina Piano (portale clienti Paddle: carta, disdetta, ricevute) e cambi di
+  piano/sedi con il controllo di compatibilità; link `_ptxn` delle email Paddle verso la dashboard.
+- ⚠️ Quando arriverà la CSP della dashboard (audit C17) deve ammettere Paddle.js
+  (`cdn.paddle.com`) e il checkout in overlay di Paddle, altrimenti l'acquisto si rompe.
 - [ ] Implementare il checkout sul web con creazione/verifica server, autorizzazione del titolare, piano/ciclo/sedi e riepilogo prima della conferma. Prezzi e checkout restano fuori dall'app nativa.
 - [ ] Implementare webhook firmati, registrazione degli eventi, idempotenza e riconciliazione; gestire duplicati, retry ed eventi fuori ordine. Il ritorno dal checkout nel browser non concede diritti.
 - [ ] Collegare soltanto eventi verificati a contratto, capacità e periodi aziendali; conservare storico e date, senza assegnare diritti per dati mancanti o resettare la prova.
@@ -947,6 +1004,7 @@ fiscale/privacy rimane separata dall'approvazione delle condizioni commerciali.
 
 | 2026-10-05 | M03b e collegamento minimo client | Guard server/RLS/Storage, capacità con lock, compatibilità migration_pending, rettifiche limitate, storico sedi chiuse e mesi arbitrari. Verifica locale: 256 test client, typecheck app/web, lint (warning preesistente), build web/export iOS; suite SQL e concorrenza nel banco. Nessuna nuova migration remota o addebito. |
 | 2026-10-18 | Ripresa M08: nessun account Paddle; requisiti di revisione del dominio verificati | Rimborsi a 14 giorni da ogni addebito approvati; termini, rimborsi e privacy aggiornati in locale; email del dominio da attivare, indirizzo/partita IVA da pubblicare |
+| 2026-10-18 | M09a: abbonamenti come periodi di accesso, eventi verificati e richieste d'acquisto | Migration e suite SQL nuove, client aggiornato; verificato in locale, non ancora rilasciato |
 
 Riferimenti interni da leggere prima di implementare: `AGENTS.md`, `ARCHITECTURE.md`, `supabase/README.md`, `web/README.md`, `web-site/README.md`, `CLOCK_IN_OUT.md`, `plans/HOURS-ABSENCES-ADJUSTMENTS.md` e stato corrente di `plans/AUDIT-2026-10-04.md`.
 

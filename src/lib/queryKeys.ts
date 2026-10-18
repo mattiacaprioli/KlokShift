@@ -27,6 +27,11 @@ export const qk = {
     byWorkspace: (workspaceId: string) =>
       ["workspaceAccess", "byWorkspace", workspaceId] as const,
   },
+  /** Riassunto dell'abbonamento Paddle, solo per il titolare (pagina Piano). */
+  workspaceBilling: {
+    byWorkspace: (workspaceId: string) =>
+      ["workspaceBilling", "byWorkspace", workspaceId] as const,
+  },
   venues: {
     all: ["venues"] as const,
     /**

@@ -106,7 +106,9 @@ La prova di **30 giorni gratuiti senza carta** è approvata per tutte le nuove a
 - Il fondatore può concedere proroghe finite con motivo, date e registro dell'intervento.
 - La prova precede il periodo annuale acquistato: non duplica i due mesi di risparmio del listino.
 
-**Dettagli da chiudere per il flusso cliente:** istante iniziale della prova, comportamento dell'acquisto durante la prova ed eleggibilità in caso di aziende create ripetutamente. La fondazione tecnica prevede un'attivazione esplicita, una sola volta dal server, con almeno una sede aperta già pronta; il collegamento automatico al setup viene affrontato nel flusso cliente.
+**Acquisto durante la prova (decisione del 18 ottobre 2026):** l'abbonamento e il primo addebito partono il giorno dell'acquisto; i giorni di prova rimasti non si sommano, e la pagina Piano lo dice prima del pagamento. Il piano comprato vale subito, anche se diverso da Team.
+
+**Dettagli da chiudere per il flusso cliente:** istante iniziale della prova ed eleggibilità in caso di aziende create ripetutamente. La fondazione tecnica prevede un'attivazione esplicita, una sola volta dal server, con almeno una sede aperta già pronta; il collegamento automatico al setup viene affrontato nel flusso cliente.
 
 ### Aziende selezionate: gratuità a vita
 

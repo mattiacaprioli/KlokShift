@@ -15,6 +15,7 @@ const labels: Record<string, string> = {
   setup: 'Preparazione', operational: 'Operativa', archive: 'Archivio', expired: 'Archivio scaduto', migration_pending: 'Migrazione da verificare', unavailable: 'Dati mancanti', deleted: 'Eliminato',
   confirmed: 'Confermato', unconfirmed: 'Da confermare', anonymous: 'Anonimo', owner: 'Titolare', collaborator: 'Collaboratore', none: 'Professionista', active: 'Attivo', invited: 'Invitato', left: 'Uscito',
   base: 'Base', team: 'Team', trial: 'Prova', complimentary_lifetime: 'Gratuito a vita', complimentary_temporary: 'Concessione temporanea', transition: 'Transizione',
+  subscription: 'Abbonamento', payment_grace: 'Tolleranza pagamento',
 };
 const flagLabels: Record<AdminFlag['code'], string> = {
   migration_pending: 'Verificare la migrazione commerciale', commercial_data_missing: 'Verificare i dati commerciali mancanti', trial_ending: 'Prova in scadenza entro 7 giorni', archive_ending: 'Archivio in scadenza entro 30 giorni', attendance_window: 'Rettifiche pregresse ancora consentite', archive_expired: 'Archivio scaduto: verificare il percorso di cancellazione', people_near_capacity: 'Capacità persone prossima al limite', people_over_capacity: 'Capacità persone superata', venues_over_capacity: 'Capacità sedi superata', document_measurement_incomplete: 'Dimensioni Storage incomplete',

@@ -16,8 +16,10 @@ type ModuleRunner = (
 
 /** Handler originale, runtime Deno e provider simulati: nessuna rete o invio. */
 export function edgeRuntime(
-  name: "accept-invite" | "invite-staff" | "push",
-  imports: Record<string, unknown>
+  name: "accept-invite" | "invite-staff" | "push" | "paddle-webhook" | "billing-checkout",
+  imports: Record<string, unknown>,
+  envOverrides: Record<string, string | undefined> = {},
+  globals: Record<string, unknown> = {}
 ) {
   let handler: Handler | undefined;
   const log = vi.fn();
@@ -29,8 +31,14 @@ export function edgeRuntime(
     SMTP_PASS: "fixture-smtp-secret", SMTP_FROM: "KlokShift <fixture@example.test>",
     SITE_URL: "https://klokshift.example.test", DASHBOARD_URL: "https://klokshift.example.test/app",
     PUSH_HOOK_SECRET: "fixture-push-secret",
+    PADDLE_WEBHOOK_SECRET: "fixture-paddle-secret", PADDLE_ENVIRONMENT: "sandbox",
+    PADDLE_API_KEY: "pdl_sdbx_apikey_fixture-secret", PADDLE_CLIENT_TOKEN: "test_fixturetoken",
   };
+  for (const [key, value] of Object.entries(envOverrides)) {
+    if (value === undefined) delete env[key]; else env[key] = value;
+  }
   const context = createContext({
+    ...globals,
     Request, Response, TextEncoder, Uint8Array, crypto: webcrypto,
     console: { error: log },
     Deno: {

@@ -224,7 +224,7 @@ CI=1 yarn lint
 
 `deno task check` usa il lock congelato. Per cambiare intenzionalmente una
 dipendenza, modifica l'import, rigenera il lock con
-`deno check --frozen=false accept-invite/index.ts delete-account/index.ts invite-staff/index.ts push/index.ts`
+`deno check --frozen=false accept-invite/index.ts billing-checkout/index.ts delete-account/index.ts invite-staff/index.ts paddle-webhook/index.ts push/index.ts`
 da `supabase/functions`, rivedi il diff e ripeti `deno task check`.
 
 Se una funzione usa una RPC nuova o un contratto SQL aggiornato, rilascia e
@@ -239,6 +239,8 @@ yarn supabase functions deploy invite-staff --project-ref rmlobxjlqlpixkvrzmfg
 yarn supabase functions deploy accept-invite --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
 yarn supabase functions deploy delete-account --project-ref rmlobxjlqlpixkvrzmfg
 yarn supabase functions deploy push --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
+yarn supabase functions deploy paddle-webhook --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
+yarn supabase functions deploy billing-checkout --project-ref rmlobxjlqlpixkvrzmfg
 ```
 
 `invite-staff` e `delete-account` mantengono la verifica JWT e rivalidano
@@ -246,7 +248,11 @@ il chiamante con `auth.getUser()`. `accept-invite` disabilita la verifica JWT:
 chi accetta non ha ancora un account; il token dell'invito e le RPC di consumo
 controllano l'accesso. `push` la disabilita perché è chiamata da `pg_net`,
 autenticato dal segreto condiviso nell'header `x-push-secret`; senza il segreto
-configurato la funzione rifiuta la richiesta. Riferimento:
+configurato la funzione rifiuta la richiesta. `paddle-webhook` la disabilita perché
+la chiama Paddle: l'autenticazione è la firma `Paddle-Signature` (HMAC-SHA256 sul
+corpo grezzo con la chiave della destinazione), e senza segreto o ambiente
+configurati rifiuta tutto. Va rilasciata **dopo** la migration
+`20261018000000_billing_subscriptions`. Riferimento:
 [flag di deploy della CLI](https://supabase.com/docs/reference/cli/supabase-functions-deploy).
 
 Variabili lette dalle funzioni (qui si riportano solo i nomi):
@@ -257,6 +263,8 @@ Variabili lette dalle funzioni (qui si riportano solo i nomi):
 | `invite-staff`, `delete-account` | `SUPABASE_ANON_KEY` |
 | `invite-staff` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SITE_URL`, `DASHBOARD_URL` |
 | `push` | `PUSH_HOOK_SECRET`, `EXPO_ACCESS_TOKEN` |
+| `paddle-webhook` | `PADDLE_WEBHOOK_SECRET` (chiave della destinazione su Paddle), `PADDLE_ENVIRONMENT` (`sandbox` o `live`) |
+| `billing-checkout` | `SUPABASE_ANON_KEY`, `PADDLE_API_KEY`, `PADDLE_CLIENT_TOKEN`, `PADDLE_ENVIRONMENT`: chiave e token devono essere dello stesso ambiente (`pdl_sdbx_apikey_`/`test_` oppure `pdl_live_apikey_`/`live_`), altrimenti la funzione rifiuta |
 
 Le variabili `SUPABASE_*` sono fornite dall'ambiente Edge del progetto;
 le altre vanno configurate come segreti del progetto. `SMTP_PORT` usa `465` se

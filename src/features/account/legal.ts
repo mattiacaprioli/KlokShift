@@ -17,6 +17,9 @@ export function legalUrlsFor(siteUrl?: string) {
   return {
     privacy: `${baseUrl}/privacy.html`,
     accountDeletion: `${baseUrl}/elimina-account.html`,
+    // Richieste da Paddle e citate accanto all'acquisto sulla dashboard web.
+    terms: `${baseUrl}/termini.html`,
+    refunds: `${baseUrl}/rimborsi.html`,
   } as const;
 }
 

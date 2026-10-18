@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { useStartWorkspaceTrial } from "@/features/workspace/hooks";
-import { workspaceAccessMessage } from "@/features/workspace/access";
+import { useStartWorkspaceTrial, useWorkspaceBilling } from "@/features/workspace/hooks";
+import { workspaceAccessMessage, type WorkspaceAccess } from "@/features/workspace/access";
+import { hasOpenSubscription, type WorkspaceBilling } from "@/features/workspace/billing";
+import { LEGAL_URLS } from "@/features/account/legal";
 import { userErrorMessage } from "@/lib/errors";
-import { EXTRA_VENUE_PRICES, formatEuro, quotePlan, type BillingCycle } from "../../../shared/pricing";
+import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
+import { openCheckout, prepareCheckout } from "../billing/checkout";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
@@ -39,13 +43,13 @@ export function PianoPage() {
             <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
               <Value label="Stato" value={stateLabels[current.state]} />
               <Value label="Piano" value={current.plan === "base" ? "Base" : current.plan === "team" ? "Team" : "Non assegnato"} />
-              <Value label="Origine dell’accesso" value={current.source === "trial" ? "Prova gratuita" : current.source === "complimentary_lifetime" ? "Gratuito a vita" : current.source === "transition" ? "Accesso transitorio" : current.source ? "Concessione a tempo" : "Non assegnato"} />
+              <Value label="Origine dell’accesso" value={current.source === "trial" ? "Prova gratuita" : current.source === "complimentary_lifetime" ? "Gratuito a vita" : current.source === "transition" ? "Accesso transitorio" : current.source === "subscription" ? "Abbonamento" : current.source === "payment_grace" ? "Rinnovo in sospeso" : current.source ? "Concessione a tempo" : "Non assegnato"} />
               <Value label="Persone in azienda" value={current.usage?.people ?? "Non disponibile"} />
               <Value label="Limite persone" value={!current.plan ? "Non assegnato" : current.limits.people === null ? "Senza limite" : current.limits.people} />
               <Value label="Sedi aperte" value={current.usage?.venues ?? "Non disponibile"} />
               <Value label="Sedi consentite" value={current.limits.venues ?? "Non assegnato"} />
               {current.operational_from ? <Value label="Inizio accesso" value={date(current.operational_from)} /> : null}
-              {current.operational_until ? <Value label={current.source === "trial" ? "Fine prova" : "Fine operatività"} value={date(current.operational_until)} /> : current.source === "complimentary_lifetime" ? <Value label="Scadenza" value="Senza scadenza commerciale" /> : null}
+              {current.operational_until ? <Value label={current.source === "trial" ? "Fine prova" : current.source === "subscription" ? "Fine del periodo pagato" : current.source === "payment_grace" ? "Termine per il pagamento" : "Fine operatività"} value={date(current.operational_until)} /> : current.source === "complimentary_lifetime" ? <Value label="Scadenza" value="Senza scadenza commerciale" /> : null}
               {current.attendance_until ? <Value label="Termine rettifiche pregresse" value={date(current.attendance_until)} /> : null}
               {current.archive_until ? <Value label="Termine consultazione ed export" value={date(current.archive_until)} /> : null}
             </dl>
@@ -83,7 +87,8 @@ export function PianoPage() {
           </Card>
         ) : null}
 
-        <PlanPreview key={workspaceId} />
+        {/* `refetch` è stabile (useCallback nel provider): l'attesa non riparte a ogni render. */}
+        <BillingSection key={workspaceId} workspaceId={workspaceId} access={current} refetchAccess={refetch} />
       </div>
     </>
   );
@@ -93,37 +98,132 @@ function Value({ label, value }: { label: string; value: string | number | null 
   return <div><dt className="text-xs text-t3">{label}</dt><dd className="mt-1 font-medium text-t1">{value ?? "Non disponibile"}</dd></div>;
 }
 
-function PlanPreview() {
-  const [cycle, setCycle] = useState<BillingCycle>("monthly");
-  const [venues, setVenues] = useState("1");
-  const count = Number(venues);
-  let valid = false;
-  try { quotePlan("team", cycle, count); valid = venues.trim() !== ""; } catch { /* Nessun importo per input non valido. */ }
+const dateOnly = (value: string) => new Date(value).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
+const ACTIVATION_TIMEOUT_MS = 90_000;
+
+/**
+ * Acquisto e abbonamento. Il diritto arriva solo dall'avviso firmato di Paddle:
+ * dopo il pagamento la pagina rilegge lo stato finché l'abbonamento non c'è.
+ */
+function BillingSection({ workspaceId, access, refetchAccess }: {
+  workspaceId: string; access: WorkspaceAccess | undefined; refetchAccess: () => Promise<unknown>;
+}) {
+  // idle → waiting (pagamento completato nel browser) → late (oltre il timeout).
+  const [phase, setPhase] = useState<"idle" | "waiting" | "late">("idle");
+  const waiting = phase !== "idle";
+  const billing = useWorkspaceBilling(workspaceId, { refetchInterval: waiting ? 3_000 : false });
+  const subscription = billing.data;
+  const activated = hasOpenSubscription(subscription) && access?.source === "subscription";
+  // L'avviso è arrivato: si torna alla vista normale (aggiornamento in render,
+  // non in un effetto, come suggerisce React per lo stato derivato).
+  if (waiting && activated) setPhase("idle");
+
+  useEffect(() => {
+    if (phase === "idle") return;
+    const poll = setInterval(() => void refetchAccess(), 3_000);
+    const timeout = phase === "waiting" ? setTimeout(() => setPhase("late"), ACTIVATION_TIMEOUT_MS) : undefined;
+    return () => { clearInterval(poll); if (timeout) clearTimeout(timeout); };
+  }, [phase, refetchAccess]);
+
+  if (billing.isPending) return <Card><p className="text-sm text-t2">Verifica dell’abbonamento…</p></Card>;
+  if (billing.isError) return <Card><p className="text-sm text-error" role="alert">{userErrorMessage(billing.error)}</p></Card>;
+
+  if (waiting && !activated) {
+    return (
+      <Card>
+        <h2 className="font-semibold text-t1">Pagamento ricevuto</h2>
+        <p className="mt-2 text-sm text-t2" role="status">{phase === "late"
+          ? "L’attivazione sta richiedendo più del previsto. Aggiorna lo stato fra qualche minuto; se non cambia, scrivici a info@klokshift.com."
+          : "Stiamo attivando il piano: di solito bastano pochi secondi."}</p>
+      </Card>
+    );
+  }
+  if (hasOpenSubscription(subscription)) return <SubscriptionCard billing={subscription as WorkspaceBilling} />;
+  if (!access || access.state === "expired") return null;
+  if (access.source === "complimentary_lifetime" && access.state === "operational") return null;
+  return <PurchasePanel workspaceId={workspaceId} access={access} onPaid={() => setPhase("waiting")} />;
+}
+
+function SubscriptionCard({ billing }: { billing: WorkspaceBilling }) {
+  const stopping = billing.scheduled_change?.action === "cancel" || billing.scheduled_change?.action === "pause";
   return (
     <Card>
-      <details>
-        <summary className="focus-gold cursor-pointer font-semibold text-t1">Listino previsto al lancio</summary>
-        <p className="mt-3 text-sm text-t2">Entrambi i piani includono le stesse funzioni e una sede. I pagamenti non sono ancora disponibili: questo riepilogo non cambia il tuo piano.</p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Periodo">
-            <Select value={cycle} onChange={(e) => setCycle(e.target.value as BillingCycle)}>
-              <option value="monthly">Mensile</option><option value="annual">Annuale · 2 mesi gratuiti</option>
-            </Select>
-          </Field>
-          <Field label="Sedi totali" error={valid ? undefined : "Indica un numero intero di sedi, almeno una."}>
-            <Input type="number" min={1} step={1} value={venues} onChange={(e) => setVenues(e.target.value)} />
-          </Field>
+      <h2 className="font-semibold text-t1">Abbonamento</h2>
+      <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
+        <Value label="Stato" value={billing.status === "active" ? "Attivo" : billing.status === "past_due" ? "Rinnovo non riuscito" : "In pausa"} />
+        <Value label="Piano" value={`${billing.plan === "base" ? "Base" : "Team"} · ${billing.billing_interval === "year" ? "annuale" : "mensile"}`} />
+        <Value label="Sedi comprese" value={1 + billing.extra_venues} />
+        {billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
+      </dl>
+      {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; l’operatività continua per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
+      {stopping ? <p className="mt-5 text-sm text-t2">I rinnovi sono fermati: il servizio resta attivo fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi.</p> : null}
+      <p className="mt-5 text-xs text-t3">Per cambiare piano o sedi, aggiornare il metodo di pagamento o fermare i rinnovi scrivi a <a className="focus-gold text-gold underline" href="mailto:info@klokshift.com">info@klokshift.com</a>: la gestione diretta da questa pagina arriva a breve. Ricevute e rimborsi passano da Paddle.</p>
+    </Card>
+  );
+}
+
+function PurchasePanel({ workspaceId, access, onPaid }: {
+  workspaceId: string; access: WorkspaceAccess; onPaid: () => void;
+}) {
+  const people = access.usage?.people ?? 0;
+  const openVenues = Math.max(1, access.usage?.venues ?? 1);
+  const baseAllowed = people <= 30;
+  const [plan, setPlan] = useState<"base" | "team">(baseAllowed ? "base" : "team");
+  const [interval, setBillingInterval] = useState<"month" | "year">("month");
+  const [venues, setVenues] = useState(String(openVenues));
+  const count = Number(venues);
+  const validVenues = venues.trim() !== "" && Number.isSafeInteger(count) && count >= openVenues && count <= 1000;
+  const quote = validVenues ? quotePlan(plan, interval === "year" ? "annual" : "monthly", count) : null;
+  const inTrial = access.source === "trial" && access.state === "operational";
+
+  const buy = useMutation({
+    mutationFn: async () => {
+      const prepared = await prepareCheckout({ workspaceId, plan, interval, extraVenues: count - 1 });
+      return openCheckout(prepared);
+    },
+    onSuccess: (result) => { if (result === "completed") onPaid(); },
+  });
+
+  return (
+    <Card>
+      <h2 className="font-semibold text-t1">Attiva un abbonamento</h2>
+      <p className="mt-2 text-sm text-t2">Entrambi i piani hanno le stesse funzioni e una sede inclusa: cambia solo quante persone e sedi puoi avere.</p>
+      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <Field label="Piano" error={baseAllowed ? undefined : `Base arriva a 30 persone: oggi ne conti ${people}.`}>
+          <Select value={plan} onChange={(e) => setPlan(e.target.value as "base" | "team")}>
+            {baseAllowed ? <option value="base">Base · fino a 30 persone</option> : null}
+            <option value="team">Team · senza limite di persone</option>
+          </Select>
+        </Field>
+        <Field label="Periodo">
+          <Select value={interval} onChange={(e) => setBillingInterval(e.target.value as "month" | "year")}>
+            <option value="month">Mensile</option><option value="year">Annuale · 2 mesi gratuiti</option>
+          </Select>
+        </Field>
+        <Field label="Sedi totali" error={validVenues ? undefined : `Almeno ${openVenues}: le sedi aperte oggi.`}>
+          <Input type="number" min={openVenues} step={1} value={venues} onChange={(e) => setVenues(e.target.value)} />
+        </Field>
+      </div>
+      {quote ? (
+        <div className="mt-5 rounded-xl bg-bg-2 p-4">
+          <p className="text-xl text-t1">{formatEuro(quote.total)} <span className="text-sm text-t3">{interval === "year" ? "all’anno" : "al mese"} + IVA</span></p>
+          {interval === "year" ? <p className="mt-1 text-xs text-t3">Equivale a {formatEuro(quote.monthlyEquivalent)} al mese, per 12 mesi consecutivi.</p> : null}
+          {count > 1 ? <p className="mt-1 text-xs text-t3">Comprende {count - 1} {count - 1 === 1 ? "sede aggiuntiva" : "sedi aggiuntive"} a {formatEuro(interval === "year" ? EXTRA_VENUE_PRICES.annual : EXTRA_VENUE_PRICES.monthly)} ciascuna.</p> : null}
         </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {(["base", "team"] as const).map((plan) => (
-            <div key={plan} className="rounded-xl border border-border-2 p-4">
-              <h3 className="font-semibold text-t1">{plan === "base" ? "Base · fino a 30 persone" : "Team · senza limite persone"}</h3>
-              {valid ? <><p className="mt-3 text-xl text-t1">{formatEuro(quotePlan(plan, cycle, count).total)} <span className="text-sm text-t3">{cycle === "annual" ? "all’anno" : "al mese"}</span></p>{cycle === "annual" ? <p className="mt-1 text-xs text-t3">Equivale a {formatEuro(quotePlan(plan, cycle, count).monthlyEquivalent)} al mese. Pagamento annuale per 12 mesi consecutivi.</p> : null}</> : <p className="mt-3 text-sm text-t3">Importo non disponibile</p>}
-            </div>
-          ))}
-        </div>
-        <p className="mt-4 text-xs text-t3">IVA esclusa. Ogni sede oltre la prima costa {formatEuro(EXTRA_VENUE_PRICES.monthly)} al mese o {formatEuro(EXTRA_VENUE_PRICES.annual)} all’anno. L’annuale costa 10 mensilità e copre 12 mesi consecutivi.</p>
-      </details>
+      ) : null}
+      {inTrial ? <p className="mt-4 text-sm text-gold">Sei in prova: se acquisti ora, l’abbonamento e il primo addebito partono oggi e i giorni di prova rimasti non si sommano.</p> : null}
+      <p className="mt-4 text-xs text-t3">
+        L’IVA e le altre imposte le calcola Paddle, nostro rivenditore e Merchant of Record, prima del pagamento.
+        L’abbonamento si rinnova da solo e puoi fermarlo quando vuoi; puoi chiedere il rimborso entro 14 giorni da ogni addebito.
+        {" "}<a className="focus-gold text-gold underline" href={LEGAL_URLS.terms} target="_blank" rel="noreferrer">Termini</a>
+        {" · "}<a className="focus-gold text-gold underline" href={LEGAL_URLS.refunds} target="_blank" rel="noreferrer">Rimborsi</a>
+      </p>
+      <div className="mt-5">
+        <Button variant="gold" disabled={!quote || buy.isPending} onClick={() => buy.mutate()}>
+          {buy.isPending ? "Apertura del pagamento…" : "Procedi al pagamento"}
+        </Button>
+      </div>
+      {buy.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(buy.error)}</p> : null}
     </Card>
   );
 }

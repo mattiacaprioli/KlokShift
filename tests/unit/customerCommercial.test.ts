@@ -1,15 +1,21 @@
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PianoPage } from "../../web/src/pages/Piano";
 import type { WorkspaceAccess } from "@/features/workspace/access";
 
-const { context, mutate } = vi.hoisted(() => ({ context: vi.fn(), mutate: vi.fn() }));
+const { context, mutate, billing, prepareCheckout } = vi.hoisted(() => ({
+  context: vi.fn(), mutate: vi.fn(), billing: vi.fn(), prepareCheckout: vi.fn(),
+}));
 vi.mock("@/features/venues/OwnerVenues", () => ({ useOwnerVenues: context }));
 vi.mock("@/features/workspace/hooks", () => ({
   useStartWorkspaceTrial: () => ({ isPending: false, error: null, mutate }),
+  useWorkspaceBilling: billing,
 }));
+// Il checkout vero carica Supabase e Paddle.js: qui conta solo che aprire la pagina non lo avvii.
+vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout: vi.fn() }));
 
 const access: WorkspaceAccess = {
   workspace_id: "azienda", state: "operational", source: "complimentary_lifetime", plan: "team",
@@ -24,12 +30,21 @@ const base = {
   historyVenueIds: ["sede-chiusa"], canAny: () => true, refetch: vi.fn(),
 };
 function render(page: ComponentType = PianoPage, path = "/piano") {
-  return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] }, createElement(page)));
+  return renderToStaticMarkup(createElement(QueryClientProvider, { client: new QueryClient() },
+    createElement(MemoryRouter, { initialEntries: [path] }, createElement(page))));
 }
-function situation(html: string) { return html.split("Listino previsto al lancio")[0]; }
+/** Solo il riquadro «Situazione attuale», prima di acquisto/abbonamento. */
+function situation(html: string) { return html.split(/Attiva un abbonamento|<h2[^>]*>Abbonamento</)[0]; }
+const noBilling = { isPending: false, isError: false, data: null };
+const trialAccess: WorkspaceAccess = { ...access, source: "trial", operational_until: "2026-11-05T19:11:00Z",
+  attendance_until: "2026-11-12T19:11:00Z", archive_until: "2027-11-05T19:11:00Z",
+  limits: { people: null, venues: 1 }, usage: { people: 3, venues: 1 } };
 
 describe("Piano e accesso del cliente", () => {
-  beforeEach(() => { context.mockReturnValue(base); mutate.mockReset(); });
+  beforeEach(() => {
+    context.mockReturnValue(base); mutate.mockReset(); prepareCheckout.mockReset();
+    billing.mockReturnValue(noBilling);
+  });
   it("separa la gratuità effettiva dal listino e non avvia nulla aprendo la pagina", () => {
     const html = render();
     const current = situation(html);
@@ -38,7 +53,7 @@ describe("Piano e accesso del cliente", () => {
     expect(current).toContain("Senza scadenza commerciale");
     expect(current).not.toContain("29,00");
     expect(current).not.toContain("Avvia la prova");
-    expect(html).toContain("I pagamenti non sono ancora disponibili");
+    expect(html).not.toContain("Procedi al pagamento");
     expect(mutate).not.toHaveBeenCalled();
   });
   it("non ricava un piano o capacità infinite dal vecchio Pro di un’azienda preesistente", () => {
@@ -89,7 +104,37 @@ describe("Piano e accesso del cliente", () => {
     const html = render();
     expect(html).toContain("riservata al titolare");
     expect(html).not.toContain("Situazione attuale");
-    expect(html).not.toContain("Listino");
+    expect(html).not.toContain("Procedi al pagamento");
     expect(mutate).not.toHaveBeenCalled();
+  });
+  it("in prova propone l’acquisto con prezzo, IVA e avviso sui giorni persi, senza avviarlo", () => {
+    context.mockReturnValue({ ...base, access: trialAccess });
+    const html = render();
+    expect(html).toContain("Attiva un abbonamento");
+    expect(html).toContain("29,00");
+    expect(html).toContain("+ IVA");
+    expect(html).toContain("i giorni di prova rimasti non si sommano");
+    expect(html).toContain("termini.html");
+    expect(html).toContain("rimborsi.html");
+    expect(prepareCheckout).not.toHaveBeenCalled();
+  });
+  it("oltre 30 persone non offre il piano Base", () => {
+    context.mockReturnValue({ ...base, access: { ...trialAccess, usage: { people: 31, venues: 1 } } });
+    const html = render();
+    expect(html).not.toContain("Base · fino a 30 persone");
+    expect(html).toContain("Base arriva a 30 persone: oggi ne conti 31.");
+  });
+  it("con un abbonamento aperto mostra rinnovo e stato, non un secondo acquisto", () => {
+    context.mockReturnValue({ ...base, access: { ...trialAccess, source: "subscription" } });
+    billing.mockReturnValue({ ...noBilling, data: {
+      status: "past_due", plan: "team", billing_interval: "year", extra_venues: 1,
+      current_period_ends_at: "2027-10-18T10:00:00Z", scheduled_change: null,
+      past_due_since: "2026-10-18T10:00:00Z", canceled_at: null,
+    } });
+    const html = render();
+    expect(html).toContain("Rinnovo non riuscito");
+    expect(html).toContain("Team · annuale");
+    expect(html).toContain("l’operatività continua per 7 giorni");
+    expect(html).not.toContain("Procedi al pagamento");
   });
 });

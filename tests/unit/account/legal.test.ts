@@ -10,6 +10,8 @@ describe("legalUrlsFor", () => {
     expect(legalUrlsFor()).toEqual({
       privacy: `${DEFAULT_SITE_URL}/privacy.html`,
       accountDeletion: `${DEFAULT_SITE_URL}/elimina-account.html`,
+      terms: `${DEFAULT_SITE_URL}/termini.html`,
+      refunds: `${DEFAULT_SITE_URL}/rimborsi.html`,
     });
   });
 
@@ -17,6 +19,8 @@ describe("legalUrlsFor", () => {
     expect(legalUrlsFor("  https://example.test///  ")).toEqual({
       privacy: "https://example.test/privacy.html",
       accountDeletion: "https://example.test/elimina-account.html",
+      terms: "https://example.test/termini.html",
+      refunds: "https://example.test/rimborsi.html",
     });
   });
 

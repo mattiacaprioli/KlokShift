@@ -51,7 +51,7 @@ export const overviewSchema = z.object({
 });
 const member = z.object({ id, user_id: id.nullable(), display_name: z.string(), authority, status: memberStatus, email: z.string().nullable(), email_confirmed_at: maybeDate, scope, counts_as_person: z.boolean() });
 const venue = z.object({ id, name: z.string(), created_at: date, closed_at: maybeDate, current_placements: count });
-const period = z.object({ id, kind: z.enum(["trial", "complimentary_lifetime", "complimentary_temporary", "transition"]), plan: z.enum(["base", "team"]), venue_limit: count.min(1), starts_at: date, ends_at: maybeDate, revoked_at: maybeDate, reason: z.string(), created_at: date });
+const period = z.object({ id, kind: z.enum(["trial", "complimentary_lifetime", "complimentary_temporary", "transition", "subscription", "payment_grace"]), plan: z.enum(["base", "team"]), venue_limit: count.min(1), starts_at: date, ends_at: maybeDate, revoked_at: maybeDate, reason: z.string(), created_at: date });
 export const workspaceDetailSchema = z.object({
   generated_at: date, workspace: workspaceSchema,
   members: pageSchema(member), venues: pageSchema(venue), periods: pageSchema(period),

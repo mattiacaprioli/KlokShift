@@ -81,6 +81,143 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_checkouts: {
+        Row: {
+          billing_interval: string
+          completed_at: string | null
+          created_at: string
+          environment: string
+          extra_venues: number
+          id: string
+          plan: string
+          provider_transaction_id: string | null
+          requested_by: string
+          status: string
+          subscription_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          billing_interval: string
+          completed_at?: string | null
+          created_at?: string
+          environment: string
+          extra_venues: number
+          id?: string
+          plan: string
+          provider_transaction_id?: string | null
+          requested_by: string
+          status?: string
+          subscription_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          billing_interval?: string
+          completed_at?: string | null
+          created_at?: string
+          environment?: string
+          extra_venues?: number
+          id?: string
+          plan?: string
+          provider_transaction_id?: string | null
+          requested_by?: string
+          status?: string
+          subscription_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_checkouts_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "billing_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_checkouts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_subscriptions: {
+        Row: {
+          billing_interval: string
+          canceled_at: string | null
+          created_at: string
+          current_period_ends_at: string | null
+          current_period_starts_at: string | null
+          environment: string
+          extra_venues: number
+          id: string
+          last_event_at: string
+          last_event_id: string
+          past_due_since: string | null
+          paused_at: string | null
+          plan: string
+          provider_customer_id: string
+          provider_subscription_id: string
+          scheduled_change_action: string | null
+          scheduled_change_at: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          billing_interval: string
+          canceled_at?: string | null
+          created_at?: string
+          current_period_ends_at?: string | null
+          current_period_starts_at?: string | null
+          environment: string
+          extra_venues: number
+          id?: string
+          last_event_at: string
+          last_event_id: string
+          past_due_since?: string | null
+          paused_at?: string | null
+          plan: string
+          provider_customer_id: string
+          provider_subscription_id: string
+          scheduled_change_action?: string | null
+          scheduled_change_at?: string | null
+          status: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          billing_interval?: string
+          canceled_at?: string | null
+          created_at?: string
+          current_period_ends_at?: string | null
+          current_period_starts_at?: string | null
+          environment?: string
+          extra_venues?: number
+          id?: string
+          last_event_at?: string
+          last_event_id?: string
+          past_due_since?: string | null
+          paused_at?: string | null
+          plan?: string
+          provider_customer_id?: string
+          provider_subscription_id?: string
+          scheduled_change_action?: string | null
+          scheduled_change_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_subscriptions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -1266,6 +1403,7 @@ export type Database = {
           reason: string
           revoked_at: string | null
           starts_at: string
+          subscription_id: string | null
           venue_limit: number
           workspace_id: string
         }
@@ -1279,6 +1417,7 @@ export type Database = {
           reason: string
           revoked_at?: string | null
           starts_at: string
+          subscription_id?: string | null
           venue_limit: number
           workspace_id: string
         }
@@ -1292,10 +1431,18 @@ export type Database = {
           reason?: string
           revoked_at?: string | null
           starts_at?: string
+          subscription_id?: string | null
           venue_limit?: number
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workspace_access_periods_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "billing_subscriptions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workspace_access_periods_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -1564,6 +1711,25 @@ export type Database = {
       assign: {
         Args: { p_role?: string; p_shift: string; p_venue_member: string }
         Returns: string
+      }
+      billing_apply_event: {
+        Args: { p_environment: string; p_event: Json }
+        Returns: Json
+      }
+      billing_attach_checkout_transaction: {
+        Args: { p_checkout: string; p_transaction_id: string }
+        Returns: undefined
+      }
+      billing_prepare_checkout: {
+        Args: {
+          p_environment: string
+          p_extra_venues: number
+          p_interval: string
+          p_plan: string
+          p_user: string
+          p_workspace: string
+        }
+        Returns: Json
       }
       claim_invite_send: {
         Args: {
@@ -2018,6 +2184,7 @@ export type Database = {
         }[]
       }
       get_workspace_access: { Args: { p_workspace: string }; Returns: Json }
+      get_workspace_billing: { Args: { p_workspace: string }; Returns: Json }
       get_workspace_contacts: {
         Args: never
         Returns: {

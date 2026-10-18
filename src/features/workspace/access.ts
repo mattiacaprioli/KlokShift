@@ -15,6 +15,9 @@ const ACCESS_SOURCES = [
   "complimentary_lifetime",
   "complimentary_temporary",
   "transition",
+  // Abbonamento Paddle verificato e i 7 giorni dopo un rinnovo non riuscito.
+  "subscription",
+  "payment_grace",
 ] as const;
 const ACCESS_PLANS = ["base", "team"] as const;
 
@@ -230,6 +233,10 @@ export function workspaceAccessMessage(access: WorkspaceAccess | undefined): str
       ? "Prova di 30 giorni attiva."
       : access.source === "complimentary_lifetime"
         ? "Accesso gratuito permanente attivo, entro la capacità concessa."
-        : "Accesso operativo attivo.";
+        : access.source === "subscription"
+          ? "Abbonamento attivo."
+          : access.source === "payment_grace"
+            ? "Il rinnovo dell'abbonamento non è andato a buon fine. L'operatività continua per pochi giorni: il titolare può sistemarlo."
+            : "Accesso operativo attivo.";
   }
 }
