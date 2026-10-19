@@ -1,5 +1,7 @@
 -- M09: rimborsi Paddle. Un rimborso totale approvato del primo pagamento o di un
 -- rinnovo chiude il periodo di quell'addebito; gli altri restano da verificare.
+-- In fondo: il margine di un'ora fra fine periodo e avviso di rinnovo, e il
+-- rinnovo non riuscito con la sequenza vera di Paddle.
 begin;
 
 create function tests.refund_service() returns void language plpgsql as $$
@@ -184,6 +186,101 @@ begin
   perform tests.eq((a #>> '{limits,venues}')::integer, 2, 'la capacità resta finché Paddle non la riduce');
   perform tests.eq((select count(*)::integer from private.billing_adjustments
     where effect = 'manual_review' and provider_adjustment_id like 'adj_02%'), 3, 'tre casi da verificare');
+end $$;
+
+-- Margine di rinnovo: un'ora dopo la fine del periodo, solo per chi rinnova.
+do $$
+declare
+  ws uuid; ws2 uuid; co uuid; r jsonb; a jsonb;
+  e1 timestamptz := date_trunc('second', now()) - interval '20 minutes';
+  t0 timestamptz;
+begin
+  t0 := e1 - interval '1 month';
+  perform tests.login('Ow');
+  ws := public.create_workspace('Margine: rinnova');
+  perform public.create_venue(ws, 'Unica sede');
+  ws2 := public.create_workspace('Margine: disdetta');
+  perform public.create_venue(ws2, 'Unica sede');
+  perform tests.logout();
+
+  perform tests.refund_service();
+  co := (public.billing_prepare_checkout('sandbox', tests.id('Ow'), ws, 'base', 'month', 0) ->> 'checkout_id')::uuid;
+  perform public.billing_apply_event('sandbox', tests.refund_sub('evt_03ma', t0, 'sub_03margin',
+    'pri_01m577s3dchg2ctcrenkderz05', 0, t0, e1, co));
+  co := (public.billing_prepare_checkout('sandbox', tests.id('Ow'), ws2, 'base', 'month', 0) ->> 'checkout_id')::uuid;
+  perform public.billing_apply_event('sandbox', jsonb_set(tests.refund_sub('evt_03mb', t0, 'sub_03cancel',
+    'pri_01m577s3dchg2ctcrenkderz05', 0, t0, e1, co), '{data,scheduled_change}',
+    jsonb_build_object('action', 'cancel', 'effective_at', e1)));
+  perform tests.logout();
+
+  a := private.workspace_access_at(ws, now());
+  perform tests.eq(a ->> 'state', 'operational', 'periodo finito da 20 minuti: in attesa del rinnovo si lavora');
+  perform tests.eq((a ->> 'operational_until')::timestamptz, e1 + interval '1 hour', 'il termine è quello del margine');
+  perform tests.eq((a ->> 'attendance_until')::timestamptz, e1 + interval '168 hours', 'rettifiche dalla fine vera');
+  perform tests.eq((a ->> 'archive_until')::timestamptz,
+    ((e1 at time zone 'Europe/Rome') + interval '12 months') at time zone 'Europe/Rome', 'archivio dalla fine vera');
+  a := private.workspace_access_at(ws, e1 + interval '61 minutes');
+  perform tests.eq(a ->> 'state', 'archive', 'dopo l''ora senza avvisi: consultazione');
+  a := private.workspace_access_at(ws2, now());
+  perform tests.eq(a ->> 'state', 'archive', 'con la disdetta programmata nessun margine');
+
+  -- Arriva il rinnovo: vale il periodo nuovo, contiguo.
+  perform tests.refund_service();
+  perform public.billing_apply_event('sandbox', tests.refund_sub('evt_03mc', e1 + interval '25 minutes',
+    'sub_03margin', 'pri_01m577s3dchg2ctcrenkderz05', 0, e1, e1 + interval '1 month'));
+  perform tests.logout();
+  a := private.workspace_access_at(ws, now());
+  perform tests.eq((a ->> 'operational_until')::timestamptz, e1 + interval '1 month', 'rinnovo arrivato: fine del mese nuovo');
+  perform tests.eq((a ->> 'operational_from')::timestamptz, t0, 'stessa decorrenza');
+end $$;
+
+-- Rinnovo non riuscito come lo manda Paddle (sandbox 19/10): prima il periodo
+-- nuovo con `active`, 3 secondi dopo `past_due`. Poi il pagamento recuperato.
+do $$
+declare
+  ws uuid; co uuid; a jsonb; sub_id uuid;
+  e1 timestamptz := date_trunc('second', now()) - interval '5 minutes';
+  t0 timestamptz;
+  ev jsonb;
+begin
+  t0 := e1 - interval '1 month';
+  perform tests.login('Ow');
+  ws := public.create_workspace('Rinnovo non riuscito');
+  perform public.create_venue(ws, 'Unica sede');
+  perform tests.logout();
+
+  perform tests.refund_service();
+  co := (public.billing_prepare_checkout('sandbox', tests.id('Ow'), ws, 'base', 'month', 0) ->> 'checkout_id')::uuid;
+  sub_id := (public.billing_apply_event('sandbox', tests.refund_sub('evt_04pa', t0, 'sub_04pastdue',
+    'pri_01m577s3dchg2ctcrenkderz05', 0, t0, e1, co)) ->> 'subscription_id')::uuid;
+  perform public.billing_apply_event('sandbox', tests.refund_sub('evt_04pb', e1 + interval '41 seconds',
+    'sub_04pastdue', 'pri_01m577s3dchg2ctcrenkderz05', 0, e1, e1 + interval '1 month'));
+  ev := tests.refund_sub('evt_04pc', e1 + interval '44 seconds', 'sub_04pastdue',
+    'pri_01m577s3dchg2ctcrenkderz05', 0, e1, e1 + interval '1 month');
+  perform public.billing_apply_event('sandbox', jsonb_set(jsonb_set(ev, '{event_type}', '"subscription.past_due"'),
+    '{data,status}', '"past_due"'));
+  perform tests.logout();
+
+  a := private.workspace_access_at(ws, now());
+  perform tests.eq(a ->> 'source', 'payment_grace', 'rinnovo non pagato: tolleranza, non un mese nuovo');
+  perform tests.eq((a ->> 'operational_until')::timestamptz, e1 + interval '168 hours',
+    'sette giorni dalla fine dell''ultimo mese pagato');
+  perform tests.eq((select count(*)::integer from public.workspace_access_periods
+    where subscription_id = sub_id and kind = 'subscription' and starts_at = e1 and revoked_at = starts_at), 1,
+    'il mese aperto prima dell''incasso è annullato');
+  a := private.workspace_access_at(ws, e1 + interval '8 days');
+  perform tests.eq(a ->> 'state', 'archive', 'senza pagamento, dopo i 7 giorni: consultazione');
+
+  -- Pagamento recuperato: torna il mese intero, la tolleranza si chiude.
+  perform tests.refund_service();
+  perform public.billing_apply_event('sandbox', tests.refund_sub('evt_04pd', e1 + interval '2 minutes',
+    'sub_04pastdue', 'pri_01m577s3dchg2ctcrenkderz05', 0, e1, e1 + interval '1 month'));
+  perform tests.logout();
+  a := private.workspace_access_at(ws, now());
+  perform tests.eq(a ->> 'source', 'subscription', 'pagato: di nuovo abbonamento');
+  perform tests.eq((a ->> 'operational_until')::timestamptz, e1 + interval '1 month', 'fino a fine del mese pagato');
+  a := private.workspace_access_at(ws, e1 + interval '8 days');
+  perform tests.eq(a ->> 'state', 'operational', 'nessuna scadenza a 7 giorni dopo il recupero');
 end $$;
 
 rollback;
