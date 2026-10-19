@@ -117,7 +117,10 @@ begin
     'billing_past_due', 'nessuna pausa con il rinnovo in sospeso');
 
   -- Pausa effettiva: consultazione; poi la ripartenza apre un periodo nuovo.
-  perform public.billing_apply_event('sandbox', tests.manage_event(5, co, 'paused', team_m, 1));
+  -- Come Paddle (sandbox 19/10): in pausa ogni voce è `inactive`.
+  r := public.billing_apply_event('sandbox', jsonb_set(jsonb_set(tests.manage_event(5, co, 'paused', team_m, 1),
+    '{data,items,0,status}', '"inactive"'), '{data,items,1,status}', '"inactive"'));
+  perform tests.eq(r ->> 'outcome', 'applied', 'l''avviso di pausa con voci inattive si applica');
   perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Ow'), ws),
     'billing_paused', 'già in pausa');
   perform tests.raises(format('select public.billing_prepare_change(''sandbox'', %L, %L, ''team'', 2)', tests.id('Ow'), ws),
