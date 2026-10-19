@@ -158,6 +158,7 @@ export type Database = {
           plan: string
           provider_customer_id: string
           provider_subscription_id: string
+          refunded_until: string | null
           scheduled_change_action: string | null
           scheduled_change_at: string | null
           status: string
@@ -180,6 +181,7 @@ export type Database = {
           plan: string
           provider_customer_id: string
           provider_subscription_id: string
+          refunded_until?: string | null
           scheduled_change_action?: string | null
           scheduled_change_at?: string | null
           status: string
@@ -202,6 +204,7 @@ export type Database = {
           plan?: string
           provider_customer_id?: string
           provider_subscription_id?: string
+          refunded_until?: string | null
           scheduled_change_action?: string | null
           scheduled_change_at?: string | null
           status?: string
