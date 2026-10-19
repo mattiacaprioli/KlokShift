@@ -283,5 +283,44 @@ begin
   perform tests.eq(a ->> 'state', 'operational', 'nessuna scadenza a 7 giorni dopo il recupero');
 end $$;
 
+-- Rimborso fatto dalla dashboard Paddle riga per riga (sandbox 19/10): arriva
+-- `partial` anche quando copre tutto. Conta l'importo; una sola riga no.
+do $$
+declare
+  ws uuid; co uuid; r jsonb; a jsonb; ev jsonb;
+  t0 timestamptz := date_trunc('second', now()) - interval '2 days';
+  e1 timestamptz;
+begin
+  e1 := t0 + interval '1 month';
+  perform tests.login('Ow');
+  ws := public.create_workspace('Rimborso: riga per riga');
+  perform public.create_venue(ws, 'Unica sede');
+  perform tests.logout();
+
+  perform tests.refund_service();
+  co := (public.billing_prepare_checkout('sandbox', tests.id('Ow'), ws, 'team', 'month', 1) ->> 'checkout_id')::uuid;
+  perform public.billing_apply_event('sandbox', tests.refund_sub('evt_05ra', t0, 'sub_05lines',
+    'pri_01m577vzt1b6qkyyf80pnq4aj9', 1, t0, e1, co));
+  perform public.billing_apply_event('sandbox', jsonb_set(tests.refund_txn('evt_05rb', t0, 'txn_05lines',
+    'sub_05lines', 'api', t0, e1), '{data,details}', '{"totals":{"grand_total":"9638"}}'));
+
+  -- Una sola riga (la sede) rimborsata per intero: non è il rimborso del periodo.
+  ev := tests.refund_adj('evt_05rc', 'adjustment.updated', t0 + interval '1 day', 'adj_05oneline',
+    'txn_05lines', 'sub_05lines', 'approved', 'partial');
+  ev := jsonb_set(jsonb_set(ev, '{data,totals,total}', '"3660"'), '{data,items}', '[{"type":"full"}]');
+  r := public.billing_apply_event('sandbox', ev);
+  perform tests.eq(r ->> 'effect', 'none', 'una riga intera non chiude l''accesso');
+
+  -- Tutte le righe, importo pari al pagato: rimborso totale.
+  ev := tests.refund_adj('evt_05rd', 'adjustment.updated', t0 + interval '1 day 1 hour', 'adj_05all',
+    'txn_05lines', 'sub_05lines', 'approved', 'partial');
+  ev := jsonb_set(jsonb_set(ev, '{data,totals,total}', '"9638"'), '{data,items}', '[{"type":"full"},{"type":"full"}]');
+  r := public.billing_apply_event('sandbox', ev);
+  perform tests.eq(r ->> 'effect', 'access_cut', 'importo pari al pagato: rimborso totale');
+  perform tests.logout();
+  a := private.workspace_access_at(ws, now());
+  perform tests.eq(a ->> 'state', 'archive', 'rimborsato riga per riga: consultazione ed export');
+end $$;
+
 rollback;
 select 'billing refunds: ok' as result;
