@@ -1663,6 +1663,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_billing_adjustments: {
+        Args: { p_offset?: number; p_open_only?: boolean; p_workspace?: string }
+        Returns: Json
+      }
       admin_list_operations: {
         Args: { p_offset?: number; p_target: string; p_target_kind: string }
         Returns: Json
@@ -1676,6 +1680,10 @@ export type Database = {
           p_query?: string
           p_state?: string
         }
+        Returns: Json
+      }
+      admin_resolve_billing_adjustment: {
+        Args: { p_adjustment: string; p_environment: string; p_note: string }
         Returns: Json
       }
       admin_set_account_classification: {

@@ -32,6 +32,8 @@ const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["admin_response_invalid"], message: "I dati amministrativi non sono verificabili. Riprova l'aggiornamento." },
   { match: ["admin_invalid_filter"], message: "Controlla i filtri di ricerca e riprova." },
   { match: ["admin_not_found"], message: "L'elemento richiesto non è disponibile." },
+  { match: ["admin_review_note_required"], message: "Scrivi cosa hai fatto, da 3 a 500 caratteri." },
+  { match: ["admin_review_not_open"], message: "Questa voce non chiede più un'azione. Aggiorna la pagina." },
   { match: ["admin_reason_required"], message: "Inserisci un motivo da 1 a 2000 caratteri." },
   { match: ["admin_stale_revision"], message: "I dati sono cambiati. Aggiorna e prepara una nuova conferma." },
   { match: ["admin_revision_required", "admin_invalid_operation"], message: "L'intervento non è valido. Aggiorna e controlla i campi." },

@@ -437,7 +437,7 @@ Stati: `PROPOSTO`, `PRONTO` dopo chiusura delle decisioni necessarie, `IN CORSO`
 | M06 | Concessioni a vita, eventuali codici, gestione economica e spese personali | M05; M09 per dati provider | IN CORSO: M06a concessioni/classificazioni/audit locale; economia e altri interventi pendenti |
 | M07 | Aziende test gratuite e validazione; primi paganti dopo pagamenti e ciclo archivio | M04–M06 per beta; M02/M09/M11 per vendite | PROPOSTO |
 | M08 | Verifica account/contratto e prova sandbox Paddle | M01–M02 per chiusura; indagine indipendente avviabile prima | IN CORSO dal 2026-10-18: pagine legali scritte in locale, account sandbox/live da aprire, email del dominio da attivare |
-| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | IN CORSO dal 2026-10-18: M09a–c rilasciati e acquisto provato in sandbox; M09d (gestione) rilasciato il 18/10, prova sandbox da fare; poi prove di disdetta/rinnovo/insoluto/rimborso e M11 |
+| M09 | Checkout web, webhook, rinnovi e riconciliazione prima dei primi paganti | M08, M03, M04, dashboard M05 | IN CORSO dal 2026-10-18: M09a–d rilasciati e provati in sandbox (acquisto, aumenti, portale, rinnovo, insoluto, recupero, rimborso, disdetta); restano riduzioni al rinnovo e live; poi M11 |
 | M10 | KPI storici, anomalie, previsione e automazioni mirate | Dati raccolti da M05–M09 | PROPOSTO |
 | M11 | Primo mese, pausa stagionale, uscita, archivio/export e cancellazione verificata | Regole M01, modello M03, UI M04/M05, provider M09 | PROPOSTO; parte della V1 |
 
@@ -870,6 +870,48 @@ subito: va gestito nel flusso di modifica), quota documenti.
   invece dell'acquisto (13:02), perché ogni avviso apre un periodo nuovo. Migration
   `20261019000100_access_from_subscription_start`: `operational_from` risale ai periodi contigui
   dello stesso abbonamento (aumento, rinnovo, tolleranza); controlli in `rls/100_billing.sql`.
+- [x] Prova sandbox 18/10, rinnovo riuscito: `next_billed_at` spostato via API (`do_not_bill`), Paddle
+  rinnova 31 s dopo l'orario, avviso `applied` 1 s dopo; periodo nuovo contiguo (17:53:36 →
+  18/11), decorrenza invariata.
+- [x] Margine di rinnovo (decisione del 19/10, in locale): nella prova l'azienda è risultata «in
+  archivio» per 32 s fra fine periodo e avviso. Migration `20261019000300_renewal_margin`: un'ora di
+  continuità dopo la fine per l'abbonamento `active` senza disdetta/pausa programmata né rimborso;
+  archivio e rettifiche contano dalla fine vera, `operational_until` restituisce il margine (il
+  client non rilegge ogni secondo). Controlli in `rls/110_billing_refunds.sql`.
+- [x] Rimborsi in locale (19/10): migration `20261019000200_billing_refunds`, avvisi
+  `adjustment.created/updated` in `private.billing_adjustments`. Rimborso totale approvato del primo
+  pagamento o di un rinnovo: chiusura immediata dei periodi di quell'addebito e `refunded_until`,
+  così gli avvisi successivi dello stesso periodo non lo riaprono (niente tolleranza dopo). Aumento
+  rimborsato, contestazioni, pagamento non nel registro, rimborso annullato: `manual_review`, accesso
+  invariato; parziali e accrediti solo registrati. Suite `rls/110_billing_refunds.sql`. Eventi `adjustment.*` aggiunti alla destinazione Paddle e prova D fatta (19/10); casi
+  `manual_review` nell'area fondatore. Paddle non disdice quando rimborsa: disdetta o riduzione
+  restano un'azione del fondatore su Paddle.
+- [x] Difetto trovato dalla prova B (19/10, carta 4000 0027 6000 3184): Paddle manda
+  `subscription.updated` `active` con il mese nuovo **prima** di incassare, poi `past_due` 3 s dopo;
+  il mese non pagato diventava un periodo e la tolleranza partiva dalla sua fine (un mese + 7 giorni
+  gratis). Migration `20261019000400_past_due_unpaid_period`: con `past_due` il mese nuovo si annulla
+  e la tolleranza parte dall'ultimo pagato; col pagamento recuperato il mese si riapre. Ripara gli
+  abbonamenti già `past_due` (Hotel Tesoro). Test con la sequenza vera in `rls/110`, verificato che
+  fallisce senza la correzione.
+- [x] Prove sandbox B e C del 19/10 dopo la correzione: rinnovo rifiutato → «Rinnovo in sospeso», 7
+  giorni dal 19/10 18:03 (Hotel Tesoro riparato dalla migration); carta 4242 dal portale → Paddle
+  incassa subito (`subscription.updated`/`activated` + `transaction.completed`), il mese annullato si
+  riapre fino al 19/11 e la tolleranza si chiude all'incasso.
+- [x] Prova D (19/10): il rimborso di tutto il rinnovo fatto dalla dashboard Paddle riga per riga
+  arriva `type: partial` con righe `full`. Migration `20261019000500_refund_full_by_amount`: totale se
+  `type = full` o se l'importo copre il `grand_total` del pagamento (una riga intera da sola no);
+  ripara i rimborsi approvati registrati come parziali. Test in `rls/110`.
+- [x] Prova D chiusa (19/10): rimborso totale del rinnovo approvato da Paddle in sandbox dopo ~7
+  minuti → `access_cut`, Hotel Tesoro in archivio dall'approvazione; disdetta immediata dalla
+  dashboard Paddle → `canceled`, archivio invariato. Prove sandbox A–D (rinnovo, rinnovo non
+  riuscito, recupero, rimborso + disdetta) completate.
+- [x] Area fondatore, rimborsi e contestazioni (19/10, in locale): migration
+  `20261019000600_admin_billing_reviews`, `admin_list_billing_adjustments` (da verificare o storico
+  per azienda) e `admin_resolve_billing_adjustment` (nota obbligatoria, chi e quando), con le
+  stesse verifiche admin. Chiede un'azione: aumento rimborsato, contestazione, pagamento non nel
+  registro, rimborso annullato, e il rimborso totale finché l'abbonamento resta aperto su Paddle
+  (si chiude da solo con la disdetta). Panoramica: «Pagamenti da verificare»; scheda azienda:
+  «Rimborsi e contestazioni». Test `rls/115_admin_billing.sql`, `adminBillingAdjustments.test.ts`.
 - [ ] Riduzioni al rinnovo con un'operazione pianificata; link `_ptxn` delle email Paddle verso la
   dashboard; disattivare, se possibile, il cambio piano dal portale Paddle.
 - ⚠️ Quando arriverà la CSP della dashboard (audit C17) deve ammettere Paddle.js

@@ -12,6 +12,7 @@ vi.mock("@/features/admin/api", () => ({
   getAdminOverview: vi.fn(), listAdminWorkspaces: vi.fn(), getAdminWorkspace: vi.fn(),
   listAdminAccounts: vi.fn(), getAdminAccount: vi.fn(),
 }));
+vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn() }));
 vi.mock("@/features/admin/controls", () => ({
   applyWorkspaceAction: vi.fn(), getWorkspaceControl: vi.fn(), getAccountControl: vi.fn(),
   setAccountClassification: vi.fn(), listOperations: vi.fn(),
