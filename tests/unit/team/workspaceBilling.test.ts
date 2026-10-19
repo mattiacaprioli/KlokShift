@@ -4,7 +4,7 @@ import { hasOpenSubscription, parseWorkspaceBilling } from "@/features/workspace
 const active = {
   status: "active", plan: "team", billing_interval: "month", extra_venues: 1,
   current_period_ends_at: "2026-11-18T10:00:00+00:00", scheduled_change: null,
-  past_due_since: null, canceled_at: null,
+  past_due_since: null, canceled_at: null, paused_at: null,
 };
 
 describe("riassunto dell'abbonamento", () => {
@@ -17,6 +17,13 @@ describe("riassunto dell'abbonamento", () => {
     const billing = parseWorkspaceBilling({ ...active,
       scheduled_change: { action: "cancel", effective_at: "2026-11-18T10:00:00+00:00" } });
     expect(billing?.scheduled_change?.action).toBe("cancel");
+    expect(hasOpenSubscription(billing)).toBe(true);
+  });
+
+  it("in pausa: aperto, con la data di inizio e senza fine periodo", () => {
+    const billing = parseWorkspaceBilling({ ...active, status: "paused", current_period_ends_at: null,
+      paused_at: "2026-11-18T10:00:00+00:00" });
+    expect(billing?.paused_at).toBe("2026-11-18T10:00:00+00:00");
     expect(hasOpenSubscription(billing)).toBe(true);
   });
 

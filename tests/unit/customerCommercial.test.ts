@@ -18,6 +18,7 @@ vi.mock("@/features/workspace/hooks", () => ({
 vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout: vi.fn() }));
 vi.mock("../../web/src/billing/manage", () => ({
   openPortal: vi.fn(), resumeRenewals: vi.fn(), previewChange: vi.fn(), applyChange: vi.fn(),
+  pauseRenewals: vi.fn(), restartSubscription: vi.fn(),
   formatCents: (cents: number) => `${cents / 100} €`,
 }));
 
@@ -145,6 +146,7 @@ describe("Piano e accesso del cliente", () => {
   const subscription = {
     status: "active", plan: "base", billing_interval: "month", extra_venues: 0,
     current_period_ends_at: "2026-11-18T10:00:00Z", scheduled_change: null, past_due_since: null, canceled_at: null,
+    paused_at: null,
   };
   it("abbonamento attivo: gestione dal portale e solo aumenti dalla pagina", () => {
     subscriptionAccess();
@@ -152,6 +154,7 @@ describe("Piano e accesso del cliente", () => {
     const html = render();
     expect(html).toContain("Ricevute e metodo di pagamento");
     expect(html).toContain("Ferma i rinnovi");
+    expect(html).toContain("Metti in pausa");
     expect(html).toContain("Aumenta piano o sedi");
     expect(html).toContain("Calcola l’importo");
     expect(html).toContain("Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale");
@@ -166,6 +169,28 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("Riprendi i rinnovi");
     expect(html).not.toContain("Ferma i rinnovi");
     expect(html).not.toContain("Aumenta piano o sedi");
+  });
+  it("pausa programmata: annulla la pausa, nessun aumento né disdetta", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription,
+      scheduled_change: { action: "pause", effective_at: "2026-11-18T10:00:00Z" } } });
+    const html = render();
+    expect(html).toContain("Pausa programmata");
+    expect(html).toContain("Annulla la pausa");
+    expect(html).not.toContain("Metti in pausa");
+    expect(html).not.toContain("Ferma i rinnovi");
+    expect(html).not.toContain("Aumenta piano o sedi");
+  });
+  it("in pausa: riparti ora, nessuna disdetta né aumento", () => {
+    context.mockReturnValue({ ...base, access: { ...trialAccess, state: "archive", source: "subscription", can_operate: false } });
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, status: "paused", paused_at: "2026-11-18T10:00:00Z" } });
+    const html = render();
+    expect(html).toContain("In pausa dal");
+    expect(html).toContain("Riparti ora");
+    expect(html).not.toContain("Ferma i rinnovi");
+    expect(html).not.toContain("Metti in pausa");
+    expect(html).not.toContain("Aumenta piano o sedi");
+    expect(html).not.toContain("Procedi al pagamento");
   });
   it("rinnovo non riuscito: in evidenza l’aggiornamento della carta, nessun aumento", () => {
     subscriptionAccess();

@@ -938,14 +938,15 @@ accrediti. La prima vendita richiede anche il completamento del ciclo M11.
 ### M11 — Primo mese, pausa e archivio dopo uscita
 
 - [ ] Implementare la regola approvata per il primo mese e le proroghe selettive; una sola prova iniziale per azienda idonea.
-- [ ] Implementare richiesta/decorrenza di pausa stagionale e uscita commerciale sul web, sincronizzate col provider; gestire retry e stato di conferma.
+- [x] Pausa e ripartenza (19/10, in locale; ordine e cancellazione col fondatore decisi lo stesso giorno): migration `20261019000700_billing_pause` (`billing_prepare_lifecycle`, `paused_at` in `get_workspace_billing`; un rinnovo non riuscito annulla il periodo solo se prima ce n'è uno pagato), `billing-manage` con `pause` (Paddle `POST /pause`, `next_billing_period`) e `resume` (`POST /resume`, `immediately` + `start_new_billing_period`, addebito pieno). Pagina Piano: «Metti in pausa», «Annulla la pausa», «Riparti ora» con conferma e prezzo; la gratuità a vita operativa non riparte a pagamento (`billing_not_needed`). Da fare: deploy di `billing-manage`, prova sandbox (pausa → fine periodo → riparti).
+- [ ] Uscita commerciale: oggi la disdetta passa dal portale Paddle («Ferma i rinnovi»); manca la conferma con fine addebiti, termine operativo, scadenza archivio e cosa sarà cancellato.
 - [ ] Implementare la regola annuale approvata: stop del rinnovo futuro, senza congelamenti o rimborsi impliciti.
 - [ ] Conservare account e membri autorizzati per consultazione; separare cancellazione account, chiusura commerciale e cancellazione dei dati.
 - [ ] Creare accesso all'archivio e selezione/export storico completi per i periodi conservati, sedi chiuse ed ex membri, rispettando permessi e categorie delle ore.
 - [ ] Bloccare scritture operative/upload nel backend preservando lettura/download ed eccezioni finite di completamento; gestire cancellazioni richieste nel percorso dedicato.
 - [ ] Conservare revoca accessi e azioni di sicurezza durante l'archivio; limitare le rettifiche ai turni già maturati, senza spostare fine operativa o scadenza archivio.
 - [ ] Aggiungere scadenza consultazione, promemoria di servizio, riattivazione e annullamento della cancellazione pendente; nessun reset del termine per login/cambio etichetta.
-- [ ] Implementare cancellazione idempotente di DB, Storage e copie applicative; preservare altre aziende/account e documentazione commerciale ancora dovuta.
+- [ ] Implementare cancellazione idempotente di DB, Storage e copie applicative; preservare altre aziende/account e documentazione commerciale ancora dovuta. Decisione del 19/10: a fine archivio la avvia il fondatore dall'area amministrativa, con conferma (nome dell'azienda); l'automatica dopo.
 - [ ] Verificare backup/restore e trattamento di copie già esportate; registrare soltanto esito e dati minimi del processo.
 - [ ] Mostrare nella dashboard personale pause, cessazioni, termine export/cancellazione, ripartenze e anomalie dei rinnovi; adeguare privacy, FAQ e termini alle funzioni reali.
 

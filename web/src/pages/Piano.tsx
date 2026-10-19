@@ -9,7 +9,7 @@ import { LEGAL_URLS } from "@/features/account/legal";
 import { userErrorMessage } from "@/lib/errors";
 import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
 import { openCheckout, prepareCheckout } from "../billing/checkout";
-import { applyChange, formatCents, openPortal, previewChange, resumeRenewals } from "../billing/manage";
+import { applyChange, formatCents, openPortal, pauseRenewals, previewChange, restartSubscription, resumeRenewals } from "../billing/manage";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 
@@ -111,7 +111,9 @@ const ACTIVATION_TIMEOUT_MS = 90_000;
 type Awaiting =
   | { kind: "purchase" }
   | { kind: "change"; plan: "base" | "team"; extraVenues: number }
-  | { kind: "resume" };
+  | { kind: "resume" }
+  | { kind: "pause" }
+  | { kind: "restart" };
 
 function BillingSection({ workspaceId, access, refetchAccess }: {
   workspaceId: string; access: WorkspaceAccess | undefined; refetchAccess: () => Promise<unknown>;
@@ -123,6 +125,8 @@ function BillingSection({ workspaceId, access, refetchAccess }: {
   const done = !awaiting ? false
     : awaiting.kind === "purchase" ? hasOpenSubscription(subscription) && access?.source === "subscription"
     : awaiting.kind === "change" ? subscription?.plan === awaiting.plan && subscription.extra_venues === awaiting.extraVenues
+    : awaiting.kind === "pause" ? subscription?.scheduled_change?.action === "pause"
+    : awaiting.kind === "restart" ? subscription?.status === "active" && access?.source === "subscription"
     : !!subscription && subscription.scheduled_change === null;
   // L'avviso è arrivato: si torna alla vista normale (aggiornamento in render,
   // non in un effetto, come suggerisce React per lo stato derivato).
@@ -150,6 +154,8 @@ function BillingSection({ workspaceId, access, refetchAccess }: {
   if (hasOpenSubscription(subscription)) {
     const notice = !awaiting ? null : late ? lateText
       : awaiting.kind === "change" ? "Aumento confermato: aggiorniamo il piano appena Paddle registra il pagamento."
+      : awaiting.kind === "pause" ? "Pausa programmata: aggiorniamo lo stato fra pochi secondi."
+      : awaiting.kind === "restart" ? "Ripartenza confermata: riattiviamo l’azienda appena Paddle registra il pagamento."
       : "Rinnovi ripresi: aggiorniamo lo stato fra pochi secondi.";
     return <SubscriptionCard workspaceId={workspaceId} billing={subscription as WorkspaceBilling}
       notice={notice} busy={!!awaiting} onAwait={(next) => { setLate(false); setAwaiting(next); }} />;
@@ -163,10 +169,18 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
   workspaceId: string; billing: WorkspaceBilling; notice: string | null; busy: boolean;
   onAwait: (next: Awaiting) => void;
 }) {
-  const stopping = billing.scheduled_change?.action === "cancel" || billing.scheduled_change?.action === "pause";
+  const pausing = billing.scheduled_change?.action === "pause";
+  const stopping = billing.scheduled_change?.action === "cancel" || pausing;
+  const paused = billing.status === "paused";
+  const yearly = billing.billing_interval === "year";
+  const [confirming, setConfirming] = useState<"pause" | "restart" | null>(null);
   const portal = useMutation({ mutationFn: (target: "overview" | "paymentMethod" | "cancel") => openPortal(workspaceId, target) });
   const resume = useMutation({ mutationFn: () => resumeRenewals(workspaceId), onSuccess: () => onAwait({ kind: "resume" }) });
-  const error = portal.error ?? resume.error;
+  const pause = useMutation({ mutationFn: () => pauseRenewals(workspaceId), onSuccess: () => onAwait({ kind: "pause" }) });
+  const restart = useMutation({ mutationFn: () => restartSubscription(workspaceId), onSuccess: () => onAwait({ kind: "restart" }) });
+  const error = portal.error ?? resume.error ?? pause.error ?? restart.error;
+  const restartPrice = quotePlan(billing.plan, yearly ? "annual" : "monthly", 1 + billing.extra_venues).total;
+  const periodEnd = billing.current_period_ends_at ? dateOnly(billing.current_period_ends_at) : null;
   return (
     <Card>
       <h2 className="font-semibold text-t1">Abbonamento</h2>
@@ -174,25 +188,51 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
         <Value label="Stato" value={billing.status === "active" ? "Attivo" : billing.status === "past_due" ? "Rinnovo non riuscito" : "In pausa"} />
         <Value label="Piano" value={`${billing.plan === "base" ? "Base" : "Team"} · ${billing.billing_interval === "year" ? "annuale" : "mensile"}`} />
         <Value label="Sedi comprese" value={1 + billing.extra_venues} />
-        {billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
+        {paused ? (billing.paused_at ? <Value label="In pausa dal" value={dateOnly(billing.paused_at)} /> : null)
+          : billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
       </dl>
       {notice ? <p className="mt-5 text-sm text-t2" role="status">{notice}</p> : null}
       {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; l’operatività continua per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
-      {stopping ? <p className="mt-5 text-sm text-t2">I rinnovi sono fermati: il servizio resta attivo fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi.</p> : null}
+      {pausing ? <p className="mt-5 text-sm text-t2">Pausa programmata: lavori normalmente fino all’ultimo giorno indicato, poi gli addebiti si fermano e l’azienda passa alla consultazione ed export, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.</p>
+        : stopping ? <p className="mt-5 text-sm text-t2">I rinnovi sono fermati: il servizio resta attivo fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi.</p> : null}
+      {paused ? <p className="mt-5 text-sm text-t2">L’abbonamento è in pausa e non ci sono addebiti. L’azienda è in consultazione ed export: turni, ore e documenti restano come li hai lasciati. Quando riparti, Paddle addebita subito un nuovo {yearly ? "anno" : "mese"} da quel giorno.</p> : null}
 
       <div className="mt-5 flex flex-wrap gap-3">
         {billing.status === "past_due"
           ? <Button variant="gold" disabled={portal.isPending} onClick={() => portal.mutate("paymentMethod")}>Aggiorna il metodo di pagamento</Button>
           : null}
+        {paused ? <Button variant="gold" disabled={restart.isPending || busy} onClick={() => setConfirming("restart")}>Riparti ora</Button> : null}
         <Button disabled={portal.isPending} onClick={() => portal.mutate("overview")}>Ricevute e metodo di pagamento</Button>
         {stopping
-          ? <Button variant="gold" disabled={resume.isPending || busy} onClick={() => resume.mutate()}>{resume.isPending ? "Ripresa…" : "Riprendi i rinnovi"}</Button>
-          : billing.status !== "paused"
-            ? <Button disabled={portal.isPending} onClick={() => portal.mutate("cancel")}>Ferma i rinnovi</Button>
+          ? <Button variant="gold" disabled={resume.isPending || busy} onClick={() => resume.mutate()}>{resume.isPending ? "Ripresa…" : pausing ? "Annulla la pausa" : "Riprendi i rinnovi"}</Button>
+          : billing.status === "active"
+            ? <>
+                <Button disabled={pause.isPending || busy} onClick={() => setConfirming("pause")}>Metti in pausa</Button>
+                <Button disabled={portal.isPending} onClick={() => portal.mutate("cancel")}>Ferma i rinnovi</Button>
+              </>
             : null}
       </div>
+      {confirming === "pause" ? (
+        <ConfirmDialog
+          title="Mettere in pausa l’abbonamento?"
+          message={`${yearly ? "La pausa non congela l’anno pagato: lavori" : "Lavori"} normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, poi gli addebiti si fermano. L’azienda passa alla consultazione ed export per 12 mesi, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.`}
+          confirmLabel="Metti in pausa"
+          pending={pause.isPending}
+          onConfirm={() => pause.mutate(undefined, { onSettled: () => setConfirming(null) })}
+          onCancel={() => setConfirming(null)}
+        />
+      ) : confirming === "restart" ? (
+        <ConfirmDialog
+          title="Ripartire adesso?"
+          message={`Paddle addebita subito ${formatEuro(restartPrice)} + IVA sulla carta salvata, per un nuovo ${yearly ? "anno" : "mese"} da oggi (${billing.plan === "base" ? "Base" : "Team"} con ${1 + billing.extra_venues} ${billing.extra_venues === 0 ? "sede" : "sedi"}). L’azienda torna operativa appena arriva il pagamento.`}
+          confirmLabel="Riparti e paga"
+          pending={restart.isPending}
+          onConfirm={() => restart.mutate(undefined, { onSettled: () => setConfirming(null) })}
+          onCancel={() => setConfirming(null)}
+        />
+      ) : null}
       {error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(error)}</p> : null}
-      <p className="mt-3 text-xs text-t3">Ricevute, metodo di pagamento e disdetta si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda.</p>
+      <p className="mt-3 text-xs text-t3">Ricevute, metodo di pagamento e disdetta si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda. La pausa tiene l’abbonamento per ripartire con un clic; la disdetta lo chiude.</p>
 
       {billing.status === "active" && !stopping
         // La chiave rimonta il modulo quando l'avviso cambia piano o sedi: niente importo vecchio a schermo.

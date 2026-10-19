@@ -84,6 +84,14 @@ begin
 
   -- Dopo l'upgrade a Team con una sede in più, le riduzioni restano assistite.
   perform public.billing_apply_event('sandbox', tests.manage_event(2, co, 'active', team_m, 1));
+  r := public.billing_prepare_lifecycle('sandbox', tests.id('Ow'), ws, 'pause');
+  perform tests.eq(r ->> 'subscription_id', 'sub_01manage', 'abbonamento attivo: la pausa è ammessa');
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''resume'')', tests.id('Ow'), ws),
+    'billing_not_paused', 'non si riparte da un abbonamento attivo');
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Co'), ws),
+    'not_allowed', 'solo il titolare mette in pausa');
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''stop'')', tests.id('Ow'), ws),
+    'billing_invalid_selection', 'azioni inventate rifiutate');
   perform tests.raises(format('select public.billing_prepare_change(''sandbox'', %L, %L, ''base'', 1)', tests.id('Ow'), ws),
     'billing_downgrade_unsupported', 'da Team a Base non dalla pagina');
   perform tests.raises(format('select public.billing_prepare_change(''sandbox'', %L, %L, ''team'', 0)', tests.id('Ow'), ws),
@@ -96,6 +104,8 @@ begin
     'il contesto dice che la disdetta è programmata');
   perform tests.raises(format('select public.billing_prepare_change(''sandbox'', %L, %L, ''team'', 2)', tests.id('Ow'), ws),
     'billing_change_scheduled', 'nessun aumento con la disdetta programmata');
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Ow'), ws),
+    'billing_change_scheduled', 'nessuna pausa sopra una disdetta programmata');
 
   -- Rinnovo in sospeso: niente cambi finché il pagamento non torna.
   perform public.billing_apply_event('sandbox', tests.manage_event(4, co, 'past_due', team_m, 1));
@@ -103,6 +113,42 @@ begin
     'billing_past_due', 'nessun aumento con il rinnovo in sospeso');
   perform tests.eq(public.billing_manage_context('sandbox', tests.id('Ow'), ws) ->> 'status', 'past_due',
     'ma il portale resta raggiungibile per aggiornare la carta');
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Ow'), ws),
+    'billing_past_due', 'nessuna pausa con il rinnovo in sospeso');
+
+  -- Pausa effettiva: consultazione; poi la ripartenza apre un periodo nuovo.
+  perform public.billing_apply_event('sandbox', tests.manage_event(5, co, 'paused', team_m, 1));
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Ow'), ws),
+    'billing_paused', 'già in pausa');
+  perform tests.raises(format('select public.billing_prepare_change(''sandbox'', %L, %L, ''team'', 2)', tests.id('Ow'), ws),
+    'billing_paused', 'niente aumenti in pausa');
+  r := public.billing_prepare_lifecycle('sandbox', tests.id('Ow'), ws, 'resume');
+  perform tests.eq(r ->> 'subscription_id', 'sub_01manage', 'in pausa: la ripartenza è ammessa');
+  perform tests.logout();
+  perform tests.eq(private.workspace_access_at(ws, now() + interval '1 minute') ->> 'state', 'archive',
+    'in pausa: consultazione ed export');
+  perform tests.login('Ow');
+  perform tests.eq(public.get_workspace_billing(ws) ->> 'status', 'paused', 'il titolare vede la pausa');
+  perform tests.eq(public.get_workspace_billing(ws) ? 'paused_at', true, 'con la data di inizio (vuota senza Paddle)');
+  perform tests.logout();
+
+  perform tests.manage_service();
+  perform public.billing_apply_event('sandbox', jsonb_set(jsonb_set(tests.manage_event(6, co, 'active', team_m, 1),
+    '{data,current_billing_period,starts_at}', to_jsonb(now() + interval '6 seconds')),
+    '{data,current_billing_period,ends_at}', to_jsonb(now() + interval '1 month')));
+  perform tests.logout();
+  perform tests.eq(private.workspace_access_at(ws, now() + interval '1 minute') ->> 'state', 'operational',
+    'ripartita: di nuovo operativa');
+
+  -- Con la gratuità a vita non si paga per ripartire.
+  perform tests.manage_service();
+  perform public.billing_apply_event('sandbox', tests.manage_event(7, co, 'paused', team_m, 1));
+  perform tests.logout();
+  insert into public.workspace_access_periods (workspace_id, kind, plan, venue_limit, starts_at, ends_at, reason)
+  values (ws, 'complimentary_lifetime', 'team', 2, now() - interval '1 minute', null, 'Fixture M11');
+  perform tests.manage_service();
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''resume'')', tests.id('Ow'), ws),
+    'billing_not_needed', 'gratuità a vita: niente checkout per ripartire');
   perform tests.logout();
 end $$;
 

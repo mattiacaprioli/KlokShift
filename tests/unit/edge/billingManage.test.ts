@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  buildItems, dbError, paddleConfig, parseRequest, portalLinks, previewSummary, type PreparedChange,
+  buildItems, dbError, lifecycleRequest, paddleConfig, parseRequest, portalLinks, previewSummary, type PreparedChange,
 } from "../../../supabase/functions/billing-manage/logic";
 import { edgeRuntime, post } from "./runtime";
 
@@ -59,6 +59,15 @@ describe("billing-manage: regole pure", () => {
     expect(portalLinks({ data: { urls: { general: { overview: "http://x" } } } }, "sub_01x")).toBeNull();
   });
 
+  it("pausa a fine periodo, ripartenza subito con periodo nuovo", () => {
+    expect(parseRequest({ action: "pause", workspaceId: WORKSPACE })).toEqual({ action: "pause", workspaceId: WORKSPACE });
+    expect(lifecycleRequest("pause", "sub_01x"))
+      .toEqual({ path: "/subscriptions/sub_01x/pause", body: { effective_from: "next_billing_period" } });
+    expect(lifecycleRequest("resume", "sub_01x")).toEqual({ path: "/subscriptions/sub_01x/resume",
+      body: { effective_from: "immediately", on_resume: "start_new_billing_period" } });
+    expect(dbError("billing_not_paused")).toEqual({ status: 409, code: "billing_not_paused" });
+  });
+
   it("traduce i rifiuti del database", () => {
     expect(dbError("billing_downgrade_unsupported")).toEqual({ status: 409, code: "billing_downgrade_unsupported" });
     expect(dbError("billing_no_subscription")).toEqual({ status: 404, code: "billing_no_subscription" });
@@ -73,6 +82,7 @@ function manage(options: {
 } = {}) {
   const rpcResults: Record<string, { data: unknown; error: unknown }> = {
     billing_manage_context: { data: { subscription_id: "sub_01x", customer_id: "ctm_01x", scheduled_change: "cancel" }, error: null },
+    billing_prepare_lifecycle: { data: { subscription_id: "sub_01x" }, error: null },
     billing_prepare_change: { data: { subscription_id: "sub_01x", plan: "team", plan_price_id: "pri_01team",
       extra_venues: 1, extra_price_id: "pri_01extra", known_prices: known }, error: null },
     ...options.rpc,
@@ -140,6 +150,30 @@ describe("billing-manage", () => {
     const edge = manage();
     expect((await edge.request({ action: "apply_change", workspaceId: WORKSPACE, plan: "team", extraVenues: 1 })).status).toBe(200);
     expect(edge.fetch.mock.calls[1][0]).toBe("https://sandbox-api.paddle.com/subscriptions/sub_01x");
+  });
+
+  it("pausa: verifica nel database, poi Paddle a fine periodo", async () => {
+    const edge = manage();
+    expect((await edge.request({ action: "pause", workspaceId: WORKSPACE })).status).toBe(200);
+    expect(edge.rpc).toHaveBeenCalledWith("billing_prepare_lifecycle",
+      { p_environment: "sandbox", p_user: "user-1", p_workspace: WORKSPACE, p_action: "pause" });
+    const [url, init] = edge.fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://sandbox-api.paddle.com/subscriptions/sub_01x/pause");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ effective_from: "next_billing_period" });
+  });
+
+  it("ripartenza rifiutata dal database: Paddle non viene toccato", async () => {
+    const edge = manage({ rpc: { billing_prepare_lifecycle: { data: null, error: { message: "billing_not_paused" } } } });
+    const response = await edge.request({ action: "resume", workspaceId: WORKSPACE });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "billing_not_paused" });
+    expect(edge.fetch).not.toHaveBeenCalled();
+  });
+
+  it("ripartenza con addebito rifiutato: errore chiaro", async () => {
+    const edge = manage({ paddle: () => ({ ok: false, status: 400, body: { error: { code: "subscription_payment_declined" } } }) });
+    expect((await edge.request({ action: "resume", workspaceId: WORKSPACE })).status).toBe(402);
   });
 
   it("riduzione rifiutata dal database: Paddle non viene toccato", async () => {

@@ -77,7 +77,7 @@ begin
         and p.proname in ('claim_invite_send', 'peek_invite', 'consume_invite', 'delete_account',
                          'grant_workspace_access', 'billing_apply_event', 'billing_prepare_checkout',
                          'billing_attach_checkout_transaction', 'billing_manage_context',
-                         'billing_prepare_change')
+                         'billing_prepare_change', 'billing_prepare_lifecycle')
         and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
     '', 'inviti, delete_account, concessioni e pagamenti sono solo della service role');
   perform tests.eq(

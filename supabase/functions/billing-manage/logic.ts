@@ -2,7 +2,7 @@
 // `paddleConfig` è la copia di quello di `billing-checkout` (stesse regole).
 
 export type BillingEnvironment = "sandbox" | "live";
-export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change";
+export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change" | "pause" | "resume";
 export type ManageRequest = {
   action: ManageAction;
   workspaceId: string;
@@ -11,7 +11,7 @@ export type ManageRequest = {
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ACTIONS: readonly ManageAction[] = ["portal", "resume_renewals", "preview_change", "apply_change"];
+const ACTIONS: readonly ManageAction[] = ["portal", "resume_renewals", "preview_change", "apply_change", "pause", "resume"];
 
 /** Il browser sceglie azione e capacità desiderata; tutto il resto lo verifica il database. */
 export function parseRequest(body: unknown): ManageRequest | null {
@@ -55,6 +55,8 @@ const DB_ERRORS: Record<string, number> = {
   billing_downgrade_unsupported: 409,
   billing_no_change: 409,
   billing_price_unavailable: 503,
+  billing_not_paused: 409,
+  billing_not_needed: 409,
 };
 
 export function dbError(message: string | undefined): { status: number; code: string } {
@@ -121,6 +123,14 @@ export function buildItems(current: unknown, change: PreparedChange): Item[] | n
     items.push({ price_id: price, quantity: change.extraVenues });
   }
   return items;
+}
+
+/** Pausa a fine periodo pagato; ripartenza subito con un periodo nuovo (addebito pieno). */
+export function lifecycleRequest(action: "pause" | "resume", subscriptionId: string) {
+  return action === "pause"
+    ? { path: `/subscriptions/${subscriptionId}/pause`, body: { effective_from: "next_billing_period" } }
+    : { path: `/subscriptions/${subscriptionId}/resume`,
+        body: { effective_from: "immediately", on_resume: "start_new_billing_period" } };
 }
 
 export function changeBody(items: Item[]) {

@@ -17,7 +17,9 @@ const ERRORS: [string, string][] = [
   ["billing_no_change", "La capacità scelta è uguale a quella attuale."],
   ["billing_change_scheduled", "I rinnovi sono fermati: riprendili prima di cambiare piano."],
   ["billing_past_due", "Il rinnovo non è andato a buon fine: aggiorna prima il metodo di pagamento."],
-  ["billing_paused", "L'abbonamento è in pausa: scrivici a info@klokshift.com per riprenderlo."],
+  ["billing_paused", "L'abbonamento è in pausa: ripartilo da questa pagina prima di cambiarlo."],
+  ["billing_not_paused", "L'abbonamento non è in pausa. Aggiorna la pagina."],
+  ["billing_not_needed", "Questa azienda ha l'accesso gratuito: non serve ripartire con un pagamento."],
   ["billing_payment_failed", "Il pagamento della differenza non è andato a buon fine: il piano non è cambiato. Controlla il metodo di pagamento e riprova."],
   ["billing_nothing_scheduled", "I rinnovi sono già attivi."],
   ["billing_no_subscription", "Non risulta un abbonamento attivo per questa azienda. Aggiorna la pagina."],
@@ -55,6 +57,16 @@ export async function openPortal(workspaceId: string, target: keyof PortalLinks)
 
 export function resumeRenewals(workspaceId: string): Promise<{ ok: true }> {
   return manage({ action: "resume_renewals", workspaceId });
+}
+
+/** Ferma i rinnovi alla fine del periodo pagato: lo storico resta consultabile. */
+export function pauseRenewals(workspaceId: string): Promise<{ ok: true }> {
+  return manage({ action: "pause", workspaceId });
+}
+
+/** Riparte da una pausa: periodo nuovo da oggi, addebitato subito sulla carta salvata. */
+export function restartSubscription(workspaceId: string): Promise<{ ok: true }> {
+  return manage({ action: "resume", workspaceId });
 }
 
 export function previewChange(selection: ChangeSelection): Promise<ChangePreview> {

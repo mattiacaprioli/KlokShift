@@ -18,6 +18,7 @@ export type WorkspaceBilling = {
   scheduled_change: { action: (typeof ACTIONS)[number]; effective_at: string } | null;
   past_due_since: string | null;
   canceled_at: string | null;
+  paused_at: string | null;
 };
 
 function invalid(): never {
@@ -53,6 +54,7 @@ export function parseWorkspaceBilling(value: unknown): WorkspaceBilling | null {
     })(),
     past_due_since: instant(raw.past_due_since),
     canceled_at: instant(raw.canceled_at),
+    paused_at: instant(raw.paused_at),
   };
   if ((billing.status === "active" || billing.status === "past_due") && !billing.current_period_ends_at) {
     return invalid();

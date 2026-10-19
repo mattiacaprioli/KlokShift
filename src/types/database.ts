@@ -1756,6 +1756,15 @@ export type Database = {
         }
         Returns: Json
       }
+      billing_prepare_lifecycle: {
+        Args: {
+          p_action: string
+          p_environment: string
+          p_user: string
+          p_workspace: string
+        }
+        Returns: Json
+      }
       claim_invite_send: {
         Args: {
           p_caller: string
