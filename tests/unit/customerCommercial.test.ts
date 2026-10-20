@@ -16,6 +16,8 @@ vi.mock("@/features/workspace/hooks", () => ({
 }));
 // Il checkout vero carica Supabase e Paddle.js: qui conta solo che aprire la pagina non lo avvii.
 vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout: vi.fn() }));
+// L'export completo carica Supabase: qui conta solo che il pulsante ci sia.
+vi.mock("../../web/src/export/fullExport", () => ({ downloadFullExport: vi.fn() }));
 vi.mock("../../web/src/billing/manage", () => ({
   openPortal: vi.fn(), resumeRenewals: vi.fn(), previewChange: vi.fn(), applyChange: vi.fn(),
   pauseRenewals: vi.fn(), restartSubscription: vi.fn(),
@@ -159,6 +161,7 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("Calcola l’importo");
     expect(html).toContain("Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale");
     expect(html).not.toContain("Riprendi i rinnovi");
+    expect(html).toContain("Scarica tutti i dati");
   });
   it("disdetta programmata: ultimo giorno, riprendi i rinnovi, nessun aumento", () => {
     subscriptionAccess();

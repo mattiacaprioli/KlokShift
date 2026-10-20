@@ -39,6 +39,7 @@
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",
+    "fflate": "0.8.2",
     "nativewind": "5.0.0-preview.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",

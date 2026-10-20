@@ -43,6 +43,7 @@ import {
   QueryError,
   StickyHeader,
 } from "../ui/primitives";
+import { FullExportCard } from "../export/FullExportCard";
 
 /**
  * Le ore di **tutta l'azienda** in un mese o fra due date, una riga per
@@ -444,6 +445,8 @@ export function OrePage() {
           </Card>
         </section>
       ) : null}
+      {/* Tutto lo storico, non solo il periodo: per chi gestisce l'azienda. */}
+      <div className="mt-8 print:hidden"><FullExportCard /></div>
     </>
   );
 }

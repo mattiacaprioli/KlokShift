@@ -11,6 +11,7 @@ import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/prici
 import { openCheckout, prepareCheckout } from "../billing/checkout";
 import { applyChange, formatCents, openPortal, pauseRenewals, previewChange, restartSubscription, resumeRenewals } from "../billing/manage";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { FullExportCard } from "../export/FullExportCard";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
@@ -86,6 +87,7 @@ export function PianoPage() {
               {canAny("can_view_hours") ? <Link className="focus-gold underline" to="/ore">Ore ed export</Link> : null}
             </div>
             {current?.state === "archive" && current.can_complete_attendance ? <p className="mt-3 text-sm text-t2">Puoi ancora completare le presenze pregresse entro il termine indicato. Questa finestra non consente di creare nuovi turni e non prolunga l’archivio.</p> : null}
+            {current?.state !== "expired" ? <FullExportCard compact /> : null}
           </Card>
         ) : null}
 

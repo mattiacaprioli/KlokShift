@@ -2053,6 +2053,7 @@ export type Database = {
         Args: { p_template: string }
         Returns: undefined
       }
+      export_workspace_data: { Args: { p_workspace: string }; Returns: Json }
       get_absence_availability: {
         Args: { p_from: string; p_to: string }
         Returns: {
