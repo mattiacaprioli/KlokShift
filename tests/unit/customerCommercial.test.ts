@@ -20,7 +20,7 @@ vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout
 vi.mock("../../web/src/export/fullExport", () => ({ downloadFullExport: vi.fn() }));
 vi.mock("../../web/src/billing/manage", () => ({
   openPortal: vi.fn(), resumeRenewals: vi.fn(), previewChange: vi.fn(), applyChange: vi.fn(),
-  pauseRenewals: vi.fn(), restartSubscription: vi.fn(),
+  pauseRenewals: vi.fn(), restartSubscription: vi.fn(), stopRenewals: vi.fn(),
   formatCents: (cents: number) => `${cents / 100} €`,
 }));
 

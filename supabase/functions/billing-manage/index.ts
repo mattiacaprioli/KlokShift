@@ -6,7 +6,8 @@
 //   - `preview_change` / `apply_change`: aumento di piano o sedi, con l'importo
 //     proporzionale calcolato da Paddle prima della conferma;
 //   - `pause`: ferma i rinnovi alla fine del periodo pagato (pausa stagionale);
-//   - `resume`: riparte da una pausa con un periodo nuovo, addebitato subito.
+//   - `resume`: riparte da una pausa con un periodo nuovo, addebitato subito;
+//   - `cancel`: disdetta a fine periodo pagato, dopo la conferma della pagina.
 // Riduzioni e cambio mensile↔annuale restano assistiti (decisione del 18/10).
 //
 // Questa funzione **non concede nulla**: piano e capacità cambiano solo quando
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
     return result.ok ? json({ ok: true }) : json({ error: "billing_unavailable" }, 502);
   }
 
-  if (request.action === "pause" || request.action === "resume") {
+  if (request.action === "pause" || request.action === "resume" || request.action === "cancel") {
     const { data, error } = await admin.rpc("billing_prepare_lifecycle", {
       p_environment: PADDLE.environment, p_user: userData.user.id, p_workspace: request.workspaceId,
       p_action: request.action,

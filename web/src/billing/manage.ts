@@ -64,6 +64,11 @@ export function pauseRenewals(workspaceId: string): Promise<{ ok: true }> {
   return manage({ action: "pause", workspaceId });
 }
 
+/** Disdetta a fine periodo pagato, dopo la conferma con il riepilogo. Annullabile con resumeRenewals. */
+export function stopRenewals(workspaceId: string): Promise<{ ok: true }> {
+  return manage({ action: "cancel", workspaceId });
+}
+
 /** Riparte da una pausa: periodo nuovo da oggi, addebitato subito sulla carta salvata. */
 export function restartSubscription(workspaceId: string): Promise<{ ok: true }> {
   return manage({ action: "resume", workspaceId });

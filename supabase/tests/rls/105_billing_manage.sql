@@ -86,6 +86,8 @@ begin
   perform public.billing_apply_event('sandbox', tests.manage_event(2, co, 'active', team_m, 1));
   r := public.billing_prepare_lifecycle('sandbox', tests.id('Ow'), ws, 'pause');
   perform tests.eq(r ->> 'subscription_id', 'sub_01manage', 'abbonamento attivo: la pausa è ammessa');
+  r := public.billing_prepare_lifecycle('sandbox', tests.id('Ow'), ws, 'cancel');
+  perform tests.eq(r ->> 'subscription_id', 'sub_01manage', 'e anche la disdetta a fine periodo');
   perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''resume'')', tests.id('Ow'), ws),
     'billing_not_paused', 'non si riparte da un abbonamento attivo');
   perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Co'), ws),
@@ -106,6 +108,8 @@ begin
     'billing_change_scheduled', 'nessun aumento con la disdetta programmata');
   perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''pause'')', tests.id('Ow'), ws),
     'billing_change_scheduled', 'nessuna pausa sopra una disdetta programmata');
+  perform tests.raises(format('select public.billing_prepare_lifecycle(''sandbox'', %L, %L, ''cancel'')', tests.id('Ow'), ws),
+    'billing_change_scheduled', 'disdetta già programmata: niente da fare');
 
   -- Rinnovo in sospeso: niente cambi finché il pagamento non torna.
   perform public.billing_apply_event('sandbox', tests.manage_event(4, co, 'past_due', team_m, 1));

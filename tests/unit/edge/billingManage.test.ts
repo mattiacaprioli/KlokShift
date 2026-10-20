@@ -21,7 +21,7 @@ describe("billing-manage: regole pure", () => {
     expect(parseRequest({ action: "apply_change", workspaceId: WORKSPACE, plan: "team", extraVenues: 1 }))
       .toEqual({ action: "apply_change", workspaceId: WORKSPACE, plan: "team", extraVenues: 1 });
     for (const bad of [
-      { action: "cancel", workspaceId: WORKSPACE }, { action: "portal", workspaceId: "x" },
+      { action: "delete", workspaceId: WORKSPACE }, { action: "portal", workspaceId: "x" },
       { action: "apply_change", workspaceId: WORKSPACE, plan: "pro", extraVenues: 0 },
       { action: "preview_change", workspaceId: WORKSPACE, plan: "team" },
     ]) expect(parseRequest(bad)).toBeNull();
@@ -66,6 +66,8 @@ describe("billing-manage: regole pure", () => {
     expect(lifecycleRequest("resume", "sub_01x")).toEqual({ path: "/subscriptions/sub_01x/resume",
       body: { effective_from: "immediately", on_resume: "start_new_billing_period" } });
     expect(dbError("billing_not_paused")).toEqual({ status: 409, code: "billing_not_paused" });
+    expect(lifecycleRequest("cancel", "sub_01x"))
+      .toEqual({ path: "/subscriptions/sub_01x/cancel", body: { effective_from: "next_billing_period" } });
   });
 
   it("traduce i rifiuti del database", () => {

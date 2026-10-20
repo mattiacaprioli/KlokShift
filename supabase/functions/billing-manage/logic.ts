@@ -2,7 +2,7 @@
 // `paddleConfig` è la copia di quello di `billing-checkout` (stesse regole).
 
 export type BillingEnvironment = "sandbox" | "live";
-export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change" | "pause" | "resume";
+export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change" | "pause" | "resume" | "cancel";
 export type ManageRequest = {
   action: ManageAction;
   workspaceId: string;
@@ -11,7 +11,7 @@ export type ManageRequest = {
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ACTIONS: readonly ManageAction[] = ["portal", "resume_renewals", "preview_change", "apply_change", "pause", "resume"];
+const ACTIONS: readonly ManageAction[] = ["portal", "resume_renewals", "preview_change", "apply_change", "pause", "resume", "cancel"];
 
 /** Il browser sceglie azione e capacità desiderata; tutto il resto lo verifica il database. */
 export function parseRequest(body: unknown): ManageRequest | null {
@@ -125,12 +125,15 @@ export function buildItems(current: unknown, change: PreparedChange): Item[] | n
   return items;
 }
 
-/** Pausa a fine periodo pagato; ripartenza subito con un periodo nuovo (addebito pieno). */
-export function lifecycleRequest(action: "pause" | "resume", subscriptionId: string) {
-  return action === "pause"
-    ? { path: `/subscriptions/${subscriptionId}/pause`, body: { effective_from: "next_billing_period" } }
-    : { path: `/subscriptions/${subscriptionId}/resume`,
-        body: { effective_from: "immediately", on_resume: "start_new_billing_period" } };
+/**
+ * Pausa e disdetta a fine periodo pagato; ripartenza subito con un periodo
+ * nuovo (addebito pieno).
+ */
+export function lifecycleRequest(action: "pause" | "resume" | "cancel", subscriptionId: string) {
+  if (action === "pause") return { path: `/subscriptions/${subscriptionId}/pause`, body: { effective_from: "next_billing_period" } };
+  if (action === "cancel") return { path: `/subscriptions/${subscriptionId}/cancel`, body: { effective_from: "next_billing_period" } };
+  return { path: `/subscriptions/${subscriptionId}/resume`,
+    body: { effective_from: "immediately", on_resume: "start_new_billing_period" } };
 }
 
 export function changeBody(items: Item[]) {
