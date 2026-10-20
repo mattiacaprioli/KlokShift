@@ -69,7 +69,9 @@ function ArchiveItem({ a }: { a: ExpiredArchive }) {
       : <form className="mt-3 space-y-3 rounded-xl bg-bg-2 p-4" onSubmit={(e) => { e.preventDefault(); remove.mutate({ workspaceId: a.workspace_id, operationId, confirmName: name, reason: reason.trim() }); }}>
           <p className="text-sm text-t1">La cancellazione non si può annullare. Il cliente ha avuto 12 mesi per esportare i dati.</p>
           <Field label="Motivo"><Textarea required maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
-          <Field label={`Scrivi «${a.workspace_name}» per confermare`}><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" /></Field>
+          {/* Fuori dall'etichetta: le etichette sono in maiuscolo e il nome va copiato com'è. */}
+          <p className="text-sm text-t2">Per confermare scrivi il nome dell’azienda esattamente così: <strong className="text-t1">{a.workspace_name}</strong></p>
+          <Field label="Nome dell’azienda"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" /></Field>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" variant="danger" disabled={remove.isPending || !reason.trim() || name.trim() !== a.workspace_name.trim()}>
               {remove.isPending ? "Cancellazione…" : "Cancella definitivamente"}
