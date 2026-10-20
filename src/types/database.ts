@@ -2109,6 +2109,7 @@ export type Database = {
           venue_name: string
         }[]
       }
+      get_member_document_quota: { Args: { p_member: string }; Returns: Json }
       get_member_performance: {
         Args: { p_member: string }
         Returns: {

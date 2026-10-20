@@ -155,12 +155,13 @@ describe("Piano e accesso del cliente", () => {
     billing.mockReturnValue({ ...noBilling, data: subscription });
     const html = render();
     expect(html).toContain("Ricevute e metodo di pagamento");
-    expect(html).toContain("Ferma i rinnovi");
+    expect(html).toContain("Chiudi l’abbonamento");
     expect(html).toContain("Metti in pausa");
+    expect(html).toContain("per tornare serve un nuovo acquisto");
     expect(html).toContain("Aumenta piano o sedi");
     expect(html).toContain("Calcola l’importo");
     expect(html).toContain("Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale");
-    expect(html).not.toContain("Riprendi i rinnovi");
+    expect(html).not.toContain("Annulla la chiusura");
     expect(html).toContain("Scarica tutti i dati");
   });
   it("disdetta programmata: ultimo giorno, riprendi i rinnovi, nessun aumento", () => {
@@ -169,8 +170,8 @@ describe("Piano e accesso del cliente", () => {
       scheduled_change: { action: "cancel", effective_at: "2026-11-18T10:00:00Z" } } });
     const html = render();
     expect(html).toContain("Ultimo giorno");
-    expect(html).toContain("Riprendi i rinnovi");
-    expect(html).not.toContain("Ferma i rinnovi");
+    expect(html).toContain("Annulla la chiusura");
+    expect(html).not.toContain("Chiudi l’abbonamento");
     expect(html).not.toContain("Aumenta piano o sedi");
   });
   it("pausa programmata: annulla la pausa, nessun aumento né disdetta", () => {
@@ -181,7 +182,7 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("Pausa programmata");
     expect(html).toContain("Annulla la pausa");
     expect(html).not.toContain("Metti in pausa");
-    expect(html).not.toContain("Ferma i rinnovi");
+    expect(html).not.toContain("Chiudi l’abbonamento");
     expect(html).not.toContain("Aumenta piano o sedi");
   });
   it("in pausa: riparti ora, nessuna disdetta né aumento", () => {
@@ -190,7 +191,7 @@ describe("Piano e accesso del cliente", () => {
     const html = render();
     expect(html).toContain("In pausa dal");
     expect(html).toContain("Riparti ora");
-    expect(html).not.toContain("Ferma i rinnovi");
+    expect(html).not.toContain("Chiudi l’abbonamento");
     expect(html).not.toContain("Metti in pausa");
     expect(html).not.toContain("Aumenta piano o sedi");
     expect(html).not.toContain("Procedi al pagamento");

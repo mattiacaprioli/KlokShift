@@ -15,7 +15,7 @@ type ChangeSelection = { workspaceId: string; plan: "base" | "team"; extraVenues
 const ERRORS: [string, string][] = [
   ["billing_downgrade_unsupported", "Per passare a un piano più piccolo o ridurre le sedi scrivi a info@klokshift.com."],
   ["billing_no_change", "La capacità scelta è uguale a quella attuale."],
-  ["billing_change_scheduled", "I rinnovi sono fermati: riprendili prima di cambiare piano."],
+  ["billing_change_scheduled", "C’è già una pausa o una chiusura programmata: annullala prima di cambiare."],
   ["billing_past_due", "Il rinnovo non è andato a buon fine: aggiorna prima il metodo di pagamento."],
   ["billing_paused", "L'abbonamento è in pausa: ripartilo da questa pagina prima di cambiarlo."],
   ["billing_not_paused", "L'abbonamento non è in pausa. Aggiorna la pagina."],
@@ -59,7 +59,7 @@ export function resumeRenewals(workspaceId: string): Promise<{ ok: true }> {
   return manage({ action: "resume_renewals", workspaceId });
 }
 
-/** Ferma i rinnovi alla fine del periodo pagato: lo storico resta consultabile. */
+/** Chiude l'abbonamento alla fine del periodo pagato: lo storico resta consultabile. */
 export function pauseRenewals(workspaceId: string): Promise<{ ok: true }> {
   return manage({ action: "pause", workspaceId });
 }

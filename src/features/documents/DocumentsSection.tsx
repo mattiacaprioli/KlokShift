@@ -12,9 +12,11 @@ import { useToast } from "@/providers/Toast";
 import { documentStatus, documentStatusLabel } from "./status";
 import {
   useDeleteStaffDocument,
+  useDocumentQuota,
   useDocumentUrl,
   useStaffDocuments,
 } from "./hooks";
+import { documentQuotaNotice } from "./quota";
 import type { StaffDocument } from "./api";
 
 type Props = {
@@ -46,6 +48,7 @@ export function DocumentsSection({
   const docs = query.data ?? [];
   const open = useDocumentUrl();
   const remove = useDeleteStaffDocument(memberId);
+  const notice = documentQuotaNotice(useDocumentQuota(memberId).data);
   const [toDelete, setToDelete] = useState<StaffDocument | null>(null);
 
   async function onOpen(doc: StaffDocument) {
@@ -75,11 +78,17 @@ export function DocumentsSection({
 
   return (
     <View className="gap-3">
+      {/* A quota piena il caricamento verrebbe rifiutato: niente «Aggiungi». */}
       <SectionHeader
         title={title}
-        actionLabel={onAdd ? "Aggiungi" : undefined}
-        onAction={onAdd}
+        actionLabel={onAdd && notice?.level !== "full" ? "Aggiungi" : undefined}
+        onAction={notice?.level !== "full" ? onAdd : undefined}
       />
+      {notice ? (
+        <Text className={cn("text-[13px] leading-5", notice.level === "full" ? "text-error" : "text-gold")}>
+          {notice.text}
+        </Text>
+      ) : null}
 
       {query.isLoading ? (
         <ActivityIndicator color="#EAB54C" />

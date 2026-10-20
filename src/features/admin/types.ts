@@ -27,6 +27,8 @@ export const workspaceSchema = z.object({
   open_venues: count, closed_venues: count, active_members: count, invited_members: count, left_members: count,
   unlinked_members: count, managers: count, current_placements: count,
   document_files: count, document_known_bytes: count, document_unknown_sizes: count, flags: z.array(flag),
+  // Quota documenti dell'azienda (20261020000500): 2 GiB o il limite concesso.
+  document_limit_bytes: count.optional(),
 }).refine((v) => v.access === null ? ["deleted", "unavailable"].includes(v.state) :
   v.access.workspace_id === v.id && v.access.state === v.state && v.access.usage !== null);
 export const accountSchema = z.object({

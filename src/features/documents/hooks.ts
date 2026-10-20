@@ -4,6 +4,7 @@ import {
   createDocumentUrl,
   createStaffDocument,
   deleteStaffDocument,
+  getMemberDocumentQuota,
   getStaffDocuments,
   replaceStaffDocumentFile,
   updateStaffDocument,
@@ -20,10 +21,22 @@ export function useStaffDocuments(memberId: string | undefined) {
   });
 }
 
+/** Spazio documenti dell'azienda, per gli avvisi all'80/90% e a quota piena. */
+export function useDocumentQuota(memberId: string | undefined) {
+  return useQuery({
+    queryKey: qk.documents.quota(memberId ?? ""),
+    queryFn: () => getMemberDocumentQuota(memberId as string),
+    enabled: !!memberId,
+  });
+}
+
 function useDocumentsInvalidation(memberId: string) {
   const qc = useQueryClient();
-  return () =>
-    qc.invalidateQueries({ queryKey: qk.documents.byMember(memberId) });
+  return () => Promise.all([
+    qc.invalidateQueries({ queryKey: qk.documents.byMember(memberId) }),
+    // Caricare o eliminare cambia lo spazio di tutta l'azienda.
+    qc.invalidateQueries({ queryKey: ["documents", "quota"] }),
+  ]);
 }
 
 export function useCreateStaffDocument(memberId: string) {

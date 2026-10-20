@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
+import { parseDocumentQuota, type DocumentQuota } from "./quota";
 
 /**
  * Documenti di un **membro** dell'azienda: HACCP, contratto, visita medica,
@@ -74,7 +75,14 @@ function documentPath(memberId: string, fileName: string): string {
   return `${memberId}/${Date.now()}-${rand}.${ext}`;
 }
 
-async function uploadFile(path: string, file: DocumentFile): Promise<void> {
+/** Spazio documenti dell'azienda di quel membro; `null` se non si riesce a leggere. */
+export async function getMemberDocumentQuota(memberId: string): Promise<DocumentQuota | null> {
+  const { data, error } = await supabase.rpc("get_member_document_quota", { p_member: memberId });
+  if (error) throw new Error(error.message);
+  return parseDocumentQuota(data);
+}
+
+async function uploadFile(memberId: string, path: string, file: DocumentFile): Promise<void> {
   const { error } = await supabase.storage
     .from(DOCUMENTS_BUCKET)
     .upload(path, file.bytes, {
@@ -83,7 +91,13 @@ async function uploadFile(path: string, file: DocumentFile): Promise<void> {
       contentType: file.mimeType,
       upsert: false,
     });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // La policy rifiuta anche a quota piena, con lo stesso errore di un permesso
+    // mancante: si guarda lo spazio per dire la cosa giusta.
+    const quota = await getMemberDocumentQuota(memberId).catch(() => null);
+    if (quota && quota.used_bytes >= quota.limit_bytes) throw new Error("document_quota_full");
+    throw new Error(error.message);
+  }
 }
 
 /**
@@ -98,7 +112,7 @@ export async function createStaffDocument(
   file: DocumentFile
 ): Promise<StaffDocument> {
   const path = documentPath(memberId, file.fileName);
-  await uploadFile(path, file);
+  await uploadFile(memberId, path, file);
 
   const { data, error } = await supabase
     .from("staff_documents")
@@ -147,7 +161,7 @@ export async function replaceStaffDocumentFile(
   file: DocumentFile
 ): Promise<void> {
   const path = documentPath(doc.member_id, file.fileName);
-  await uploadFile(path, file);
+  await uploadFile(doc.member_id, path, file);
 
   const { data, error } = await supabase
     .from("staff_documents")

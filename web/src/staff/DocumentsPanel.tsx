@@ -9,9 +9,11 @@ import {
 import {
   useCreateStaffDocument,
   useDeleteStaffDocument,
+  useDocumentQuota,
   useDocumentUrl,
   useStaffDocuments,
 } from "@/features/documents/hooks";
+import { documentQuotaNotice } from "@/features/documents/quota";
 import { documentStatus, documentStatusLabel } from "@/features/documents/status";
 import { useToast } from "../ui/Toast";
 import { Button, Card, Input, Pill } from "../ui/primitives";
@@ -36,6 +38,7 @@ export function DocumentsPanel({ personId }: { personId: string }) {
   const create = useCreateStaffDocument(personId);
   const remove = useDeleteStaffDocument(personId);
   const signedUrl = useDocumentUrl();
+  const notice = documentQuotaNotice(useDocumentQuota(personId).data);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -102,6 +105,11 @@ export function DocumentsPanel({ personId }: { personId: string }) {
       <span className="text-xs font-semibold uppercase tracking-wider text-t3">
         Documenti
       </span>
+      {notice ? (
+        <p className={notice.level === "full" ? "text-sm text-error" : "text-sm text-gold"} role="status">
+          {notice.text}
+        </p>
+      ) : null}
 
       {docs.length === 0 ? (
         <p className="text-xs text-t4">
@@ -160,7 +168,7 @@ export function DocumentsPanel({ personId }: { personId: string }) {
         </div>
       )}
 
-      <Card className="flex flex-wrap items-center gap-3 p-3">
+      {notice?.level === "full" ? null : <Card className="flex flex-wrap items-center gap-3 p-3">
         <input
           ref={fileRef}
           type="file"
@@ -190,7 +198,7 @@ export function DocumentsPanel({ personId }: { personId: string }) {
         <span className="text-xs text-t4">
           Scadenza facoltativa · PDF o immagine, max 10 MB
         </span>
-      </Card>
+      </Card>}
     </section>
   );
 }

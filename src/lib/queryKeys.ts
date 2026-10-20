@@ -130,6 +130,8 @@ export const qk = {
     // Per membro (`staff_documents.member_id`): un membro dell'azienda ha una
     // sola cartella, valida per tutte le sedi in cui lavora.
     byMember: (memberId: string) => ["documents", "byMember", memberId] as const,
+    // Lo spazio è dell'azienda, ma si chiede dalla scheda: chiave per membro.
+    quota: (memberId: string) => ["documents", "quota", memberId] as const,
   },
   roles: {
     all: ["roles"] as const,

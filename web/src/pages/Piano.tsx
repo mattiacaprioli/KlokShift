@@ -165,9 +165,9 @@ function BillingSection({ workspaceId, access, refetchAccess }: {
     const notice = !awaiting ? null : late ? lateText
       : awaiting.kind === "change" ? "Aumento confermato: aggiorniamo il piano appena Paddle registra il pagamento."
       : awaiting.kind === "pause" ? "Pausa programmata: aggiorniamo lo stato fra pochi secondi."
-      : awaiting.kind === "stop" ? "Rinnovi fermati: aggiorniamo lo stato fra pochi secondi."
+      : awaiting.kind === "stop" ? "Chiusura programmata: aggiorniamo lo stato fra pochi secondi."
       : awaiting.kind === "restart" ? "Ripartenza confermata: riattiviamo l’azienda appena Paddle registra il pagamento."
-      : "Rinnovi ripresi: aggiorniamo lo stato fra pochi secondi.";
+      : "Annullato: aggiorniamo lo stato fra pochi secondi.";
     return <SubscriptionCard workspaceId={workspaceId} billing={subscription as WorkspaceBilling}
       notice={notice} busy={!!awaiting} onAwait={(next) => { setLate(false); setAwaiting(next); }} />;
   }
@@ -207,7 +207,7 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
       {notice ? <p className="mt-5 text-sm text-t2" role="status">{notice}</p> : null}
       {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; l’operatività continua per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
       {pausing ? <p className="mt-5 text-sm text-t2">Pausa programmata: lavori normalmente fino all’ultimo giorno indicato, poi gli addebiti si fermano e l’azienda passa alla consultazione ed export, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.</p>
-        : stopping ? <p className="mt-5 text-sm text-t2">I rinnovi sono fermati: il servizio resta attivo fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi.</p> : null}
+        : stopping ? <p className="mt-5 text-sm text-t2">Abbonamento in chiusura: lavori normalmente fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi. Per tornare dopo servirà un nuovo acquisto.</p> : null}
       {paused ? <p className="mt-5 text-sm text-t2">L’abbonamento è in pausa e non ci sono addebiti. L’azienda è in consultazione ed export: turni, ore e documenti restano come li hai lasciati. Quando riparti, Paddle addebita subito un nuovo {yearly ? "anno" : "mese"} da quel giorno.</p> : null}
 
       <div className="mt-5 flex flex-wrap gap-3">
@@ -217,11 +217,11 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
         {paused ? <Button variant="gold" disabled={restart.isPending || busy} onClick={() => setConfirming("restart")}>Riparti ora</Button> : null}
         <Button disabled={portal.isPending} onClick={() => portal.mutate("overview")}>Ricevute e metodo di pagamento</Button>
         {stopping
-          ? <Button variant="gold" disabled={resume.isPending || busy} onClick={() => resume.mutate()}>{resume.isPending ? "Ripresa…" : pausing ? "Annulla la pausa" : "Riprendi i rinnovi"}</Button>
+          ? <Button variant="gold" disabled={resume.isPending || busy} onClick={() => resume.mutate()}>{resume.isPending ? "Annullamento…" : pausing ? "Annulla la pausa" : "Annulla la chiusura"}</Button>
           : billing.status === "active"
             ? <>
                 <Button disabled={pause.isPending || busy} onClick={() => setConfirming("pause")}>Metti in pausa</Button>
-                <Button disabled={stop.isPending || busy} onClick={() => setConfirming("stop")}>Ferma i rinnovi</Button>
+                <Button disabled={stop.isPending || busy} onClick={() => setConfirming("stop")}>Chiudi l’abbonamento</Button>
               </>
             : null}
       </div>
@@ -236,9 +236,9 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
         />
       ) : confirming === "stop" ? (
         <ConfirmDialog
-          title="Fermare i rinnovi?"
-          message={`Gli addebiti si fermano: lavori normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, che resta pagato. Poi l’azienda passa alla consultazione ed export fino al ${archiveEnd ?? "termine dell’archivio"}; dopo quella data vengono cancellati i dati dell’azienda (sedi, turni, ore, assenze, schede, documenti e chat), mentre restano gli account delle persone. Se ti fermi solo per una stagione, la pausa tiene l’abbonamento e riparti con un clic. Fino all’ultimo giorno puoi riprendere i rinnovi da qui.`}
-          confirmLabel="Ferma i rinnovi"
+          title="Chiudere l’abbonamento?"
+          message={`Lavori normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, che resta pagato; poi non ci sono altri addebiti. L’azienda passa alla consultazione ed export fino al ${archiveEnd ?? "termine dell’archivio"}; dopo quella data vengono cancellati i dati dell’azienda (sedi, turni, ore, assenze, schede, documenti e chat), mentre restano gli account delle persone. Per tornare servirà un nuovo acquisto. Se ti fermi solo per una stagione, scegli la pausa: riparti con un clic. Fino all’ultimo giorno puoi annullare la chiusura da qui.`}
+          confirmLabel="Chiudi l’abbonamento"
           destructive
           pending={stop.isPending}
           onConfirm={() => stop.mutate(undefined, { onSettled: () => setConfirming(null) })}
@@ -255,7 +255,14 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
         />
       ) : null}
       {error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(error)}</p> : null}
-      <p className="mt-3 text-xs text-t3">Ricevute e metodo di pagamento si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda. La pausa tiene l’abbonamento per ripartire con un clic; fermare i rinnovi lo chiude alla fine del periodo pagato.</p>
+      {billing.status === "active" && !stopping ? (
+        <ul className="mt-4 space-y-1 text-sm text-t2">
+          <li><strong className="text-t1">Pausa</strong>: ti fermi per una stagione e riparti con un clic, con lo stesso piano e la stessa carta.</li>
+          <li><strong className="text-t1">Chiudi</strong>: smetti di usare KlokShift; per tornare serve un nuovo acquisto.</li>
+          <li className="text-xs text-t3">In entrambi i casi lavori fino all’ultimo giorno pagato, poi hai 12 mesi per consultare ed esportare i dati.</li>
+        </ul>
+      ) : null}
+      <p className="mt-3 text-xs text-t3">Ricevute e metodo di pagamento si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda.</p>
 
       {billing.status === "active" && !stopping
         // La chiave rimonta il modulo quando l'avviso cambia piano o sedi: niente importo vecchio a schermo.
