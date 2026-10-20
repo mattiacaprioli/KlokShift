@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, PageHeader, Pill, Placeholder, Select, Spinner } from "../ui/primitives";
 import { WorkspaceActions, AccountClassification, OperationHistory } from "./WorkspaceActions";
 import { BillingAdjustments } from "./BillingAdjustments";
-import { ExpiredArchives } from "./ExpiredArchives";
+import { CustomerDeletion, ExpiredArchives } from "./ExpiredArchives";
 const labels: Record<string, string> = {
   all: 'Tutti', customer: 'Cliente', internal: 'Interno', test: 'Test', unclassified: 'Non classificato',
   setup: 'Preparazione', operational: 'Operativa', archive: 'Archivio', expired: 'Archivio scaduto', migration_pending: 'Migrazione da verificare', unavailable: 'Dati mancanti', deleted: 'Eliminato',
@@ -176,6 +176,8 @@ function WorkspaceDetail({ userId, id }: { userId: string; id: string }) {
     </section>
     <section aria-label="Gestione" hidden={tab !== 'gestione'}>
       {d.workspace.deleted_at === null ? <WorkspaceActions key={id} userId={userId} workspaceId={id} /> : <Placeholder title="Azienda eliminata" detail="Il registro degli interventi è disponibile nella scheda Cronologia." />}
+      {d.workspace.deleted_at === null && d.workspace.state !== 'operational'
+        ? <div className="mt-6"><CustomerDeletion key={`delete-${id}`} workspaceId={id} workspaceName={d.workspace.name} /></div> : null}
     </section>
     <section aria-label="Cronologia" hidden={tab !== 'cronologia'} className="space-y-6">
       {query.isFetching ? <Spinner /> : <Card><h2 className="mb-3 font-semibold">Storico dei piani e delle concessioni</h2><Table headers={['Accesso e capacità', 'Decorrenza e fine', 'Revoca', 'Motivo']}>{d.periods.items.map((p) => <tr key={p.id}><Cell>{labels[p.kind]} · {labels[p.plan]} · {p.venue_limit} {p.venue_limit === 1 ? 'sede' : 'sedi'}</Cell><Cell>{date(p.starts_at)}<br />{p.ends_at ? date(p.ends_at) : 'Senza scadenza'}</Cell><Cell>{p.revoked_at ? date(p.revoked_at) : 'Nessuna'}</Cell><Cell>{p.reason}</Cell></tr>)}</Table>{!d.periods.items.length && <p className="p-3 text-sm text-t3">Nessun piano o concessione assegnati.</p>}<Pager page={d.periods} onOffset={(periods) => setOffsets({ ...offsets, periods })} /></Card>}

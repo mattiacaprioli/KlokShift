@@ -39,11 +39,7 @@ export function ExpiredArchives({ userId }: { userId: string }) {
 
 function ArchiveItem({ a }: { a: ExpiredArchive }) {
   const [open, setOpen] = useState(false);
-  const [operationId] = useState(() => crypto.randomUUID());
-  const [name, setName] = useState("");
-  const [reason, setReason] = useState("");
   const cleanup = useAdminWrite(cleanupWorkspaceFiles);
-  const remove = useAdminWrite(deleteWorkspaceDataAndFiles);
   const pending = a.inventory.files_pending;
   const cleaned = cleanup.data as CleanupResult | undefined;
 
@@ -66,23 +62,53 @@ function ArchiveItem({ a }: { a: ExpiredArchive }) {
     </div> : null)
       : a.subscription_open ? <p className="mt-2 text-sm text-gold">L’abbonamento è ancora aperto su Paddle: disdicilo prima di cancellare i dati.</p>
       : !open ? <div className="mt-3"><Button onClick={() => setOpen(true)}>Cancella i dati…</Button></div>
-      : <form className="mt-3 space-y-3 rounded-xl bg-bg-2 p-4" onSubmit={(e) => { e.preventDefault(); remove.mutate({ workspaceId: a.workspace_id, operationId, confirmName: name, reason: reason.trim() }); }}>
-          <p className="text-sm text-t1">La cancellazione non si può annullare. Il cliente ha avuto 12 mesi per esportare i dati.</p>
-          <Field label="Motivo"><Textarea required maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
-          {/* Fuori dall'etichetta: le etichette sono in maiuscolo e il nome va copiato com'è. */}
-          <p className="text-sm text-t2">Per confermare scrivi il nome dell’azienda esattamente così: <strong className="text-t1">{a.workspace_name}</strong></p>
-          <Field label="Nome dell’azienda"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" /></Field>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" variant="danger" disabled={remove.isPending || !reason.trim() || name.trim() !== a.workspace_name.trim()}>
-              {remove.isPending ? "Cancellazione…" : "Cancella definitivamente"}
-            </Button>
-            <Button disabled={remove.isPending} onClick={() => { setOpen(false); setName(""); }}>Annulla</Button>
-          </div>
-        </form>}
-    {remove.error ? <p role="alert" className="mt-2 text-sm text-error">{userErrorMessage(remove.error)}</p> : null}
+      : <DeletionForm workspaceId={a.workspace_id} workspaceName={a.workspace_name} customerRequest={false} onCancel={() => setOpen(false)} />}
     {cleanup.error ? <p role="alert" className="mt-2 text-sm text-error">{userErrorMessage(cleanup.error)}</p> : null}
     {cleaned ? <p role="status" className="mt-2 text-sm text-t2">{cleaned.remaining
       ? `Tolti ${cleaned.removed} file; ${cleaned.failed || "alcuni"} non ancora: riprova fra poco.`
       : `File tolti dallo Storage: ${cleaned.removed}.`}</p> : null}
   </li>;
+}
+
+/**
+ * Conferma della cancellazione: motivo, nome esatto, poi dati e file. La stessa
+ * per l'archivio scaduto e per la richiesta del cliente; il server ricontrolla.
+ */
+export function DeletionForm({ workspaceId, workspaceName, customerRequest, onCancel }: {
+  workspaceId: string; workspaceName: string; customerRequest: boolean; onCancel: () => void;
+}) {
+  const [operationId] = useState(() => crypto.randomUUID());
+  const [name, setName] = useState("");
+  const [reason, setReason] = useState("");
+  const remove = useAdminWrite(deleteWorkspaceDataAndFiles);
+  return <form className="mt-3 space-y-3 rounded-xl bg-bg-2 p-4" onSubmit={(e) => {
+    e.preventDefault();
+    remove.mutate({ workspaceId, operationId, confirmName: name, reason: reason.trim(), customerRequest });
+  }}>
+    <p className="text-sm text-t1">{customerRequest
+      ? "La cancellazione non si può annullare. Procedi solo con una richiesta scritta di chi gestisce l’azienda e indica nel motivo quando e come è arrivata."
+      : "La cancellazione non si può annullare. Il cliente ha avuto 12 mesi per esportare i dati."}</p>
+    <Field label="Motivo"><Textarea required maxLength={2000} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+    {/* Fuori dall'etichetta: le etichette sono in maiuscolo e il nome va copiato com'è. */}
+    <p className="text-sm text-t2">Per confermare scrivi il nome dell’azienda esattamente così: <strong className="text-t1">{workspaceName}</strong></p>
+    <Field label="Nome dell’azienda"><Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" /></Field>
+    <div className="flex flex-wrap gap-2">
+      <Button type="submit" variant="danger" disabled={remove.isPending || !reason.trim() || name.trim() !== workspaceName.trim()}>
+        {remove.isPending ? "Cancellazione…" : "Cancella definitivamente"}
+      </Button>
+      <Button disabled={remove.isPending} onClick={() => { setName(""); onCancel(); }}>Annulla</Button>
+    </div>
+    {remove.error ? <p role="alert" className="text-sm text-error">{userErrorMessage(remove.error)}</p> : null}
+  </form>;
+}
+
+/** Scheda azienda → Gestione: cancellazione anticipata, solo per un'azienda che non lavora. */
+export function CustomerDeletion({ workspaceId, workspaceName }: { workspaceId: string; workspaceName: string }) {
+  const [open, setOpen] = useState(false);
+  return <Card>
+    <h2 className="font-semibold">Cancella i dati su richiesta del cliente</h2>
+    <p className="mt-2 text-sm text-t3">Per un’azienda in archivio o mai attivata, se chi la gestisce chiede di cancellare i dati prima della scadenza. Si cancella quello che si cancella a fine archivio; restano gli account e il registro commerciale. Con un abbonamento ancora aperto su Paddle il server rifiuta.</p>
+    {open ? <DeletionForm workspaceId={workspaceId} workspaceName={workspaceName} customerRequest onCancel={() => setOpen(false)} />
+      : <div className="mt-3"><Button onClick={() => setOpen(true)}>Cancella i dati…</Button></div>}
+  </Card>;
 }

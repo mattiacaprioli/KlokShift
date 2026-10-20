@@ -108,5 +108,29 @@ begin
   perform tests.logout();
 end $$;
 
+-- Su richiesta del cliente: anche in archivio non scaduto, mai da operativa.
+do $$
+declare
+  w2 uuid := tests.id('W2'); r jsonb; op uuid := gen_random_uuid();
+begin
+  perform tests.dd_admin();
+  perform tests.raises(format('select public.admin_delete_workspace_data(%L, %L, ''W2'', ''richiesta'', true)', w2, op),
+    'admin_workspace_operational', 'un''azienda che lavora non si cancella nemmeno su richiesta');
+  perform tests.logout();
+  update public.workspace_access_periods set starts_at = now() - interval '1 year',
+    revoked_at = now() - interval '1 day' where workspace_id = w2;
+  perform tests.eq(private.workspace_access_at(w2, now()) ->> 'state', 'archive', 'W2 in archivio');
+
+  perform tests.dd_admin();
+  perform tests.raises(format('select public.admin_delete_workspace_data(%L, %L, ''W2'', ''richiesta'')', w2, op),
+    'admin_archive_not_expired', 'senza richiesta: si aspetta la scadenza');
+  r := public.admin_delete_workspace_data(w2, op, 'W2', 'Richiesta del titolare via email del 20/10', true);
+  perform tests.eq(r ->> 'customer_request', 'true', 'eseguita su richiesta');
+  perform tests.eq((r #>> '{deleted,venues}')::integer, 1, 'la sede di W2 cancellata');
+  perform tests.logout();
+  perform tests.eq((select (parameters ->> 'customer_request')::boolean from private.admin_operations
+    where operation_id = op), true, 'il registro dice che era una richiesta');
+end $$;
+
 rollback;
 select 'workspace data deletion: ok' as result;

@@ -1731,6 +1731,7 @@ export type Database = {
       admin_delete_workspace_data: {
         Args: {
           p_confirm_name: string
+          p_customer_request?: boolean
           p_operation: string
           p_reason: string
           p_workspace: string

@@ -28,6 +28,7 @@ const archive = z.object({
 export const expiredArchivesSchema = pageSchema(archive).and(z.object({ generated_at: date }));
 const deletionResultSchema = z.object({
   workspace_id: id, data_deleted_at: date, deleted: inventory.omit({ files_pending: true }), files_pending: count,
+  customer_request: z.boolean(),
 });
 const cleanupResultSchema = z.object({
   removed: count, failed: count, remaining: z.boolean(), error: z.string().optional(),
@@ -35,7 +36,9 @@ const cleanupResultSchema = z.object({
 
 export type ExpiredArchive = z.infer<typeof archive>;
 export type CleanupResult = z.infer<typeof cleanupResultSchema>;
-export type DeleteWorkspaceData = { workspaceId: string; operationId: string; confirmName: string; reason: string };
+export type DeleteWorkspaceData = {
+  workspaceId: string; operationId: string; confirmName: string; reason: string; customerRequest?: boolean;
+};
 
 function parsed<T extends z.ZodType>(schema: T, result: { data: unknown; error: { message: string } | null }): z.output<T> {
   if (result.error) throw new Error(result.error.message);
@@ -51,6 +54,7 @@ export async function listExpiredArchives(offset: number) {
 export async function deleteWorkspaceData(c: DeleteWorkspaceData) {
   return parsed(deletionResultSchema, await supabase.rpc("admin_delete_workspace_data", {
     p_workspace: c.workspaceId, p_operation: c.operationId, p_confirm_name: c.confirmName, p_reason: c.reason,
+    p_customer_request: c.customerRequest ?? false,
   }));
 }
 

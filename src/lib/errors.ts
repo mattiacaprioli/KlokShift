@@ -33,6 +33,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["admin_invalid_filter"], message: "Controlla i filtri di ricerca e riprova." },
   { match: ["admin_not_found"], message: "L'elemento richiesto non è disponibile." },
   { match: ["admin_confirm_name_mismatch"], message: "Il nome scritto non è quello dell'azienda. Ricopialo esattamente." },
+  { match: ["admin_workspace_operational"], message: "Questa azienda sta ancora lavorando: i suoi dati non si cancellano." },
   { match: ["admin_archive_not_expired"], message: "L'archivio di questa azienda non è ancora scaduto: i dati non si cancellano." },
   { match: ["admin_subscription_open"], message: "L'abbonamento è ancora aperto su Paddle: disdicilo prima di cancellare i dati." },
   { match: ["admin_data_already_deleted"], message: "I dati di questa azienda sono già stati cancellati. Aggiorna la pagina." },

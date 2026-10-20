@@ -110,6 +110,8 @@ describe("Scheda azienda del fondatore", () => {
     expect(panel.content).toMatch(/<input[^>]*value="2"/);
     expect(panel.content).toMatch(/<input[^>]*value="4096"/);
     expect(panel.content).toContain("0,03 MiB");
+    // Operativa: la cancellazione su richiesta non si propone.
+    expect(panel.content).not.toContain("Cancella i dati su richiesta del cliente");
     expect(mutate).not.toHaveBeenCalled();
   });
   it("nasconde schede e moduli dopo un diniego anche se erano presenti dati", () => {

@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ExpiredArchives } from "../../web/src/admin/ExpiredArchives";
+import { CustomerDeletion, ExpiredArchives } from "../../web/src/admin/ExpiredArchives";
 
 const { read } = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("@/features/admin/hooks", () => ({
@@ -43,6 +43,12 @@ describe("Archivi scaduti (area fondatore)", () => {
     expect(html).toContain("3 file ancora da togliere");
     expect(html).toContain("Togli i file rimasti");
     expect(html).not.toContain("Cancella i dati…");
+  });
+  it("su richiesta del cliente: avviso e pulsante, il modulo si apre al clic", () => {
+    const html = renderToStaticMarkup(createElement(CustomerDeletion, { workspaceId: base.workspace_id, workspaceName: "Bar Stagione" }));
+    expect(html).toContain("Cancella i dati su richiesta del cliente");
+    expect(html).toContain("Cancella i dati…");
+    expect(html).not.toContain("Cancella definitivamente");
   });
   it("nessun archivio scaduto", () => {
     expect(render([])).toContain("nessun dato da cancellare");
