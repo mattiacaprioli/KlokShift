@@ -13,6 +13,8 @@ vi.mock("@/features/admin/api", () => ({
   listAdminAccounts: vi.fn(), getAdminAccount: vi.fn(),
 }));
 vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn() }));
+vi.mock("@/features/admin/finance", () => ({ getAdminFinance: vi.fn(), getAdminWorkspaceFinance: vi.fn(),
+  formatMoney: (v: number) => String(v), shiftMonth: (m: string) => m, currentMonth: () => "2026-10" }));
 vi.mock("@/features/admin/archives", () => ({ listExpiredArchives: vi.fn(), deleteWorkspaceDataAndFiles: vi.fn(), cleanupWorkspaceFiles: vi.fn() }));
 vi.mock("@/features/admin/controls", () => ({
   applyWorkspaceAction: vi.fn(), getWorkspaceControl: vi.fn(), getAccountControl: vi.fn(),
@@ -63,6 +65,7 @@ describe("Scheda azienda del fondatore", () => {
     read.mockImplementation((_user, resource) => ({
       isSuccess: true,
       data: resource === "workspace" ? detail : resource === "workspace-control" ? control :
+        resource === "workspace-finance" ? { generated_at: at, subscriptions: [], payments: [], refunds: [] } :
         { ...empty, generated_at: at },
     }));
   });
@@ -94,7 +97,8 @@ describe("Scheda azienda del fondatore", () => {
         ...access, state: "migration_pending", source: null, plan: null,
         operational_from: null, limits: { people: null, venues: null },
       } },
-    } : resource === "workspace-control" ? { ...control, snapshot: { ...control.snapshot, lifetime: null } } : empty }));
+    } : resource === "workspace-control" ? { ...control, snapshot: { ...control.snapshot, lifetime: null } }
+      : resource === "workspace-finance" ? { generated_at: at, subscriptions: [], payments: [], refunds: [] } : empty }));
     const panel = visiblePanel(render());
     expect(panel.content).toContain("Persone in azienda</dt><dd>3");
     expect(panel.content).toContain("Limite persone</dt><dd>Non assegnato");

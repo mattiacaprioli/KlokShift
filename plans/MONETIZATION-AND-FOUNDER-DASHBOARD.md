@@ -691,7 +691,8 @@ Rilascio e prova visuale del riordino ancora pendenti, §8 della procedura M06a.
 - [ ] Aggiungere codici/link di riscatto soltanto se scelti: destinatario, hash, scadenza per riscatto, monouso atomico e nessuna scadenza del beneficio permanente.
 - [ ] Collegare pagamenti/rimborsi provider con riferimento univoco, separati dalle somme attese; nessun addebito per la capacità gratuita concessa.
 - [ ] Aggiungere spese, periodi di competenza, quota progetto e riferimenti esterni.
-- [ ] Implementare incassi, MRR, cassa e costi con le definizioni del §6.
+- [x] Incassi, prima versione (20/10, in locale): migration `20261020000600_admin_finance` (`admin_get_finance` per mese nell'ora italiana, `admin_get_workspace_finance`). MRR dagli importi delle voci dell'ultimo avviso applicato (solo `active`, annuale / 12, IVA esclusa), `past_due` come ricavo a rischio; pagamenti del mese da `transaction.completed` (lordo, IVA, commissione, netto Paddle, per origine; i cambi carta da 0 € esclusi); rimborsi approvati con il netto stornato; sandbox e live e valute mai sommati. Panoramica: «Incassi» con mese precedente e successivo; scheda azienda: «Abbonamento e pagamenti». Test `rls/140`, `adminFinance.test.ts`.
+- [ ] Payout Paddle (avvisi `payout.*` o report), costi del progetto, cassa e margine: ancora non collegati, la pagina lo dice.
 - [ ] Aggiungere scadenzario e registro amministrativo atomico; verificare rettifiche e doppio submit.
 - [ ] Gestire trasferimento titolarità e chiusura azienda senza perdita del contratto o dei movimenti storici.
 - [ ] Definire recupero assistito del controllo aziendale quando l'unico titolare perde accesso: verificare identità e autorità, registrare l'intervento e non usare il pagamento come prova sufficiente di titolarità.

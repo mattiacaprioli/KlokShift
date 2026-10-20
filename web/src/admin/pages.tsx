@@ -12,6 +12,7 @@ import { Button, Card, Field, Input, PageHeader, Pill, Placeholder, Select, Spin
 import { WorkspaceActions, AccountClassification, OperationHistory } from "./WorkspaceActions";
 import { BillingAdjustments } from "./BillingAdjustments";
 import { CustomerDeletion, ExpiredArchives } from "./ExpiredArchives";
+import { FinanceOverview, WorkspaceFinancePanel } from "./Finance";
 const labels: Record<string, string> = {
   all: 'Tutti', customer: 'Cliente', internal: 'Interno', test: 'Test', unclassified: 'Non classificato',
   setup: 'Preparazione', operational: 'Operativa', archive: 'Archivio', expired: 'Archivio scaduto', migration_pending: 'Migrazione da verificare', unavailable: 'Dati mancanti', deleted: 'Eliminato',
@@ -60,7 +61,6 @@ function Metric({ title, value, detail }: {
 function filterOptions(values: readonly string[]) {
   return ['all', ...values].map((v) => <option key={v} value={v}>{labels[v] ?? v}</option>);
 }
-function FinancialUnavailable() { return <Card><h2 className="font-semibold">Economia e costi</h2><p className="mt-2 text-sm text-t3">Non disponibili. Il registro finanziario, gli incassi Paddle e le fonti di costo non sono ancora collegati. I conteggi operativi non rappresentano clienti paganti, ricavi o utile.</p></Card>; }
 function Flags({ flags }: {
   flags: AdminFlag[];
 }) { return flags.length ? <ul className="space-y-3">{flags.map((f) => <li key={f.code}><Pill tone={f.severity === 'critical' ? 'error' : f.severity === 'warning' ? 'warning' : 'neutral'}>{flagLabels[f.code]}</Pill><p className="mt-1 text-xs text-t4">Fonte: {f.source}{f.at ? ` · ${date(f.at)}` : ''}</p></li>)}</ul> : <p className="text-sm text-t3">Nessuna anomalia fra i controlli disponibili.</p>; }
@@ -83,7 +83,7 @@ export function OverviewPage({ userId }: {
     <Card><h2 className="mb-4 font-semibold">Segnalazioni da verificare</h2>{d.signals.length ? <ul className="space-y-4">{d.signals.map((s) => <li key={`${s.workspace_id}-${s.code}`}><Link className="text-gold" to={workspaceLink(s.workspace_id)}>{s.workspace_name}</Link><Flags flags={[s]} /></li>)}</ul> : <p className="text-sm text-t3">Nessuna segnalazione disponibile.</p>}<p className="mt-4 text-xs text-t4">Prime 20 segnalazioni, ordinate per gravità e scadenza. L’elenco aziende mostra anche le altre. Nessuna modifica automatica dei diritti.</p></Card>
     <BillingAdjustments userId={userId} />
     <ExpiredArchives userId={userId} />
-    <FinancialUnavailable />
+    <FinanceOverview userId={userId} />
   </div>}</Read></>;
 }
 export function WorkspacesPage({ userId }: {
@@ -164,8 +164,8 @@ function WorkspaceDetail({ userId, id }: { userId: string; id: string }) {
         </div>
         <Card><h2 className="mb-2 font-semibold">Classificazione: {labels[d.workspace.classification]}</h2><p className="text-sm text-t3">Etichetta organizzativa dell’azienda. Piano e gratuità si assegnano separatamente nella scheda Gestione.</p>{d.classification_reason && <p className="mt-2 text-sm text-t3">Motivo: {d.classification_reason}</p>}</Card>
         <Card><h2 className="mb-3 font-semibold">Attività recente</h2><p className="text-sm text-t3">Ultimo turno creato: {date(d.activity.last_shift_created_at)}<br />Ultima timbratura d’ingresso: {date(d.activity.last_clock_in_at)}<br />Ultimo login di un gestore: {date(d.activity.last_manager_sign_in_at)}</p><p className="mt-2 text-xs text-t4">Il login è dell’account, anche se effettuato per un’altra azienda.</p></Card>
+        <WorkspaceFinancePanel userId={userId} workspaceId={id} />
         <BillingAdjustments userId={userId} workspaceId={id} />
-        <FinancialUnavailable />
       </>}
     </section>
     <section aria-label="Persone e sedi" hidden={tab !== 'persone'} className="space-y-6">

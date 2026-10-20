@@ -1743,6 +1743,7 @@ export type Database = {
         Returns: Json
       }
       admin_get_account_control: { Args: { p_account: string }; Returns: Json }
+      admin_get_finance: { Args: { p_month?: string }; Returns: Json }
       admin_get_overview: { Args: never; Returns: Json }
       admin_get_workspace: {
         Args: {
@@ -1754,6 +1755,10 @@ export type Database = {
         Returns: Json
       }
       admin_get_workspace_control: {
+        Args: { p_workspace: string }
+        Returns: Json
+      }
+      admin_get_workspace_finance: {
         Args: { p_workspace: string }
         Returns: Json
       }
