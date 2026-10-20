@@ -9,12 +9,18 @@
 // firmato che Paddle manda a `paddle-webhook` dopo il pagamento.
 // Prezzi e acquisto restano sul web: l'app nativa non chiama questa funzione.
 //
+// `{ "action": "client_config" }` risponde anche senza utente con ambiente e
+// token client di Paddle: sono pubblici per natura (Paddle.js li espone nella
+// pagina) e servono alla dashboard per aprire da sola il pagamento quando il
+// cliente arriva dal link di un'email Paddle (`?_ptxn=txn_…`).
+//
 // Deploy (richiede JWT, quindi NIENTE --no-verify-jwt):
 //   supabase secrets set PADDLE_API_KEY=<chiave API> PADDLE_CLIENT_TOKEN=<token client> PADDLE_ENVIRONMENT=sandbox
 //   supabase functions deploy billing-checkout --project-ref rmlobxjlqlpixkvrzmfg
 
 import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import {
+  isClientConfigRequest,
   paddleConfig,
   parsePrepared,
   parseSelection,
@@ -55,6 +61,16 @@ Deno.serve(async (req) => {
     return json({ error: "billing_unavailable" }, 503);
   }
 
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "billing_invalid_selection" }, 400);
+  }
+  if (isClientConfigRequest(body)) {
+    return json({ environment: PADDLE.environment, clientToken: PADDLE.clientToken });
+  }
+
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return json({ error: "not_authenticated" }, 401);
   const asUser = createClient(SUPABASE_URL, ANON_KEY, {
@@ -63,12 +79,6 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "not_authenticated" }, 401);
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "billing_invalid_selection" }, 400);
-  }
   const selection = parseSelection(body);
   if (!selection) return json({ error: "billing_invalid_selection" }, 400);
 

@@ -64,3 +64,34 @@ export async function resolveBillingAdjustment(c: ResolveBillingAdjustment) {
     p_environment: c.environment, p_adjustment: c.adjustmentId, p_note: c.note,
   }));
 }
+
+const rejectedEvent = z.object({
+  environment: z.enum(["sandbox", "live"]),
+  event_id: z.string().regex(/^evt_[a-z0-9]+$/),
+  event_type: z.string(),
+  error: z.string().nullable(),
+  occurred_at: date,
+  received_at: date,
+  paddle_id: z.string().nullable(),
+  workspace_id: id.nullable(),
+  workspace_name: z.string().nullable(),
+  reviewed_at: maybeDate,
+  review_note: z.string().nullable(),
+});
+export const rejectedEventsSchema = pageSchema(rejectedEvent).and(z.object({ generated_at: date, open_total: count }));
+export type RejectedBillingEvent = z.infer<typeof rejectedEvent>;
+export type ResolveBillingEvent = { environment: RejectedBillingEvent["environment"]; eventId: string; note: string };
+
+/** Avvisi Paddle scartati dal servizio: da verificare (predefinito) o tutto lo storico. */
+export async function listRejectedBillingEvents(openOnly: boolean, offset: number) {
+  return parsed(rejectedEventsSchema, await supabase.rpc("admin_list_rejected_billing_events", {
+    p_open_only: openOnly, p_offset: offset,
+  }));
+}
+
+export async function resolveBillingEvent(c: ResolveBillingEvent) {
+  const { error } = await supabase.rpc("admin_resolve_billing_event", {
+    p_environment: c.environment, p_event_id: c.eventId, p_note: c.note,
+  });
+  if (error) throw new Error(error.message);
+}

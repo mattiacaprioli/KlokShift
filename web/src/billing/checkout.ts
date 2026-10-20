@@ -53,7 +53,11 @@ export async function prepareCheckout(selection: CheckoutSelection): Promise<Pre
 type PaddleEvent = { name?: string };
 type PaddleGlobal = {
   Environment: { set: (environment: "sandbox") => void };
-  Initialize: (options: { token: string; eventCallback: (event: PaddleEvent) => void }) => void;
+  Initialize: (options: {
+    token: string;
+    eventCallback: (event: PaddleEvent) => void;
+    checkout?: { settings: { displayMode: "overlay"; locale: string; theme: "light" } };
+  }) => void;
   Checkout: {
     open: (options: {
       transactionId: string;
@@ -85,6 +89,21 @@ function loadPaddle(): Promise<PaddleGlobal> {
   return loading;
 }
 
+const CHECKOUT_SETTINGS = { displayMode: "overlay", locale: "it", theme: "light" } as const;
+
+/** Paddle.Initialize vale una volta per pagina: l'ambiente non cambia senza ricaricare. */
+function ensureInitialized(paddle: PaddleGlobal, environment: "sandbox" | "live", clientToken: string) {
+  if (initializedWith === null) {
+    if (environment === "sandbox") paddle.Environment.set("sandbox");
+    paddle.Initialize({ token: clientToken, eventCallback: (event) => listener?.(event),
+      // Le impostazioni valgono anche per il checkout che Paddle apre da solo con `_ptxn`.
+      checkout: { settings: CHECKOUT_SETTINGS } });
+    initializedWith = clientToken;
+  } else if (initializedWith !== clientToken) {
+    throw new UserFacingError("La configurazione dei pagamenti è cambiata. Ricarica la pagina e riprova.");
+  }
+}
+
 /**
  * Apre il checkout di Paddle sulla transazione creata dal server. Risolve con
  * `completed` quando il cliente ha pagato, `closed` se chiude la finestra.
@@ -96,14 +115,7 @@ export async function openCheckout(prepared: PreparedCheckout): Promise<"complet
   } catch {
     throw new UserFacingError("Non riesco a caricare la pagina di pagamento. Controlla la connessione o eventuali blocchi del browser.");
   }
-  // Paddle.Initialize vale una volta per pagina: l'ambiente non cambia senza ricaricare.
-  if (initializedWith === null) {
-    if (prepared.environment === "sandbox") paddle.Environment.set("sandbox");
-    paddle.Initialize({ token: prepared.clientToken, eventCallback: (event) => listener?.(event) });
-    initializedWith = prepared.clientToken;
-  } else if (initializedWith !== prepared.clientToken) {
-    throw new UserFacingError("La configurazione dei pagamenti è cambiata. Ricarica la pagina e riprova.");
-  }
+  ensureInitialized(paddle, prepared.environment, prepared.clientToken);
   return new Promise((resolve) => {
     // Al pagamento riuscito si risponde subito: la finestra di Paddle mostra
     // la conferma e il cliente la chiude quando vuole.
@@ -118,7 +130,43 @@ export async function openCheckout(prepared: PreparedCheckout): Promise<"complet
       // Precompilata con l'email dell'account, ma modificabile: le ricevute
       // possono andare a un altro indirizzo (es. il commercialista).
       ...(prepared.email ? { customer: { email: prepared.email } } : {}),
-      settings: { displayMode: "overlay", locale: "it", theme: "light" },
+      settings: CHECKOUT_SETTINGS,
     });
   });
+}
+
+/** La transazione di un link Paddle (`?_ptxn=txn_…`), se l'indirizzo ne ha una valida. */
+export function paymentLinkTransaction(search: string): string | null {
+  const txn = new URLSearchParams(search).get("_ptxn");
+  return txn && /^txn_[a-z0-9]+$/.test(txn) ? txn : null;
+}
+
+/**
+ * Link delle email di Paddle (aggiornare la carta dopo un rinnovo non riuscito,
+ * pagare una transazione): portano al link di pagamento predefinito, cioè la
+ * dashboard, con `?_ptxn=`. Basta caricare e inizializzare Paddle.js, anche
+ * prima del login: il pagamento lo apre Paddle. A finestra chiusa il parametro
+ * si toglie, così ricaricando non riparte. Il diritto arriva comunque solo
+ * dall'avviso firmato.
+ */
+export async function openPaymentLink(): Promise<void> {
+  if (!paymentLinkTransaction(window.location.search)) return;
+  const { data } = await supabase.functions.invoke<{ environment?: unknown; clientToken?: unknown }>(
+    "billing-checkout", { body: { action: "client_config" } });
+  const environment = data?.environment;
+  if ((environment !== "sandbox" && environment !== "live") || typeof data?.clientToken !== "string") return;
+  try {
+    const paddle = await loadPaddle();
+    listener = (event) => {
+      if (event.name === "checkout.completed" || event.name === "checkout.closed") {
+        listener = null;
+        const url = new URL(window.location.href);
+        url.searchParams.delete("_ptxn");
+        window.history.replaceState(null, "", url.toString());
+      }
+    };
+    ensureInitialized(paddle, environment, data.clientToken);
+  } catch {
+    // Senza Paddle.js il cliente vede la dashboard; il link dell'email resta valido.
+  }
 }

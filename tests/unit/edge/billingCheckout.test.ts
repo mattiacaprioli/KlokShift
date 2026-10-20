@@ -68,6 +68,17 @@ function checkout(options: {
 }
 
 describe("billing-checkout", () => {
+  it("configurazione pubblica per i link delle email Paddle: senza utente, niente altro", async () => {
+    const edge = checkout();
+    const response = await edge.handle(post({ action: "client_config" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ environment: "sandbox", clientToken: "test_fixturetoken" });
+    expect(edge.rpc).not.toHaveBeenCalled();
+    expect(edge.fetch).not.toHaveBeenCalled();
+    // Con altri campi non è la richiesta pubblica: serve l'utente.
+    expect((await edge.handle(post({ action: "client_config", workspaceId: "x" }))).status).toBe(401);
+  });
+
   it("prepara, crea la transazione su Paddle e restituisce i dati del checkout", async () => {
     const edge = checkout();
     const response = await edge.request();

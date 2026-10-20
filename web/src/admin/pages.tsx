@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, PageHeader, Pill, Placeholder, Select, Spinner } from "../ui/primitives";
 import { WorkspaceActions, AccountClassification, OperationHistory } from "./WorkspaceActions";
 import { BillingAdjustments } from "./BillingAdjustments";
+import { RejectedEvents } from "./RejectedEvents";
 import { CustomerDeletion, ExpiredArchives } from "./ExpiredArchives";
 import { FinanceOverview, WorkspaceFinancePanel } from "./Finance";
 const labels: Record<string, string> = {
@@ -82,6 +83,7 @@ export function OverviewPage({ userId }: {
     <Card><h2 className="mb-3 font-semibold">Organico e appartenenze</h2><p className="text-sm text-t3">{d.usage.active_members} membri attivi · {d.usage.invited_members} invitati · {d.usage.left_members} usciti · {d.usage.unlinked_members} senza account collegato · {d.usage.managers} gestori attivi · {d.usage.current_placements} collocazioni attuali.</p><p className="mt-2 text-xs text-t4">{d.usage.commercial_people} persone conteggiate commercialmente, sommate per azienda: una persona presente in due aziende conta in ciascuna. Gli account Auth restano unici. Account eliminati ancora registrati: {d.accounts.deleted_available}; le cancellazioni definitive non sono ricostruibili senza un registro.</p></Card>
     <Card><h2 className="mb-4 font-semibold">Segnalazioni da verificare</h2>{d.signals.length ? <ul className="space-y-4">{d.signals.map((s) => <li key={`${s.workspace_id}-${s.code}`}><Link className="text-gold" to={workspaceLink(s.workspace_id)}>{s.workspace_name}</Link><Flags flags={[s]} /></li>)}</ul> : <p className="text-sm text-t3">Nessuna segnalazione disponibile.</p>}<p className="mt-4 text-xs text-t4">Prime 20 segnalazioni, ordinate per gravità e scadenza. L’elenco aziende mostra anche le altre. Nessuna modifica automatica dei diritti.</p></Card>
     <BillingAdjustments userId={userId} />
+    <RejectedEvents userId={userId} />
     <ExpiredArchives userId={userId} />
     <FinanceOverview userId={userId} />
   </div>}</Read></>;

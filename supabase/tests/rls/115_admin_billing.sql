@@ -109,5 +109,46 @@ begin
   perform tests.logout();
 end $$;
 
+-- Avvisi Paddle scartati: in elenco con l'azienda se si riconosce, chiusi con una nota.
+do $$
+declare
+  ws uuid; co uuid; r jsonb; item jsonb;
+begin
+  perform tests.login('Ow');
+  ws := public.create_workspace('Fondatore: avvisi');
+  perform public.create_venue(ws, 'Unica sede');
+  perform tests.logout();
+  perform tests.ab_service();
+  co := (public.billing_prepare_checkout('sandbox', tests.id('Ow'), ws, 'base', 'month', 0) ->> 'checkout_id')::uuid;
+  r := public.billing_apply_event('sandbox', jsonb_build_object('event_id', 'evt_06rj', 'event_type', 'subscription.created',
+    'occurred_at', now(), 'data', jsonb_build_object('id', 'sub_06rej', 'customer_id', 'ctm_06rej', 'status', 'active',
+      'items', jsonb_build_array(jsonb_build_object('price', jsonb_build_object('id', 'pri_01nonincatalogo'),
+        'quantity', 1, 'status', 'active', 'recurring', true)),
+      'billing_cycle', jsonb_build_object('interval', 'month', 'frequency', 1),
+      'current_billing_period', jsonb_build_object('starts_at', now(), 'ends_at', now() + interval '1 month'),
+      'scheduled_change', null, 'canceled_at', null, 'paused_at', null,
+      'custom_data', jsonb_build_object('klokshift_checkout', co))));
+  perform tests.eq(r ->> 'error', 'unknown_price', 'avviso scartato: prezzo non nel catalogo');
+  perform tests.logout();
+
+  perform tests.login('Ow');
+  perform tests.raises('select public.admin_list_rejected_billing_events()', 'admin_not_allowed', 'il titolare non vede gli avvisi');
+  perform tests.ab_admin();
+  r := public.admin_list_rejected_billing_events();
+  item := (select i from jsonb_array_elements(r -> 'items') i where i ->> 'event_id' = 'evt_06rj');
+  perform tests.eq(item ->> 'error', 'unknown_price', 'in elenco con il motivo');
+  perform tests.eq(item ->> 'workspace_name', 'Fondatore: avvisi', 'e l''azienda dalla richiesta d''acquisto');
+  perform tests.raises('select public.admin_resolve_billing_event(''sandbox'', ''evt_06rj'', ''no'')',
+    'admin_review_note_required', 'serve una nota');
+  perform public.admin_resolve_billing_event('sandbox', 'evt_06rj', 'Prezzo aggiunto al catalogo, abbonamento riallineato');
+  perform tests.eq((select count(*)::integer from jsonb_array_elements(public.admin_list_rejected_billing_events() -> 'items') i
+    where i ->> 'event_id' = 'evt_06rj'), 0, 'verificato: esce dall''elenco aperto');
+  perform tests.eq((select i ->> 'review_note' from jsonb_array_elements(public.admin_list_rejected_billing_events(false) -> 'items') i
+    where i ->> 'event_id' = 'evt_06rj'), 'Prezzo aggiunto al catalogo, abbonamento riallineato', 'resta nello storico con la nota');
+  perform tests.raises('select public.admin_resolve_billing_event(''sandbox'', ''evt_06rj'', ''di nuovo'')',
+    'admin_review_not_open', 'non si chiude due volte');
+  perform tests.logout();
+end $$;
+
 rollback;
 select 'admin billing: ok' as result;

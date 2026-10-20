@@ -8,7 +8,8 @@ const { read } = vi.hoisted(() => ({ read: vi.fn() }));
 vi.mock("@/features/admin/hooks", () => ({
   useAdminRead: read, useAdminWrite: () => ({ isPending: false, error: null, mutate: vi.fn() }),
 }));
-vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn() }));
+vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn(),
+  listRejectedBillingEvents: vi.fn(), resolveBillingEvent: vi.fn() }));
 
 const at = "2026-10-19T17:30:02+00:00";
 const base = {

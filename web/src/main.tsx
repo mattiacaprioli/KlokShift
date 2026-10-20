@@ -10,6 +10,7 @@ import { App } from "./App";
 import { ToastProvider } from "./ui/Toast";
 import { AppErrorBoundary } from "./ui/ErrorBoundary";
 import { consumeAuthLink } from "./lib/recovery";
+import { openPaymentLink } from "./billing/checkout";
 import "./index.css";
 
 const root = createRoot(document.getElementById("root")!);
@@ -38,3 +39,6 @@ void consumeAuthLink().then(() =>
     </StrictMode>
   )
 );
+
+// Dal link di un'email Paddle (`?_ptxn=`): il pagamento si apre sopra la pagina.
+void openPaymentLink();

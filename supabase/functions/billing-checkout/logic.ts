@@ -11,6 +11,12 @@ export type CheckoutSelection = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Il browser sceglie solo cosa comprare: prezzi e azienda li verifica il database. */
+/** Richiesta della configurazione pubblica di Paddle.js (ambiente e token client). */
+export function isClientConfigRequest(body: unknown): boolean {
+  return !!body && typeof body === "object" && !Array.isArray(body) &&
+    (body as Record<string, unknown>).action === "client_config" && Object.keys(body).length === 1;
+}
+
 export function parseSelection(body: unknown): CheckoutSelection | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const raw = body as Record<string, unknown>;

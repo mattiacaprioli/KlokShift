@@ -8,7 +8,8 @@ const { status, globalRead } = vi.hoisted(() => ({ status: vi.fn(), globalRead: 
 vi.mock('@/features/admin/hooks', () => ({ useAdminAccess: status, useAdminRead: globalRead }));
 vi.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { id: 'founder' }, access_token: 'fixture' }, signOut: vi.fn() }) }));
 vi.mock('@/features/admin/api', () => ({ getAdminOverview: vi.fn(), listAdminWorkspaces: vi.fn(), getAdminWorkspace: vi.fn(), listAdminAccounts: vi.fn(), getAdminAccount: vi.fn(), listAdminMfaFactors: vi.fn(), enrollAdminMfa: vi.fn(), cancelAdminMfaEnrollment: vi.fn(), verifyAdminMfa: vi.fn() }));
-vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn() }));
+vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn(),
+  listRejectedBillingEvents: vi.fn(), resolveBillingEvent: vi.fn() }));
 vi.mock("@/features/admin/finance", () => ({ getAdminFinance: vi.fn(), getAdminWorkspaceFinance: vi.fn(),
   formatMoney: (v: number) => String(v), shiftMonth: (m: string) => m, currentMonth: () => "2026-10" }));
 vi.mock("@/features/admin/archives", () => ({ listExpiredArchives: vi.fn(), deleteWorkspaceDataAndFiles: vi.fn(), cleanupWorkspaceFiles: vi.fn() }));

@@ -12,7 +12,8 @@ vi.mock("@/features/admin/api", () => ({
   getAdminOverview: vi.fn(), listAdminWorkspaces: vi.fn(), getAdminWorkspace: vi.fn(),
   listAdminAccounts: vi.fn(), getAdminAccount: vi.fn(),
 }));
-vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn() }));
+vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn(),
+  listRejectedBillingEvents: vi.fn(), resolveBillingEvent: vi.fn() }));
 vi.mock("@/features/admin/finance", () => ({ getAdminFinance: vi.fn(), getAdminWorkspaceFinance: vi.fn(),
   formatMoney: (v: number) => String(v), shiftMonth: (m: string) => m, currentMonth: () => "2026-10" }));
 vi.mock("@/features/admin/archives", () => ({ listExpiredArchives: vi.fn(), deleteWorkspaceDataAndFiles: vi.fn(), cleanupWorkspaceFiles: vi.fn() }));

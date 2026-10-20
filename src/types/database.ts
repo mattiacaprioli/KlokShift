@@ -1784,6 +1784,10 @@ export type Database = {
         Args: { p_offset?: number; p_target: string; p_target_kind: string }
         Returns: Json
       }
+      admin_list_rejected_billing_events: {
+        Args: { p_offset?: number; p_open_only?: boolean }
+        Returns: Json
+      }
       admin_list_workspaces: {
         Args: {
           p_classification?: string
@@ -1797,6 +1801,10 @@ export type Database = {
       }
       admin_resolve_billing_adjustment: {
         Args: { p_adjustment: string; p_environment: string; p_note: string }
+        Returns: Json
+      }
+      admin_resolve_billing_event: {
+        Args: { p_environment: string; p_event_id: string; p_note: string }
         Returns: Json
       }
       admin_set_account_classification: {

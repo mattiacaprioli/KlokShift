@@ -913,8 +913,9 @@ subito: va gestito nel flusso di modifica), quota documenti.
   registro, rimborso annullato, e il rimborso totale finché l'abbonamento resta aperto su Paddle
   (si chiude da solo con la disdetta). Panoramica: «Pagamenti da verificare»; scheda azienda:
   «Rimborsi e contestazioni». Test `rls/115_admin_billing.sql`, `adminBillingAdjustments.test.ts`.
-- [ ] Riduzioni al rinnovo con un'operazione pianificata; link `_ptxn` delle email Paddle verso la
-  dashboard; disattivare, se possibile, il cambio piano dal portale Paddle.
+- [x] Link `_ptxn` delle email Paddle (20/10, in locale): la dashboard, aperta con `?_ptxn=txn_…`, chiede a `billing-checkout` la configurazione pubblica (`action: client_config`, senza utente: ambiente e token client) e inizializza Paddle.js, che apre da solo il pagamento; a finestra chiusa il parametro si toglie. Da fare: ripubblicare `billing-checkout`; sul live il link di pagamento predefinito deve essere un dominio approvato.
+- [x] Avvisi Paddle scartati nell'area fondatore (20/10, in locale): migration `20261020000700_admin_rejected_events` (`admin_list_rejected_billing_events`, `admin_resolve_billing_event` con nota), Panoramica «Avvisi Paddle scartati» con il motivo in italiano e cosa fare. Test in `rls/115`, `adminRejectedEvents.test.ts`.
+- [ ] Riduzioni al rinnovo con un'operazione pianificata; disattivare, se possibile, il cambio piano dal portale Paddle.
 - ⚠️ Quando arriverà la CSP della dashboard (audit C17) deve ammettere Paddle.js
   (`cdn.paddle.com`) e il checkout in overlay di Paddle, altrimenti l'acquisto si rompe.
 - [ ] Implementare il checkout sul web con creazione/verifica server, autorizzazione del titolare, piano/ciclo/sedi e riepilogo prima della conferma. Prezzi e checkout restano fuori dall'app nativa.
