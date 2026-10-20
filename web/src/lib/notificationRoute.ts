@@ -15,6 +15,8 @@ export function webRouteForNotification(
   relatedId: string | null
 ): string | null {
   if (type === "staff_response") return "/staff";
+  // Promemoria dell'archivio (related_id = azienda): scadenza, export e riattivazione.
+  if (type === "archive_reminder") return "/piano";
   // Per i messaggi related_id è la conversazione, non un turno. Stessa cosa per
   // la richiesta di cambio turno: si legge e si decide dalla card nel thread.
   if (type === "new_message" || type === "shift_change_request") {

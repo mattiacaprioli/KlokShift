@@ -81,6 +81,56 @@ export type Database = {
         }
         Relationships: []
       }
+      archive_reminders: {
+        Row: {
+          archive_until: string
+          created_at: string
+          email: string
+          email_attempts: number
+          emailed_at: string | null
+          id: string
+          kind: string
+          last_error_code: string | null
+          user_id: string
+          workspace_id: string
+          workspace_name: string
+        }
+        Insert: {
+          archive_until: string
+          created_at?: string
+          email: string
+          email_attempts?: number
+          emailed_at?: string | null
+          id?: string
+          kind: string
+          last_error_code?: string | null
+          user_id: string
+          workspace_id: string
+          workspace_name: string
+        }
+        Update: {
+          archive_until?: string
+          created_at?: string
+          email?: string
+          email_attempts?: number
+          emailed_at?: string | null
+          id?: string
+          kind?: string
+          last_error_code?: string | null
+          user_id?: string
+          workspace_id?: string
+          workspace_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_reminders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_checkouts: {
         Row: {
           billing_interval: string
@@ -2738,6 +2788,7 @@ export type Database = {
         | "absence_request"
         | "absence_response"
         | "absence_sick"
+        | "archive_reminder"
       shift_status: "open" | "closed" | "cancelled"
       venue_scope: "all" | "selected"
     }
@@ -2902,6 +2953,7 @@ export const Constants = {
         "absence_request",
         "absence_response",
         "absence_sick",
+        "archive_reminder",
       ],
       shift_status: ["open", "closed", "cancelled"],
       venue_scope: ["all", "selected"],

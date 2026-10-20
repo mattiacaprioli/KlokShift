@@ -14,6 +14,12 @@ describe("dove atterra una notifica", () => {
     }
   });
 
+  it("promemoria dell'archivio: home della gestione nell'app, mai un turno", () => {
+    // related_id è l'azienda: il ramo finale la aprirebbe come turno.
+    expect(routeForNotification("manager", "archive_reminder", "w1")).toBe("/(manager)/(tabs)");
+    expect(routeForNotification("waiter", "archive_reminder", "w1")).toBeNull();
+  });
+
   it("professionista: turni sul turno, messaggi ed esiti nel thread", () => {
     expect(routeForNotification("waiter", "shift_assigned", "s1")).toBe("/(waiter)/shift/s1");
     expect(routeForNotification("waiter", "new_message", "c1")).toBe("/(waiter)/chat/c1");

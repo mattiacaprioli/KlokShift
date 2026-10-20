@@ -224,7 +224,7 @@ CI=1 yarn lint
 
 `deno task check` usa il lock congelato. Per cambiare intenzionalmente una
 dipendenza, modifica l'import, rigenera il lock con
-`deno check --frozen=false accept-invite/index.ts billing-checkout/index.ts billing-manage/index.ts delete-account/index.ts invite-staff/index.ts paddle-webhook/index.ts push/index.ts workspace-file-cleanup/index.ts`
+`deno check --frozen=false accept-invite/index.ts archive-reminders/index.ts billing-checkout/index.ts billing-manage/index.ts delete-account/index.ts invite-staff/index.ts paddle-webhook/index.ts push/index.ts workspace-file-cleanup/index.ts`
 da `supabase/functions`, rivedi il diff e ripeti `deno task check`.
 
 Se una funzione usa una RPC nuova o un contratto SQL aggiornato, rilascia e
@@ -243,6 +243,7 @@ yarn supabase functions deploy paddle-webhook --no-verify-jwt --project-ref rmlo
 yarn supabase functions deploy billing-checkout --project-ref rmlobxjlqlpixkvrzmfg
 yarn supabase functions deploy billing-manage --project-ref rmlobxjlqlpixkvrzmfg
 yarn supabase functions deploy workspace-file-cleanup --project-ref rmlobxjlqlpixkvrzmfg
+yarn supabase functions deploy archive-reminders --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg
 ```
 
 `invite-staff` e `delete-account` mantengono la verifica JWT e rivalidano
@@ -268,6 +269,7 @@ Variabili lette dalle funzioni (qui si riportano solo i nomi):
 | `paddle-webhook` | `PADDLE_WEBHOOK_SECRET` (chiave della destinazione su Paddle), `PADDLE_ENVIRONMENT` (`sandbox` o `live`) |
 | `billing-checkout` | `SUPABASE_ANON_KEY`, `PADDLE_API_KEY`, `PADDLE_CLIENT_TOKEN`, `PADDLE_ENVIRONMENT`: chiave e token devono essere dello stesso ambiente (`pdl_sdbx_apikey_`/`test_` oppure `pdl_live_apikey_`/`live_`), altrimenti la funzione rifiuta |
 | `billing-manage` | `SUPABASE_ANON_KEY`, `PADDLE_API_KEY`, `PADDLE_ENVIRONMENT` (stessi valori di `billing-checkout`); la chiave API deve avere Subscriptions R/W, Customers R e Customer portal sessions W |
+| `archive-reminders` | `PUSH_HOOK_SECRET` (lo stesso di `push`, chiamata da `private.run_archive_reminders` con pg_cron ogni mattina), `SMTP_*` e `DASHBOARD_URL` come `invite-staff` |
 | `workspace-file-cleanup` | `SUPABASE_ANON_KEY` (le altre le fornisce Supabase); solo il fondatore con secondo fattore, svuota `workspace_file_cleanup` dopo `admin_delete_workspace_data` |
 
 Le variabili `SUPABASE_*` sono fornite dall'ambiente Edge del progetto;

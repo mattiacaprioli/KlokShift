@@ -49,7 +49,8 @@ export function routeForNotification(
     if (
       type === "shift_cancelled" ||
       type === "staff_removed" ||
-      type === "shift_unassigned"
+      type === "shift_unassigned" ||
+      type === "archive_reminder"
     )
       return null;
     return relatedId ? `/(waiter)/shift/${relatedId}` : null;
@@ -63,6 +64,10 @@ export function routeForNotification(
   if (type === "team_joined") return "/(manager)/team";
   // Revoca: non c'è più niente da aprire. Stessa scelta di `staff_removed`.
   if (type === "team_removed") return null;
+  // Promemoria dell'archivio: il `related_id` è l'azienda. Nell'app si atterra
+  // sulla home (niente acquisti nell'app nativa, App Store 3.1.3); la
+  // riattivazione e l'export sono sul web.
+  if (type === "archive_reminder") return "/(manager)/(tabs)";
   // `shift_change_request` porta la conversazione, non il turno: la richiesta si
   // legge e si decide dalla card nel thread.
   if (type === "new_message" || type === "shift_change_request") {
