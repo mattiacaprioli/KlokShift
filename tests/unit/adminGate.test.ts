@@ -9,6 +9,7 @@ vi.mock('@/features/admin/hooks', () => ({ useAdminAccess: status, useAdminRead:
 vi.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { id: 'founder' }, access_token: 'fixture' }, signOut: vi.fn() }) }));
 vi.mock('@/features/admin/api', () => ({ getAdminOverview: vi.fn(), listAdminWorkspaces: vi.fn(), getAdminWorkspace: vi.fn(), listAdminAccounts: vi.fn(), getAdminAccount: vi.fn(), listAdminMfaFactors: vi.fn(), enrollAdminMfa: vi.fn(), cancelAdminMfaEnrollment: vi.fn(), verifyAdminMfa: vi.fn() }));
 vi.mock("@/features/admin/billing", () => ({ listBillingAdjustments: vi.fn(), resolveBillingAdjustment: vi.fn() }));
+vi.mock("@/features/admin/archives", () => ({ listExpiredArchives: vi.fn(), deleteWorkspaceDataAndFiles: vi.fn(), cleanupWorkspaceFiles: vi.fn() }));
 vi.mock('@/features/admin/controls', () => ({ applyWorkspaceAction: vi.fn(), getWorkspaceControl: vi.fn(), getAccountControl: vi.fn(), setAccountClassification: vi.fn(), listOperations: vi.fn() }));
 function render() {
   const client = new QueryClient();

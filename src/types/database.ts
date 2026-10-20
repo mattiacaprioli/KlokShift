@@ -1487,6 +1487,47 @@ export type Database = {
           },
         ]
       }
+      workspace_file_cleanup: {
+        Row: {
+          attempts: number
+          bucket_id: string
+          created_at: string
+          id: string
+          last_error_code: string | null
+          object_name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          bucket_id: string
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          object_name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          bucket_id?: string
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          object_name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_file_cleanup_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           authority: Database["public"]["Enums"]["member_authority"]
@@ -1569,6 +1610,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          data_deleted_at: string | null
           deleted_at: string | null
           id: string
           name: string
@@ -1578,6 +1620,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          data_deleted_at?: string | null
           deleted_at?: string | null
           id?: string
           name: string
@@ -1587,6 +1630,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          data_deleted_at?: string | null
           deleted_at?: string | null
           id?: string
           name?: string
@@ -1634,6 +1678,15 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_delete_workspace_data: {
+        Args: {
+          p_confirm_name: string
+          p_operation: string
+          p_reason: string
+          p_workspace: string
+        }
+        Returns: Json
+      }
       admin_get_account: {
         Args: { p_account: string; p_offset?: number }
         Returns: Json
@@ -1665,6 +1718,10 @@ export type Database = {
       }
       admin_list_billing_adjustments: {
         Args: { p_offset?: number; p_open_only?: boolean; p_workspace?: string }
+        Returns: Json
+      }
+      admin_list_expired_archives: {
+        Args: { p_offset?: number }
         Returns: Json
       }
       admin_list_operations: {

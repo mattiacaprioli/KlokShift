@@ -10,6 +10,8 @@ import { confirmationFailure } from "./confirmation";
 
 const labels = { customer: "Cliente", internal: "Interno", test: "Test", unclassified: "Non classificato" };
 const actionLabels = { grant_lifetime: "Gratuità a vita / variazione capacità", set_classification: "Classificazione", add_note: "Nota amministrativa" };
+// Il registro mostra anche la cancellazione dei dati, che non si prepara da questo modulo.
+const historyLabels = { ...actionLabels, delete_data: "Cancellazione dei dati a fine archivio" };
 function date(value: string) { return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Rome" }).format(new Date(value)); }
 function mib(value: number) { return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(value / 1048576) + " MiB"; }
 // Select ricava il menu dai figli <option> diretti, senza eseguire componenti annidati.
@@ -152,7 +154,7 @@ export function OperationHistory({ userId, kind, targetId }: { userId: string; k
     {query.isPending || query.isFetching ? <Spinner /> : query.isError ? <><Feedback error={query.error} success={false} /><Button onClick={() => void query.refetch()}>Riprova</Button></> : <>
       {!query.data.items.length && <p className="text-sm text-t3">Nessun intervento in questa pagina.</p>}
       <ol className="divide-y divide-border-2">{query.data.items.map((op) => <li key={op.operation_id} className="space-y-2 py-4">
-        <p className="text-sm font-semibold">{actionLabels[op.action]} · {date(op.applied_at)}</p>
+        <p className="text-sm font-semibold">{historyLabels[op.action]} · {date(op.applied_at)}</p>
         <p className="whitespace-pre-wrap text-sm">{op.reason}</p>
         {op.action === "set_classification" && <p className="text-sm text-t3">{labels[op.before_state.classification ?? "unclassified"]} → {labels[op.after_state.classification ?? "unclassified"]}</p>}
         {op.action === "grant_lifetime" && <p className="text-sm text-t3">Prima: {op.before_state.access?.plan ?? "piano non assegnato"}, {op.before_state.access?.limits.venues ?? "capacità da verificare"} sedi. Dopo: {op.after_state.lifetime?.plan === "base" ? "Base" : "Team"}, {op.after_state.lifetime?.venue_limit} sedi, {(op.after_state.lifetime?.document_limit_bytes ?? 0) / 1048576} MiB concessi.</p>}

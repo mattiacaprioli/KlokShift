@@ -24,7 +24,7 @@ export const workspaceControlSchema = z.object({
   generated_at: date, target_id: id, revision, snapshot: snapshotSchema,
 }).refine((v) => !v.snapshot.access || v.snapshot.access.workspace_id === v.target_id);
 export const accountControlSchema = z.object({ generated_at: date, target_id: id, revision, classification });
-const action = z.enum(["grant_lifetime", "set_classification", "add_note"]);
+const action = z.enum(["grant_lifetime", "set_classification", "add_note", "delete_data"]);
 export const operationResultSchema = z.object({
   operation_id: id, action, target_id: id, applied_at: date, period_id: id.nullable(),
 }).refine((v) => (v.action === "grant_lifetime") === (v.period_id !== null));
