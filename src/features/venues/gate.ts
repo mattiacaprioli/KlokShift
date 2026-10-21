@@ -18,7 +18,7 @@ export function canCreateVenue(args: {
   }
   return access.usage.venues < access.limits.venues
     ? { allowed: true }
-    : { allowed: false, reason: `La capacità dell'azienda è di ${access.limits.venues} sedi aperte. Le sedi chiuse conservano lo storico.` };
+    : { allowed: false, reason: `La capacità dell'azienda è di ${access.limits.venues === 1 ? "1 sede aperta" : `${access.limits.venues} sedi aperte`}. Le sedi chiuse conservano lo storico.` };
 }
 
 /**
