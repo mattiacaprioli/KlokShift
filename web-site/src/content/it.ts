@@ -301,6 +301,11 @@ export const it: Content = {
         q: "Fa anche le buste paga?",
         a: "No. KlokShift organizza turni, presenze e ore ed esporta i dati per il consulente del lavoro. Non sostituisce il software paghe.",
       },
+      {
+        q: "Come posso contattarvi?",
+        // Stesso recapito del footer e di `src/features/support/supportContent.ts`.
+        a: "Scrivi a info@klokshift.com: rispondiamo in italiano dal lunedì al venerdì, di solito entro 2 giorni lavorativi. Se usi già KlokShift, apri «Aiuto e supporto» nell'app o nella dashboard e premi «Scrivici»: il messaggio parte già con i dati che ci servono per aiutarti.",
+      },
     ],
   },
 

@@ -82,3 +82,12 @@ describe("FAQ della timbratura", () => {
     expect(clock?.a).toMatch(/Fuori turno/);
   });
 });
+
+describe("recapito dell'assistenza", () => {
+  it("è la casella aziendale, con i tempi di risposta delle regole", async () => {
+    const { SUPPORT_EMAIL, SUPPORT_RESPONSE_NOTE, supportMailto } = await import("@/features/support/supportContent");
+    expect(SUPPORT_EMAIL).toBe("info@klokshift.com");
+    expect(SUPPORT_RESPONSE_NOTE).toContain("2 giorni lavorativi");
+    expect(supportMailto("info@klokshift.com", { surface: "Dashboard web" })).toMatch(/^mailto:info@klokshift\.com\?subject=/);
+  });
+});

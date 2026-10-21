@@ -7,6 +7,7 @@ import {
 import { ABSENCE_MANAGER_TUTORIAL } from "@/features/absences/tutorialContent";
 import {
   SUPPORT_EMAIL,
+  SUPPORT_RESPONSE_NOTE,
   SUPPORT_PENDING_NOTE,
   faqFor,
   supportScopeNote,
@@ -94,6 +95,7 @@ export function AiutoPage() {
                   Scrivici
                 </a>
                 <span className="text-sm text-t3">{SUPPORT_EMAIL}</span>
+                <p className="w-full text-xs text-t3">{SUPPORT_RESPONSE_NOTE}</p>
               </div>
             ) : (
               <p className="text-xs text-t3">{SUPPORT_PENDING_NOTE}</p>

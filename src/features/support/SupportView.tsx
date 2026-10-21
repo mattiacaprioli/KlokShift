@@ -13,6 +13,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   SUPPORT_EMAIL,
+  SUPPORT_RESPONSE_NOTE,
   SUPPORT_PENDING_NOTE,
   faqFor,
   supportScopeNote,
@@ -87,6 +88,9 @@ export function SupportView({
               {supportScopeNote({ isOwner })}
             </Text>
             <ContactAction workspace={workspace} />
+            {SUPPORT_EMAIL ? (
+              <Text className="text-[13px] leading-5 text-t3">{SUPPORT_RESPONSE_NOTE}</Text>
+            ) : null}
           </Card>
         </View>
       </ScrollView>

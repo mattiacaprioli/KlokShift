@@ -12,13 +12,20 @@
 // Solo dati, nessun import di React Native: la dashboard web lo riusa così com'è.
 
 /**
- * ⚠️ DA IMPOSTARE: l'indirizzo dell'assistenza, quando la casella esiste.
- * Finché è `null` la sezione «Contattaci» dice che il recapito arriva a breve e
- * non mostra il pulsante: un `mailto:` senza destinatario non deve partire.
- * Lo stesso indirizzo va anche in `web-site/public/privacy.html` (§10) e in
- * `web-site/src/content/it.ts` (footer).
+ * L'indirizzo dell'assistenza (casella attiva dal 18/10). Con `null` la sezione
+ * «Contattaci» direbbe che il recapito arriva a breve e non mostrerebbe il
+ * pulsante: un `mailto:` senza destinatario non deve partire. Lo stesso
+ * indirizzo sta in `web-site/public/privacy.html`, `termini.html`,
+ * `rimborsi.html` e in `web-site/src/content/it.ts` (footer e FAQ).
  */
-export const SUPPORT_EMAIL: string | null = null;
+export const SUPPORT_EMAIL: string | null = "info@klokshift.com";
+
+/**
+ * Tempi di risposta come in docs/MONETIZATION.md §7: un obiettivo di prima
+ * risposta, non un tempo garantito di soluzione.
+ */
+export const SUPPORT_RESPONSE_NOTE =
+  "Rispondiamo in italiano dal lunedì al venerdì, di solito entro 2 giorni lavorativi.";
 
 /** Dove legge la risposta: l'app di chi lavora, l'app di chi gestisce, la dashboard. */
 export type SupportAudience = "waiter" | "manager" | "web";
