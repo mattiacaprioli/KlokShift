@@ -110,8 +110,11 @@ describe("Scheda azienda del fondatore", () => {
   it("prepara la variazione dai valori concessi senza proporre un altro piano", () => {
     const panel = visiblePanel(render("gestione"));
     expect(panel.content).toContain("Situazione attuale");
-    const triggers = [...panel.content.matchAll(/<button\b[^>]*role="combobox"[^>]*>(.*?)<\/button>/gs)];
-    expect(triggers[1][1]).toContain("Base · fino a 30 persone");
+    // Intervento e piano sono card radio: è selezionato il piano già concesso.
+    const checked = (panel.content.match(/<input[^>]*type="radio"[^>]*>/g) ?? [])
+      .filter((tag) => tag.includes('checked=""')).map((tag) => tag.match(/name="(\w+)"[^>]*value="(\w+)"/)?.slice(1).join("="));
+    expect(checked).toEqual(["action=grant_lifetime", "plan=base"]);
+    expect(panel.content).toContain("Base · fino a 30 persone");
     expect(panel.content).toMatch(/<input[^>]*value="2"/);
     expect(panel.content).toMatch(/<input[^>]*value="4096"/);
     expect(panel.content).toContain("0,03 MiB");
