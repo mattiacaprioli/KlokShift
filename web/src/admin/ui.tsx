@@ -6,6 +6,8 @@ import { Avatar } from "../ui/Avatar";
 import { SidebarIcon, type SidebarIconName } from "../ui/SidebarIcon";
 import { date, flagLabels, labels, severityTone, stateTone, time, type Tone } from "./format";
 
+export { Meter } from "../ui/Meter";
+
 /*
  * Pezzi visivi dell'area fondatore. Solo presentazione: nessuno legge dati o
  * decide regole, così il colore di uno stato è lo stesso in ogni pagina.
@@ -69,32 +71,6 @@ export function StatTile({ icon, label, value, children }: PropsWithChildren<{ i
 /** Una voce di dettaglio di `StatTile`: pallino, numero, parola. */
 export function StatPart({ tone = "neutral", value, label }: { tone?: Tone; value: ReactNode; label: string }) {
   return <span className="inline-flex items-center gap-1.5"><Dot tone={tone} /><span className="font-semibold tabular-nums text-t2">{value}</span>{label}</span>;
-}
-
-/**
- * Usato su limite. Il riempimento dice la gravità (oro, arancio sopra l'80%,
- * rosso oltre il limite); senza limite resta il numero e basta.
- */
-export function Meter({ label, used, limit, missing = "Non assegnato", unlimited, format = String }: {
-  label: string; used: number | null | undefined; limit: number | null | undefined;
-  missing?: string; unlimited?: boolean; format?: (n: number) => string;
-}) {
-  const ratio = used != null && limit ? used / limit : null;
-  const tone = ratio === null ? "gold" : ratio > 1 ? "error" : ratio >= 0.8 ? "warning" : "gold";
-  const fill = { gold: "bg-gold", warning: "bg-warning", error: "bg-error" }[tone];
-  const track = { gold: "bg-gold/12", warning: "bg-warning/15", error: "bg-error/15" }[tone];
-  return <div className="min-w-0">
-    <div className="flex items-baseline justify-between gap-2 text-xs">
-      <span className="text-t3">{label}</span>
-      <span className="truncate tabular-nums text-t1">
-        {used == null ? "—" : format(used)}
-        <span className="text-t4"> / {unlimited ? "∞" : limit != null ? format(limit) : missing}</span>
-      </span>
-    </div>
-    <div className={cn("mt-1.5 h-1.5 overflow-hidden rounded-full", ratio === null ? "bg-bg-3" : track)}>
-      {ratio !== null ? <div className={cn("h-full rounded-full", fill)} style={{ width: `${Math.max(2, Math.min(100, ratio * 100))}%` }} /> : null}
-    </div>
-  </div>;
 }
 
 /** Barre orizzontali proporzionali al massimo: una sola serie, niente legenda. */

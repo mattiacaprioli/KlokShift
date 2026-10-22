@@ -487,6 +487,49 @@ export function StickyHeader({ children }: PropsWithChildren) {
   );
 }
 
+/**
+ * Colonna principale + colonna laterale da 380 px, come Collaboratori: su uno
+ * schermo largo il contenuto non resta una striscia a sinistra con metà
+ * pagina vuota, e le righe di testo non si allungano. Sotto `xl` è una
+ * colonna sola, con la laterale in coda.
+ */
+export const pageColumnsClass =
+  "grid max-w-7xl items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]";
+
+/** Per le liste larghe (Assenze): due colonne solo da 1400 px, sotto le righe si stringerebbero. */
+const wideColumnsClass =
+  "grid max-w-7xl items-start gap-6 min-[1400px]:grid-cols-[minmax(0,1fr)_380px]";
+
+export function PageColumns({
+  aside,
+  children,
+  mainClassName = "gap-6",
+  sticky = true,
+  wide = false,
+}: PropsWithChildren<{
+  aside: ReactNode;
+  /** La spaziatura fra i blocchi della colonna principale. */
+  mainClassName?: string;
+  /** Una laterale più alta dello schermo non va fissata: la coda sparirebbe. */
+  sticky?: boolean;
+  /** La colonna principale ha righe larghe: la laterale arriva più tardi. */
+  wide?: boolean;
+}>) {
+  return (
+    <div className={wide ? wideColumnsClass : pageColumnsClass}>
+      <div className={cn("flex min-w-0 flex-col", mainClassName)}>{children}</div>
+      <aside
+        className={cn(
+          "flex min-w-0 flex-col gap-6",
+          sticky && (wide ? "min-[1400px]:sticky min-[1400px]:top-8" : "xl:sticky xl:top-8")
+        )}
+      >
+        {aside}
+      </aside>
+    </div>
+  );
+}
+
 export function Pill({
   tone = "neutral",
   children,

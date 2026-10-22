@@ -106,6 +106,42 @@ export function groupCompanyAbsences<
   return { pending, upcoming, closed };
 }
 
+/**
+ * Il riepilogo a lato della pagina Assenze (web), sulle righe già filtrate.
+ * Conta solo le approvate: una richiesta in sospeso non è ancora un'assenza.
+ * Ferie e malattia in giorni di calendario, i permessi in numero (spesso sono
+ * poche ore). «Senza certificato» sono le malattie approvate senza riferimento.
+ */
+export function summarizeCompanyAbsences<
+  T extends Pick<Absence, "kind" | "status" | "start_date" | "end_date" | "inps_protocol">,
+>(
+  absences: readonly T[],
+  today: string = todayString()
+): {
+  ferieDays: number;
+  permessi: number;
+  malattiaDays: number;
+  absentToday: T[];
+  missingCertificates: number;
+} {
+  let ferieDays = 0;
+  let permessi = 0;
+  let malattiaDays = 0;
+  let missingCertificates = 0;
+  const absentToday: T[] = [];
+  for (const a of absences) {
+    if (a.status !== "approved") continue;
+    if (a.kind === "ferie") ferieDays += absenceDays(a);
+    else if (a.kind === "permesso") permessi += 1;
+    else {
+      malattiaDays += absenceDays(a);
+      if (!a.inps_protocol?.trim()) missingCertificates += 1;
+    }
+    if (a.start_date <= today && a.end_date >= today) absentToday.push(a);
+  }
+  return { ferieDays, permessi, malattiaDays, absentToday, missingCertificates };
+}
+
 /** Il tono della pillola di stato, condiviso da app e web. */
 export function absenceStatusTone(
   status: AbsenceStatus

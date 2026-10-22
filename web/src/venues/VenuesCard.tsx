@@ -42,87 +42,102 @@ export function VenuesCard() {
     );
   }
 
+  const closedList = closed.length > 0 ? (
+    <ul className="mt-2 flex flex-col gap-2">
+      {closed.map((v) => (
+        <li
+          key={v.id}
+          className="flex items-center gap-3 rounded-xl border border-border-2 px-3 py-2"
+        >
+          <span className="min-w-0 flex-1 truncate text-sm text-t3">
+            {v.name}
+          </span>
+          <Button
+            disabled={setClosed.isPending}
+            onClick={() => reopen(v.id, v.name)}
+          >
+            Riapri
+          </Button>
+        </li>
+      ))}
+    </ul>
+  ) : null;
+
   // Con zero o una sede aperta «Aggiungi sede» sta già sulla pagina: qui
   // restano solo le sedi chiuse.
   const single = venues.length <= 1;
   if (single && closed.length === 0) return null;
 
-  return (
-    <Card>
-      {single ? null : (
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-            Le tue sedi · {venues.length}
-          </span>
-          {isOwner ? (
-            <Button onClick={() => navigate("/sede/nuovo")}>
-              + Aggiungi sede
-            </Button>
-          ) : null}
-        </div>
-      )}
-
-      {single ? null : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {venues.map((v, i) => (
-            <li key={v.id}>
-              <button
-                type="button"
-                onClick={() => navigate(`/sede/${v.id}`)}
-                className="focus-gold flex w-full items-center gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2.5 text-left transition hover:bg-bg-2"
-              >
-                <Avatar url={v.logo_url} name={v.name} size={36} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-t1">
-                    {v.name}
-                  </span>
-                  {v.city ? (
-                    <span className="block truncate text-xs text-t4">
-                      {v.city}
-                    </span>
-                  ) : null}
-                </span>
-                {venues.length > 1 ? (
-                  <span
-                    aria-hidden
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: venueAccent(i) }}
-                  />
-                ) : null}
-                <span aria-hidden className="shrink-0 text-t3">
-                  ›
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {closed.length > 0 ? (
-        <details className={single ? undefined : "mt-4"}>
+  if (single) {
+    return (
+      <Card>
+        <details>
           <summary className="cursor-pointer text-xs text-t3">
             Sedi chiuse · {closed.length}
           </summary>
-          <ul className="mt-2 flex flex-col gap-2">
-            {closed.map((v) => (
-              <li
-                key={v.id}
-                className="flex items-center gap-3 rounded-xl border border-border-2 px-3 py-2"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm text-t3">
-                  {v.name}
-                </span>
-                <Button
-                  disabled={setClosed.isPending}
-                  onClick={() => reopen(v.id, v.name)}
-                >
-                  Riapri
-                </Button>
-              </li>
-            ))}
-          </ul>
+          {closedList}
         </details>
+      </Card>
+    );
+  }
+
+  // Più sedi: una griglia di schede, così lo schermo largo si riempie di sedi
+  // e non di vuoto. La barretta in alto è il colore della sede nel planning.
+  return (
+    <div className="flex max-w-7xl flex-col gap-6">
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {venues.map((v, i) => (
+          <li key={v.id}>
+            <button
+              type="button"
+              onClick={() => navigate(`/sede/${v.id}`)}
+              className="focus-gold group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-card text-left transition hover:border-border-gold hover:bg-bg-1"
+            >
+              <span aria-hidden className="h-1 w-full" style={{ backgroundColor: venueAccent(i) }} />
+              <span className="flex flex-1 flex-col gap-4 p-5">
+                <span className="flex items-center gap-4">
+                  <Avatar url={v.logo_url} name={v.name} size={52} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-lg font-semibold text-t1">{v.name}</span>
+                    {v.city ? <span className="block truncate text-sm text-t3">{v.city}</span> : null}
+                  </span>
+                </span>
+                {v.address ? <span className="block text-sm text-t3">{v.address}</span> : null}
+                <span className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-3 text-xs">
+                  <span className="flex items-center gap-2 text-t3">
+                    <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: venueAccent(i) }} />
+                    Colore nel planning
+                  </span>
+                  <span className="font-semibold text-gold transition group-hover:translate-x-0.5">Apri la scheda ›</span>
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+        {isOwner ? (
+          <li>
+            <button
+              type="button"
+              onClick={() => navigate("/sede/nuovo")}
+              className="focus-gold flex h-full min-h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border-2 text-t3 transition hover:border-border-gold hover:text-gold"
+            >
+              <span aria-hidden className="grid size-10 place-items-center rounded-full bg-bg-2 text-xl">+</span>
+              <span className="text-sm font-semibold">Aggiungi sede</span>
+            </button>
+          </li>
+        ) : null}
+      </ul>
+
+      {closed.length > 0 ? (
+        <Card>
+          <details>
+            <summary className="cursor-pointer text-xs text-t3">
+              Sedi chiuse · {closed.length}
+            </summary>
+            {closedList}
+          </details>
+        </Card>
       ) : null}
-    </Card>
+    </div>
   );
 }

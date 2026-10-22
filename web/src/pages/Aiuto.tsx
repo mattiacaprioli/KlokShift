@@ -13,7 +13,8 @@ import {
   supportScopeNote,
   supportMailto,
 } from "@/features/support/supportContent";
-import { Card, PageHeader } from "../ui/primitives";
+import { Card, PageColumns, PageHeader } from "../ui/primitives";
+import { SidebarIcon, type SidebarIconName } from "../ui/SidebarIcon";
 
 /**
  * «Aiuto e supporto»: guide, domande frequenti e contatto. I testi sono quelli
@@ -26,12 +27,71 @@ export function AiutoPage() {
   const { isOwner, canAny, workspaceId, workspaceName } = useOwnerVenues();
   const canStaff = canAny("can_manage_staff");
   const faq = faqFor("web", { isOwner });
+  // Le pagine di cui parlano guide e domande, solo per chi può aprirle: gli
+  // stessi controlli della barra laterale.
+  const quickLinks: { to: string; label: string; icon: SidebarIconName }[] = [
+    ...(isOwner ? [{ to: "/collaboratori", label: "Collaboratori", icon: "team" as const }] : []),
+    ...(canStaff ? [{ to: "/assenze", label: "Assenze", icon: "absence" as const }] : []),
+    ...(isOwner ? [{ to: "/piano", label: "Piano e accesso", icon: "plan" as const }] : []),
+    { to: "/impostazioni", label: "Impostazioni", icon: "settings" },
+  ];
 
   return (
     <>
       <PageHeader title="Aiuto e supporto" />
 
-      <div className="flex max-w-2xl flex-col gap-8">
+      <PageColumns
+        mainClassName="gap-8"
+        aside={
+          <>
+            <section>
+              <SectionTitle>Contattaci</SectionTitle>
+              <Card className="flex flex-col gap-4">
+                <p className="text-sm leading-6 text-t2">
+                  {supportScopeNote({ isOwner })}
+                </p>
+                {SUPPORT_EMAIL ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={supportMailto(SUPPORT_EMAIL, {
+                        surface: "Dashboard web",
+                        workspace: workspaceId
+                          ? { id: workspaceId, name: workspaceName }
+                          : null,
+                      })}
+                      className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
+                    >
+                      Scrivici
+                    </a>
+                    <span className="text-sm text-t3">{SUPPORT_EMAIL}</span>
+                    <p className="w-full text-xs text-t3">{SUPPORT_RESPONSE_NOTE}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-t3">{SUPPORT_PENDING_NOTE}</p>
+                )}
+              </Card>
+            </section>
+            <section>
+              <SectionTitle>Vai a</SectionTitle>
+              <Card className="flex flex-col gap-1 p-2">
+                {quickLinks.map((l) => (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    className="focus-gold flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm text-t2 transition hover:bg-bg-2 hover:text-t1"
+                  >
+                    <span className="flex items-center gap-3">
+                      <SidebarIcon name={l.icon} />
+                      {l.label}
+                    </span>
+                    <span aria-hidden className="text-t4">›</span>
+                  </Link>
+                ))}
+              </Card>
+            </section>
+          </>
+        }
+      >
         {isOwner || canStaff ? (
           <section>
             <SectionTitle>Guide</SectionTitle>
@@ -75,34 +135,7 @@ export function AiutoPage() {
           </div>
         </section>
 
-        <section>
-          <SectionTitle>Contattaci</SectionTitle>
-          <Card className="flex flex-col gap-4">
-            <p className="text-sm leading-6 text-t2">
-              {supportScopeNote({ isOwner })}
-            </p>
-            {SUPPORT_EMAIL ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <a
-                  href={supportMailto(SUPPORT_EMAIL, {
-                    surface: "Dashboard web",
-                    workspace: workspaceId
-                      ? { id: workspaceId, name: workspaceName }
-                      : null,
-                  })}
-                  className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-                >
-                  Scrivici
-                </a>
-                <span className="text-sm text-t3">{SUPPORT_EMAIL}</span>
-                <p className="w-full text-xs text-t3">{SUPPORT_RESPONSE_NOTE}</p>
-              </div>
-            ) : (
-              <p className="text-xs text-t3">{SUPPORT_PENDING_NOTE}</p>
-            )}
-          </Card>
-        </section>
-      </div>
+      </PageColumns>
     </>
   );
 }

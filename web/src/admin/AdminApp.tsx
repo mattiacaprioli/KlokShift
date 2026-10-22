@@ -53,9 +53,9 @@ export function AdminApp() {
   if (!keepMounted)
     return <MfaForm onVerified={() => void access.refetch()} exit={exit} />;
   const navClass = ({ isActive }: { isActive: boolean }) => cn(
-    "focus-gold flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
+    "focus-gold flex min-h-9 items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
     isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1");
-  const footClass = "focus-gold flex min-h-9 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-xs text-t2 transition-colors hover:bg-bg-2 hover:text-t1";
+  const footClass = "focus-gold flex min-h-8 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5 text-xs text-t2 transition-colors hover:bg-bg-2 hover:text-t1";
   return <>
     <div className="min-h-dvh bg-bg-0 text-t1 lg:flex" inert={rechecking || undefined} aria-hidden={rechecking || undefined}>
       <aside className="z-20 flex shrink-0 flex-col border-b border-border-2 bg-bg-card lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:border-b-0 lg:border-r">

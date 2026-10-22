@@ -11,7 +11,9 @@ import {
   type CompanyAbsenceFilters,
 } from "@/features/absences/filters";
 import { useCompanyAbsences } from "@/features/absences/hooks";
-import { ABSENCE_KINDS, groupCompanyAbsences } from "@/features/absences/labels";
+import { ABSENCE_KINDS, ABSENCE_KIND_LABEL, groupCompanyAbsences, summarizeCompanyAbsences } from "@/features/absences/labels";
+import type { AbsenceWithPerson } from "@/features/absences/api";
+import { PersonAvatar } from "../ui/PersonAvatar";
 import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
@@ -19,6 +21,8 @@ import { AbsenceRow, AbsenceRows } from "../absences/AbsencesPanel";
 import { NoVenues } from "../venues/NoVenues";
 import {
   Button,
+  Card,
+  PageColumns,
   PageHeader,
   Placeholder,
   QueryError,
@@ -86,7 +90,7 @@ export function AssenzePage() {
     <>
       <PageHeader title="Assenze" subtitle={subtitle} />
       {query.isPending ? (
-        <ListSkeleton avatar label="Caricamento assenze…" className="max-w-5xl" />
+        <ListSkeleton avatar label="Caricamento assenze…" className="max-w-7xl" />
       ) : query.isError ? (
         <QueryError error={query.error} />
       ) : (rows ?? []).length === 0 ? (
@@ -95,7 +99,7 @@ export function AssenzePage() {
           detail="Le richieste di ferie e permessi arrivano in chat e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona, in Staff."
         />
       ) : (
-        <div className="flex max-w-5xl flex-col gap-8">
+        <div className="flex max-w-7xl flex-col gap-6">
           {/* Una riga sola senza etichette, come la barra della pagina Ore: le
               voci «Tutte le persone», «Tutte le sedi» dicono già cosa sono.
               Niente `items-center`: lo stretch dà a tutto la stessa altezza. */}
@@ -167,65 +171,67 @@ export function AssenzePage() {
             ) : null}
           </div>
 
-          {visible.length === 0 ? (
-            <Placeholder
-              title="Nessuna assenza con questi filtri"
-              detail={`Negli ultimi ${COMPANY_ABSENCES_DAYS_BACK} giorni non c'è niente che corrisponda. Lo storico completo di una persona è nella sua scheda, in Staff.`}
-            />
-          ) : (
-            <>
-              {pending.length > 0 ? (
-                <Section title={`Da decidere · ${pending.length}`}>
-                  <AbsenceRows>
-                    {pending.map((a) => (
-                      <AbsenceRow
-                        key={a.id}
-                        absence={a}
-                        personName={a.person?.full_name ?? "Persona"}
-                        impliedStatus="pending"
-                      />
-                    ))}
-                  </AbsenceRows>
-                </Section>
-              ) : null}
+          <PageColumns wide mainClassName="gap-8" aside={<AbsenceSummary absences={visible} />}>
+            {visible.length === 0 ? (
+              <Placeholder
+                title="Nessuna assenza con questi filtri"
+                detail={`Negli ultimi ${COMPANY_ABSENCES_DAYS_BACK} giorni non c'è niente che corrisponda. Lo storico completo di una persona è nella sua scheda, in Staff.`}
+              />
+            ) : (
+              <>
+                {pending.length > 0 ? (
+                  <Section title={`Da decidere · ${pending.length}`}>
+                    <AbsenceRows>
+                      {pending.map((a) => (
+                        <AbsenceRow
+                          key={a.id}
+                          absence={a}
+                          personName={a.person?.full_name ?? "Persona"}
+                          impliedStatus="pending"
+                        />
+                      ))}
+                    </AbsenceRows>
+                  </Section>
+                ) : null}
 
-              <Section title="In corso e prossime">
-                {upcoming.length > 0 ? (
-                  <AbsenceRows>
-                    {upcoming.map((a) => (
-                      <AbsenceRow
-                        key={a.id}
-                        absence={a}
-                        personName={a.person?.full_name ?? "Persona"}
-                        impliedStatus="approved"
-                      />
-                    ))}
-                  </AbsenceRows>
-                ) : (
-                  <p className="text-sm text-t4">
-                    Nessuna assenza approvata in arrivo.
-                  </p>
-                )}
-              </Section>
-
-              {closed.length > 0 ? (
-                <Section title="Passate e chiuse">
-                  {/* Una passata approvata è il caso normale: la pill resta
-                      solo per le rifiutate e le ritirate. */}
-                  <AbsenceRows>
-                    {closed.map((a) => (
-                      <AbsenceRow
-                        key={a.id}
-                        absence={a}
-                        personName={a.person?.full_name ?? "Persona"}
-                        impliedStatus="approved"
-                      />
-                    ))}
-                  </AbsenceRows>
+                <Section title="In corso e prossime">
+                  {upcoming.length > 0 ? (
+                    <AbsenceRows>
+                      {upcoming.map((a) => (
+                        <AbsenceRow
+                          key={a.id}
+                          absence={a}
+                          personName={a.person?.full_name ?? "Persona"}
+                          impliedStatus="approved"
+                        />
+                      ))}
+                    </AbsenceRows>
+                  ) : (
+                    <p className="text-sm text-t4">
+                      Nessuna assenza approvata in arrivo.
+                    </p>
+                  )}
                 </Section>
-              ) : null}
-            </>
-          )}
+
+                {closed.length > 0 ? (
+                  <Section title="Passate e chiuse">
+                    {/* Una passata approvata è il caso normale: la pill resta
+                        solo per le rifiutate e le ritirate. */}
+                    <AbsenceRows>
+                      {closed.map((a) => (
+                        <AbsenceRow
+                          key={a.id}
+                          absence={a}
+                          personName={a.person?.full_name ?? "Persona"}
+                          impliedStatus="approved"
+                        />
+                      ))}
+                    </AbsenceRows>
+                  </Section>
+                ) : null}
+              </>
+            )}
+          </PageColumns>
         </div>
       )}
     </>
@@ -271,5 +277,73 @@ function Section({
       </h2>
       {children}
     </section>
+  );
+}
+
+
+/**
+ * La colonna a destra: quanto pesano le assenze nel periodo e cosa resta da
+ * fare. Conta le righe già filtrate, quindi segue tipo, persona e sede scelti.
+ */
+function AbsenceSummary({ absences }: { absences: readonly AbsenceWithPerson[] }) {
+  const s = useMemo(() => summarizeCompanyAbsences(absences), [absences]);
+  return (
+    <>
+      <Card>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-t3">
+          Riepilogo · ultimi {COMPANY_ABSENCES_DAYS_BACK} giorni
+        </h2>
+        <dl className="mt-4 grid grid-cols-3 gap-2">
+          <SummaryTile label="Ferie" value={s.ferieDays} unit={s.ferieDays === 1 ? "giorno" : "giorni"} />
+          <SummaryTile label="Permessi" value={s.permessi} unit={s.permessi === 1 ? "permesso" : "permessi"} />
+          <SummaryTile label="Malattia" value={s.malattiaDays} unit={s.malattiaDays === 1 ? "giorno" : "giorni"} />
+        </dl>
+        <p className="mt-3 text-xs text-t4">Solo le assenze approvate, con i filtri attivi.</p>
+      </Card>
+
+      <Card>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-t3">Assenti oggi</h2>
+        {s.absentToday.length === 0 ? (
+          <p className="mt-3 text-sm text-t3">Nessuno è assente oggi.</p>
+        ) : (
+          <ul className="mt-3 flex flex-col gap-2.5">
+            {s.absentToday.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 text-sm">
+                <PersonAvatar personId={a.member_id} name={a.person?.full_name ?? "Persona"} size={28} />
+                <span className="min-w-0 flex-1 truncate text-t1">{a.person?.full_name ?? "Persona"}</span>
+                <span className="shrink-0 text-xs text-t3">{ABSENCE_KIND_LABEL[a.kind]}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-t3">Da completare</h2>
+        {s.missingCertificates > 0 ? (
+          <p className="mt-3 flex items-start gap-2 text-sm text-t2">
+            <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-warning" />
+            {s.missingCertificates === 1
+              ? "1 malattia senza certificato: lo aggiungi dalla riga, con «Aggiungi certificato»."
+              : `${s.missingCertificates} malattie senza certificato: lo aggiungi dalla riga, con «Aggiungi certificato».`}
+          </p>
+        ) : (
+          <p className="mt-3 flex items-center gap-2 text-sm text-t3">
+            <span aria-hidden className="size-2 shrink-0 rounded-full bg-success" />
+            Nessun certificato mancante.
+          </p>
+        )}
+      </Card>
+    </>
+  );
+}
+
+function SummaryTile({ label, value, unit }: { label: string; value: number; unit: string }) {
+  return (
+    <div className="rounded-xl bg-bg-1 px-3 py-2.5">
+      <dt className="text-xs text-t3">{label}</dt>
+      <dd className="mt-1 font-serif text-2xl tabular-nums text-t1">{value}</dd>
+      <dd className="text-[11px] text-t4">{unit}</dd>
+    </div>
   );
 }

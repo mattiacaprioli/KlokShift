@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { DetailSkeleton } from "./ui/Skeleton";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { TeamPermission } from "@/features/team/api";
@@ -38,9 +39,8 @@ const NAV: NavItem[] = [
   { to: "/planning", label: "Planning", icon: "planning", group: "Operatività" },
   { to: "/ore", label: "Ore", icon: "hours", group: "Operatività", perm: "can_view_hours" },
   { to: "/staff", label: "Staff", icon: "staff", group: "Persone", perm: "can_manage_staff" },
-  // Stesso permesso della pagina (scrivere i ruoli è gestire la sede). Prima si
-  // trovava solo da Staff, ma è uno dei primi passi del setup.
-  { to: "/ruoli", label: "Ruoli", icon: "roles", group: "Persone", perm: "can_manage_venue" },
+  // «Ruoli» non è nel menu (scelta del 22/10): ci si arriva dal pulsante in
+  // Staff, dai «Primi passi» e dal form del turno.
   // Stesso permesso di Staff: è quello che fa leggere e decidere le assenze.
   {
     to: "/assenze",
@@ -57,7 +57,6 @@ const NAV: NavItem[] = [
   { to: "/sede", label: "Sede", icon: "venue", group: "Gestione" },
   { to: "/collaboratori", label: "Collaboratori", icon: "team", group: "Gestione", ownerOnly: true },
   { to: "/piano", label: "Piano e accesso", icon: "plan", group: "Gestione", ownerOnly: true },
-  { to: "/impostazioni", label: "Impostazioni", icon: "settings", group: "Gestione" },
 ];
 
 export function AppLayout() {
@@ -76,19 +75,63 @@ export function AppLayout() {
   const company = companyName(venues, profile?.full_name);
   const who = profile?.full_name ?? session?.user.email;
 
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  function toggle() {
+    setCollapsed((c) => {
+      writeCollapsed(!c);
+      return !c;
+    });
+  }
+
+  // Ristretta: solo icone. Aperta o chiusa la struttura è la stessa e le icone
+  // non si spostano: cambia la larghezza, le scritte sfumano e vengono tagliate
+  // dal bordo. Così il movimento è uno solo, senza salti a fine animazione.
+  const ease = "duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
+  const fade = cn("transition-opacity", ease, collapsed ? "opacity-0" : "opacity-100");
+  const itemClass = (isActive: boolean) => cn(
+    "focus-gold relative flex min-h-9 items-center gap-3 rounded-lg px-[13px] py-1.5 text-sm font-medium transition-colors",
+    isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1"
+  );
+  const footClass = (isActive = false) => cn(
+    "focus-gold mt-1 flex min-h-8 w-full cursor-pointer items-center gap-3 rounded-lg px-[13px] py-1.5 text-left text-xs transition-colors",
+    isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1"
+  );
+  const label = (text: string) => <span className={cn("flex-1 whitespace-nowrap", fade)}>{text}</span>;
+
   return (
     <div className="flex min-h-dvh">
       {/* Intestazione e account restano visibili anche quando il menu scorre. */}
-      <aside className="sticky top-0 flex h-dvh w-60 shrink-0 flex-col border-r border-border-2 bg-bg-card print:hidden">
-        <div className="shrink-0 px-6 pb-5 pt-6">
-          <div className="mb-4 h-1 w-8 rounded-full bg-gold" />
-          <p className="break-words font-serif text-xl leading-tight text-t1">{company}</p>
-          <p className="mt-2 text-xs text-t2">
-            {venues.length > 1 ? `${venues.length} sedi` : "Gestione turni"}
-          </p>
+      <aside
+        className={cn(
+          "sticky top-0 flex h-dvh shrink-0 flex-col overflow-hidden border-r border-border-2 bg-bg-card transition-[width] print:hidden",
+          ease,
+          collapsed ? "w-[68px]" : "w-60"
+        )}
+      >
+        <div className={cn("shrink-0 pb-4 pt-6 transition-[padding]", ease, collapsed ? "px-5" : "px-6")}>
+          <div className="flex h-7 items-center justify-between">
+            <div
+              title={company}
+              className={cn("h-1 shrink-0 rounded-full bg-gold transition-[width,opacity]", ease, collapsed ? "w-0 opacity-0" : "w-8")}
+            />
+            <CollapseButton collapsed={collapsed} onClick={toggle} />
+          </div>
+          {/* Altezza da 1fr a 0fr: il blocco del nome si chiude senza far
+              saltare il menu sotto. Larghezza fissa: il testo non va a capo
+              mentre la colonna si stringe, viene solo tagliato. */}
+          <div className={cn("grid transition-[grid-template-rows,opacity]", ease, collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100")}>
+            <div className="overflow-hidden">
+              <div className="w-48 pt-2">
+                <p className="break-words font-serif text-xl leading-tight text-t1">{company}</p>
+                <p className="mt-2 text-xs text-t2">
+                  {venues.length > 1 ? `${venues.length} sedi` : "Gestione turni"}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <nav aria-label="Navigazione principale" className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 pb-6">
+        <nav aria-label="Navigazione principale" className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-3 pb-6">
           {(["Operatività", "Persone", "Gestione"] as const).map((group) => {
             const items = NAV.filter(
               (item) => item.group === group &&
@@ -97,34 +140,47 @@ export function AppLayout() {
             if (items.length === 0) return null;
             return (
               <div key={group}>
-                <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-t3">
-                  {group}
-                </h2>
-                <div className="space-y-1">
+                {/* Stessa altezza aperta e chiusa: il titolo sfuma, al suo
+                    posto compare una lineetta. */}
+                <div className="relative mb-1 h-5">
+                  <h2 className={cn("absolute inset-x-3 top-1/2 -translate-y-1/2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.14em] text-t3", fade)}>
+                    {group}
+                  </h2>
+                  <div
+                    aria-hidden
+                    className={cn("absolute left-2 top-1/2 h-px w-7 bg-border-2 transition-opacity", ease, collapsed ? "opacity-100" : "opacity-0")}
+                  />
+                </div>
+                <div className="space-y-0.5">
                   {items.map((item) => {
                     const count =
                       item.badge === "chat" ? chatUnread :
                       item.badge === "notifiche" ? notifUnread :
                       item.badge === "assenze" ? absencesPending : 0;
+                    const countLabel = `${count} ${item.badge === "assenze" ? "richieste da gestire" : item.badge === "chat" ? "messaggi non letti" : "notifiche non lette"}`;
                     return (
                       <NavLink
                         key={item.to}
                         to={item.to}
                         end={item.to === "/"}
-                        className={({ isActive }) => cn(
-                          "focus-gold flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
-                          isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1"
-                        )}
+                        title={collapsed ? (count > 0 ? `${item.label} · ${countLabel}` : item.label) : undefined}
+                        className={({ isActive }) => itemClass(isActive)}
                       >
                         <SidebarIcon name={item.icon} />
-                        <span className="flex-1">{item.label}</span>
+                        {label(item.label)}
                         {count > 0 ? (
-                          <span
-                            aria-label={`${count} ${item.badge === "assenze" ? "richieste da gestire" : item.badge === "chat" ? "messaggi non letti" : "notifiche non lette"}`}
-                            className="flex min-w-5 items-center justify-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-4 text-gold-ink"
-                          >
-                            {count > 99 ? "99+" : count}
-                          </span>
+                          <>
+                            <span
+                              aria-label={countLabel}
+                              className={cn("flex min-w-5 items-center justify-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-4 text-gold-ink", fade)}
+                            >
+                              {count > 99 ? "99+" : count}
+                            </span>
+                            <span
+                              aria-hidden
+                              className={cn("absolute left-[27px] top-1 size-2 rounded-full bg-gold ring-2 ring-bg-card transition-opacity", ease, collapsed ? "opacity-100" : "opacity-0")}
+                            />
+                          </>
                         ) : null}
                       </NavLink>
                     );
@@ -136,37 +192,40 @@ export function AppLayout() {
         </nav>
 
         <div className="shrink-0 border-t border-border-2 p-3">
-          <Link
+          {/* L'unico ingresso a /impostazioni: fino al 22/10 c'era anche una
+              voce «Impostazioni» in Gestione, che portava alla stessa pagina. */}
+          <NavLink
             to="/impostazioni"
-            aria-label="Apri le impostazioni del tuo account"
-            className="focus-gold flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-bg-2"
+            aria-label="Apri account e impostazioni"
+            title={collapsed ? `${who ?? "Profilo"} · Account e impostazioni` : undefined}
+            className={({ isActive }) => cn(
+              "focus-gold flex items-center gap-3 rounded-lg px-1 py-2 transition-colors",
+              isActive ? "bg-gold/12" : "hover:bg-bg-2"
+            )}
           >
             <Avatar url={profile?.avatar_url} name={who ?? "Profilo"} size={36} />
-            <div className="min-w-0">
+            <div className={cn("min-w-0 whitespace-nowrap", fade)}>
               <p className="truncate text-sm font-medium text-t1" title={who}>{who}</p>
-              <p className="mt-0.5 text-xs text-t3">Il tuo account</p>
+              <p className="mt-0.5 text-xs text-t3">Account e impostazioni</p>
             </div>
-          </Link>
+          </NavLink>
           {/* Fuori da `NAV`: l'aiuto non dipende da nessun permesso. */}
           <NavLink
             to="/aiuto"
-            className={({ isActive }) =>
-              cn(
-                "focus-gold mt-1 flex min-h-9 w-full items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors",
-                isActive ? "bg-gold/12 text-gold" : "text-t2 hover:bg-bg-2 hover:text-t1"
-              )
-            }
+            title={collapsed ? "Aiuto e supporto" : undefined}
+            className={({ isActive }) => footClass(isActive)}
           >
             <SidebarIcon name="help" />
-            Aiuto e supporto
+            {label("Aiuto e supporto")}
           </NavLink>
           <button
             type="button"
             onClick={() => void signOut()}
-            className="focus-gold mt-1 flex min-h-9 w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-xs text-t2 transition-colors hover:bg-bg-2 hover:text-t1"
+            title={collapsed ? "Esci" : undefined}
+            className={footClass()}
           >
             <SidebarIcon name="logout" />
-            Esci
+            {label("Esci")}
           </button>
         </div>
       </aside>
@@ -196,4 +255,39 @@ export function AppLayout() {
       </main>
     </div>
   );
+}
+
+/** Restringe e riallarga la sidebar. */
+function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
+  const text = collapsed ? "Allarga il menu" : "Restringi il menu";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={text}
+      aria-expanded={!collapsed}
+      title={text}
+      className="focus-gold grid size-7 cursor-pointer place-items-center rounded-lg text-t3 transition-colors hover:bg-bg-2 hover:text-t1"
+    >
+      <SidebarIcon name="panel" className="size-4" />
+    </button>
+  );
+}
+
+// Preferenza di questo browser: si legge e si scrive con try/catch perché in
+// navigazione privata o con i dati del sito bloccati lo storage può lanciare.
+const COLLAPSED_KEY = "klokshift.sidebar.collapsed";
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeCollapsed(value: boolean) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0");
+  } catch {
+    // Senza storage la scelta vale finché la pagina resta aperta.
+  }
 }

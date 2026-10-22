@@ -29,6 +29,7 @@ import {
   Card,
   Field,
   Input,
+  PageColumns,
   PageHeader,
   Pill,
   Placeholder,
@@ -654,26 +655,20 @@ export function TeamPage() {
         }
       />
 
-      <div className="grid max-w-6xl items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="flex min-w-0 flex-col gap-3">
-          {team.isPending ? (
-            <ListSkeleton avatar label="Caricamento collaboratori…" />
-          ) : team.isError ? (
-            <QueryError error={team.error} />
-          ) : members.length === 0 ? (
-            <Placeholder
-              title="Nessun collaboratore"
-              detail="Invita chi organizza i turni con te: sceglierai cosa può fare e su quali sedi."
-            />
-          ) : (
-            members.map((m) => <MemberCard key={m.memberId} member={m} />)
-          )}
-        </section>
-
-        <aside className="xl:sticky xl:top-8">
-          <InviteForm workspaceId={workspaceId} />
-        </aside>
-      </div>
+      <PageColumns aside={<InviteForm workspaceId={workspaceId} />} mainClassName="gap-3">
+        {team.isPending ? (
+          <ListSkeleton avatar label="Caricamento collaboratori…" />
+        ) : team.isError ? (
+          <QueryError error={team.error} />
+        ) : members.length === 0 ? (
+          <Placeholder
+            title="Nessun collaboratore"
+            detail="Invita chi organizza i turni con te: sceglierai cosa può fare e su quali sedi."
+          />
+        ) : (
+          members.map((m) => <MemberCard key={m.memberId} member={m} />)
+        )}
+      </PageColumns>
     </>
   );
 }

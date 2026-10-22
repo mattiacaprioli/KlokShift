@@ -87,9 +87,7 @@ export function SedePage() {
             : "Apri una sede per vederne la scheda."
         }
       />
-      <div className="max-w-2xl">
-        <VenuesCard />
-      </div>
+      <VenuesCard />
     </>
   );
 }

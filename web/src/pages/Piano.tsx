@@ -13,7 +13,8 @@ import { openCheckout, prepareCheckout } from "../billing/checkout";
 import { applyChange, formatCents, openPortal, pauseRenewals, previewChange, restartSubscription, resumeRenewals, stopRenewals } from "../billing/manage";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { FullExportCard } from "../export/FullExportCard";
-import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
+import { Button, Card, Field, Input, PageHeader, Placeholder, Select, pageColumnsClass } from "../ui/primitives";
+import { Meter } from "../ui/Meter";
 
 const date = (value: string) => new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome" });
 const stateLabels = {
@@ -37,10 +38,19 @@ export function PianoPage() {
       <PageHeader title="Piano e accesso" subtitle={workspaceName} actions={
         <Button disabled={accessPending} onClick={() => void refetch()}>Aggiorna stato</Button>
       } />
-      <div className="max-w-4xl space-y-5">
-        <Card>
+      {/* Due colonne come Collaboratori. L'ordine nel DOM resta Situazione →
+          Storico → Abbonamento (chi legge con lo screen reader, e il test, lo
+          trovano così); la colonna a destra la decide la griglia. */}
+      <div className={historyVenueIds.length > 0 ? pageColumnsClass : "max-w-4xl space-y-5"}>
+        <Card className="min-w-0 xl:col-start-1">
           <h2 className="text-lg font-semibold text-t1">Situazione attuale</h2>
           <p className="mt-2 text-sm text-t2" role="status">{accessPending ? "Verifica dello stato dell’azienda…" : workspaceAccessMessage(current)}</p>
+          {current?.plan && current.usage ? (
+            <div className="mt-5 grid gap-4 rounded-xl bg-bg-1 p-4 sm:grid-cols-2">
+              <Meter label="Persone in azienda" used={current.usage.people} limit={current.limits.people} unlimited={current.limits.people === null} warnAt={1} />
+              <Meter label="Sedi aperte" used={current.usage.venues} limit={current.limits.venues} warnAt={1} />
+            </div>
+          ) : null}
           {current ? (
             <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
               <Value label="Stato" value={stateLabels[current.state]} />
@@ -74,7 +84,7 @@ export function PianoPage() {
         </Card>
 
         {historyVenueIds.length > 0 ? (
-          <Card>
+          <Card className="min-w-0 xl:sticky xl:top-8 xl:col-start-2 xl:row-span-2 xl:row-start-1">
             <h2 className="font-semibold text-t1">Storico e dati</h2>
             <p className="mt-2 text-sm text-t2">{current?.state === "expired" ? "Il periodo di consultazione è terminato." : "Trovi qui i turni e i riepiloghi delle sedi a cui hai accesso, comprese quelle chiuse."}</p>
             <div className="mt-4 flex flex-wrap gap-5 text-sm text-gold">
@@ -87,7 +97,9 @@ export function PianoPage() {
         ) : null}
 
         {/* `refetch` è stabile (useCallback nel provider): l'attesa non riparte a ogni render. */}
-        <BillingSection key={workspaceId} workspaceId={workspaceId} access={current} refetchAccess={refetch} />
+        <div className="min-w-0 space-y-5 xl:col-start-1">
+          <BillingSection key={workspaceId} workspaceId={workspaceId} access={current} refetchAccess={refetch} />
+        </div>
       </div>
     </>
   );
