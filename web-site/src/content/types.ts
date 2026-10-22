@@ -49,14 +49,14 @@ export type Content = {
   problem: {
     eyebrow: string;
     title: string;
-    lead: string;
+    lead?: string;
     items: BeforeAfter[];
   };
 
   venue: {
     eyebrow: string;
     title: string;
-    lead: string;
+    lead?: string;
     features: Feature[];
     shotPlanningAlt: string;
     shotHoursAlt: string;
@@ -65,7 +65,7 @@ export type Content = {
   pro: {
     eyebrow: string;
     title: string;
-    lead: string;
+    lead?: string;
     features: Feature[];
     shotAlt: string;
   };
@@ -77,16 +77,8 @@ export type Content = {
   };
 
   sectors: {
-    eyebrow: string;
     title: string;
-    lead: string;
     items: string[];
-  };
-
-  platforms: {
-    eyebrow: string;
-    title: string;
-    items: Feature[];
   };
 
   plans: {

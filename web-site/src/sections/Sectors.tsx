@@ -1,30 +1,40 @@
-import { Section } from "../ui/Section";
+import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { t } from "../content";
 
 /*
- * I settori come chip: il modo di organizzare i turni è lo stesso in un
- * ristorante, in un hotel, in una discoteca o in un'agenzia di eventi.
+ * I settori come fascia sotto l'hero, al posto dei loghi dei clienti che non
+ * abbiamo: dicono subito «è per te» a chi arriva. Volutamente bassa e
+ * delimitata da due linee, non una sezione piena: con lo stesso sfondo e la
+ * stessa spaziatura delle altre sembrava un blocco capitato lì per caso.
  */
 export function Sectors() {
   return (
-    <Section
+    <section
       id="settori"
-      tone="raised"
-      eyebrow={t.sectors.eyebrow}
-      title={t.sectors.title}
-      lead={t.sectors.lead}
+      aria-labelledby="settori-title"
+      className="border-y border-border py-8 sm:py-10"
     >
-      <Reveal className="mt-8 flex flex-wrap gap-2.5 sm:mt-10">
-        {t.sectors.items.map((item) => (
-          <span
-            key={item}
-            className="rounded-full border border-border-2 px-4 py-2.5 text-t1"
+      <Container>
+        <Reveal className="flex flex-col items-center gap-5 text-center">
+          <h2
+            id="settori-title"
+            className="font-mono text-xs tracking-[0.18em] text-t3 uppercase"
           >
-            {item}
-          </span>
-        ))}
-      </Reveal>
-    </Section>
+            {t.sectors.title}
+          </h2>
+          <ul className="flex flex-wrap justify-center gap-2">
+            {t.sectors.items.map((item) => (
+              <li
+                key={item}
+                className="rounded-full border border-border-2 px-3.5 py-1.5 text-sm text-t2"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+      </Container>
+    </section>
   );
 }

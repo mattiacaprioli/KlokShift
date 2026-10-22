@@ -77,7 +77,9 @@ function PriceCard({
 }
 
 export function Plans() {
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("annual");
+  // Si apre sul mensile: 29 € è il numero che regge «un prezzo per l'azienda»;
+  // l'annuale resta a un tocco, col suo «2 mesi gratis» sul selettore.
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
 
   return (
     <Section

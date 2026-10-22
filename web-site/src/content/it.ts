@@ -52,23 +52,22 @@ export const it: Content = {
       { href: "#prezzi", label: "Prezzi" },
       { href: "#faq", label: "Domande" },
     ],
-    cta: "Prova la beta",
+    cta: "Prova gratis",
   },
 
   hero: {
     eyebrow: "Turni e ore del personale",
     title: "I turni della settimana in dieci minuti, non in una serata.",
-    lead: "Pianifichi, il team conferma dal telefono e le ore dei turni si sommano automaticamente. Addio a fogli Excel e gruppi WhatsApp.",
-    ctaPrimary: "Prova la beta",
+    lead: "Tu pianifichi, il team conferma e timbra dal telefono, le ore si contano da sole.",
+    ctaPrimary: "Prova gratis 30 giorni",
     ctaSecondary: "Guarda come funziona",
-    note: "Beta: prova Team di 30 giorni, una sede, senza carta. I pagamenti non sono ancora disponibili.",
+    note: "In beta · senza carta · nessun rinnovo automatico",
     shotAlt: "L'agenda dei turni della settimana",
   },
 
   problem: {
     eyebrow: "Prima e dopo",
     title: "Il turno è deciso. Chi lo copre, no.",
-    lead: "Oggi il piano vive in tre posti. Con KlokShift, in uno.",
     items: [
       {
         title: "Il gruppo su WhatsApp",
@@ -77,45 +76,44 @@ export const it: Content = {
       },
       {
         title: "Il foglio Excel",
-        body: "Cambi un turno e rifai tutto. Poi lo rimandi a tutti.",
-        after: "Sposti il turno. Chi è coinvolto riceve la notifica.",
+        body: "Cambi un turno e rifai tutto.",
+        after: "Lo sposti, e chi è coinvolto viene avvisato.",
       },
       {
         title: "Le ore a fine mese",
-        body: "Contate a memoria, la sera prima del consulente.",
-        after: "Turni e presenze sono già raccolti. Esporti PDF o CSV in un clic.",
+        body: "Contate a memoria, la sera prima.",
+        after: "Il team timbra dall'app. Esporti in un clic.",
       },
     ],
   },
 
   venue: {
     eyebrow: "Funzioni",
-    title: "Tutto quello che serve per organizzare il personale. Niente di più.",
-    lead: "Inserisci il team una volta. Turni, copertura e ore restano nello stesso posto.",
+    title: "Turni, presenze e ore. Niente moduli da attivare.",
     features: [
       {
         title: "Il tuo team, su più sedi",
-        body: "Ruoli, tipo di contratto e ore previste. Una scheda per persona, anche su due sedi.",
+        body: "Una scheda per persona, con ruoli e ore da contratto.",
       },
       {
         title: "Copertura sotto controllo",
-        body: "Dici quanti servono per ruolo. L'agenda segna cosa è scoperto.",
+        body: "Vedi subito i buchi e chi è in ferie.",
       },
       {
         title: "Planning da scrivania",
-        body: "Trascini i turni, duplichi la settimana, stampi il piano. Chi è coinvolto viene avvisato.",
+        body: "Trascini i turni, duplichi la settimana, stampi.",
       },
       {
-        title: "Presenze e ore, in un solo posto",
-        body: "Segni chi c'era e correggi le ore effettive. A fine mese esporti PDF o CSV per il consulente.",
+        title: "Timbratura dall'app",
+        body: "Entrata, uscita e pausa dal telefono.",
       },
       {
         title: "Documenti con le scadenze",
-        body: "Contratti, certificati, visite mediche. Sai cosa scade prima che scada.",
+        body: "Sai cosa scade prima che scada.",
       },
       {
-        title: "I ruoli che usi davvero",
-        body: "Sala, cassa, magazzino, reception, turno notte: li crei tu.",
+        title: "Pronto per il consulente",
+        body: "Ore, pause e assenze in PDF o CSV.",
       },
     ],
     shotPlanningAlt: "Il planning settimanale con i turni per persona",
@@ -125,23 +123,23 @@ export const it: Content = {
   pro: {
     eyebrow: "Per il tuo team",
     title: "Il team sa quando lavora. Senza chiederlo a te.",
-    lead: "Il turno arriva sul telefono e si conferma. Dopo il turno, le ore svolte restano aggiornate. L'app per i dipendenti è gratuita.",
+    lead: "L'app per i dipendenti è gratuita.",
     features: [
       {
         title: "Conferma con un tocco",
-        body: "Tu assegni, loro rispondono dall'app.",
+        body: "Tu assegni, loro rispondono.",
       },
       {
-        title: "Le proprie ore, sempre aggiornate",
-        body: "Ogni turno concluso entra nel riepilogo del mese.",
+        title: "Timbra dal telefono",
+        body: "E le ore del mese si aggiornano da sole.",
       },
       {
         title: "Cambi e assenze in chat",
-        body: "Una sostituzione o un giorno di ferie si chiedono dall'app. Tu li vedi subito.",
+        body: "Sostituzioni e ferie si chiedono dall'app.",
       },
       {
         title: "I turni dei colleghi",
-        body: "Se lo consenti, ognuno sa con chi è in servizio.",
+        body: "Se vuoi, ognuno vede con chi lavora.",
       },
     ],
     shotAlt: "Una conversazione tra la sede e un dipendente",
@@ -152,28 +150,26 @@ export const it: Content = {
     title: "Si parte in un pomeriggio.",
     steps: [
       {
-        title: "Prepara la prima sede",
-        body: "Crea l'account, conferma l'email e prepara la sede. Da «Piano e accesso» avvii la prova di 30 giorni.",
+        title: "Crea la sede",
+        body: "Account e sede in pochi minuti.",
       },
       {
         title: "Aggiungi il team",
-        body: "Inviti via email, o crei tu la scheda.",
+        body: "Li inviti via email.",
       },
       {
         title: "Pianifica la settimana",
-        body: "Crei i turni e assegni le persone. Dal telefono o dal browser.",
+        body: "Dal telefono o dal browser.",
       },
       {
         title: "Il team conferma",
-        body: "Arriva la notifica. Tu vedi la copertura e, dopo il turno, registri presenze e ore effettive.",
+        body: "Ricevono la notifica e rispondono.",
       },
     ],
   },
 
   sectors: {
-    eyebrow: "Per chi",
-    title: "Se il tuo personale lavora su turni, KlokShift fa per te.",
-    lead: "Stesso metodo, qualunque settore.",
+    title: "Per chi lavora su turni",
     items: [
       "Ristoranti e bar",
       "Hotel",
@@ -188,25 +184,10 @@ export const it: Content = {
     ],
   },
 
-  platforms: {
-    eyebrow: "App e browser",
-    title: "Il telefono per il team, il browser per chi pianifica.",
-    items: [
-      {
-        title: "L'app",
-        body: "Turni, conferme, ore, documenti e messaggi. Una notifica quando qualcosa cambia.",
-      },
-      {
-        title: "La dashboard",
-        body: "Planning trascinabile, duplicazione, stampa ed export. Niente da installare.",
-      },
-    ],
-  },
-
   plans: {
     eyebrow: "Listino previsto al lancio",
-    title: "Due piani semplici. Una sede inclusa.",
-    lead: "Stesse funzioni, capacità diversa per l'intera azienda. Con l'annuale paghi 10 mensilità per 12 mesi consecutivi. Durante la beta puoi provare: gli acquisti non sono ancora disponibili.",
+    title: "Un prezzo per l'azienda, non per ogni dipendente.",
+    lead: "Stesse funzioni in entrambi. In beta si prova gratis: gli acquisti non sono ancora attivi.",
     billing: {
       label: "Periodo di fatturazione",
       monthly: "Mensile",
@@ -255,10 +236,10 @@ export const it: Content = {
     extraVenue: {
       monthly: `Sede aggiuntiva: ${euro(EXTRA_VENUE_PRICES.monthly)} al mese.`,
       annual: `Sede aggiuntiva: ${euro(EXTRA_VENUE_PRICES.annual)} all'anno — risparmi ${euro(annualSaving(EXTRA_VENUE_PRICES))}.`,
-      detail: "Una sede con il proprio planning e organico, nella stessa azienda. Chi lavora in più sedi conta una sola volta nel limite persone.",
+      detail: "Chi lavora in più sedi conta una volta sola.",
     },
-    note: "Crea l'account e la prima sede, poi avvia la prova. Nessun addebito automatico alla scadenza.",
-    cta: "Prova la beta",
+    note: "Nessun addebito automatico alla fine della prova.",
+    cta: "Prova gratis 30 giorni",
   },
 
   faq: {
@@ -266,53 +247,45 @@ export const it: Content = {
     title: "Prima di iniziare.",
     items: [
       {
-        q: "Serve una carta di credito per provare?",
-        a: "No. Ogni nuova azienda ha una prova unica di 30 giorni con il piano Team, tutte le funzioni e una sede. Parte quando il titolare conferma l'avvio da «Piano e accesso», dopo aver preparato la prima sede. Non si rinnova a pagamento.",
+        q: "Serve una carta per provare?",
+        a: "No. Hai 30 giorni gratis con il piano Team e una sede. Alla fine non paghi nulla in automatico.",
       },
       {
         q: "Posso già acquistare un piano?",
-        a: "Durante la beta gli acquisti non sono ancora disponibili. Puoi creare l'account, preparare la prima sede e avviare la prova gratuita. Il listino mostra i prezzi previsti al lancio; il piano a pagamento si attiverà solo dopo un acquisto esplicito sul web.",
+        a: "Non ancora: siamo in beta. I prezzi qui sopra sono quelli previsti al lancio.",
       },
       {
-        q: "I dipendenti devono pagare?",
-        a: "No. Il piano è dell'azienda. Al lancio Base prevede fino a 30 persone uniche nell'intera azienda e Team non ha un limite persone; entrambi includono le stesse funzioni. Una persona che lavora in due sedi conta una sola volta.",
-      },
-      {
-        q: "Quanto risparmio con il pagamento annuale?",
-        a: `Paghi 10 mesi invece di 12: ${euro(PLAN_PRICES.base.annual)} all'anno per il piano fino a 30 dipendenti e ${euro(PLAN_PRICES.team.annual)} per quello senza limiti. Anche una sede aggiuntiva costa ${euro(EXTRA_VENUE_PRICES.annual)} all'anno invece di ${euro(EXTRA_VENUE_PRICES.monthly * 12)}.`,
-      },
-      {
-        q: "E se chiudo per la stagione, o non rinnovo?",
-        a: "Alla fine della prova l'operatività si ferma. Lo storico resta consultabile ed esportabile per 12 mesi dalla fine dell'operatività; per le rettifiche pregresse c'è una finestra separata di 7 giorni. Al lancio pagante la pausa mensile decorrerà dalla fine del periodo pagato. L'annuale copre 12 mesi consecutivi, senza congelamento automatico. Pausa, disdetta e cancellazione dei dati sono operazioni distinte.",
+        q: "I dipendenti pagano?",
+        a: "No, paga solo l'azienda. L'app per il team è gratuita.",
       },
       {
         q: "Ho più sedi. Come funziona?",
-        a: `Ogni piano include una sede; ogni sede aggiuntiva costa ${euro(EXTRA_VENUE_PRICES.monthly)} al mese oppure ${euro(EXTRA_VENUE_PRICES.annual)} all'anno. Tutte stanno sullo stesso account, e chi lavora in due sedi ha un unico conteggio delle ore.`,
+        a: `Una sede è inclusa, ogni altra costa ${euro(EXTRA_VENUE_PRICES.monthly)} al mese. Chi lavora in più sedi conta una volta sola.`,
       },
       {
-        q: "Devo installare qualcosa?",
-        a: "Il team usa l'app. Tu puoi fare tutto dal browser.",
+        q: "E se chiudo per la stagione?",
+        a: "Nessun addebito a sorpresa, e lo storico resta consultabile ed esportabile per 12 mesi. I dettagli sono nei Termini.",
       },
       {
-        q: "Dove finiscono i dati del personale?",
-        a: "Su server nell'Unione Europea. Ogni azienda vede solo i propri, e ognuno può chiedere la cancellazione del proprio account.",
+        q: "Fa le buste paga?",
+        a: "No. Prepara turni, timbrature e ore da passare al consulente, che fa paghe e Libro Unico.",
       },
       {
-        q: "Fa anche le buste paga?",
-        a: "No. KlokShift organizza turni, presenze e ore ed esporta i dati per il consulente del lavoro. Non sostituisce il software paghe.",
+        q: "Dove finiscono i dati?",
+        a: "Su server nell'Unione Europea. Ogni azienda vede solo i propri.",
       },
       {
-        q: "Come posso contattarvi?",
+        q: "Come vi contatto?",
         // Stesso recapito del footer e di `src/features/support/supportContent.ts`.
-        a: "Scrivi a info@klokshift.com: rispondiamo in italiano dal lunedì al venerdì, di solito entro 2 giorni lavorativi. Se usi già KlokShift, apri «Aiuto e supporto» nell'app o nella dashboard e premi «Scrivici»: il messaggio parte già con i dati che ci servono per aiutarti.",
+        a: "Scrivi a info@klokshift.com: risponde in italiano chi costruisce KlokShift, di solito entro 2 giorni lavorativi.",
       },
     ],
   },
 
   finalCta: {
     title: "La prossima settimana, pianificata in dieci minuti.",
-    lead: "Prova la beta: prepara la prima sede e avvia 30 giorni con il piano Team. Senza carta e senza rinnovo a pagamento.",
-    cta: "Prova la beta",
+    lead: "30 giorni gratis, senza carta. In beta.",
+    cta: "Prova gratis 30 giorni",
     secondary: "Ho già un account",
     note: "Lavori in un'azienda che usa KlokShift? Scarica l'app e fatti invitare.",
   },

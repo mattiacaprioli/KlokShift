@@ -22,7 +22,7 @@ const ICONS: IconName[] = [
   "grid",
   "clock",
   "document",
-  "tag",
+  "check",
 ];
 
 export function ForVenues() {
