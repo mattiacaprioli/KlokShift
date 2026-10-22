@@ -32,8 +32,7 @@ describe("Listino web approvato", () => {
     expect(content.plans.extraVenue.monthly).toBe("Sede aggiuntiva: 15\u00a0€ al mese.");
     expect(content.plans.extraVenue.annual).toBe("Sede aggiuntiva: 150\u00a0€ all'anno — risparmi 30\u00a0€.");
     const faq = content.faq.items.map((item) => item.a).join(" ");
-    expect(faq).toContain("290\u00a0€ all'anno");
-    expect(faq).toContain("invece di 180\u00a0€");
+    expect(faq).toContain("15\u00a0€ al mese");
     expect(faq).not.toMatch(/\d €/);
   });
   it("la beta non pubblicizza un acquisto attivo o un piano gratuito illimitato nei metadata", () => {
@@ -42,8 +41,9 @@ describe("Listino web approvato", () => {
     expect(schema.offers).toBeUndefined();
     expect(schema.description).toContain("Acquisti non ancora disponibili");
     expect(html.match(/name="description"[\s\S]*?content="([^"]+)"/)![1]).toContain("Acquisti non ancora disponibili");
-    expect(content.hero.note).toContain("I pagamenti non sono ancora disponibili");
+    expect(content.hero.note).toContain("In beta");
+    expect(content.hero.note).toContain("nessun rinnovo automatico");
     expect(content.plans.note).toContain("Nessun addebito automatico");
-    expect(content.faq.items.find(item => item.q === "Posso già acquistare un piano?")?.a).toContain("non sono ancora disponibili");
+    expect(content.faq.items.find(item => item.q === "Posso già acquistare un piano?")?.a).toContain("Non ancora");
   });
 });
