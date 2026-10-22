@@ -1,7 +1,8 @@
 import { ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { operationsGate } from "@/features/workspace/access";
 import { useOwnerPeople } from "@/features/staff/hooks";
 import {
   personEmploymentType,
@@ -11,6 +12,7 @@ import {
 import { useSelfStaff } from "@/features/staff/self";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { NoVenues } from "../venues/NoVenues";
+import { RunOnMount } from "../ui/RunOnMount";
 import { AddStaffPanel } from "../staff/AddStaffPanel";
 import { StaffDetail } from "../staff/StaffDetail";
 import {
@@ -32,7 +34,8 @@ import {
  * anche questa pagina: le sedi sono le etichette della persona.
  */
 export function StaffPage() {
-  const { ownerId, venues, isMultiVenue, canAny, canUseOperations } = useOwnerVenues();
+  const { ownerId, venues, isMultiVenue, canAny, canUseOperations, access, accessPending, isOwner } =
+    useOwnerVenues();
   // Un collaboratore può essere entrato per i soli turni: i pulsanti che
   // porterebbero a una schermata vuota non compaiono.
   const canStaff = canAny("can_manage_staff");
@@ -41,9 +44,24 @@ export function StaffPage() {
   // Chi gestisce può lavorare: la propria riga si riconosce, e finché non c'è
   // si offre di crearla. Stessa query dell'elenco, nessuna in più.
   const self = useSelfStaff();
+  // `?aggiungi=1` / `?aggiungi=me` arrivano dalla checklist «Primi passi»:
+  // la pagina si apre col pannello già aperto, poi il parametro sparisce.
+  const [params, setParams] = useSearchParams();
+  const addParam = params.get("aggiungi");
   const [adding, setAdding] = useState(false);
   /** Il pannello «+ Aggiungi» aperto in modalità «sono io». */
   const [addingSelf, setAddingSelf] = useState(false);
+  // Si aspetta lo stato dell'azienda: prima, «non operativa» vorrebbe dire solo
+  // «non ancora caricata», e il collegamento andrebbe perso.
+  const openFromLink = addParam !== null && !accessPending;
+  const consumeLink = () => {
+    if (canStaff && canUseOperations) {
+      setAddingSelf(addParam === "me");
+      setAdding(true);
+    }
+    setParams({}, { replace: true });
+  };
+  const locked = operationsGate(access, { isOwner });
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   if (venues.length === 0) {
@@ -74,6 +92,7 @@ export function StaffPage() {
 
   return (
     <>
+      {openFromLink ? <RunOnMount run={consumeLink} /> : null}
       <PageHeader
         title="Staff"
         subtitle={[
@@ -111,6 +130,12 @@ export function StaffPage() {
                 }}
               >
                 {adding && !addingSelf ? "Annulla" : "+ Aggiungi"}
+              </Button>
+            ) : canStaff && !locked.allowed ? (
+              // Spento ma visibile, col perché: il banner in alto ha il bottone
+              // per sbloccarlo.
+              <Button variant="gold" disabled title={locked.reason}>
+                + Aggiungi
               </Button>
             ) : null}
           </div>

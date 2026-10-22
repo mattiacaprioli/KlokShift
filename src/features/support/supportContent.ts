@@ -60,6 +60,11 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
     audience: ["waiter"],
   },
   {
+    q: "Perché non posso aggiungere persone o creare turni?",
+    a: "Finché la prova di 30 giorni non è avviata, l'azienda è solo preparata: puoi sistemare la sede, ma persone, ruoli e turni restano chiusi. La prova la avvia il titolare con «Avvia la prova» (in app dalla Home, sulla dashboard dalla checklist o dal banner in alto): è gratuita e non chiede una carta.",
+    audience: ["manager", "web"],
+  },
+  {
     q: "Come aggiungo una persona all'organico?",
     a: "Da Staff › «Aggiungi allo staff» (sulla dashboard: Staff › «+ Aggiungi»). Scrivi nome ed email: se ha già KlokShift riceve un invito nell'app, altrimenti un'email per registrarsi con quell'indirizzo, e la sua scheda si collega da sola.",
     audience: ["manager", "web"],

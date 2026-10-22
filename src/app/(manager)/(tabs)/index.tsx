@@ -47,6 +47,7 @@ import { useOwnerShifts, useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { useSelfStaff } from "@/features/staff/self";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
+import { FirstStepsCard } from "@/features/onboarding/FirstStepsCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
@@ -99,6 +100,7 @@ export default function ManagerHome() {
 
   const venueQuery = useOwnerVenues();
   const { venues, isMultiVenue, can, canAny, workspaceId } = venueQuery;
+  const canCreateShift = venueQuery.canUseOperations && canAny("can_manage_shifts");
   // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
   // le timbrature arrivano già col realtime.
   const now = useNow();
@@ -344,6 +346,16 @@ export default function ManagerHome() {
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
         ) : (
           <>
+            {/* Chi non ha ancora una sede vede questo invito in cima, sopra i
+                KPI a zero, non un muro al posto della home: la prima schermata
+                dell'app deve somigliare a quella che userà tutti i giorni. */}
+            {venues.length === 0 ? (
+              <NoVenuesState className="mt-0" subtitle="Tutte le sedi sono chiuse: aprine una per tornare a organizzare i turni." />
+            ) : null}
+
+            {/* Cosa manca perché l'azienda giri: solo il titolare, finché serve. */}
+            <FirstStepsCard />
+
             {/* A colpo d'occhio. Il periodo sta **sopra i numeri che qualifica**:
                 senza, "31 turni" non dice su quanto tempo. */}
             <View className="gap-2.5">
@@ -392,13 +404,6 @@ export default function ManagerHome() {
                 router.push(`/(manager)/staff/${personId}`)
               }
             />
-
-            {/* Chi non ha ancora una sede vede i KPI a zero e questo invito, non
-                un muro al posto della home: la prima schermata dell'app deve
-                somigliare a quella che userà tutti i giorni. */}
-            {venues.length === 0 ? (
-              <NoVenuesState subtitle="Aggiungi le informazioni della tua sede per iniziare a organizzare i turni." />
-            ) : null}
 
             {/* Il proprio turno prima di quelli degli altri: chi organizza i
                 turni e ci lavora apre l'app anche per sapere quando attacca. */}
@@ -555,7 +560,13 @@ export default function ManagerHome() {
               ) : upcoming.length === 0 ? (
                 <EmptyState
                   title="Nessun turno in programma"
-                  subtitle="Crea un turno dalla scheda «Turni»."
+                  subtitle={
+                    canCreateShift
+                      ? "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
+                      : "Qui compaiono i prossimi turni delle tue sedi."
+                  }
+                  actionLabel={canCreateShift ? "Crea un turno" : undefined}
+                  onAction={() => router.push("/(manager)/shift/new")}
                 />
               ) : (
                 <View className="gap-3">

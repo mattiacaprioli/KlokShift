@@ -19,6 +19,7 @@ import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useOwnerPeople } from "@/features/staff/hooks";
 import { useSelfStaff } from "@/features/staff/self";
+import { OperationsLockedCard } from "@/features/workspace/OperationsLockedCard";
 import {
   personEmploymentType,
   personRoleNames,
@@ -174,6 +175,8 @@ export default function ManagerStaffScreen() {
                 label="Aggiungi allo staff"
                 onPress={() => router.push("/(manager)/staff/new")}
               />
+            ) : canStaff ? (
+              <OperationsLockedCard title="Aggiungi allo staff" />
             ) : null}
 
             {/* Anche chi organizza i turni li lavora. Finché la scheda non c'è le
@@ -249,8 +252,7 @@ export default function ManagerStaffScreen() {
             </Card>
             ) : null}
 
-            {/* Non è una funzione Pro: senza ruoli non si aggiunge nemmeno una
-                persona all'organico. */}
+            {/* Le mansioni da chiedere sui turni e da dare alle persone. */}
             {canVenue ? (
             <Card
               className="rounded-3xl border-border-2 p-4"
@@ -283,7 +285,7 @@ export default function ManagerStaffScreen() {
             ) : people.length === 0 ? (
               <EmptyState
                 title="Nessuno nello staff"
-                subtitle="Aggiungi il tuo personale per assegnarlo ai turni."
+                subtitle="Aggiungi le persone con la loro email: chi si registra con quella trova già la sua scheda e i suoi turni."
               />
             ) : (
               <View className="gap-3">

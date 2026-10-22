@@ -72,14 +72,18 @@ accedere manualmente nella dashboard locale.
    Atteso: registrazione su `localhost:5173/#/registrati`, senza checkout.
 2. Registrare un nuovo alias email proprio, confermare l’email e accedere.
 3. Aprire l’azienda dal modulo iniziale con nome **TEST M04 — prova**.
-   Atteso: dopo la creazione della prima sede si apre Piano e accesso;
-   stato Da configurare, nessun piano attivo, nessuna scadenza di prova.
-4. Cliccare **Avvia la prova di 30 giorni**, poi **Annulla**. Atteso: nessuna
-   attivazione. Ricaricare conferma ancora Da configurare.
-5. Ripetere e scegliere **Conferma e avvia la prova**. Atteso: Operativa,
-   origine Prova gratuita, piano Team, una sede consentita; inizio e fine
-   determinati dal server, fine prova a 30 giorni. Sono visibili anche il
-   termine rettifiche (+7 giorni) e il termine archivio (+12 mesi).
+   Atteso (dal 22/10/2026): dopo la creazione si apre la pagina a tutta
+   larghezza **La tua prova di 30 giorni** (`#/prova`), con i punti della prova
+   e nessun prezzo; nessuna attivazione automatica.
+4. Cliccare **Più tardi**. Atteso: Home con il banner «avvia la prova» e la
+   checklist **Primi passi** ferma al passo 1, gli altri bloccati. Planning e
+   Staff mostrano il banner; «+ Turno» porta a `#/prova`, «+ Aggiungi» è
+   spento con la spiegazione. Piano e accesso: stato Da configurare.
+5. Dalla checklist (o dal banner) tornare a `#/prova` e cliccare **Avvia la
+   prova**. Atteso: Home, Operativa, origine Prova gratuita, piano Team, una
+   sede consentita; inizio e fine determinati dal server, fine prova a 30
+   giorni. In Piano sono visibili anche il termine rettifiche (+7 giorni) e il
+   termine archivio (+12 mesi).
 6. Ricaricare e usare Aggiorna stato più volte: atteso stesse date, nessuna
    nuova prova. La prova non è rinnovabile tramite un pulsante di riavvio.
 7. Aggiungere una scheda all’organico e creare un turno. Atteso: operazioni

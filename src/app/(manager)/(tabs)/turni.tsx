@@ -22,6 +22,7 @@ import type { ShiftWithCount } from "@/features/shifts/types";
 import { cn } from "@/lib/cn";
 import { addDaysToDate, startOfWeek, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
+import { OperationsLockedCard } from "@/features/workspace/OperationsLockedCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
@@ -683,7 +684,7 @@ export default function ManagerShiftsScreen() {
                       : "Tocca «Turni di tutti» per tornare all'agenda completa."
                   }
                 />
-              ) : (
+              ) : canCreateShift ? (
                 <EmptyState
                   title={
                     away
@@ -692,9 +693,23 @@ export default function ManagerShiftsScreen() {
                   }
                   subtitle={
                     away
-                      ? "Tocca «Oggi» per tornare ai prossimi, oppure «+» per crearne uno in questo giorno."
-                      : "Tocca «+» per crearne uno."
+                      ? "Tocca «Oggi» per tornare ai prossimi, oppure crea un turno in questo giorno."
+                      : "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
                   }
+                  actionLabel="Crea un turno"
+                  onAction={() =>
+                    router.push(`/(manager)/shift/new?date=${visibleDay}`)
+                  }
+                />
+              ) : venueQuery.canAny("can_manage_shifts") ? (
+                // Il permesso c'è, l'azienda non è operativa: si dice perché.
+                <View className="pt-6">
+                  <OperationsLockedCard title="Crea il primo turno" />
+                </View>
+              ) : (
+                <EmptyState
+                  title="Nessun turno in programma"
+                  subtitle="Qui compaiono i turni delle sedi su cui lavori."
                 />
               )}
             </View>

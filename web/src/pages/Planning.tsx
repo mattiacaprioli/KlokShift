@@ -50,9 +50,11 @@ import {
   formatShiftRange,
   formatTime,
   isOvernightShift,
+  todayString,
 } from "@/lib/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { operationsGate } from "@/features/workspace/access";
 import {
   addDays,
   addMonths,
@@ -93,6 +95,7 @@ import {
 } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
+import { RunOnMount } from "../ui/RunOnMount";
 
 const VIEWS = ["settimana", "mese", "persone"] as const;
 type View = (typeof VIEWS)[number];
@@ -131,7 +134,9 @@ function storedVenue(): string | null {
  * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
-  const { venues, venueIds, isMultiVenue, can, canAny, canUseOperations } = useOwnerVenues();
+  const { venues, venueIds, isMultiVenue, can, canAny, canUseOperations, access, accessPending, isOwner } =
+    useOwnerVenues();
+  const navigate = useNavigate();
   // Chi gestisce può essere in turno: il trigger non avvisa chi sta spostando,
   // e la finestra di conferma non deve promettere un avviso in più.
   const { session } = useAuth();
@@ -178,6 +183,8 @@ export function PlanningPage() {
 
   const [params, setParams] = useSearchParams();
   const deepLinkId = params.get("shift");
+  // `?nuovo=oggi`: arriva dalla checklist «Primi passi» e apre il form.
+  const createToday = params.get("nuovo") === "oggi";
 
   useEffect(() => {
     try {
@@ -299,6 +306,23 @@ export function PlanningPage() {
   const absences = impactAbsencesQuery.data ?? [];
 
   const toast = useToast();
+
+  /**
+   * Ogni «+ Turno» passa da qui. Con l'azienda non operativa il server
+   * rifiuterebbe il salvataggio dopo che il form è stato compilato: meglio
+   * dirlo al tocco, e al titolare in preparazione portare dritto alla prova.
+   */
+  const openCreate = (date: string, personIds?: string[]) => {
+    if (canUseOperations) {
+      setPanel({ date, personIds });
+      return;
+    }
+    const gate = operationsGate(access, { isOwner });
+    if (gate.allowed) setPanel({ date, personIds });
+    else if (gate.canStartTrial) navigate("/prova");
+    else toast.show(gate.reason, "error");
+  };
+
   const move = useMoveShiftToDate();
   const reassign = useReassignShiftAssignment();
   const movePerson = useMoveAssignment();
@@ -596,7 +620,7 @@ export function PlanningPage() {
               byDay={byDay}
               clockKindsByShift={clockKindsByShift}
               venueOf={venueOf}
-              onCreate={(day) => setPanel({ date: day })}
+              onCreate={(day) => openCreate(day)}
               onOpen={(day, shift) => setPanel({ date: day, shift })}
               onMove={requestMove}
             />
@@ -608,9 +632,7 @@ export function PlanningPage() {
               venueIds={scopedIds}
               absences={absences}
               onOpen={(shift) => setPanel({ date: shift.date, shift })}
-              onCreate={(day, personId) =>
-                setPanel({ date: day, personIds: [personId] })
-              }
+              onCreate={(day, personId) => openCreate(day, [personId])}
               onReassign={requestReassign}
               onMovePerson={requestMovePerson}
               legendTarget={legendEl}
@@ -622,7 +644,7 @@ export function PlanningPage() {
               byDay={byDay}
               clockKindsByShift={clockKindsByShift}
               venueOf={venueOf}
-              onCreate={(day) => setPanel({ date: day })}
+              onCreate={(day) => openCreate(day)}
               onOpen={(day, shift) => setPanel({ date: day, shift })}
               onOpenDay={(day) => {
                 setMonday(startOfWeek(new Date(`${day}T00:00:00`)));
@@ -633,6 +655,17 @@ export function PlanningPage() {
           )}
         </ShiftDragProvider>
       )}
+
+      {/* Aspetta lo stato dell'azienda: deciderlo prima vorrebbe dire
+          scartare il collegamento senza aprire niente. */}
+      {createToday && !accessPending ? (
+        <RunOnMount
+          run={() => {
+            if (canCreateShift) setPanel({ date: todayString() });
+            setParams({}, { replace: true });
+          }}
+        />
+      ) : null}
 
       {deepLinkId ? (
         <DeepLinkedShift
@@ -1282,3 +1315,4 @@ function DeepLinkedShift({
   }, [data]);
   return null;
 }
+

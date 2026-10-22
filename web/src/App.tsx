@@ -31,6 +31,7 @@ import { TeamPage } from "./pages/Team";
 import { ImpostazioniPage } from "./pages/Impostazioni";
 import { AiutoPage } from "./pages/Aiuto";
 import { PianoPage } from "./pages/Piano";
+import { ProvaPage } from "./pages/Prova";
 const AdminApp = lazy(() => import("./admin/AdminApp").then((module) => ({ default: module.AdminApp })));
 
 export function App() {
@@ -162,6 +163,8 @@ function Dashboard({ userId }: { userId: string }) {
           come NotificationsListener sull'app. */}
       <NotificationsWatcher userId={userId} />
       <Routes>
+        {/* A tutta pagina come la creazione dell'azienda che la precede. */}
+        <Route path="/prova" element={<ProvaPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/planning" element={<PlanningPage />} />

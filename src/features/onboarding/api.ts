@@ -1,42 +1,27 @@
 import { supabase } from "@/lib/supabase";
-import {
-  PRIMARY_ROLE_EXAMPLES,
-  writeWaiterProfile,
-} from "@/features/waiterProfile/api";
-
-/** Ruolo principale — testo libero, stessi esempi del profilo cameriere. */
-export { PRIMARY_ROLE_EXAMPLES };
 
 export type OnboardingInput = {
   full_name: string;
-  city: string | null;
-  primary_role: string;
 };
 
 /**
- * Chiude l'onboarding: scrive `waiter_profiles` (scrittura parziale — le lingue,
- * l'unica altra colonna, restano intatte) e poi i campi condivisi di `profiles`,
- * alzando il flag `onboarding_complete`.
+ * Chiude l'onboarding: il nome e il flag `onboarding_complete`, in una sola
+ * scrittura su `profiles`.
  *
- * ⚠️ **L'ordine conta, ed è questo.** Le due scritture non sono in transazione:
- * alzando il flag per primo, un errore sulla seconda lasciava un account già
- * «onboardato» sul database ma fermo sul wizard nell'app — e chi riprovava
- * ripeteva l'errore senza avanzare mai. Il flag è l'ultima cosa che si scrive,
- * così vale quello che dice: il profilo c'è davvero.
+ * Fino al 22/10/2026 scriveva prima `waiter_profiles` (ruolo principale) e il
+ * flag per ultimo, perché le due scritture non erano in transazione. Ora è una
+ * sola: `waiter_profiles` resta com'è e si compila, se serve, dal profilo.
  */
 export async function completeOnboarding(
   userId: string,
   input: OnboardingInput
 ): Promise<void> {
-  await writeWaiterProfile(userId, { primary_role: input.primary_role });
-
   // `.select()`: un UPDATE scartato dalla RLS tornerebbe 204 senza errore, e
   // proseguire lascerebbe l'utente sul wizard a ogni avvio.
   const { data, error } = await supabase
     .from("profiles")
     .update({
       full_name: input.full_name,
-      city: input.city,
       onboarding_complete: true,
     })
     .eq("id", userId)

@@ -44,6 +44,7 @@ import {
   StickyHeader,
 } from "../ui/primitives";
 import { FullExportCard } from "../export/FullExportCard";
+import { NoVenues } from "../venues/NoVenues";
 
 /**
  * Le ore di **tutta l'azienda** in un mese o fra due date, una riga per
@@ -156,6 +157,16 @@ export function OrePage() {
     w.document.close();
     w.focus();
     w.print();
+  }
+
+  // Le sedi chiuse hanno ancora le loro ore: il vuoto è solo senza nessuna sede.
+  if (venues.length === 0 && historyVenues.length === 0) {
+    return (
+      <>
+        <PageHeader title="Ore" />
+        <NoVenues detail="Le ore arrivano dai turni: apri una sede per iniziare a programmarli." />
+      </>
+    );
   }
 
   return (

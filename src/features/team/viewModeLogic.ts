@@ -1,5 +1,15 @@
 import type { ViewMode } from "./viewModeStorage";
 
+/**
+ * Cosa ha detto di voler fare alla registrazione. Un'indicazione, non un ruolo.
+ * Senza import nativi: la legge anche la dashboard web.
+ */
+export function signupIntent(
+  metadata: Record<string, unknown> | undefined
+): ViewMode {
+  return metadata?.intent === "manager" ? "manager" : "waiter";
+}
+
 /** Calcolo puro della vista dopo che appartenenze e profilo sono noti. */
 export function resolvedViewMode({
   canManage,

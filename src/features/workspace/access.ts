@@ -220,11 +220,23 @@ export function canUseWorkspaceOperations(access: WorkspaceAccess | undefined): 
   return access?.can_operate === true || access?.state === "migration_pending";
 }
 
-export function workspaceAccessMessage(access: WorkspaceAccess | undefined): string {
+/**
+ * In `setup` il messaggio dipende da chi legge: il titolare avvia la prova (se
+ * la sede c'è già, è l'unica cosa che manca), gli altri possono solo aspettarla.
+ * Senza `isOwner` si parla al titolare, come fanno Piano e la card di Profilo.
+ */
+export function workspaceAccessMessage(
+  access: WorkspaceAccess | undefined,
+  { isOwner = true }: { isOwner?: boolean } = {}
+): string {
   if (!access) return "Stato dell'azienda non disponibile. Riprova l'aggiornamento.";
   switch (access.state) {
     case "migration_pending": return "La configurazione dell'azienda è in verifica. Puoi continuare a lavorare.";
-    case "setup": return "Prepara la prima sede e avvia la prova di 30 giorni senza carta.";
+    case "setup": return !isOwner
+      ? "Il lavoro non è ancora attivo: il titolare deve avviare la prova di 30 giorni."
+      : (access.usage?.venues ?? 0) > 0
+        ? "L'azienda è pronta: avvia la prova di 30 giorni, senza carta, per aggiungere persone e creare turni."
+        : "Apri una sede, poi avvia la prova di 30 giorni senza carta.";
     case "archive": return access.can_complete_attendance
       ? "Puoi consultare ed esportare lo storico e completare le presenze pregresse entro il termine indicato."
       : "L'accesso operativo è terminato. Puoi consultare ed esportare lo storico.";
@@ -238,5 +250,44 @@ export function workspaceAccessMessage(access: WorkspaceAccess | undefined): str
           : access.source === "payment_grace"
             ? "Il rinnovo dell'abbonamento non è andato a buon fine. L'operatività continua per pochi giorni: il titolare può sistemarlo."
             : "Accesso operativo attivo.";
+  }
+}
+
+export type OperationsGate =
+  | { allowed: true }
+  | { allowed: false; reason: string; canStartTrial: boolean };
+
+/**
+ * Perché un pulsante operativo (persone, ruoli, turni) non si può usare, detto
+ * a chi lo guarda. Solo UX: il rifiuto vero resta quello del server
+ * (`assert_workspace_operational`). `canStartTrial` è vero solo per il titolare
+ * di un'azienda in `setup` con almeno una sede, cioè quando la prova parte
+ * davvero con un tocco.
+ */
+export function operationsGate(
+  access: WorkspaceAccess | undefined,
+  { isOwner }: { isOwner: boolean }
+): OperationsGate {
+  if (canUseWorkspaceOperations(access)) return { allowed: true };
+  if (!access) {
+    return { allowed: false, canStartTrial: false, reason: "Stato dell'azienda non disponibile. Riprova tra poco." };
+  }
+  switch (access.state) {
+    case "setup": {
+      const canStartTrial = isOwner && (access.usage?.venues ?? 0) > 0;
+      return {
+        allowed: false,
+        canStartTrial,
+        reason: isOwner
+          ? "Per aggiungere persone, ruoli e turni avvia la prova di 30 giorni: è gratuita e non chiede una carta."
+          : "Il titolare deve ancora avviare la prova dell'azienda: fino ad allora persone e turni restano chiusi.",
+      };
+    }
+    case "archive":
+      return { allowed: false, canStartTrial: false, reason: "L'operatività dell'azienda è terminata: puoi consultare ed esportare lo storico." };
+    case "expired":
+      return { allowed: false, canStartTrial: false, reason: "Il periodo di consultazione dell'archivio è terminato." };
+    default:
+      return { allowed: false, canStartTrial: false, reason: "Al momento l'azienda non è operativa." };
   }
 }

@@ -16,6 +16,7 @@ import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
 import { AbsenceRow, AbsenceRows } from "../absences/AbsencesPanel";
+import { NoVenues } from "../venues/NoVenues";
 import {
   Button,
   PageHeader,
@@ -68,6 +69,15 @@ export function AssenzePage() {
           title="Non gestisci l'organico"
           detail="Le assenze le vede chi ha il permesso sull'organico. Nel planning trovi comunque chi non è disponibile."
         />
+      </>
+    );
+  }
+
+  if (venues.length === 0) {
+    return (
+      <>
+        <PageHeader title="Assenze" />
+        <NoVenues detail="Le assenze sono del tuo organico: apri una sede per iniziare a crearlo." />
       </>
     );
   }

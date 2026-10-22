@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { SupportLine } from "./SupportLine";
 
 /**
  * Cornice delle schermate fuori sessione (accesso, registrazione, conferma
@@ -19,6 +20,7 @@ export function AuthShell({
           {subtitle ? <p className="mt-2 text-sm text-t3">{subtitle}</p> : null}
         </div>
         {children}
+        <SupportLine className="mt-8" />
       </div>
     </main>
   );

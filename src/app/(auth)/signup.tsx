@@ -52,7 +52,7 @@ export default function SignupRole() {
         keyboardShouldPersistTaps="handled"
       >
         <Text className="font-sans text-[13.5px] text-t3">
-          Scegli come vuoi iniziare. Potrai cambiare in seguito dalle impostazioni.
+          Scegli come vuoi iniziare: con lo stesso account potrai anche lavorare per una sede e gestirne una tua.
         </Text>
 
         <View className="mt-7 gap-3.5">

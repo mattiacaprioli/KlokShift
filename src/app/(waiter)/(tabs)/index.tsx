@@ -33,6 +33,8 @@ import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
 import { isShiftOver } from "@/lib/format";
+import { JoinWorkspaceCard } from "@/features/onboarding/JoinWorkspaceCard";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 
 /** Quanti turni seguono il primo, prima di mandare all'agenda. */
 const PREVIEW_COUNT = 3;
@@ -47,10 +49,22 @@ export default function WaiterHomeScreen() {
   const assignedQuery = useMyAssignedUpcoming(waiterId);
   const unplannedQuery = useMyUnplannedClock();
   const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
+  const context = useOwnerVenues();
+  // Nessun organico e nessun invito da accettare: al posto del «nessun turno»
+  // la Home dice come farsi aggiungere. Solo a contesto caricato, senza errori.
+  const notInAnyWorkspace =
+    !context.isPending &&
+    !context.isError &&
+    !context.memberships.some((m) => m.status === "active") &&
+    context.pendingInvites.length === 0;
   const unread = useUnreadCount(waiterId).data ?? 0;
   const respond = useRespondToAssignment();
   const pull = usePullToRefresh(() =>
-    Promise.all([assignedQuery.refetch(), unplannedQuery.refetch()])
+    Promise.all([
+      assignedQuery.refetch(),
+      unplannedQuery.refetch(),
+      context.refetch(),
+    ])
   );
 
   const [declining, setDeclining] = useState<string | null>(null);
@@ -161,8 +175,8 @@ export default function WaiterHomeScreen() {
             icon="users"
             title={
               pendingInvites.length === 1
-                ? "1 richiesta di collaborazione"
-                : `${pendingInvites.length} richieste di collaborazione`
+                ? "1 invito da un'azienda"
+                : `${pendingInvites.length} inviti dalle aziende`
             }
             subtitle="Tocca per rispondere"
             onPress={() => router.push("/(waiter)/inviti")}
@@ -227,6 +241,8 @@ export default function WaiterHomeScreen() {
             <NextShiftSkeleton />
           ) : assignedQuery.isError ? (
             <QueryError onRetry={() => assignedQuery.refetch()} />
+          ) : next == null && notInAnyWorkspace ? (
+            <JoinWorkspaceCard />
           ) : next == null ? (
             <EmptyState
               title={

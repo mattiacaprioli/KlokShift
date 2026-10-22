@@ -126,13 +126,14 @@ export function useOwnerPastShifts(
  * Senza filtri è il KPI "turni svolti" della home.
  */
 export function useOwnerPastShiftsCount(
-  filters: PastShiftsFilters = NO_PAST_FILTERS
+  filters: PastShiftsFilters = NO_PAST_FILTERS,
+  { enabled = true }: { enabled?: boolean } = {}
 ) {
   const { historyVenueIds: venueIds, historyVenuesKey: venuesKey } = useOwnerVenues();
   return useQuery({
     queryKey: qk.shifts.pastCount(venuesKey, pastFiltersKey(filters)),
     queryFn: () => getOwnerPastShiftsCount(venueIds, filters),
-    enabled: venueIds.length > 0,
+    enabled: enabled && venueIds.length > 0,
     staleTime: BADGE_STALE_TIME,
   });
 }

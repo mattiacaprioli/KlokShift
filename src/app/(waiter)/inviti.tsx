@@ -97,7 +97,7 @@ export default function WaiterInvitesScreen() {
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
       <View className="px-5 pb-2">
-        <ScreenHeader eyebrow="Collaborazioni" title="Richieste" />
+        <ScreenHeader eyebrow="Aziende" title="Inviti" />
       </View>
       <ScrollView
         contentContainerStyle={{

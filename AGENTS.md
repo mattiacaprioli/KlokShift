@@ -127,6 +127,23 @@ persone. Lo legge e lo scrive chi ha «Turni» sulla sede, solo via
 `save_shift_template` / `delete_shift_template`. Eliminarlo non tocca i turni
 creati da lui. Dettagli in [plans/SHIFT-TEMPLATES.md](plans/SHIFT-TEMPLATES.md).
 
+## Primo accesso (2026-10-22)
+
+Chi entra deve capire in pochi minuti cosa fare, in app e sul web.
+
+- **Titolare**: prima sede → schermata della prova (`(manager)/prova`, web
+  `#/prova`, testi in `workspace/trialCopy.ts`) → checklist **Primi passi**
+  in Home (prova, ruoli, persone, primo turno, team invitato). I passi si
+  spuntano dai dati (`onboarding/firstSteps.ts`, condiviso app+web), mai a mano;
+  «chiudi» è locale. La prova resta un tocco esplicito (MONETIZATION §3).
+- **Azienda in `setup`**: i pulsanti operativi non spariscono in silenzio, dicono
+  perché (`operationsGate` in `workspace/access.ts`) e portano alla prova.
+- **Dipendente**: il wizard chiede solo nome e foto; senza organico la Home
+  mostra «fatti aggiungere con questa email» (`JoinWorkspaceCard`).
+- **Collaboratore**: benvenuto con permessi e sedi in Home sulla dashboard.
+- Il carosello ha tre serie (titolare, collaboratore, dipendente) in
+  `introContent.ts`: se cambia il percorso, cambia anche lui.
+
 ## Monetizzazione e dashboard personale (2026-10-05)
 
 Le regole approvate sono in [docs/MONETIZATION.md](docs/MONETIZATION.md);

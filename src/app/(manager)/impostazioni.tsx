@@ -8,6 +8,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
 import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
+import { useSwitchToWorkView } from "@/features/onboarding/useSwitchToWorkView";
 import { useAuth } from "@/lib/auth";
 import { StaffChatToggle } from "@/features/chat/StaffChatToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -21,7 +22,8 @@ export default function ManagerSettingsScreen() {
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
   const { isOwner, workspaceId } = useOwnerVenues();
-  const { canSwitch, setMode } = useViewMode();
+  const { canSwitch } = useViewMode();
+  const workView = useSwitchToWorkView();
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -87,7 +89,8 @@ export default function ManagerSettingsScreen() {
                 stanno di là. La riga esiste solo per lui. */}
             {canSwitch ? (
               <Pressable
-                onPress={() => setMode("waiter")}
+                onPress={() => void workView.switchToWork()}
+                disabled={workView.busy}
                 className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
               >
                 <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">

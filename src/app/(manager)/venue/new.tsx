@@ -14,7 +14,8 @@ import { canCreateVenue, venueNewMode } from "@/features/venues/gate";
  *
  * È l'**unico** punto dell'app che chiama `canCreateVenue` (vedi `gate.ts`).
  *
- * Non c'è più niente da "attivare" dopo il salvataggio: la sede appena aperta
+ * Dopo la **prima** sede si passa a `prova` (l'azienda nasce in `setup`).
+ * Per le successive non c'è niente da "attivare": la sede appena aperta
  * entra in `venues`, e da lì compare da sé nell'agenda, nel picker del form
  * turno e nell'elenco del Profilo. Chi ha aperto Milano trova Milano ovunque
  * senza doverci entrare.
@@ -93,9 +94,13 @@ export default function VenueNewScreen() {
       intro={
         venues.length > 0
           ? "Una sede in più: avrà un suo organico, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
-          : "Queste informazioni saranno visibili ai professionisti sui tuoi turni."
+          : "Serve solo il nome: lo vede il tuo organico sui turni. Il resto puoi completarlo dopo."
       }
-      onSaved={() => router.back()}
+      // La prima sede apre l'ultimo passo del setup: la prova. Senza, il
+      // titolare si troverebbe persone e turni chiusi senza sapere perché.
+      onSaved={() =>
+        firstWorkspace ? router.replace("/(manager)/prova") : router.back()
+      }
     />
   );
 }

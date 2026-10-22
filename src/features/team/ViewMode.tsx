@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { loadViewMode, saveViewMode, type ViewMode } from "./viewModeStorage";
-import { resolvedViewMode } from "./viewModeLogic";
+import { resolvedViewMode, signupIntent } from "./viewModeLogic";
 
 /**
  * Il cappello con cui si sta usando l'app: **gestione** (`manager`) o **lavoro**
@@ -56,12 +56,8 @@ export function useViewMode(): ViewModeState {
   return ctx;
 }
 
-/** Cosa ha detto di voler fare alla registrazione. Un'indicazione, non un ruolo. */
-export function signupIntent(
-  metadata: Record<string, unknown> | undefined
-): ViewMode {
-  return metadata?.intent === "manager" ? "manager" : "waiter";
-}
+// Sta nella logica pura perché la usa anche la dashboard (`NotForWaiters`).
+export { signupIntent };
 
 export function ViewModeProvider({ children }: PropsWithChildren) {
   const { session, profile } = useAuth();

@@ -180,7 +180,7 @@ export function VenueFormView({
         >
           <Text className="text-base text-t2">
             {intro ??
-              "Queste informazioni saranno visibili ai professionisti sui tuoi turni."}
+              "Serve solo il nome: lo vede il tuo organico sui turni. Il resto puoi completarlo dopo."}
           </Text>
 
           {/* Il logo si può caricare solo su una sede già creata: prima non c'è

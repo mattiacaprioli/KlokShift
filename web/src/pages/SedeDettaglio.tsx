@@ -42,7 +42,7 @@ export function SedeDettaglioPage() {
         <PageHeader title="Sede non trovata" actions={back} />
         <Placeholder
           title="Questa sede non esiste più"
-          detail="Potrebbe essere stato chiuso da un altro dispositivo."
+          detail="Potrebbe essere stata chiusa da un altro dispositivo."
         />
       </>
     );

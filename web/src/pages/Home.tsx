@@ -34,9 +34,10 @@ import {
   toDateString,
 } from "@/lib/format";
 import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { FirstStepsCard } from "../onboarding/FirstStepsCard";
+import { CollaboratorWelcome } from "../onboarding/CollaboratorWelcome";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
-import { AccessBanner } from "../billing/AccessBanner";
 import { LiveClockLine } from "../shifts/LiveClockLine";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { UnplannedClockDialog } from "../shifts/UnplannedClockDialog";
@@ -77,7 +78,8 @@ type Worker = {
  * schermi.
  */
 export function HomePage() {
-  const { venues, isMultiVenue, can, canAny, workspaceId } = useOwnerVenues();
+  const { venues, isMultiVenue, can, canAny, workspaceId, canUseOperations } = useOwnerVenues();
+  const canCreateShift = canUseOperations && canAny("can_manage_shifts");
   const self = useSelfStaff();
   // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
   // le timbrature arrivano già col realtime.
@@ -202,7 +204,8 @@ export function HomePage() {
   return (
     <>
       <PageHeader title={isMultiVenue ? "Home" : venues[0].name} />
-      <AccessBanner />
+      <FirstStepsCard />
+      <CollaboratorWelcome />
 
       {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non
           dice su quanto tempo, e la prima domanda di chi guarda è "in base a
@@ -354,7 +357,17 @@ export function HomePage() {
           ) : nextShifts.length === 0 ? (
             <Placeholder
               title="Nessun turno in programma"
-              detail="Crea il primo turno dal Planning."
+              detail={canCreateShift
+                ? "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
+                : "Qui compaiono i prossimi turni delle tue sedi."}
+              action={canCreateShift ? (
+                <Link
+                  to="/planning?nuovo=oggi"
+                  className="focus-gold rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
+                >
+                  Crea un turno
+                </Link>
+              ) : undefined}
             />
           ) : (
             <div className="flex flex-col gap-2">

@@ -38,12 +38,12 @@ export function useVenueRoles(venueId: string | undefined) {
  * I ruoli di tutta l'azienda. Come gli hook dei turni, non prende una sede:
  * serve a filtrare liste che sono già di tutte le sedi.
  */
-export function useOwnerVenueRoles() {
+export function useOwnerVenueRoles({ enabled = true }: { enabled?: boolean } = {}) {
   const { venueIds, venuesKey } = useOwnerVenues();
   return useQuery({
     queryKey: qk.roles.byOwner(venuesKey),
     queryFn: () => getOwnerVenueRoles(venueIds),
-    enabled: venueIds.length > 0,
+    enabled: enabled && venueIds.length > 0,
   });
 }
 

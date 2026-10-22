@@ -3,8 +3,10 @@ import {
   parseWorkspaceAccess,
   workspaceAccessRefetchDelay,
   canUseWorkspaceOperations,
+  operationsGate,
   workspaceAccessMessage,
 } from "@/features/workspace/access";
+import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { canCreateVenue, venueNewMode } from "@/features/venues/gate";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
@@ -221,5 +223,60 @@ describe("nuova sede: quale schermata", () => {
   it("il titolare aspetta lo stato commerciale, poi decide canCreateVenue", () => {
     expect(venueNewMode({ ...base, accessPending: true })).toBe("loading");
     expect(venueNewMode(base)).toBe("add");
+  });
+});
+
+describe("azienda in preparazione: cosa si dice e a chi", () => {
+  function setup(venues: number, usage: boolean = true) {
+    return parseWorkspaceAccess({ ...trial(), state: "setup", source: null, plan: null,
+      operational_from: null, operational_until: null, archive_until: null, attendance_until: null,
+      can_operate: false, can_complete_attendance: false, limits: { people: null, venues: null },
+      usage: usage ? { people: 0, venues } : null });
+  }
+
+  it("con la sede già aperta chiede solo di avviare la prova", () => {
+    expect(workspaceAccessMessage(setup(1))).toMatch(/avvia la prova/);
+    expect(workspaceAccessMessage(setup(1))).not.toMatch(/prima sede/);
+    expect(workspaceAccessMessage(setup(0))).toMatch(/Apri una sede/);
+  });
+
+  it("a chi non è titolare non chiede di fare quello che non può", () => {
+    expect(workspaceAccessMessage(setup(1, false), { isOwner: false })).toMatch(/il titolare deve/);
+  });
+
+  it("il titolare con la sede aperta può avviare la prova da un pulsante bloccato", () => {
+    const gate = operationsGate(setup(1), { isOwner: true });
+    expect(gate).toMatchObject({ allowed: false, canStartTrial: true });
+  });
+
+  it("senza sede, o per un collaboratore, niente scorciatoia alla prova", () => {
+    expect(operationsGate(setup(0), { isOwner: true })).toMatchObject({ allowed: false, canStartTrial: false });
+    expect(operationsGate(setup(1, false), { isOwner: false })).toMatchObject({ allowed: false, canStartTrial: false });
+  });
+
+  it("operativa o in migrazione lascia passare; in archivio spiega senza prova", () => {
+    expect(operationsGate(parseWorkspaceAccess(trial()), { isOwner: true }).allowed).toBe(true);
+    const pending = parseWorkspaceAccess({ ...trial(), state: "migration_pending", source: null, plan: null,
+      operational_from: null, operational_until: null, archive_until: null, attendance_until: null,
+      can_operate: false, can_complete_attendance: false, limits: { people: null, venues: null } });
+    expect(operationsGate(pending, { isOwner: true }).allowed).toBe(true);
+    const archive = parseWorkspaceAccess({ ...trial(), state: "archive", can_operate: false });
+    expect(operationsGate(archive, { isOwner: true })).toMatchObject({ allowed: false, canStartTrial: false });
+    expect(operationsGate(undefined, { isOwner: true }).allowed).toBe(false);
+  });
+
+  it("i testi della prova e dei blocchi non nominano prezzi né acquisti (app nativa)", () => {
+    const texts = [
+      ...Object.values(TRIAL_COPY).flat(),
+      ...[setup(1), setup(0)].flatMap((a) => [
+        workspaceAccessMessage(a),
+        workspaceAccessMessage(a, { isOwner: false }),
+        ...[true, false].map((isOwner) => {
+          const gate = operationsGate(a, { isOwner });
+          return gate.allowed ? "" : gate.reason;
+        }),
+      ]),
+    ];
+    for (const text of texts) expect(text).not.toMatch(/€|acquist|compra|paga|abbonament/i);
   });
 });

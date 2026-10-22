@@ -19,8 +19,8 @@ import { useOwnerVenues } from "./OwnerVenues";
  * schermata che ha davvero bisogno di una sede lo mostra al posto del proprio
  * contenuto.
  *
- * ⚠️ La home **non** lo usa: saluta, mostra i KPI a zero e invita a creare il
- * prima sede. Chi apre l'app la prima volta non deve trovare un muro.
+ * Nella home sta in cima, sopra i KPI a zero, e non al posto della pagina: chi
+ * apre l'app la prima volta non deve trovare un muro.
  *
  * Chi si è registrato per gestire una sede e non ha ancora un'azienda passa dallo
  * stesso pulsante: `venue/new` apre azienda e sede in un colpo. Se qualcuno lo ha
@@ -50,7 +50,7 @@ export function NoVenuesState({
           title="Configura la tua sede"
           subtitle={
             !workspaceId
-              ? "Apri la tua azienda con la prima sede: ci vuole un minuto."
+              ? "Apri la tua azienda con la prima sede: ci vuole un minuto. Poi avvii la prova di 30 giorni e aggiungi il team."
               : canAdd
                 ? subtitle
                 : "Solo il titolare può aggiungere una sede."

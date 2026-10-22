@@ -150,12 +150,12 @@ export const it: Content = {
     title: "Si parte in un pomeriggio.",
     steps: [
       {
-        title: "Crea la sede",
-        body: "Account e sede in pochi minuti.",
+        title: "Crea la sede e avvia la prova",
+        body: "Account, sede e 30 giorni senza carta, in pochi minuti.",
       },
       {
         title: "Aggiungi il team",
-        body: "Li inviti via email.",
+        body: "Con l'email di ognuno: chi si registra con quella trova già la sua sede.",
       },
       {
         title: "Pianifica la settimana",
@@ -287,7 +287,7 @@ export const it: Content = {
     lead: "30 giorni gratis, senza carta. In beta.",
     cta: "Prova gratis 30 giorni",
     secondary: "Ho già un account",
-    note: "Lavori in un'azienda che usa KlokShift? Scarica l'app e fatti invitare.",
+    note: "Lavori in un'azienda che usa KlokShift? Chiedi alla sede di aggiungerti con la tua email, poi scarica l'app e registrati con quella.",
   },
 
   footer: {

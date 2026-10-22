@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { useStartWorkspaceTrial, useWorkspaceBilling } from "@/features/workspace/hooks";
+import { useWorkspaceBilling } from "@/features/workspace/hooks";
+import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { workspaceAccessMessage, type WorkspaceAccess } from "@/features/workspace/access";
 import { hasOpenSubscription, type WorkspaceBilling } from "@/features/workspace/billing";
 import { LEGAL_URLS } from "@/features/account/legal";
@@ -24,8 +25,6 @@ const stateLabels = {
 export function PianoPage() {
   const { workspaceId, workspaceName, isOwner, access, accessPending, accessError,
     historyVenueIds, canAny, refetch } = useOwnerVenues();
-  const trial = useStartWorkspaceTrial();
-  const [reviewingWorkspace, setReviewingWorkspace] = useState<string | null>(null);
 
   if (!isOwner) return <Placeholder title="Piano e accesso" detail="Questa sezione è riservata al titolare dell’azienda." />;
   if (!workspaceId) return <Placeholder title="Prepara la tua azienda" detail="Crea la prima sede. Potrai poi avviare la prova di 30 giorni senza carta." action={<Link className="focus-gold text-gold underline" to="/sede/nuovo">Crea la prima sede</Link>} />;
@@ -36,7 +35,7 @@ export function PianoPage() {
   return (
     <>
       <PageHeader title="Piano e accesso" subtitle={workspaceName} actions={
-        <Button disabled={accessPending || trial.isPending} onClick={() => void refetch()}>Aggiorna stato</Button>
+        <Button disabled={accessPending} onClick={() => void refetch()}>Aggiorna stato</Button>
       } />
       <div className="max-w-4xl space-y-5">
         <Card>
@@ -63,19 +62,15 @@ export function PianoPage() {
           {current?.limits.people === 30 && (current.usage?.people ?? 0) >= 28 ? <p className="mt-3 text-sm text-gold">Il limite di 30 persone è vicino o raggiunto. Le persone e i turni già presenti restano utilizzabili.</p> : null}
           {current?.state === "setup" ? (
             <div className="mt-5 space-y-3 border-t border-border-2 pt-5">
-              <p className="text-sm text-t2">La prova include tutte le funzioni del piano Team e una sede, per 30 giorni. Inizia quando confermi l’avvio e non richiede una carta.</p>
-              {canStart ? reviewingWorkspace === workspaceId ? (
-                <div className="space-y-3 rounded-xl bg-bg-2 p-4">
-                  <p className="text-sm text-t1">Vuoi iniziare ora? I 30 giorni decorrono dalla conferma. La prova è unica per questa azienda e non si rinnova a pagamento.</p>
-                  <div className="flex flex-wrap gap-3">
-                    <Button variant="gold" disabled={trial.isPending} onClick={() => trial.mutate(workspaceId, { onSuccess: () => setReviewingWorkspace(null) })}>{trial.isPending ? "Avvio…" : "Conferma e avvia la prova"}</Button>
-                    <Button disabled={trial.isPending} onClick={() => setReviewingWorkspace(null)}>Annulla</Button>
-                  </div>
-                </div>
-              ) : <Button variant="gold" onClick={() => setReviewingWorkspace(workspaceId)}>Avvia la prova di 30 giorni</Button> : <Link className="focus-gold text-sm text-gold underline" to="/sede/nuovo">Prepara la prima sede</Link>}
+              {/* Stessi testi della pagina /prova e dell'app: l'avvio passa da lì. */}
+              <ul className="space-y-1.5 text-sm text-t2">
+                {TRIAL_COPY.points.map((point) => <li key={point}>· {point}</li>)}
+              </ul>
+              {canStart
+                ? <Link className="focus-gold inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light" to="/prova">Avvia la prova di 30 giorni</Link>
+                : <Link className="focus-gold text-sm text-gold underline" to="/sede/nuovo">Prepara la prima sede</Link>}
             </div>
           ) : null}
-          {trial.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(trial.error)}</p> : null}
         </Card>
 
         {historyVenueIds.length > 0 ? (

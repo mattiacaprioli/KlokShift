@@ -12,6 +12,7 @@ import { QueryError } from "./ui/primitives";
 import { Avatar } from "./ui/Avatar";
 import { PersonAvatarProvider } from "./ui/PersonAvatar";
 import { SidebarIcon, type SidebarIconName } from "./ui/SidebarIcon";
+import { AccessBanner } from "./billing/AccessBanner";
 
 type NavItem = {
   to: string;
@@ -37,6 +38,9 @@ const NAV: NavItem[] = [
   { to: "/planning", label: "Planning", icon: "planning", group: "Operatività" },
   { to: "/ore", label: "Ore", icon: "hours", group: "Operatività", perm: "can_view_hours" },
   { to: "/staff", label: "Staff", icon: "staff", group: "Persone", perm: "can_manage_staff" },
+  // Stesso permesso della pagina (scrivere i ruoli è gestire la sede). Prima si
+  // trovava solo da Staff, ma è uno dei primi passi del setup.
+  { to: "/ruoli", label: "Ruoli", icon: "roles", group: "Persone", perm: "can_manage_venue" },
   // Stesso permesso di Staff: è quello che fa leggere e decidere le assenze.
   {
     to: "/assenze",
@@ -185,6 +189,7 @@ export function AppLayout() {
                 stampato il {new Date().toLocaleDateString("it-IT")}
               </span>
             </div>
+            <AccessBanner />
             <PersonAvatarProvider><Outlet /></PersonAvatarProvider>
           </>
         )}

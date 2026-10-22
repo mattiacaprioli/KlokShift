@@ -149,7 +149,7 @@ export function RegistrazionePage() {
               <Link to="/login" className="focus-gold font-semibold underline">
                 Accedi
               </Link>{" "}
-              o recupera la password dall&apos;app.
+              o usa «Password dimenticata?» nella pagina di accesso.
             </p>
           ) : null}
 
@@ -158,9 +158,9 @@ export function RegistrazionePage() {
           </Button>
 
           <p className="text-center text-xs leading-5 text-t4">
-            Stai creando un account da sede. Se ti ha invitato qualcuno a
-            gestire il suo, usa l&apos;indirizzo a cui è arrivato l&apos;invito:
-            è quello che ti collega alla sua sede.
+            Stai creando un account per gestire la tua azienda. Se un titolare
+            ti ha invitato a gestire la sua, non registrarti qui: apri il link
+            dell&apos;email d&apos;invito, l&apos;account si crea da lì.
             <br />
             Se lavori come professionista, la registrazione si fa
             dall&apos;app KlokShift sul telefono.
@@ -206,8 +206,8 @@ function CheckYourMail({ email }: { email: string }) {
         <p className="text-sm leading-6 text-t2">
           Abbiamo inviato un link di conferma a{" "}
           <span className="font-semibold text-t1">{email}</span>. Aprilo per
-          attivare l&apos;account, poi torna qui e accedi. Se ti hanno invitato,
-          al primo accesso troverai già la sede che gestisci.
+          attivare l&apos;account, poi torna qui e accedi: crei la tua azienda
+          in un minuto.
         </p>
 
         <p className="mt-4 text-xs leading-5 text-t4">

@@ -12,6 +12,12 @@ export default function ManagerLayout() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="venue/new" options={{ headerShown: false }} />
+      {/* Si esce solo coi due bottoni: un gesto indietro riporterebbe al form
+          della sede appena salvata. */}
+      <Stack.Screen
+        name="prova"
+        options={{ headerShown: false, gestureEnabled: false }}
+      />
       <Stack.Screen name="venue/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="shift/new" options={{ headerShown: false }} />
       <Stack.Screen name="shift/[id]" options={{ headerShown: false }} />

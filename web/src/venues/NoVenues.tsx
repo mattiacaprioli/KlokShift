@@ -18,7 +18,7 @@ export function NoVenues({
   const navigate = useNavigate();
   return (
     <Placeholder
-      title="Nessuna sede collegata a questo account"
+      title="Nessuna sede aperta"
       detail={detail}
       action={
         <Button variant="gold" onClick={() => navigate("/sede/nuovo")}>

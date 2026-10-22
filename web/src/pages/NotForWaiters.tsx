@@ -7,7 +7,9 @@ import {
   useCreateFirstVenue,
   useRespondToInvite,
 } from "@/features/workspace/hooks";
+import { signupIntent } from "@/features/team/viewModeLogic";
 import { Button, Field, Input } from "../ui/primitives";
+import { SupportLine } from "../ui/SupportLine";
 
 /**
  * Il muro davanti a chi non gestisce (ancora) nessuna azienda.
@@ -28,10 +30,62 @@ import { Button, Field, Input } from "../ui/primitives";
  *   lui, invece di essere rimbalzato al login.
  */
 export function NotForWaitersPage() {
-  const { profile, signOut } = useAuth();
+  const { session, profile, signOut } = useAuth();
   const { pendingInvites } = useOwnerVenues();
   const firstName = profile?.full_name?.trim().split(/\s+/)[0];
   const invited = pendingInvites.length > 0;
+  // Registrato dall'app come professionista: qui non c'è niente per lui, e il
+  // modulo «crea l'azienda» in primo piano era un invito ad aprirne una per
+  // sbaglio. Prima gli si dice dove sono i suoi turni; l'azienda resta a un tocco.
+  const worker = !invited && signupIntent(session?.user.user_metadata) === "waiter";
+  const [openOwn, setOpenOwn] = useState(false);
+
+  if (worker) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center p-6">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold" />
+          <h1 className="font-serif text-2xl text-t1">
+            {firstName ? `Ciao ${firstName}, i tuoi turni sono nell'app` : "I tuoi turni sono nell'app"}
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-t2">
+            Questa è la dashboard per chi gestisce un&apos;azienda. Turni, ore e
+            messaggi li trovi nell&apos;app KlokShift sul telefono, con lo stesso account.
+          </p>
+          <div className="mt-6 rounded-2xl border border-border-2 bg-bg-1 p-5 text-left">
+            <p className="text-sm font-semibold text-t1">Non vedi ancora la tua sede?</p>
+            <p className="mt-1 text-sm leading-6 text-t2">
+              Chiedi a chi organizza i turni di aggiungerti con questa email:
+            </p>
+            <p className="mt-3 select-all rounded-xl bg-bg-2 px-3 py-2 text-center text-sm font-semibold text-t1">
+              {session?.user.email}
+            </p>
+            <p className="mt-3 text-xs leading-5 text-t3">
+              Appena ti aggiunge trovi la sede e i tuoi turni nell&apos;app: non c&apos;è
+              niente da accettare.
+            </p>
+          </div>
+
+          {openOwn ? (
+            <OpenWorkspaceCard />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setOpenOwn(true)}
+              className="focus-gold mt-6 text-sm text-gold underline"
+            >
+              Vuoi aprire un&apos;azienda tua?
+            </button>
+          )}
+
+          <div className="mt-6">
+            <Button onClick={() => void signOut()}>Esci</Button>
+          </div>
+          <SupportLine className="mt-8" />
+        </div>
+      </main>
+    );
+  }
 
   // Il caso normale è chi si è appena registrato per gestire un'azienda: la
   // creazione viene prima, la nota per il professionista capitato qui dopo.
@@ -54,11 +108,13 @@ export function NotForWaitersPage() {
 
         <p className="mt-6 text-xs leading-5 text-t3">
           Lavori in un&apos;azienda che usa già KlokShift? Turni e messaggi li
-          trovi nell&apos;app sul telefono: chiedi alla tua azienda di invitarti.
+          trovi nell&apos;app sul telefono: chiedi alla sede di aggiungerti con
+          l&apos;email di questo account.
         </p>
         <Button className="mt-4" onClick={() => void signOut()}>
           Esci
         </Button>
+        <SupportLine className="mt-8" />
       </div>
     </main>
   );
@@ -72,7 +128,7 @@ export function NotForWaitersPage() {
  * ne ha uno solo è il modo più veloce per far abbandonare il modulo.
  *
  * L'appartenenza appena creata fa passare il gate e monta la dashboard.
- * Dopo il salvataggio portiamo il titolare al riepilogo per avviare la prova.
+ * Dopo il salvataggio portiamo il titolare all'ultimo passo: la prova (`/prova`).
  * Il modulo è già aperto: è il motivo per cui quasi tutti arrivano qui.
  */
 function OpenWorkspaceCard() {
@@ -96,7 +152,7 @@ function OpenWorkspaceCard() {
       });
       // L’invalidazione del contesto smonta questo form. mutateAsync prosegue
       // anche dopo lo smontaggio, a differenza del callback del singolo mutate.
-      navigate("/piano");
+      navigate("/prova");
     } catch (e) {
       setError(userErrorMessage(e));
     }

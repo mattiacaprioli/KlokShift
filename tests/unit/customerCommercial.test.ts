@@ -83,6 +83,8 @@ describe("Piano e accesso del cliente", () => {
     const html = situation(render());
     expect(html).toContain(venues ? "Avvia la prova di 30 giorni" : "Prepara la prima sede");
     expect(html).not.toContain("Conferma e avvia");
+    // L'avvio passa da una pagina sola, la stessa del setup.
+    expect(html).toContain(venues ? 'href="/prova"' : 'href="/sede/nuovo"');
     expect(mutate).not.toHaveBeenCalled();
   });
   it("mantiene storico ed export in archivio, con finestre distinte e senza nuova prova", () => {
