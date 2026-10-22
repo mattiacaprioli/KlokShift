@@ -129,7 +129,8 @@ export function HomeClockCard({
               disabled={punch.isPending || blocked}
               onPress={() => setConfirming(state)}
             />
-            {state === "out" && item.clock ? (
+            {/* Pausa fissa: vale quella del turno, niente pulsante. */}
+            {state === "out" && item.clock?.break_clocked ? (
               <ClockBreakButton
                 className="mt-3"
                 recordId={item.clock.id}

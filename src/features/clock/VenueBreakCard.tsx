@@ -4,6 +4,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Segmented } from "@/components/ui/Segmented";
 import { SelectChip } from "@/components/ui/SelectChip";
 import {
+  BREAK_CLOCKED_COPY,
+  BREAK_CLOCKED_LABEL,
   BREAK_POLICY_COPY,
   BREAK_RULE_MINUTES,
   BREAK_RULE_THRESHOLDS,
@@ -14,7 +16,7 @@ import { userErrorMessage } from "@/lib/errors";
 import { formatBreakMinutes } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { Text, View } from "@/tw";
-import { useSetVenueBreakPolicy } from "./hooks";
+import { useSetVenueBreakClocked, useSetVenueBreakPolicy } from "./hooks";
 
 type Policy = {
   paid: boolean;
@@ -29,6 +31,7 @@ type Policy = {
 export function VenueBreakCard({ venue }: { venue: Venue }) {
   const toast = useToast();
   const save = useSetVenueBreakPolicy();
+  const saveClocked = useSetVenueBreakClocked();
   const current: Policy = {
     paid: venue.break_paid,
     ruleAfterMinutes: venue.break_rule_after_minutes,
@@ -62,6 +65,36 @@ export function VenueBreakCard({ venue }: { venue: Venue }) {
         />
         <Text className="text-[13px] leading-5 text-t3">
           {current.paid ? BREAK_POLICY_COPY.paid : BREAK_POLICY_COPY.unpaid}
+        </Text>
+      </Card>
+      <Card className="gap-3 px-4 py-3.5">
+        <Text className="text-[15px] font-sans-semibold text-t1">
+          Come si registra
+        </Text>
+        <Segmented
+          options={[
+            { id: "clocked", label: BREAK_CLOCKED_LABEL.clocked },
+            { id: "fixed", label: BREAK_CLOCKED_LABEL.fixed },
+          ]}
+          value={venue.break_clocked ? "clocked" : "fixed"}
+          onChange={(id) => {
+            const clocked = id === "clocked";
+            if (clocked === venue.break_clocked || saveClocked.isPending) return;
+            saveClocked.mutate(
+              { venueId: venue.id, clocked },
+              {
+                onError: (error) =>
+                  toast.show(
+                    userErrorMessage(error, "Impossibile salvare. Riprova."),
+                    "error"
+                  ),
+              }
+            );
+          }}
+        />
+        <Text className="text-[13px] leading-5 text-t3">
+          {venue.break_clocked ? BREAK_CLOCKED_COPY.clocked : BREAK_CLOCKED_COPY.fixed}{" "}
+          {BREAK_CLOCKED_COPY.note}
         </Text>
       </Card>
       <Card className="gap-3 px-4 py-3.5">

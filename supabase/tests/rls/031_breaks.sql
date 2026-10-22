@@ -253,6 +253,54 @@ begin
   perform tests.login('Co2');
   reviewed := public.approve_clock_record(a);
   perform tests.eq(reviewed.worked_hours, 4::numeric, 'pausa retribuita: 4 h restano 4 h');
+  perform public.set_venue_break_policy(tests.id('V1'), false);
+
+  -- ---------------------------------------------------------------------------
+  -- Pausa fissa (20261022000000): la sede decide, la persona può fare eccezione,
+  -- la timbratura tiene la scelta con cui è entrata.
+  -- ---------------------------------------------------------------------------
+  perform tests.login('Co');
+  perform tests.raises(format('select public.set_venue_break_clocked(%L, false)', tests.id('V1')),
+    'not_allowed', 'Turni non basta per decidere come si registra la pausa');
+  perform tests.raises(format('select public.set_member_break_clocked(%L, true)', vm),
+    'not_allowed', 'Turni non basta per l''eccezione della persona');
+  perform tests.login('Co2');
+  perform public.set_venue_break_clocked(tests.id('V1'), false);
+
+  perform tests.login('Ow');
+  a := tests.br_shift(vm, today + 1, '08:00', '12:00', 30);
+  perform tests.login('Emp');
+  rec := public.clock_punch(a, 'in');
+  perform tests.eq(rec.break_clocked, false, 'la timbratura copia la pausa fissa della sede');
+  perform tests.raises(format('select public.clock_break(%L, ''start'')', rec.id),
+    'break_not_clocked', 'con la pausa fissa non si timbra l''inizio pausa');
+  rec := public.clock_punch(a, 'out');
+  perform tests.login('Co2');
+  perform tests.eq(tests.br_break(rec.id), 'planned:30', 'pausa fissa: vale la pianificata');
+  perform public.correct_clock_break(rec.id, 0, 'Pausa non fatta, comunicata');
+  perform tests.eq(tests.br_break(rec.id), 'corrected:0', 'chi gestisce corregge anche la pausa fissa');
+
+  -- Eccezione per la persona: timbra lei, anche se la sede è fissa.
+  perform public.set_member_break_clocked(vm, true);
+  perform tests.login('Ow');
+  a := tests.br_shift(vm, today + 1, '14:00', '18:00', 30);
+  perform tests.login('Emp');
+  rec := public.clock_punch(a, 'in');
+  perform tests.eq(rec.break_clocked, true, 'l''eccezione della persona prevale sulla sede');
+  brk := public.clock_break(rec.id, 'start');
+  perform tests.ok(brk.id is not null, 'con l''eccezione la pausa si timbra');
+
+  -- Tornare «come la sede» non tocca la timbratura già aperta.
+  perform tests.login('Co2');
+  perform public.set_member_break_clocked(vm);
+  perform tests.eq((select break_clocked from public.venue_members where id = vm), null::boolean,
+    'senza valore torna a seguire la sede');
+  perform tests.eq((select break_clocked from public.shift_clock_records where id = rec.id), true,
+    'la timbratura aperta tiene la scelta con cui è entrata');
+  perform tests.login('Emp');
+  brk := public.clock_break(rec.id, 'end');
+  perform tests.ok(brk.ended_at is not null, 'la pausa iniziata si chiude');
+  perform public.clock_punch(a, 'out');
 end $$;
 
 rollback;

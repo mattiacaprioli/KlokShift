@@ -115,8 +115,11 @@ turno porta `break_minutes` e la **copia** `shifts.break_paid`, così cambiare l
 scelta non riscrive i turni conclusi. Il professionista timbra inizio/fine pausa
 (`shift_clock_breaks`); vale la correzione di chi gestisce, poi la pausa
 timbrata, poi la pianificata. ⚠️ `shiftCountedHours` e `effectiveClockBreak`
-sono gemelli **manuali** di `shift_counted_hours` e `clock_record_break`. Dettagli
-in [plans/BREAKS.md](plans/BREAKS.md).
+sono gemelli **manuali** di `shift_counted_hours` e `clock_record_break`.
+Dal 2026-10-22 la sede sceglie anche se la pausa si **timbra** o è **fissa**
+(dal turno, senza pulsante), con eccezione per persona e sede; la scelta si
+copia sulla timbratura all'entrata. La durata resta sul turno, mai sul
+contratto. Dettagli in [plans/BREAKS.md](plans/BREAKS.md).
 
 ## Modelli di turno (2026-10-16)
 

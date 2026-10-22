@@ -16,6 +16,7 @@ function clock(outAt: string | null): ClockRecordWithCorrections {
     venue_id: "venue-1",
     venue_member_id: "member-1",
     method: "app",
+    break_clocked: true,
     note: null,
     role_id: null,
     clock_in_at: "2026-09-25T12:00:00Z",

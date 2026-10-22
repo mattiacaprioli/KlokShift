@@ -69,9 +69,18 @@ import type {
 } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import {
+  useSetMemberBreakClocked,
   useSetMemberClockMethod,
   useSetMemberClockUnplanned,
 } from "@/features/clock/hooks";
+import {
+  BREAK_CLOCKED_COPY,
+  BREAK_CLOCKED_LABEL,
+  breakClockedChoice,
+  breakClockedSummary,
+  breakClockedValue,
+  type BreakClockedChoice,
+} from "@/features/shifts/breaks";
 import {
   CLOCK_METHOD_CHOICES,
   CLOCK_UNPLANNED_DESCRIPTION,
@@ -132,6 +141,71 @@ function ClockMethodPicker({
                 )}
               >
                 {option.label}
+              </Text>
+              <Text className="mt-0.5 text-xs leading-4 text-t3">
+                {description}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const BREAK_CLOCKED_CHOICES: BreakClockedChoice[] = ["inherit", "clocked", "fixed"];
+
+/**
+ * Pausa timbrata o fissa per questa persona in questa sede. Ha senso solo
+ * quando la persona timbra: in Manuale la pausa è sempre quella del turno.
+ */
+function BreakClockedPicker({
+  value,
+  venueClocked,
+  onChange,
+}: {
+  value: BreakClockedChoice;
+  venueClocked: boolean;
+  onChange: (value: BreakClockedChoice) => void;
+}) {
+  return (
+    <View className="gap-2">
+      {BREAK_CLOCKED_CHOICES.map((id) => {
+        const active = id === value;
+        const label = id === "inherit" ? "Come la sede" : BREAK_CLOCKED_LABEL[id];
+        const description =
+          id === "inherit"
+            ? `Segue l’impostazione della sede. ${
+                BREAK_CLOCKED_COPY[venueClocked ? "clocked" : "fixed"]
+              }`
+            : BREAK_CLOCKED_COPY[id];
+        return (
+          <Pressable
+            key={id}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(id)}
+            className={cn(
+              "flex-row items-center gap-3 rounded-2xl border px-4 py-3",
+              active ? "border-gold/70 bg-gold/10" : "border-border bg-bg-1"
+            )}
+          >
+            <View
+              className={cn(
+                "h-6 w-6 shrink-0 items-center justify-center rounded-full border",
+                active ? "border-gold bg-gold" : "border-border-2"
+              )}
+            >
+              {active ? <Icon name="check" size={14} color="#1A1206" /> : null}
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text
+                className={cn(
+                  "text-[15px] font-sans-semibold",
+                  active ? "text-gold" : "text-t1"
+                )}
+              >
+                {label}
               </Text>
               <Text className="mt-0.5 text-xs leading-4 text-t3">
                 {description}
@@ -229,6 +303,7 @@ function WorkplaceCard({
   const restore = useAddPersonToVenue();
   const setClock = useSetMemberClockMethod();
   const setUnplanned = useSetMemberClockUnplanned();
+  const setBreakClocked = useSetMemberBreakClocked();
 
   const savedRoles = membership.staff_member_roles
     .map((r) => r.role)
@@ -243,10 +318,14 @@ function WorkplaceCard({
     clockMethodChoice(membership.clock_method)
   );
   const [unplanned, setUnplannedChoice] = useState(membership.clock_unplanned);
+  const [breakChoice, setBreakChoice] = useState<BreakClockedChoice>(
+    breakClockedChoice(membership.break_clocked)
+  );
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const venueName = membership.venue?.name ?? "Sede";
   const venueMethod = membership.venue?.clock_method ?? "manual";
+  const venueBreakClocked = membership.venue?.break_clocked ?? true;
   const effectiveMethod = effectiveClockMethod(
     membership.clock_method,
     venueMethod
@@ -259,7 +338,8 @@ function WorkplaceCard({
     update.isPending ||
     remove.isPending ||
     setClock.isPending ||
-    setUnplanned.isPending;
+    setUnplanned.isPending ||
+    setBreakClocked.isPending;
   /** Appartenenza finita: resta per lo storico, non si modifica più. */
   const left = membership.link_status === "left";
   const staffDirty =
@@ -273,7 +353,11 @@ function WorkplaceCard({
     clockChoice !== clockMethodChoice(membership.clock_method);
   const unplannedDirty =
     editing && canEditClock && unplanned !== membership.clock_unplanned;
-  const dirty = staffDirty || clockDirty || unplannedDirty;
+  const breakDirty =
+    editing &&
+    canEditClock &&
+    breakChoice !== breakClockedChoice(membership.break_clocked);
+  const dirty = staffDirty || clockDirty || unplannedDirty || breakDirty;
   useUnsavedEdit(`sede:${membership.venue_id}`, dirty);
 
   // Il form riparte dai dati di adesso a ogni apertura: «Annulla» non deve
@@ -283,6 +367,7 @@ function WorkplaceCard({
     setEmpType(membership.employment_type);
     setClockChoice(clockMethodChoice(membership.clock_method));
     setUnplannedChoice(membership.clock_unplanned);
+    setBreakChoice(breakClockedChoice(membership.break_clocked));
     setEditing(true);
   }
 
@@ -308,6 +393,12 @@ function WorkplaceCard({
         await setUnplanned.mutateAsync({
           venueMemberId: membership.id,
           enabled: unplanned,
+        });
+      }
+      if (breakDirty) {
+        await setBreakClocked.mutateAsync({
+          venueMemberId: membership.id,
+          clocked: breakClockedValue(breakChoice),
         });
       }
       toast.show(`Modifiche salvate · ${venueName}`);
@@ -436,6 +527,17 @@ function WorkplaceCard({
             </View>
           ) : null}
 
+          {canEditClock && chosenMethod !== "manual" ? (
+            <View className="gap-2">
+              <Mono>Pausa</Mono>
+              <BreakClockedPicker
+                value={breakChoice}
+                venueClocked={venueBreakClocked}
+                onChange={setBreakChoice}
+              />
+            </View>
+          ) : null}
+
           <EditActions
             pending={busy}
             canSave={dirty}
@@ -474,6 +576,15 @@ function WorkplaceCard({
                   <ReadField
                     label="Senza turno"
                     value={clockUnplannedSummary(membership.clock_unplanned)}
+                  />
+                ) : null}
+                {effectiveMethod !== "manual" ? (
+                  <ReadField
+                    label="Pausa"
+                    value={breakClockedSummary(
+                      membership.break_clocked,
+                      venueBreakClocked
+                    )}
                   />
                 ) : null}
               </>

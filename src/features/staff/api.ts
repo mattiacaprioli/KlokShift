@@ -69,13 +69,13 @@ const PERSON_COLUMNS =
   "hr:member_hr(note, contract_hours, contract_period)";
 
 const VENUE_EMBED =
-  "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, closed_at, clock_method)";
+  "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, closed_at, clock_method, break_clocked)";
 
 const ROLES_EMBED =
   "roles:venue_member_roles(role:venue_roles(id, name, sort_order))";
 
 const MEMBERSHIPS_EMBED =
-  "memberships:venue_members(id, venue_id, employment_type, clock_method, clock_unplanned, left_at, created_at, " +
+  "memberships:venue_members(id, venue_id, employment_type, clock_method, clock_unplanned, break_clocked, left_at, created_at, " +
   VENUE_EMBED +
   ", " +
   ROLES_EMBED +
@@ -121,6 +121,7 @@ type RawVenueBrief = {
   city: string | null;
   closed_at: string | null;
   clock_method: Enums<"clock_method">;
+  break_clocked: boolean;
 } | null;
 
 type RawVenueMember = {
@@ -129,6 +130,7 @@ type RawVenueMember = {
   employment_type: EmploymentType;
   clock_method: PersonMembership["clock_method"];
   clock_unplanned: boolean;
+  break_clocked: boolean | null;
   left_at: string | null;
   created_at: string;
   venue: RawVenueBrief;
@@ -216,6 +218,7 @@ function toMembership(row: RawMember, vm: RawVenueMember): PersonMembership {
     employment_type: vm.employment_type,
     clock_method: vm.clock_method,
     clock_unplanned: vm.clock_unplanned,
+    break_clocked: vm.break_clocked,
     created_at: vm.created_at,
     left_at: vm.left_at,
     venue: vm.venue,

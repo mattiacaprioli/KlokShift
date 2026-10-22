@@ -12,7 +12,9 @@ import {
   getOpenUnplannedClocks,
   punchClock,
   punchUnplannedClock,
+  setMemberBreakClocked,
   setMemberClockUnplanned,
+  setVenueBreakClocked,
   setVenueBreakPolicy,
   setVenueClockMethod,
   setMemberClockMethod,
@@ -187,6 +189,26 @@ export function useVoidUnplannedClock() {
   return useMutation({
     mutationFn: voidUnplannedClock,
     onSuccess: () => invalidateClockViews(qc),
+  });
+}
+
+export function useSetVenueBreakClocked() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: setVenueBreakClocked,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
+      invalidateWorkViews(qc);
+    },
+  });
+}
+
+export function useSetMemberBreakClocked() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { venueMemberId: string; clocked: boolean | null }) =>
+      setMemberBreakClocked(vars.venueMemberId, vars.clocked),
+    onSuccess: () => invalidateWorkViews(qc),
   });
 }
 

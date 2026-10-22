@@ -108,9 +108,11 @@ export type PersonMembership = Pick<
   clock_method: Enums<"clock_method"> | null;
   /** Può timbrare senza un turno pianificato (solo con la timbratura dall'app). */
   clock_unplanned: boolean;
+  /** Pausa timbrata (true) o fissa (false); null = come la sede. */
+  break_clocked: boolean | null;
   venue: Pick<
     Tables<"venues">,
-    "id" | "name" | "city" | "closed_at" | "clock_method"
+    "id" | "name" | "city" | "closed_at" | "clock_method" | "break_clocked"
   > | null;
   staff_member_roles: { role: StaffRoleRef | null }[];
 };

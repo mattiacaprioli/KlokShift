@@ -212,6 +212,10 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "L'uscita è già stata registrata. Aggiorna la pagina.",
   },
   {
+    match: ["break_not_clocked"],
+    message: "In questa sede la pausa non si timbra: vale quella del turno.",
+  },
+  {
     match: ["clock_break_not_started"],
     message: "Non c’è una pausa da chiudere.",
   },

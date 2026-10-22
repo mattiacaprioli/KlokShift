@@ -159,11 +159,14 @@ export function UnplannedClockCard({
                   disabled={punch.isPending}
                   onPress={() => setConfirming("out")}
                 />
-                <ClockBreakButton
-                  className="mt-3"
-                  recordId={open.recordId}
-                  onBreak={false}
-                />
+                {/* Pausa fissa: vale quella del turno, niente pulsante. */}
+                {open.breakClocked ? (
+                  <ClockBreakButton
+                    className="mt-3"
+                    recordId={open.recordId}
+                    onBreak={false}
+                  />
+                ) : null}
               </>
             )}
           </>

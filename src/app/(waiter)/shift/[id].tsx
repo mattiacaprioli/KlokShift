@@ -409,11 +409,14 @@ export default function WaiterShiftDetailScreen() {
                             disabled={punch.isPending}
                             onPress={() => setPunchAction("out")}
                           />
-                          <ClockBreakButton
-                            className="mt-3"
-                            recordId={clock.id}
-                            onBreak={false}
-                          />
+                          {/* Pausa fissa: vale quella del turno, niente pulsante. */}
+                          {clock.break_clocked ? (
+                            <ClockBreakButton
+                              className="mt-3"
+                              recordId={clock.id}
+                              onBreak={false}
+                            />
+                          ) : null}
                         </>
                       )
                     ) : (

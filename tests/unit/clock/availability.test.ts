@@ -28,6 +28,7 @@ function item(
         clock_out_at: options.outAt ?? null,
         created_at: options.inAt,
         method: "app",
+        break_clocked: true,
         note: null,
         role_id: null,
         shift_id: "shift",
@@ -158,7 +159,7 @@ describe("blocksPlannedClockIn", () => {
   const now = new Date("2026-09-24T18:00:00Z");
   const entry = (clockInAt: string | null) => ({
     open: clockInAt
-      ? { recordId: "record", clockInAt, roleId: null, note: null }
+      ? { recordId: "record", clockInAt, roleId: null, note: null, breakClocked: true }
       : null,
   });
 

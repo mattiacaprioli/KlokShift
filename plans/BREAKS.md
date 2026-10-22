@@ -76,11 +76,47 @@ di `shift_counted_hours`, `effectiveClockBreak` e `clockedHours`
 (`src/features/clock/hours.ts`) di `clock_record_break` e
 `clock_record_counted_hours`. Se cambia uno, cambia l'altro.
 
+## Pausa fissa, non timbrata (2026-10-22)
+
+> Migration `20261022000000_break_fixed.sql`, casi in fondo a
+> `supabase/tests/rls/031_breaks.sql`.
+
+Molte sedi la pausa non la fanno timbrare: «10–19 con un'ora di pausa» e basta.
+Accanto a retribuita/non retribuita la sede sceglie **come si registra**:
+
+- **Timbrata** (predefinito, `venues.break_clocked = true`): come sopra.
+- **Fissa, dal turno**: il pulsante «Inizia pausa» non compare e `clock_break`
+  rifiuta l'inizio (`break_not_clocked`). Senza pause timbrate vale la pausa
+  pianificata del turno; chi gestisce può correggerla come sempre.
+
+Chi ha «Ore» può fare un'**eccezione per persona e per sede**
+(`venue_members.break_clocked`, null = come la sede), nella card della sede
+in `staff/[id]`, accanto a «Timbra senza turno». Si vede solo se la persona
+timbra: in Manuale la pausa è comunque quella del turno.
+
+- **Copia sulla timbratura** all'entrata (`shift_clock_records.break_clocked`,
+  trigger, mai dal client), non sul turno: il turno ha più persone, la
+  timbratura una sola, e cambiare la regola non tocca le timbrature già aperte.
+- Due RPC nuove (`set_venue_break_clocked`, `set_member_break_clocked`) e non
+  un parametro in più su `set_venue_break_policy`, per non rompere le app già
+  installate.
+- Il calcolo delle ore **non cambia**: con la pausa fissa non esistono pause
+  timbrate, quindi `clock_record_break` e il gemello `effectiveClockBreak`
+  cadono da soli sulla pianificata (o sulla correzione).
+- La **durata** resta sul turno, non sul contratto della persona: lo stesso
+  dipendente in un turno corto non ha la stessa pausa, e il contratto
+  riscriverebbe lo storico. L'orario fisso ripetuto si copre con un modello di
+  turno.
+- Fuori turno con pausa fissa: pausa 0 (non c'è un turno pianificato), la
+  corregge chi approva.
+
 ## Fuori perimetro
 
 - Pause multiple con tipo diverso (pasto non retribuito + riposo retribuito
   sullo stesso turno, come Deputy): oggi la scelta è una per sede.
-- Scelta per persona o per contratto.
+- Retribuita/non retribuita per persona o per contratto (per persona c'è solo
+  timbrata/fissa).
+- Durata della pausa per persona o per assegnazione: la pausa è del turno.
 - Avvisi sulla pausa mancata o sotto il minimo di legge: KlokShift non conosce
   il CCNL applicato.
 - Pausa automatica sul fuori turno: vale solo quella timbrata, chi approva la

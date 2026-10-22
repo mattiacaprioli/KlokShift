@@ -112,6 +112,19 @@ export async function setVenueBreakPolicy(input: {
   return data;
 }
 
+/** Pausa timbrata (true) o fissa dal turno (false) per la sede. */
+export async function setVenueBreakClocked(input: {
+  venueId: string;
+  clocked: boolean;
+}): Promise<Tables<"venues">> {
+  const { data, error } = await supabase.rpc("set_venue_break_clocked", {
+    p_venue: input.venueId,
+    p_clocked: input.clocked,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function setVenueClockMethod(
   venueId: string,
   method: Enums<"clock_method">
@@ -136,6 +149,8 @@ export type MyUnplannedClock = {
     clockInAt: string;
     roleId: string | null;
     note: string | null;
+    /** False = pausa fissa: niente pulsante della pausa. */
+    breakClocked: boolean;
   } | null;
 };
 
@@ -154,6 +169,7 @@ export async function getMyUnplannedClock(): Promise<MyUnplannedClock[]> {
           clockInAt: row.clock_in_at,
           roleId: row.role_id,
           note: row.note,
+          breakClocked: row.break_clocked ?? true,
         }
       : null,
   }));
@@ -246,6 +262,19 @@ export async function setMemberClockUnplanned(
   const { data, error } = await supabase.rpc("set_member_clock_unplanned", {
     p_venue_member: venueMemberId,
     p_enabled: enabled,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** L'eccezione della persona in una sede; null = come la sede. */
+export async function setMemberBreakClocked(
+  venueMemberId: string,
+  clocked: boolean | null
+): Promise<Tables<"venue_members">> {
+  const { data, error } = await supabase.rpc("set_member_break_clocked", {
+    p_venue_member: venueMemberId,
+    p_clocked: clocked ?? undefined,
   });
   if (error) throw new Error(error.message);
   return data;

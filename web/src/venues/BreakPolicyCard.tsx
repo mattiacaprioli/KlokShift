@@ -1,6 +1,11 @@
 import type { Venue } from "@/features/venues/api";
-import { useSetVenueBreakPolicy } from "@/features/clock/hooks";
 import {
+  useSetVenueBreakClocked,
+  useSetVenueBreakPolicy,
+} from "@/features/clock/hooks";
+import {
+  BREAK_CLOCKED_COPY,
+  BREAK_CLOCKED_LABEL,
   BREAK_POLICY_COPY,
   BREAK_RULE_MINUTES,
   BREAK_RULE_THRESHOLDS,
@@ -31,6 +36,7 @@ export function BreakPolicyCard({
   embedded?: boolean;
 }) {
   const save = useSetVenueBreakPolicy();
+  const saveClocked = useSetVenueBreakClocked();
   const toast = useToast();
   const current: Policy = {
     paid: venue.break_paid,
@@ -87,6 +93,48 @@ export function BreakPolicyCard({
       <p className="mt-2 text-sm leading-5 text-t3">
         {current.paid ? BREAK_POLICY_COPY.paid : BREAK_POLICY_COPY.unpaid}
       </p>
+
+      <div className="mt-5 border-t border-border-2 pt-4">
+        <h3 className="text-sm font-semibold text-t1">Come si registra</h3>
+        <div
+          role="radiogroup"
+          aria-label={`Come si registra la pausa a ${venue.name}`}
+          className="mt-2 inline-flex gap-1 rounded-xl border border-border-2 bg-bg-1 p-1"
+        >
+          {[
+            { clocked: true, label: BREAK_CLOCKED_LABEL.clocked },
+            { clocked: false, label: BREAK_CLOCKED_LABEL.fixed },
+          ].map((option) => {
+            const active = option.clocked === venue.break_clocked;
+            return (
+              <button
+                key={option.label}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={saveClocked.isPending}
+                onClick={() => {
+                  if (active) return;
+                  saveClocked.mutate(
+                    { venueId: venue.id, clocked: option.clocked },
+                    { onError: (error) => toast.show(userErrorMessage(error), "error") }
+                  );
+                }}
+                className={cn(
+                  "focus-gold rounded-lg px-4 py-1.5 text-sm transition",
+                  active ? "bg-bg-2 font-semibold text-t1" : "text-t3 hover:text-t1"
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-sm leading-5 text-t3">
+          {venue.break_clocked ? BREAK_CLOCKED_COPY.clocked : BREAK_CLOCKED_COPY.fixed}{" "}
+          {BREAK_CLOCKED_COPY.note}
+        </p>
+      </div>
 
       <div className="mt-5 border-t border-border-2 pt-4">
         <label className="flex items-start gap-3 text-sm text-t1">

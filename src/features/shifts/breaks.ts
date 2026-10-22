@@ -64,3 +64,42 @@ export const BREAK_POLICY_COPY = {
   rule: "La regola propone la pausa quando crei un turno; chi lo crea può sempre cambiarla.",
   note: "Vale per i turni non ancora conclusi: quelli già conclusi restano come sono stati registrati. KlokShift non conosce il tuo contratto: verifica con il consulente del lavoro se la pausa va retribuita.",
 } as const;
+
+/**
+ * Come si registra la pausa (20261022000000): timbrata dal professionista o
+ * fissa, cioè quella del turno senza pulsante. La sede sceglie, la persona può
+ * fare eccezione (null = come la sede). Stesse parole in app e dashboard.
+ */
+export type BreakClockedChoice = "inherit" | "clocked" | "fixed";
+
+export const BREAK_CLOCKED_LABEL = {
+  clocked: "Timbrata",
+  fixed: "Fissa, dal turno",
+} as const;
+
+export const BREAK_CLOCKED_COPY = {
+  clocked:
+    "Il professionista timbra inizio e fine pausa dall’app. Se non la timbra, vale la pausa del turno.",
+  fixed:
+    "Il professionista non timbra la pausa: vale quella scritta sul turno, e chi gestisce le ore può correggerla.",
+  note: "Vale dalla prossima entrata: le timbrature già aperte restano come sono.",
+} as const;
+
+export function breakClockedChoice(value: boolean | null): BreakClockedChoice {
+  if (value == null) return "inherit";
+  return value ? "clocked" : "fixed";
+}
+
+export function breakClockedValue(choice: BreakClockedChoice): boolean | null {
+  if (choice === "inherit") return null;
+  return choice === "clocked";
+}
+
+/** «Fissa, dal turno · come la sede»: il riepilogo della scheda. */
+export function breakClockedSummary(
+  override: boolean | null,
+  venueDefault: boolean
+): string {
+  const label = BREAK_CLOCKED_LABEL[(override ?? venueDefault) ? "clocked" : "fixed"];
+  return override == null ? `${label} · come la sede` : label;
+}
