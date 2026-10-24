@@ -5,12 +5,8 @@
     "incremental": true,
     "tsBuildInfoFile": ".expo/cache/tsconfig.tsbuildinfo",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/assets/*": [
-        "./assets/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"]
     }
   },
   "include": [
@@ -20,10 +16,5 @@
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
-  "exclude": [
-    "supabase/functions",
-    "tests",
-    "web",
-    "web-site"
-  ]
+  "exclude": ["supabase/functions", "tests", "cypress", "cypress.config.ts", "web", "web-site"]
 }

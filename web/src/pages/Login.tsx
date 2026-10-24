@@ -96,6 +96,7 @@ export function LoginPage() {
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Field label="Email">
             <Input
+              data-cy="login-email"
               type="email"
               autoComplete="email"
               required
@@ -106,6 +107,7 @@ export function LoginPage() {
           </Field>
           <Field label="Password">
             <PasswordInput
+              data-cy="login-password"
               autoComplete="current-password"
               required
               value={password}
@@ -151,7 +153,12 @@ export function LoginPage() {
             </div>
           ) : null}
 
-          <Button type="submit" variant="gold" disabled={busy}>
+          <Button
+            data-cy="login-submit"
+            type="submit"
+            variant="gold"
+            disabled={busy}
+          >
             {busy ? "Accesso…" : "Accedi"}
           </Button>
 
