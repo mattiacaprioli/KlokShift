@@ -613,6 +613,42 @@ export async function getMyWorkTotals(
  * Il perimetro è l'intersezione fra l'azienda corrente e le sedi su cui chi
  * legge ha il permesso Ore. Le sedi chiuse restano incluse nello storico.
  */
+/** Un turno concluso le cui ore non contano ancora (`get_hours_to_fix`). */
+export type HourToFix = {
+  assignment_id: string;
+  shift_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  title: string;
+  venue_id: string;
+  venue_name: string;
+  member_id: string;
+  member_name: string;
+  kind: HourToFixKind;
+  /** Le ore proposte dalla timbratura, o quelle del turno se non c'è. */
+  hours: number;
+};
+export type HourToFixKind = "missing_out" | "to_approve" | "not_clocked";
+
+/**
+ * I turni conclusi del periodo le cui ore non contano ancora, uno per persona,
+ * con il perché. È il complemento esatto di quello che conta nel riepilogo
+ * (`getOwnerHoursSummary`): stesso perimetro, stessa regola.
+ */
+export async function getHoursToFix(
+  workspaceId: string,
+  { start, end }: { start: string; end: string }
+): Promise<HourToFix[]> {
+  const { data, error } = await supabase.rpc("get_hours_to_fix", {
+    p_workspace: workspaceId,
+    p_from: start,
+    p_to: end,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as HourToFix[];
+}
+
 export async function getOwnerHoursSummary(
   workspaceId: string,
   { start, end }: { start: string; end: string }

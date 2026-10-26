@@ -31,7 +31,14 @@ import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
-import { useOwnerHoursSummary } from "@/features/assignments/hooks";
+import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  HOURS_TO_FIX_HINT,
+  HOURS_TO_FIX_TITLE,
+  hourToFixLabel,
+  hourToFixWhen,
+  hoursToFixSummary,
+} from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
   breakSummaryText,
@@ -75,12 +82,15 @@ const asDate = (d: string) => new Date(`${d}T00:00:00`);
  *
  * Con una sola sede la pagina è identica a prima del multi-sede.
  */
+/** Righe di «Ore da sistemare» visibili prima di «Mostra tutti». */
+const TO_FIX_PREVIEW = 8;
+
 export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { profile } = useAuth();
   const router = useRouter();
-  const { workspaceId, venues, historyVenues, canUseOperations, canAny } =
+  const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
     useOwnerVenues();
   // Il turno dimenticato si registra da qui: è una questione di ore, e qui si
   // accorge che mancano (come in 7shifts o Deputy, dal foglio ore).
@@ -105,6 +115,11 @@ export default function VenueHoursScreen() {
 
   const query = useOwnerHoursSummary(workspaceId, period);
   const absenceQuery = useOwnerAbsenceSummary(workspaceId, period);
+  // I turni del periodo le cui ore non contano ancora, con il perché: anche chi
+  // doveva timbrare e non l'ha fatto, che il riepilogo non nomina.
+  const toFix = useHoursToFix(workspaceId, period).data ?? [];
+  const [showAllToFix, setShowAllToFix] = useState(false);
+  const toFixShown = showAllToFix ? toFix : toFix.slice(0, TO_FIX_PREVIEW);
   const allRows = query.data ?? [];
   const allAbsences = absenceQuery.data ?? [];
   // Si sceglie fra chi nel periodo ha ore o assenze; chi non c'è più esce
@@ -263,6 +278,58 @@ export default function VenueHoursScreen() {
           </ChipRow>
         ) : null}
 
+        {/* Prima del riepilogo: è la cosa da fare. Ogni riga apre il turno,
+            dove si inseriscono gli orari, l'uscita o si approva. */}
+        {toFix.length > 0 ? (
+          <View
+            className="rounded-3xl border border-warning px-5 py-4"
+            // Sfondo inline come nelle `Pill`: `bg-warning/5` passerebbe da
+            // `color-mix`, che react-native-css non regge.
+            style={{ backgroundColor: "rgba(226,146,47,0.06)" }}
+          >
+            <Mono>{HOURS_TO_FIX_TITLE}</Mono>
+            <Text className="mt-1 text-xs font-sans-semibold text-warning">
+              {hoursToFixSummary(toFix)}
+            </Text>
+            <Text className="mt-1 text-xs leading-4 text-t3">{HOURS_TO_FIX_HINT}</Text>
+            <View className="mt-3 gap-2">
+              {toFixShown.map((item) => (
+                <Pressable
+                  key={item.assignment_id}
+                  onPress={() => router.push(`/(manager)/shift/${item.shift_id}`)}
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-3 rounded-2xl border border-border-2 bg-bg-1 px-3 py-2.5"
+                >
+                  <View className="flex-1">
+                    <Text className="text-sm font-sans-semibold text-t1" numberOfLines={1}>
+                      {item.member_name}
+                    </Text>
+                    <Text className="text-xs text-t3" numberOfLines={1}>
+                      {hourToFixWhen(item)}
+                      {isMultiVenue ? ` · ${item.venue_name}` : ""}
+                    </Text>
+                    <Text className="text-xs font-sans-semibold text-warning">
+                      {hourToFixLabel(item)}
+                    </Text>
+                  </View>
+                  <Icon name="chevR" size={16} color="#8C8579" />
+                </Pressable>
+              ))}
+            </View>
+            {toFix.length > TO_FIX_PREVIEW ? (
+              <Pressable
+                onPress={() => setShowAllToFix((v) => !v)}
+                hitSlop={8}
+                className="mt-3 self-start"
+              >
+                <Text className="text-xs font-sans-semibold text-gold">
+                  {showAllToFix ? "Mostra meno" : `Mostra tutti (${toFix.length})`}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
         {query.isLoading || absenceQuery.isLoading ? (
           <ListSkeleton variant="person" label="Caricamento ore…" />
         ) : query.isError || absenceQuery.isError ? (
@@ -290,7 +357,7 @@ export default function VenueHoursScreen() {
                   </View>
                   <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
                   {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
-                  {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo.</Text> : null}
+                  {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo: le trovi in «{HOURS_TO_FIX_TITLE}».</Text> : null}
                   <Text className="text-xs text-t3">
                     {totalShifts} turni · {report.length}{" "}
                     {report.length === 1 ? "persona" : "persone"}

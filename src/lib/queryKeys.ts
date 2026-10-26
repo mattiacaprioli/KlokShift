@@ -164,6 +164,10 @@ export const qk = {
     /** `period`: `periodKey()` di `assignments/reportPeriod` (mese o intervallo). */
     ownerHours: (workspaceId: string, period: string) =>
       ["staff", "ownerHours", workspaceId, period] as const,
+    // Sotto `staff` come il riepilogo: si rilegge con lui dopo ogni turno,
+    // timbratura o presenza toccata.
+    hoursToFix: (workspaceId: string, period: string) =>
+      ["staff", "hoursToFix", workspaceId, period] as const,
   },
   assignments: {
     all: ["assignments"] as const,

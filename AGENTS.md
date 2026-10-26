@@ -137,6 +137,11 @@ approva nello stesso passo («Salva e approva»). Chi non ha timbrato riceve gli
 orari da chi ha «Ore» con `enter_clock_record`: timbratura `method = 'manual'`,
 con correzione e autore, già approvata. Il motivo di una correzione è
 facoltativo (`20261026000300`); per annullare una timbratura resta obbligatorio.
+La pagina Ore apre con **«Ore da sistemare»** (`get_hours_to_fix`): i turni
+conclusi le cui ore non contano ancora, ciascuno con il motivo (non ha timbrato,
+uscita mancante, da approvare), e ogni riga porta al turno. ⚠️ È il complemento
+esatto di `shifts_count` in `get_workspace_hours_summary`: se cambia la regola
+di cosa conta, cambiano insieme (test SQL 037).
 
 ## Pausa (2026-10-16)
 

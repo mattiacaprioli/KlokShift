@@ -1,10 +1,18 @@
 import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
-import { useOwnerHoursSummary } from "@/features/assignments/hooks";
+import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  HOURS_TO_FIX_HINT,
+  HOURS_TO_FIX_TITLE,
+  hourToFixLabel,
+  hourToFixWhen,
+  hoursToFixSummary,
+} from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
   breakSummaryText,
@@ -59,10 +67,14 @@ import { NoVenues } from "../venues/NoVenues";
  * rispondeva a una domanda che questa pagina non fa — esiste per pagare le
  * persone, non per allocare il costo fra le sedi.
  */
+/** Righe di «Ore da sistemare» visibili prima di «Mostra tutti». */
+const TO_FIX_PREVIEW = 8;
+
 export function OrePage() {
   const { profile } = useAuth();
-  const { workspaceId, venues, historyVenues, canUseOperations, canAny } =
+  const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
     useOwnerVenues();
+  const navigate = useNavigate();
   // Il turno dimenticato si registra da qui: è una questione di ore, ed è qui
   // che ci si accorge che mancano (come dal foglio ore di 7shifts o Deputy).
   const canRecord = canUseOperations && canAny("can_view_hours");
@@ -103,7 +115,11 @@ export function OrePage() {
   const people = groupHoursByPerson(rows);
   const totalHours = people.reduce((s, p) => s + p.hours, 0);
   const toReview = people.reduce((s, p) => s + p.to_review_count, 0);
-  const proposedHours = people.reduce((s, p) => s + p.proposed_hours, 0);
+  // I turni del periodo le cui ore non contano ancora, con il perché: anche chi
+  // doveva timbrare e non l'ha fatto, che il riepilogo non nomina.
+  const toFix = useHoursToFix(workspaceId, period).data ?? [];
+  const [showAllToFix, setShowAllToFix] = useState(false);
+  const toFixShown = showAllToFix ? toFix : toFix.slice(0, TO_FIX_PREVIEW);
   const label = periodLabel(period);
   const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
   // Ferie, permessi e malattia del periodo: ore nel consuntivo, giorni nel dettaglio.
@@ -181,7 +197,7 @@ export function OrePage() {
       <StickyHeader>
         <PageHeader
           title="Ore"
-          subtitle={`${label} · ${formatHours(totalHours)} lavorate effettive${toReview > 0 ? ` · ${toReview} turni da verificare` : ""}`}
+          subtitle={`${label} · ${formatHours(totalHours)} lavorate effettive${toFix.length > 0 ? ` · ${toFix.length} ${toFix.length === 1 ? "turno" : "turni"} da sistemare` : ""}`}
           actions={
             canRecord ? (
               <Button variant="gold" onClick={() => setRecording(true)}>
@@ -324,25 +340,61 @@ export function OrePage() {
         />
       ) : null}
 
+      {/* Prima del riepilogo: è la cosa da fare. Ogni riga porta al turno, dove
+          si inseriscono gli orari, l'uscita o si approva. Fino al 26/10/2026 qui
+          c'era solo «N turni da verificare», senza dire quali. */}
+      {toFix.length > 0 ? (
+        <Card className="mb-4 border-warning/40 bg-warning/5 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-t1">{HOURS_TO_FIX_TITLE}</p>
+            <p className="text-xs font-semibold text-warning">{hoursToFixSummary(toFix)}</p>
+          </div>
+          <p className="mt-1 text-xs text-t3">{HOURS_TO_FIX_HINT}</p>
+          <ul className="mt-3 flex flex-col gap-1">
+            {toFixShown.map((item) => (
+              <li key={item.assignment_id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/planning?shift=${item.shift_id}`)}
+                  className="focus-gold flex w-full items-center gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-left transition hover:bg-bg-2"
+                >
+                  <PersonAvatar personId={item.member_id} name={item.member_name} size={28} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-t1">{item.member_name}</span>
+                    <span className="block truncate text-xs text-t4">
+                      {hourToFixWhen(item)}
+                      {isMultiVenue ? ` · ${item.venue_name}` : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-warning">
+                    {hourToFixLabel(item)}
+                  </span>
+                  <span aria-hidden className="text-t4">›</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {toFix.length > TO_FIX_PREVIEW ? (
+            <button
+              type="button"
+              onClick={() => setShowAllToFix((v) => !v)}
+              className="focus-gold mt-2 text-xs font-semibold text-gold hover:underline"
+            >
+              {showAllToFix ? "Mostra meno" : `Mostra tutti (${toFix.length})`}
+            </button>
+          ) : null}
+        </Card>
+      ) : null}
+
       {report.length > 0 && !isPending && !absenceQuery.isPending && !isError && !absenceQuery.isError ? (
         <>
-        {toReview > 0 ? (
-          <Card className="mb-4 border-gold/40 bg-gold/5">
-            <p className="text-sm font-semibold text-t1">
-              {toReview} {toReview === 1 ? "turno da verificare" : "turni da verificare"}
-            </p>
-            <p className="mt-1 text-xs text-t3">
-              Le timbrature complete propongono {formatHours(proposedHours)}. Non entrano nel totale finché non vengono approvate dal dettaglio del turno.
-            </p>
-          </Card>
-        ) : null}
         <Card className="mb-4 grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
           <div><p className="text-xs text-t3">Ore Lavorate Effettive</p><p className="font-mono text-xl text-t1">{formatHours(totalHours)}</p></div>
           <div><p className="text-xs text-t3">Ore di Assenza Giustificata</p><p className="font-mono text-xl text-t1">{formatHours(totalJustified)}</p></div>
           <div><p className="text-xs text-t3">Totale ore coperte</p><p className="font-mono text-xl text-gold">{formatHours(totalCoveredHours)}</p></div>
           <p className="text-xs text-t4 sm:col-span-3">Senza timbratura, le ore del turno concluso entrano automaticamente e si possono correggere dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</p>
           {totalConflicts > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</p> : null}
-          {totalUntracked > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dalle ore lavorate effettive.</p> : null}
+          {totalUntracked > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dalle ore lavorate effettive: le trovi in «{HOURS_TO_FIX_TITLE}».</p> : null}
         </Card>
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-sm">

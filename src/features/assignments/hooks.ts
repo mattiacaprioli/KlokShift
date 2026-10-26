@@ -29,6 +29,7 @@ import {
   getPersonWorkedShifts,
   getOwnerTodayAssignments,
   getOwnerHoursSummary,
+  getHoursToFix,
   reassignShiftAssignment,
   respondToAssignment,
   setAssignmentPresence,
@@ -411,6 +412,15 @@ export function useOwnerHoursSummary(
   return useQuery({
     queryKey: qk.staff.ownerHours(workspaceId ?? "", periodKey(period)),
     queryFn: () => getOwnerHoursSummary(workspaceId as string, periodBounds(period)),
+    enabled: !!workspaceId,
+  });
+}
+
+/** I turni del periodo le cui ore non contano ancora: la lista «da sistemare». */
+export function useHoursToFix(workspaceId: string | undefined, period: ReportPeriod) {
+  return useQuery({
+    queryKey: qk.staff.hoursToFix(workspaceId ?? "", periodKey(period)),
+    queryFn: () => getHoursToFix(workspaceId as string, periodBounds(period)),
     enabled: !!workspaceId,
   });
 }
