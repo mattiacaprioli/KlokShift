@@ -93,8 +93,15 @@ begin
     'la correzione non sovrascrive l''entrata originale');
   perform tests.eq((select clock_out_at from public.shift_clock_records where id = rec.id), original_out,
     'la correzione non sovrascrive l''uscita originale');
-  perform tests.raises(format('select public.correct_clock_record(%L, null, now(), '''')', rec.id),
-    'reason_required', 'la correzione vuole una motivazione');
+  -- Il motivo è facoltativo (20261026000300): la correzione passa e lo lascia
+  -- vuoto. Provata in un blocco che si annulla, per non cambiare il resto.
+  begin
+    perform tests.ok((public.correct_clock_record(rec.id, null, now(), '  ')).reason is null,
+      'la correzione senza motivo lo lascia vuoto');
+    raise exception 'rollback_probe';
+  exception when others then
+    if sqlerrm <> 'rollback_probe' then raise; end if;
+  end;
 
   perform tests.eq((
     select sum(to_review_count) from public.get_workspace_hours_summary(

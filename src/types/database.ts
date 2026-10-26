@@ -839,7 +839,7 @@ export type Database = {
           corrected_out_at: string | null
           created_at: string
           id: string
-          reason: string
+          reason: string | null
         }
         Insert: {
           clock_record_id: string
@@ -849,7 +849,7 @@ export type Database = {
           corrected_out_at?: string | null
           created_at?: string
           id?: string
-          reason: string
+          reason?: string | null
         }
         Update: {
           clock_record_id?: string
@@ -859,7 +859,7 @@ export type Database = {
           corrected_out_at?: string | null
           created_at?: string
           id?: string
-          reason?: string
+          reason?: string | null
         }
         Relationships: [
           {
@@ -2038,7 +2038,7 @@ export type Database = {
           corrected_out_at: string | null
           created_at: string
           id: string
-          reason: string
+          reason: string | null
         }
         SetofOptions: {
           from: "*"
@@ -2062,7 +2062,7 @@ export type Database = {
           corrected_out_at: string | null
           created_at: string
           id: string
-          reason: string
+          reason: string | null
         }
         SetofOptions: {
           from: "*"

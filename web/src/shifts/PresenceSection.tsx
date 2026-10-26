@@ -210,7 +210,7 @@ function ClockReview({
             <Input
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="Motivo (es. non ha timbrato, mezz’ora in più)"
+              placeholder="Motivo (facoltativo): es. non ha timbrato, mezz’ora in più"
               className="sm:col-span-2"
             />
             {enterIn.ok && enterOut.ok && !enterRangeOk ? (
@@ -225,7 +225,7 @@ function ClockReview({
               <Button
                 type="button"
                 variant="gold"
-                disabled={enter.isPending || !reason.trim() || !enterRangeOk}
+                disabled={enter.isPending || !enterRangeOk}
                 onClick={() => {
                   if (!enterIn.ok || !enterOut.ok) return;
                   enter.mutate(
@@ -372,7 +372,7 @@ function ClockReview({
           <Input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Motivo della correzione"
+            placeholder="Motivo (facoltativo)"
             className="self-end"
           />
           <div className="flex gap-2 sm:col-span-2">
@@ -381,7 +381,7 @@ function ClockReview({
               type="button"
               variant="gold"
               disabled={
-                pending || !reason.trim() || !inResult.ok || !outResult.ok || !breakValid
+                pending || !inResult.ok || !outResult.ok || !breakValid
               }
               onClick={async () => {
                 if (!inResult.ok || !outResult.ok) return;
@@ -457,7 +457,8 @@ function ClockReview({
           <ul className="mt-1 space-y-1 pl-4">
             {clock.corrections.map((item) => (
               <li key={item.id}>
-                {item.corrector?.full_name ?? "Gestore"} · {new Date(item.created_at).toLocaleString("it-IT")} · {item.reason}
+                {item.corrector?.full_name ?? "Gestore"} · {new Date(item.created_at).toLocaleString("it-IT")}
+                {item.reason ? ` · ${item.reason}` : ""}
               </li>
             ))}
           </ul>

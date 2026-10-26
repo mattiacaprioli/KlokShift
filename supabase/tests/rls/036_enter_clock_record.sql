@@ -32,8 +32,6 @@ begin
     'not_allowed', 'con solo Turni non si inseriscono orari');
 
   perform tests.login('Co2');
-  perform tests.raises(format('select public.enter_clock_record(%L, %L, %L, '' '')', aid, t_in, t_out),
-    'reason_required', 'serve un motivo');
   perform tests.raises(format('select public.enter_clock_record(%L, %L, %L, ''x'')',
       aid, t_in, now() + interval '1 hour'),
     'invalid_clock_interval', 'non nel futuro');

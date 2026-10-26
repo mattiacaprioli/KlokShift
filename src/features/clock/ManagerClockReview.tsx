@@ -150,8 +150,9 @@ export function ManagerClockReview({
   const invalidRange = outAt.getTime() <= inAt.getTime();
   const breakValue = Number(breakDraft);
   const breakValid = breakDraft !== "" && Number.isInteger(breakValue);
-  const canSaveCorrection =
-    reason.trim().length > 0 && !invalidRange && breakValid && !pending;
+  // Il motivo è facoltativo (20261026000300): la traccia è la correzione
+  // stessa, con autore e ora. Per annullare invece resta obbligatorio.
+  const canSaveCorrection = !invalidRange && breakValid && !pending;
   const corrections = [...activeClock.corrections].sort((a, b) =>
     b.created_at.localeCompare(a.created_at)
   );
@@ -367,7 +368,9 @@ export function ManagerClockReview({
               <View className="mt-2 gap-2">
                 {corrections.map((item) => (
                   <View key={item.id} className="rounded-xl bg-bg-2 px-3 py-2">
-                    <Text className="text-xs text-t2">{item.reason}</Text>
+                    <Text className="text-xs text-t2">
+                      {item.reason ?? "Nessun motivo indicato"}
+                    </Text>
                     <Text className="mt-1 text-[11px] text-t4">
                       {item.corrector?.full_name ?? "Gestore"} ·{" "}
                       {formatCorrectionDate(item.created_at)}
@@ -411,7 +414,7 @@ export function ManagerClockReview({
             </Text>
             <Text className="mt-2 text-sm leading-5 text-t2">
               {mode === "correct"
-                ? "Gli orari originali restano nello storico. Indica il motivo della modifica."
+                ? "Gli orari originali restano nello storico, con chi li ha corretti."
                 : unplanned
                   ? `${UNPLANNED_VOID_NOTICE} La timbratura resterà nello storico.`
                   : "La timbratura non verrà conteggiata, ma resterà nello storico."}
@@ -461,7 +464,7 @@ export function ManagerClockReview({
 
               <View className="mt-5">
                 <Input
-                  label="Motivo"
+                  label={mode === "correct" ? "Motivo (facoltativo)" : "Motivo"}
                   value={reason}
                   onChangeText={setReason}
                   placeholder={
@@ -543,7 +546,7 @@ function EnterTimesModal({
   const now = useNow();
   const invalidRange = outAt.getTime() <= inAt.getTime();
   const future = outAt.getTime() > now.getTime();
-  const canSave = reason.trim().length > 0 && !invalidRange && !future && !enter.isPending;
+  const canSave = !invalidRange && !future && !enter.isPending;
 
   function onSave() {
     if (!canSave) return;
@@ -579,7 +582,7 @@ function EnterTimesModal({
           <Text className="text-lg font-sans-bold text-t1">Inserisci gli orari</Text>
           <Text className="mt-2 text-sm leading-5 text-t2">
             Gli orari in cui {personName} ha lavorato davvero. Restano nello
-            storico con il motivo, e le ore contano subito.
+            storico con chi li ha inseriti, e le ore contano subito.
           </Text>
 
           <ScrollView
@@ -602,7 +605,7 @@ function EnterTimesModal({
             ) : null}
             <View className="mt-5">
               <Input
-                label="Motivo"
+                label="Motivo (facoltativo)"
                 value={reason}
                 onChangeText={setReason}
                 placeholder="Es. non ha timbrato, mezz’ora in più"

@@ -135,7 +135,8 @@ timbrano (`hoursAreClocked`, gemello di `record_attendance`), app e dashboard
 non mostrano il campo ore. Si correggono entrata e uscita, e la correzione
 approva nello stesso passo («Salva e approva»). Chi non ha timbrato riceve gli
 orari da chi ha «Ore» con `enter_clock_record`: timbratura `method = 'manual'`,
-con correzione, motivo e autore, già approvata.
+con correzione e autore, già approvata. Il motivo di una correzione è
+facoltativo (`20261026000300`); per annullare una timbratura resta obbligatorio.
 
 ## Pausa (2026-10-16)
 

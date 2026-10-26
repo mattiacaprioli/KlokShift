@@ -182,8 +182,15 @@ begin
   perform tests.eq((select proposed from tests.br_hours(today - 1, today)), 4.25::numeric,
     'proposta con la pausa timbrata');
 
-  perform tests.raises(format('select public.correct_clock_break(%L, 30, '''')', rec.id),
-    'reason_required', 'la correzione della pausa vuole un motivo');
+  -- Il motivo è facoltativo (20261026000300). Provata in un blocco che si
+  -- annulla, per non cambiare il resto.
+  begin
+    perform tests.ok((public.correct_clock_break(rec.id, 30, '')).reason is null,
+      'anche la pausa si corregge senza motivo');
+    raise exception 'rollback_probe';
+  exception when others then
+    if sqlerrm <> 'rollback_probe' then raise; end if;
+  end;
   perform tests.raises(format('select public.correct_clock_break(%L, 300, ''x'')', rec.id),
     'break_too_long', 'la pausa corretta resta dentro la timbratura');
   perform tests.login('Emp');
