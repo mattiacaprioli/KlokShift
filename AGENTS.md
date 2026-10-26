@@ -127,6 +127,16 @@ gemello nel passato. Mettere qualcuno su un turno finito (`assign_one`) chiede
 dice; i form del nuovo turno dicono l'orario passato e portano a «Turno già
 fatto». Nei test SQL lo storico si prepara con `tests.create_shifts` (seed).
 
+## Correggere le ore (2026-10-26)
+
+Con la timbratura le ore contano solo da una timbratura approvata: un numero
+scritto a mano resta fuori dal consuntivo (B02). Per questo, sulle righe che
+timbrano (`hoursAreClocked`, gemello di `record_attendance`), app e dashboard
+non mostrano il campo ore. Si correggono entrata e uscita, e la correzione
+approva nello stesso passo («Salva e approva»). Chi non ha timbrato riceve gli
+orari da chi ha «Ore» con `enter_clock_record`: timbratura `method = 'manual'`,
+con correzione, motivo e autore, già approvata.
+
 ## Pausa (2026-10-16)
 
 La sede (chi ha «Ore») decide se la pausa è retribuita: retribuita resta nelle

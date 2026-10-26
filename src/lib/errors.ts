@@ -222,6 +222,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Hai già un’entrata aperta: registra prima l’uscita.",
   },
   {
+    // `enter_clock_record`: gli orari si inseriscono solo dove non c'è niente.
+    match: ["clock_record_exists"],
+    message: "C'è già una timbratura per questo turno: correggi quella.",
+  },
+  {
     // Chiusa da un altro nel frattempo: il gestore o il professionista (C13).
     match: ["clock_already_closed"],
     message: "L'uscita è già stata registrata. Aggiorna la pagina.",

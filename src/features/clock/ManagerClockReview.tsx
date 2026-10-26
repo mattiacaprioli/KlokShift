@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Pill } from "@/components/ui/Pill";
 import { TimeField } from "@/features/shifts/TimeField";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
+import { isActiveAssignment } from "@/features/assignments/status";
 import { userErrorMessage } from "@/lib/errors";
 import {
   formatHours,
@@ -15,10 +16,12 @@ import {
   type ShiftBreak,
 } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
+import { useNow } from "@/lib/useNow";
 import {
   useApproveClockRecord,
   useCorrectClockBreak,
   useCorrectClockRecord,
+  useEnterClockRecord,
   useVoidClockRecord,
 } from "./hooks";
 import {
@@ -51,6 +54,8 @@ function formatCorrectionDate(value: string): string {
  */
 export function ManagerClockReview({
   assignment,
+  clocked,
+  scheduledInAt,
   scheduledOutAt,
   plannedHours,
   shiftBreak,
@@ -58,6 +63,14 @@ export function ManagerClockReview({
   unplanned = false,
 }: {
   assignment: AssignmentWithStaff;
+  /**
+   * Le ore di questa riga passano dalla timbratura (`hoursAreClocked`). Senza
+   * timbratura e senza timbratura dovuta non c'è niente da mostrare qui: le ore
+   * si correggono col numero, sotto.
+   */
+  clocked: boolean;
+  /** Inizio pianificato del turno, proposto quando si inseriscono gli orari. */
+  scheduledInAt: Date;
   /** Fine pianificata del turno, proposta quando manca l'uscita. */
   scheduledOutAt: Date;
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
@@ -83,12 +96,41 @@ export function ManagerClockReview({
   const [reason, setReason] = useState("");
   const [breakDraft, setBreakDraft] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const works = isActiveAssignment(assignment.status);
 
   if (!clock || !times) {
+    if (!clocked) return null;
+    // Doveva timbrare e non l'ha fatto: senza orari quelle ore non contano.
+    // Li inserisce chi ha «Ore», con un motivo, e nascono già approvati.
     return (
-      <View className="mt-3 border-t border-border pt-3">
-        <Text className="text-xs text-t4">Nessuna timbratura registrata</Text>
-      </View>
+      <>
+        <View className="mt-3 rounded-2xl border border-border bg-bg-1 p-3.5">
+          <Text className="text-sm font-sans-semibold text-t1">
+            {personName} non ha timbrato
+          </Text>
+          <Text className="mt-0.5 text-xs leading-4 text-t3">
+            Senza orari queste ore non contano.
+          </Text>
+          {!locked && works ? (
+            <GoldButton
+              className="mt-3"
+              size="sm"
+              label="Inserisci orari"
+              onPress={() => setEntering(true)}
+            />
+          ) : null}
+        </View>
+        {entering ? (
+          <EnterTimesModal
+            assignmentId={assignment.id}
+            personName={personName}
+            defaultIn={scheduledInAt}
+            defaultOut={scheduledOutAt}
+            onClose={() => setEntering(false)}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -168,14 +210,20 @@ export function ManagerClockReview({
           reason: reason.trim(),
         });
       }
+      // Correggere vuol dire aver controllato: si approva nello stesso passo,
+      // altrimenti la correzione lasciava le ore «da verificare» e fuori dal
+      // consuntivo finché qualcuno non tornava ad approvarle.
+      if (works) await approve.mutateAsync(assignment.id);
       setMode(null);
       setReason("");
       toast.show(
-        !activeTimes.outAt
-          ? "Uscita inserita"
-          : timesChanged
-            ? "Orari corretti"
-            : "Pausa corretta"
+        works
+          ? "Correzione salvata, ore approvate"
+          : !activeTimes.outAt
+            ? "Uscita inserita"
+            : timesChanged
+              ? "Orari corretti"
+              : "Pausa corretta"
       );
     } catch (error) {
       toast.show(
@@ -433,7 +481,13 @@ export function ManagerClockReview({
             <View className="mt-6 gap-2.5">
               {mode === "correct" ? (
                 <GoldButton
-                  label={pending ? "Salvataggio…" : "Salva correzione"}
+                  label={
+                    pending
+                      ? "Salvataggio…"
+                      : works
+                        ? "Salva e approva"
+                        : "Salva correzione"
+                  }
                   disabled={!canSaveCorrection}
                   onPress={onCorrect}
                 />
@@ -460,5 +514,119 @@ export function ManagerClockReview({
         </Pressable>
       </Modal>
     </>
+  );
+}
+
+/**
+ * Inserisci gli orari di chi doveva timbrare e non l'ha fatto
+ * (`enter_clock_record`): entrata, uscita e motivo, già approvati. La pausa è
+ * quella del turno; si corregge dopo, come ogni timbratura.
+ */
+function EnterTimesModal({
+  assignmentId,
+  personName,
+  defaultIn,
+  defaultOut,
+  onClose,
+}: {
+  assignmentId: string;
+  personName: string;
+  defaultIn: Date;
+  defaultOut: Date;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const enter = useEnterClockRecord();
+  const [inAt, setInAt] = useState(() => defaultIn);
+  const [outAt, setOutAt] = useState(() => defaultOut);
+  const [reason, setReason] = useState("");
+  const now = useNow();
+  const invalidRange = outAt.getTime() <= inAt.getTime();
+  const future = outAt.getTime() > now.getTime();
+  const canSave = reason.trim().length > 0 && !invalidRange && !future && !enter.isPending;
+
+  function onSave() {
+    if (!canSave) return;
+    enter.mutate(
+      {
+        assignmentId,
+        inAt: inAt.toISOString(),
+        outAt: outAt.toISOString(),
+        reason: reason.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast.show("Orari inseriti, ore approvate");
+          onClose();
+        },
+        onError: (error) =>
+          toast.show(userErrorMessage(error, "Impossibile salvare gli orari."), "error"),
+      }
+    );
+  }
+
+  return (
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <Pressable
+        onPress={enter.isPending ? undefined : onClose}
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
+        className="items-center justify-center px-6"
+      >
+        <Pressable
+          onPress={() => {}}
+          className="max-h-[88%] w-full rounded-3xl border border-border-2 bg-bg-card p-6"
+        >
+          <Text className="text-lg font-sans-bold text-t1">Inserisci gli orari</Text>
+          <Text className="mt-2 text-sm leading-5 text-t2">
+            Gli orari in cui {personName} ha lavorato davvero. Restano nello
+            storico con il motivo, e le ore contano subito.
+          </Text>
+
+          <ScrollView
+            className="mt-5"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="flex-row gap-3">
+              <TimeField className="flex-1" label="Entrata" value={inAt} onChange={setInAt} />
+              <TimeField className="flex-1" label="Uscita" value={outAt} onChange={setOutAt} />
+            </View>
+            {invalidRange ? (
+              <Text className="mt-2 text-xs font-sans-semibold text-error">
+                L’uscita deve essere successiva all’entrata.
+              </Text>
+            ) : future ? (
+              <Text className="mt-2 text-xs font-sans-semibold text-error">
+                L’uscita non può essere nel futuro.
+              </Text>
+            ) : null}
+            <View className="mt-5">
+              <Input
+                label="Motivo"
+                value={reason}
+                onChangeText={setReason}
+                placeholder="Es. non ha timbrato, mezz’ora in più"
+                multiline
+                numberOfLines={3}
+                className="h-24"
+                textAlignVertical="top"
+                maxLength={500}
+              />
+            </View>
+          </ScrollView>
+
+          <View className="mt-6 gap-2.5">
+            <GoldButton
+              label={enter.isPending ? "Salvataggio…" : "Salva e approva"}
+              disabled={!canSave}
+              onPress={onSave}
+            />
+            <Pressable disabled={enter.isPending} onPress={onClose} className="items-center py-2">
+              <Text className="text-sm text-t3">Indietro</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }

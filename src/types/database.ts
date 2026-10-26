@@ -2091,6 +2091,34 @@ export type Database = {
         Args: { p_template: string }
         Returns: undefined
       }
+      enter_clock_record: {
+        Args: {
+          p_assignment: string
+          p_in: string
+          p_out: string
+          p_reason: string
+        }
+        Returns: {
+          attendance_reviewed_at: string | null
+          attendance_reviewed_by: string | null
+          confirmed_at: string | null
+          created_at: string
+          hours_source: string | null
+          id: string
+          role_id: string | null
+          shift_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
+          worked_hours: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       export_workspace_data: { Args: { p_workspace: string }; Returns: Json }
       get_absence_availability: {
         Args: { p_from: string; p_to: string }

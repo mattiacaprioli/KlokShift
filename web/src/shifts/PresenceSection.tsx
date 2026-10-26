@@ -9,6 +9,7 @@ import { assignmentHours } from "@/features/assignments/hours";
 import { useSelfStaff } from "@/features/staff/self";
 import { userErrorMessage } from "@/lib/errors";
 import {
+  addDaysToDate,
   formatHours,
   formatHoursVariance,
   shiftCountedHours,
@@ -21,6 +22,7 @@ import {
   useApproveClockRecords,
   useCorrectClockBreak,
   useCorrectClockRecord,
+  useEnterClockRecord,
   useVoidClockRecord,
 } from "@/features/clock/hooks";
 import {
@@ -29,8 +31,12 @@ import {
   effectiveClockBreak,
   effectiveClockTimes,
   formatClockTime,
+  hoursAreClocked,
   isRegularPendingClock,
 } from "@/features/clock/hours";
+import { effectiveClockMethod } from "@/features/clock/methods";
+import { isActiveAssignment } from "@/features/assignments/status";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import {
   resolveRomeLocal,
   romeDateTimeLocal,
@@ -97,6 +103,9 @@ export function RomeDateTimeField({
 
 function ClockReview({
   assignment,
+  clocked,
+  defaultIn,
+  defaultOut,
   plannedHours,
   endTime,
   shiftBreak,
@@ -104,6 +113,15 @@ function ClockReview({
   unplanned,
 }: {
   assignment: AssignmentWithStaff;
+  /**
+   * Le ore passano dalla timbratura (`hoursAreClocked`): senza timbratura non
+   * contano, e chi gestisce ne inserisce gli orari. Chi non timbra non ha
+   * niente da mostrare qui.
+   */
+  clocked: boolean;
+  /** Inizio e fine del turno nell'ora di Roma, proposti inserendo gli orari. */
+  defaultIn: string;
+  defaultOut: string;
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
   plannedHours: number;
   /** Fine prevista del turno, per proporre l'uscita mancante. */
@@ -119,7 +137,9 @@ function ClockReview({
   const correct = useCorrectClockRecord();
   const correctBreak = useCorrectClockBreak();
   const voidClock = useVoidClockRecord();
-  const [mode, setMode] = useState<"correct" | "void" | null>(null);
+  const enter = useEnterClockRecord();
+  const works = isActiveAssignment(assignment.status);
+  const [mode, setMode] = useState<"correct" | "void" | "enter" | null>(null);
   const times = clock ? effectiveClockTimes(clock) : null;
   const [inAt, setInAt] = useState(() => (times ? romeDateTimeLocal(times.inAt) : ""));
   const [outAt, setOutAt] = useState(() =>
@@ -132,7 +152,103 @@ function ClockReview({
   const [breakDraft, setBreakDraft] = useState(() => String(pause?.minutes ?? 0));
 
   if (!clock || !times || !pause) {
-    return <p className="mt-1 text-[11px] text-t4">Non timbrato</p>;
+    if (!clocked) return null;
+    // Doveva timbrare e non l'ha fatto: senza orari quelle ore non contano. Li
+    // inserisce chi ha «Ore», con un motivo, e nascono già approvati
+    // (`enter_clock_record`).
+    const enterIn = romeFieldToIso(inAt, { ambiguousChoice: inChoice });
+    const enterOut = romeFieldToIso(outAt, { ambiguousChoice: outChoice });
+    const enterRangeOk =
+      enterIn.ok && enterOut.ok && Date.parse(enterOut.iso) > Date.parse(enterIn.iso);
+    return (
+      <div
+        className="mt-2 border-t border-border pt-2"
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.preventDefault();
+        }}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs text-t3">
+            Non ha timbrato: senza orari queste ore non contano.
+          </p>
+          {!locked && works && mode !== "enter" ? (
+            <Button
+              type="button"
+              variant="gold"
+              onClick={() => {
+                setInAt(defaultIn);
+                setOutAt(defaultOut);
+                setInChoice(undefined);
+                setOutChoice(undefined);
+                setReason("");
+                setMode("enter");
+              }}
+              className="px-3 py-1.5 text-xs"
+            >
+              Inserisci orari
+            </Button>
+          ) : null}
+        </div>
+        {mode === "enter" ? (
+          <div className="mt-3 grid gap-2 rounded-xl bg-bg-2 p-3 sm:grid-cols-2">
+            <RomeDateTimeField
+              label="Entrata"
+              value={inAt}
+              onChange={setInAt}
+              choice={inChoice}
+              onChoice={setInChoice}
+              result={enterIn}
+            />
+            <RomeDateTimeField
+              label="Uscita"
+              value={outAt}
+              onChange={setOutAt}
+              choice={outChoice}
+              onChoice={setOutChoice}
+              result={enterOut}
+            />
+            <Input
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Motivo (es. non ha timbrato, mezz’ora in più)"
+              className="sm:col-span-2"
+            />
+            {enterIn.ok && enterOut.ok && !enterRangeOk ? (
+              <p className="text-xs text-warning sm:col-span-2">
+                L’uscita deve essere successiva all’entrata.
+              </p>
+            ) : null}
+            <div className="flex gap-2 sm:col-span-2">
+              <Button type="button" onClick={() => setMode(null)}>
+                Annulla
+              </Button>
+              <Button
+                type="button"
+                variant="gold"
+                disabled={enter.isPending || !reason.trim() || !enterRangeOk}
+                onClick={() => {
+                  if (!enterIn.ok || !enterOut.ok) return;
+                  enter.mutate(
+                    {
+                      assignmentId: assignment.id,
+                      inAt: enterIn.iso,
+                      outAt: enterOut.iso,
+                      reason: reason.trim(),
+                    },
+                    { onSuccess: () => setMode(null) }
+                  );
+                }}
+              >
+                {enter.isPending ? "Salvataggio…" : "Salva e approva"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {enter.error ? (
+          <p className="mt-2 text-xs text-error">{userErrorMessage(enter.error)}</p>
+        ) : null}
+      </div>
+    );
   }
 
   const hours = clockRecordHours(clock, shiftBreak);
@@ -290,13 +406,16 @@ function ClockReview({
                       reason: reason.trim(),
                     });
                   }
+                  // Correggere vuol dire aver controllato: si approva nello
+                  // stesso passo, o le ore restavano fuori dal consuntivo.
+                  if (works) await approve.mutateAsync(assignment.id);
                   close();
                 } catch {
                   // L'errore resta nello stato della mutation e si mostra sotto.
                 }
               }}
             >
-              Salva correzione
+              {works ? "Salva e approva" : "Salva correzione"}
             </Button>
           </div>
         </div>
@@ -380,12 +499,15 @@ function outFieldDefault(
 export function PresenceSection({
   shiftId,
   venueId,
+  date,
   startTime,
   endTime,
   shiftBreak,
   unplanned = false,
 }: {
   shiftId: string;
+  /** Il giorno del turno: da qui partono gli orari proposti da inserire. */
+  date: string;
   /** La sede del turno: decide se le proprie ore sono proprie da scrivere. */
   venueId: string;
   startTime: string;
@@ -414,6 +536,19 @@ export function PresenceSection({
    */
   const self = useSelfStaff();
   const locked = !self.canEditOwnPayroll(venueId);
+  // Con la timbratura le ore si correggono dagli orari, non dal numero: un
+  // numero scritto a mano resterebbe fuori dal consuntivo (B02).
+  const { venues } = useOwnerVenues();
+  const venueMethod = venues.find((v) => v.id === venueId)?.clock_method ?? "manual";
+  const clockedOf = (a: AssignmentWithStaff) =>
+    hoursAreClocked(
+      a,
+      effectiveClockMethod(a.staff_member?.clock_method ?? null, venueMethod)
+    );
+  const defaultIn = `${date}T${startTime.slice(0, 5)}`;
+  const defaultOut = `${
+    endTime.slice(0, 5) > startTime.slice(0, 5) ? date : addDaysToDate(date, 1)
+  }T${endTime.slice(0, 5)}`;
 
   // Chi ha rifiutato il turno non è una presenza da consuntivare: resta in
   // "Chi lavora" con la sua etichetta, ma qui darebbe un "Presente" verde (e un
@@ -463,6 +598,7 @@ export function PresenceSection({
           const absent = a.status === "no_show";
           const hours = assignmentHours(a.status, a.worked_hours, times);
           const mineLocked = isMineLocked(a);
+          const clocked = clockedOf(a);
           return (
             <div
               key={a.id}
@@ -515,6 +651,12 @@ export function PresenceSection({
                 {absent ? "Assente" : "Presente"}
               </button>
 
+              {clocked ? (
+                // Le ore vengono dalla timbratura: si correggono lì sotto.
+                <span className="w-20 text-center font-mono text-xs text-t3">
+                  {absent ? "—" : hours}
+                </span>
+              ) : (
               <Input
                 type="number"
                 step={0.5}
@@ -533,11 +675,15 @@ export function PresenceSection({
                 className="w-20 px-2 py-1 text-center font-mono text-xs disabled:opacity-40"
                 aria-label="Ore effettive"
               />
+              )}
               </>
               )}
               </div>
               <ClockReview
                 assignment={a}
+                clocked={clocked}
+                defaultIn={defaultIn}
+                defaultOut={defaultOut}
                 plannedHours={planned}
                 endTime={endTime}
                 shiftBreak={shiftBreak}
@@ -548,12 +694,19 @@ export function PresenceSection({
           );
         })}
       </div>
-      <p className="mt-2 text-[11px] text-t4">
-        Senza timbratura, le ore del turno concluso compaiono automaticamente in Ore.
-        {shiftBreak.break_minutes > 0 && !shiftBreak.break_paid
-          ? ` Ore previste ${formatHours(planned)}, al netto della pausa non retribuita: correggi il numero se le ore svolte sono diverse.`
-          : ` Durata prevista ${formatHours(planned)}: correggi il numero se le ore svolte sono diverse.`}
-      </p>
+      {rows.some((a) => !clockedOf(a)) ? (
+        <p className="mt-2 text-[11px] text-t4">
+          Senza timbratura, le ore del turno concluso compaiono automaticamente in Ore.
+          {shiftBreak.break_minutes > 0 && !shiftBreak.break_paid
+            ? ` Ore previste ${formatHours(planned)}, al netto della pausa non retribuita: correggi il numero se le ore svolte sono diverse.`
+            : ` Durata prevista ${formatHours(planned)}: correggi il numero se le ore svolte sono diverse.`}
+        </p>
+      ) : (
+        <p className="mt-2 text-[11px] text-t4">
+          Con la timbratura le ore vengono dagli orari: si correggono con «Correggi
+          orari e pausa» o «Inserisci orari», e si approvano nello stesso passo.
+        </p>
+      )}
       {locked && rows.some((a) => self.isSelf(a.staff_member?.waiter_id)) ? (
         <p className="mt-1 text-[11px] text-t4">
           Le tue presenze e le tue ore le segna chi ha il permesso Ore su questa

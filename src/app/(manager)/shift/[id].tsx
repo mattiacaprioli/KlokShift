@@ -56,8 +56,10 @@ import {
 import { useNow } from "@/lib/useNow";
 import {
   effectiveClockTimes,
+  hoursAreClocked,
   isRegularPendingClock,
 } from "@/features/clock/hours";
+import { effectiveClockMethod } from "@/features/clock/methods";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
 
@@ -164,6 +166,8 @@ function PresenceRow({
   plannedHours,
   shiftBreak,
   shiftId,
+  clocked,
+  scheduledInAt,
   scheduledOutAt,
   locked,
   unplanned,
@@ -172,6 +176,12 @@ function PresenceRow({
   plannedHours: number;
   shiftBreak: ShiftBreak;
   shiftId: string;
+  /**
+   * Le ore passano dalla timbratura: si correggono entrata e uscita, non il
+   * numero, che con la timbratura resterebbe fuori dal consuntivo.
+   */
+  clocked: boolean;
+  scheduledInAt: Date;
   scheduledOutAt: Date;
   locked?: boolean;
   /** Turno nato da una timbratura senza turno. */
@@ -265,6 +275,8 @@ function PresenceRow({
 
       <ManagerClockReview
         assignment={assignment}
+        clocked={clocked}
+        scheduledInAt={scheduledInAt}
         scheduledOutAt={scheduledOutAt}
         plannedHours={plannedHours}
         shiftBreak={shiftBreak}
@@ -285,7 +297,7 @@ function PresenceRow({
         </View>
       ) : null}
 
-      {present && !locked ? (
+      {present && !locked && !clocked ? (
         <View className="mt-3 border-t border-border pt-3">
           {!editing ? (
             <Pressable
@@ -735,6 +747,15 @@ export default function ShiftDetailScreen() {
                   plannedHours={plannedHours}
                   shiftBreak={shift}
                   shiftId={id}
+                  clocked={hoursAreClocked(
+                    a,
+                    effectiveClockMethod(
+                      a.staff_member?.clock_method ?? null,
+                      venues.find((v) => v.id === shift.venue_id)?.clock_method ??
+                        "manual"
+                    )
+                  )}
+                  scheduledInAt={shiftStartsAt(shift.date, shift.start_time)}
                   scheduledOutAt={shiftEndsAt(
                     shift.date,
                     shift.start_time,

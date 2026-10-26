@@ -49,6 +49,28 @@ export async function approveClockRecord(
   return data;
 }
 
+/**
+ * Orari inseriti da chi gestisce per chi timbra dall'app e non l'ha fatto
+ * (`enter_clock_record`): la timbratura nasce con un motivo e già approvata,
+ * e le ore contano. Se una timbratura c'è già il database rifiuta
+ * (`clock_record_exists`): si corregge quella.
+ */
+export async function enterClockRecord(input: {
+  assignmentId: string;
+  inAt: string;
+  outAt: string;
+  reason: string;
+}): Promise<Tables<"shift_assignments">> {
+  const { data, error } = await supabase.rpc("enter_clock_record", {
+    p_assignment: input.assignmentId,
+    p_in: input.inAt,
+    p_out: input.outAt,
+    p_reason: input.reason,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function correctClockRecord(input: {
   recordId: string;
   inAt: string;

@@ -286,6 +286,7 @@ export function ShiftDetails({
               <PresenceSection
                 shiftId={shift.id}
                 venueId={shift.venue_id}
+                date={shift.date}
                 startTime={shift.start_time}
                 endTime={shift.end_time}
                 shiftBreak={shift}

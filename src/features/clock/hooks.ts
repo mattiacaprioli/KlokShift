@@ -7,6 +7,7 @@ import {
   closeUnplannedClock,
   correctClockBreak,
   correctClockRecord,
+  enterClockRecord,
   getClockBreaks,
   getMyUnplannedClock,
   getOpenUnplannedClocks,
@@ -81,6 +82,15 @@ export function useApproveClockRecords() {
       await Promise.all(assignmentIds.map((id) => approveClockRecord(id)));
     },
     onSettled: () => invalidateClockViews(qc),
+  });
+}
+
+/** Orari inseriti da chi gestisce, già approvati: stesse viste da rileggere. */
+export function useEnterClockRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: enterClockRecord,
+    onSuccess: () => invalidateClockViews(qc),
   });
 }
 

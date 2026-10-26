@@ -1,4 +1,4 @@
-import type { Tables } from "@/types/database";
+import type { Enums, Tables } from "@/types/database";
 import {
   formatBreakMinutes,
   formatHours,
@@ -185,6 +185,33 @@ export function isDefinitiveWorkedHours(assignment: ActualInput): boolean {
     assignment.attendance_reviewed_at != null &&
     effectiveClockTimes(assignment.clock).outAt != null
   );
+}
+
+/**
+ * Le ore di questa riga passano dalla timbratura? Allora si correggono entrata
+ * e uscita (e si approvano), non un numero a parte: con la timbratura un numero
+ * scritto a mano resta fuori dal consuntivo.
+ *
+ * Gemello **manuale** del metodo storico in `record_attendance`
+ * (20261004000300): la fonte già congelata sulla riga vince sul metodo attuale
+ * della persona o della sede. Se cambia lì, cambia qui.
+ */
+export function hoursAreClocked(
+  assignment: Pick<ActualInput, "hours_source" | "worked_hours" | "clock">,
+  currentMethod: Enums<"clock_method">
+): boolean {
+  if (assignment.clock) return true;
+  switch (assignment.hours_source) {
+    case "manual":
+    case "manual_auto":
+      return false;
+    case "clock":
+    case "clock_expected":
+      return true;
+  }
+  // Ore scritte senza fonte: le scrive solo un metodo con timbratura (B02).
+  if (assignment.worked_hours != null) return true;
+  return currentMethod !== "manual";
 }
 
 export function assignmentActual(
