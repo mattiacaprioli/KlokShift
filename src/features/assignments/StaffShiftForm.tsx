@@ -84,8 +84,8 @@ export function StaffShiftForm({ initialDate, header }: Props) {
   const create = useCreateInternalShift();
 
   const [date, setDate] = useState(() => initialDate ?? new Date());
-  const [start, setStart] = useState(defaultTime(18));
-  const [end, setEnd] = useState(defaultTime(23));
+  const [start, setStart] = useState(defaultTime(8));
+  const [end, setEnd] = useState(defaultTime(17));
   // Chi è selezionato **e** in che ruolo: la chiave è la persona, il valore il
   // ruolo che ricopre in questo turno (null = non ancora scelto).
   const [selected, setSelected] = useState<Record<string, string | null>>({});

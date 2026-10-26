@@ -698,6 +698,7 @@ export function PlanningPage() {
           date={panel.date}
           shift={panel.shift}
           initialPersonIds={panel.personIds}
+          defaultVenueId={activeVenueId}
           onClose={() => setPanel(null)}
         />
       ) : null}

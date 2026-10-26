@@ -98,6 +98,7 @@ export function RomeDateTimeField({
 function ClockReview({
   assignment,
   plannedHours,
+  endTime,
   shiftBreak,
   locked,
   unplanned,
@@ -105,6 +106,8 @@ function ClockReview({
   assignment: AssignmentWithStaff;
   /** Le ore del turno: lo scostamento si legge accanto a quelle timbrate. */
   plannedHours: number;
+  /** Fine prevista del turno, per proporre l'uscita mancante. */
+  endTime: string;
   /** Pausa pianificata e scelta della sede, copiate sul turno. */
   shiftBreak: ShiftBreak;
   locked: boolean;
@@ -120,7 +123,7 @@ function ClockReview({
   const times = clock ? effectiveClockTimes(clock) : null;
   const [inAt, setInAt] = useState(() => (times ? romeDateTimeLocal(times.inAt) : ""));
   const [outAt, setOutAt] = useState(() =>
-    times?.outAt ? romeDateTimeLocal(times.outAt) : ""
+    times ? outFieldDefault(times.inAt, times.outAt, endTime) : ""
   );
   const [inChoice, setInChoice] = useState<0 | 1 | undefined>();
   const [outChoice, setOutChoice] = useState<0 | 1 | undefined>();
@@ -201,7 +204,7 @@ function ClockReview({
             disabled={pending}
             onClick={() => {
               setInAt(romeDateTimeLocal(times.inAt));
-              setOutAt(times.outAt ? romeDateTimeLocal(times.outAt) : "");
+              setOutAt(outFieldDefault(times.inAt, times.outAt, endTime));
               setBreakDraft(String(pause.minutes));
               setMode("correct");
             }}
@@ -357,6 +360,23 @@ function ClockReview({
  * conosce le singole assegnazioni. Su desktop l'ora è un campo numerico —
  * molto più veloce degli step ±0,5h dell'app.
  */
+/**
+ * Il valore iniziale del campo «Uscita». Se manca, si propone il giorno
+ * dell'entrata alla fine prevista del turno (o all'ora d'entrata, se la fine
+ * cade prima): il campo vuoto costringeva a riscrivere anche la data.
+ */
+function outFieldDefault(
+  inAt: string,
+  outAt: string | null,
+  endTime: string
+): string {
+  if (outAt) return romeDateTimeLocal(outAt);
+  const entry = romeDateTimeLocal(inAt);
+  const [day, entryTime] = entry.split("T");
+  const end = endTime.slice(0, 5);
+  return end > entryTime ? `${day}T${end}` : entry;
+}
+
 export function PresenceSection({
   shiftId,
   venueId,
@@ -519,6 +539,7 @@ export function PresenceSection({
               <ClockReview
                 assignment={a}
                 plannedHours={planned}
+                endTime={endTime}
                 shiftBreak={shiftBreak}
                 locked={mineLocked}
                 unplanned={unplanned}

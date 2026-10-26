@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "@/tw";
 import { Mono } from "@/components/ui/Mono";
 import { SelectChip } from "@/components/ui/SelectChip";
@@ -31,25 +30,13 @@ export function RoleRequirementsField({
   onChange,
   assignedRoleIds,
 }: Props) {
-  const router = useRouter();
   const [picking, setPicking] = useState(false);
 
   const active = roles.filter((r) => (targets[r.id] ?? 0) > 0);
   const available = roles.filter((r) => (targets[r.id] ?? 0) === 0);
 
-  if (roles.length === 0) {
-    return (
-      <View className="gap-2">
-        <Mono>Fabbisogno per ruolo · facoltativo</Mono>
-        <Pressable onPress={() => router.push("/(manager)/ruoli")} hitSlop={8}>
-          <Text className="text-[13px] leading-5 text-t3">
-            Per chiedere dei ruoli su un turno devi prima crearli.{" "}
-            <Text className="font-sans-semibold text-gold">Creali ora</Text>
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
+  // Senza ruoli nella sede non c'è niente da chiedere: la sezione sparisce.
+  if (roles.length === 0) return null;
 
   return (
     <View className="gap-2">

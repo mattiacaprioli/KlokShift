@@ -25,7 +25,6 @@ import {
 } from "@/features/shifts/moveImpact";
 import { useAuth } from "@/lib/auth";
 import { useVenueStaff } from "@/features/staff/hooks";
-import { Link } from "react-router-dom";
 import { useVenueRoles } from "@/features/roles/hooks";
 import {
   staffRoleNames,
@@ -93,6 +92,7 @@ export function ShiftPanel({
   date,
   shift,
   initialPersonIds,
+  defaultVenueId,
   onClose,
 }: {
   date: string;
@@ -107,6 +107,11 @@ export function ShiftPanel({
    * dove.
    */
   initialPersonIds?: string[];
+  /**
+   * La sede da proporre in creazione, se chi apre ne ha già scelta una (il
+   * filtro del Planning). Vince sull'ultima usata.
+   */
+  defaultVenueId?: string | null;
   onClose: () => void;
 }) {
   // Un turno esistente si apre in lettura: il form arriva solo da «Modifica»,
@@ -163,6 +168,7 @@ export function ShiftPanel({
             date={date}
             shift={shift}
             initialPersonIds={initialPersonIds}
+            defaultVenueId={defaultVenueId}
             headerActions={headerActions}
             onClose={onClose}
             onCancelEdit={shift ? () => setEditing(false) : undefined}
@@ -177,6 +183,7 @@ function InternalForm({
   date,
   shift,
   initialPersonIds,
+  defaultVenueId,
   headerActions,
   onClose,
   onCancelEdit,
@@ -184,6 +191,7 @@ function InternalForm({
   date: string;
   shift?: Shift;
   initialPersonIds?: string[];
+  defaultVenueId?: string | null;
   /** Il contenitore accanto a «Chiudi», dove il form mette «Modelli». */
   headerActions: HTMLElement | null;
   onClose: () => void;
@@ -244,12 +252,18 @@ function InternalForm({
     resolver: zodResolver(internalShiftSchema),
     defaultValues: {
       // In modifica la sede è quella del turno e non si tocca (vedi il campo);
-      // in creazione si propone l'ultima usata, la stessa del form mobile.
-      venue_id: shift?.venue_id ?? lastVenueId ?? venues[0]?.id ?? "",
+      // in creazione si propone la sede filtrata nel Planning (se ci si possono
+      // fare turni), poi l'ultima usata, la stessa del form mobile.
+      venue_id:
+        shift?.venue_id ??
+        venues.find((v) => v.id === defaultVenueId)?.id ??
+        lastVenueId ??
+        venues[0]?.id ??
+        "",
       title: shift?.title ?? "",
       date: shift?.date ?? date,
-      start_time: shift?.start_time?.slice(0, 5) ?? "18:00",
-      end_time: shift?.end_time?.slice(0, 5) ?? "23:00",
+      start_time: shift?.start_time?.slice(0, 5) ?? "08:00",
+      end_time: shift?.end_time?.slice(0, 5) ?? "17:00",
       description: shift?.description ?? "",
       require_confirmation: shift?.require_confirmation ?? false,
     },
@@ -855,37 +869,19 @@ function InternalForm({
 
           {/* Colonna destra: chi serve e chi viene. */}
           <div className="flex min-w-0 flex-col gap-4">
-            <section>
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-                  Fabbisogno per ruolo
-                </span>
-                {coverage.required > 0 ? (
-                  <Pill tone={coverage.missing > 0 ? "warning" : "success"}>
-                    {coverage.covered}/{coverage.required} coperti
-                  </Pill>
-                ) : null}
-              </div>
-              {roles.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
-                  {/* Il listino si scrive con il permesso 'venue': a chi fa i soli
-                      turni «Creali ora» aprirebbe una pagina in sola lettura. */}
-                  {can(formVenueId, "can_manage_venue") ? (
-                    <>
-                      Nessun ruolo definito.{" "}
-                      <Link to="/ruoli" className="font-semibold text-gold">
-                        Creali ora
-                      </Link>{" "}
-                      per poterli chiedere sui turni.
-                    </>
-                  ) : (
-                    <>
-                      Nessun ruolo definito per questa sede: può crearli chi ne
-                      gestisce i dati.
-                    </>
-                  )}
-                </p>
-              ) : (
+            {/* Senza ruoli nella sede non c'è niente da chiedere: la sezione sparisce. */}
+            {roles.length > 0 ? (
+              <section>
+                <div className="mb-2 flex items-baseline justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-t3">
+                    Fabbisogno per ruolo
+                  </span>
+                  {coverage.required > 0 ? (
+                    <Pill tone={coverage.missing > 0 ? "warning" : "success"}>
+                      {coverage.covered}/{coverage.required} coperti
+                    </Pill>
+                  ) : null}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {roles.map((role) => {
                     const count =
@@ -918,8 +914,8 @@ function InternalForm({
                     );
                   })}
                 </div>
-              )}
-            </section>
+              </section>
+            ) : null}
 
             <section>
               <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">

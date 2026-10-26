@@ -969,8 +969,7 @@ function AddToVenue({
   const add = useAddPersonToVenue();
   const toast = useToast();
   const [venueId, setVenueId] = useState("");
-  const [empType, setEmpType] =
-    useState<Enums<"employment_type">>("a_chiamata");
+  const [empType, setEmpType] = useState<Enums<"employment_type">>("fisso");
   const rolesQuery = useVenueRoles(venueId || undefined);
   const suggestions = useMemo(
     () => suggestedRoleIds(rolesQuery.data ?? [], person.memberships),

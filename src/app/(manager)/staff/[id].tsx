@@ -640,8 +640,7 @@ function AddToVenueCard({
   const toast = useToast();
   const add = useAddPersonToVenue();
   const [venueId, setVenueId] = useState<string | null>(null);
-  const [empType, setEmpType] =
-    useState<Enums<"employment_type">>("a_chiamata");
+  const [empType, setEmpType] = useState<Enums<"employment_type">>("fisso");
   const venue = venues.find((v) => v.id === venueId);
   const rolesQuery = useVenueRoles(venueId ?? undefined);
   const suggestions = useMemo(
