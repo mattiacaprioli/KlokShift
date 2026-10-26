@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView } from "react-native";
-import { ScrollView, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
@@ -35,10 +35,17 @@ import { SkippedDaysNotes } from "@/features/shifts/SkippedDaysNotes";
 import { shiftBreakError } from "@/features/shifts/breaks";
 import {
   plannedDatesOf,
+  shortDays,
   skippedDaysOf,
   staffForDate,
   weekOf,
 } from "@/features/shifts/repeat";
+import {
+  PLAN_ENDED,
+  RECORD_ACTION,
+  endedDates,
+  planEndedExtra,
+} from "@/features/shifts/recorded";
 import { usePlanChecks } from "@/features/shifts/usePlanChecks";
 import { useShiftBreak } from "@/features/shifts/useShiftBreak";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -84,7 +91,8 @@ export function StaffShiftForm({ initialDate, header }: Props) {
   const router = useRouter();
   const toast = useToast();
   const { venueId, choose } = useLastVenue();
-  const { venues } = useOwnerVenues();
+  const { venues, canUseOperations, canAny } = useOwnerVenues();
+  const canRecord = canUseOperations && canAny("can_view_hours");
   const venue = venues.find((v) => v.id === venueId) ?? null;
   const staffQuery = useVenueStaff(venueId);
   // Solo staff confermato: gli inviti ancora da accettare non sono assegnabili.
@@ -149,6 +157,18 @@ export function StaffShiftForm({ initialDate, header }: Props) {
     end_time: toTimeString(end),
   });
   const selectedStaff = staff.filter((m) => m.id in selected);
+  // Il passato non si pianifica (`create_shifts` lo rifiuta): un orario già
+  // finito lo si dice sotto gli orari, e porta a «Turno già fatto».
+  const rangeValid = isValidShiftRange(toTimeString(start), toTimeString(end));
+  const ended = rangeValid
+    ? endedDates(plannedDates, toTimeString(start), toTimeString(end))
+    : [];
+  const mainEnded = ended.includes(toDateString(date));
+  const endedMessage = mainEnded
+    ? PLAN_ENDED
+    : ended.length > 0
+      ? planEndedExtra(shortDays(ended))
+      : null;
   // Chi resta fuori da qualche copia per un'assenza approvata: la stessa regola
   // del pannello web, anche con un giorno solo.
   const skippedDays = skippedDaysOf(selectedStaff, (m) =>
@@ -270,6 +290,10 @@ export function StaffShiftForm({ initialDate, header }: Props) {
       toast.show(error, "error");
       return;
     }
+    if (endedMessage) {
+      toast.show(endedMessage, "error");
+      return;
+    }
     const roleTargets = roles
       .map((role) => ({ role_id: role.id, count: targets[role.id] ?? 0 }))
       .filter((t) => t.count > 0);
@@ -342,23 +366,48 @@ export function StaffShiftForm({ initialDate, header }: Props) {
           <DayPicker value={date} onChange={chooseDate} />
         </View>
 
-        <ShiftTimeFields
-          date={date}
-          start={start}
-          end={end}
-          onStartChange={setStart}
-          onEndChange={setEnd}
-          pause={{
-            minutes: pause.minutes,
-            paid: venue?.break_paid ?? false,
-            onChange: pause.setMinutes,
-          }}
-        />
+        <View className="gap-2">
+          <ShiftTimeFields
+            date={date}
+            start={start}
+            end={end}
+            onStartChange={setStart}
+            onEndChange={setEnd}
+            pause={{
+              minutes: pause.minutes,
+              paid: venue?.break_paid ?? false,
+              onChange: pause.setMinutes,
+            }}
+          />
+          {endedMessage ? (
+            <Text className="text-xs font-sans-semibold text-error">
+              {endedMessage}
+            </Text>
+          ) : null}
+          {mainEnded && canRecord ? (
+            <Pressable
+              onPress={() =>
+                router.replace(`/(manager)/shift/record?date=${toDateString(date)}`)
+              }
+              accessibilityRole="button"
+              hitSlop={8}
+              className="self-start"
+            >
+              <Text className="text-xs font-sans-semibold text-gold">
+                {RECORD_ACTION}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         <RepeatDaysField
           date={toDateString(date)}
           extraDates={extraDates}
           onToggle={toggleExtraDate}
+          isClosed={(day) =>
+            rangeValid &&
+            endedDates([day], toTimeString(start), toTimeString(end)).length > 0
+          }
         />
 
         <RoleRequirementsField

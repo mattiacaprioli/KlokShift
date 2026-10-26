@@ -151,3 +151,78 @@ begin
 
   perform tests.logout();
 end $$;
+
+
+-- Fixture: storico nel passato. Dal 26/10/2026 `public.create_shifts` rifiuta
+-- i turni già finiti (20261026000100: il passato si registra, non si
+-- pianifica), ma molti test hanno bisogno di turni conclusi «come li faceva la
+-- pianificazione». Questa è la versione di prima, con gli stessi controlli di
+-- permesso e la stessa `assign_one`: cambia solo che accetta date passate.
+-- Gira come chi l'ha definita, ma `auth.uid()` resta l'attore impersonato.
+create function tests.create_shifts(p_plans jsonb)
+ RETURNS uuid[]
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_plan    jsonb;
+  v_venue   uuid;
+  v_dates   date[];
+  v_date    date;
+  v_shift   uuid;
+  v_ids     uuid[] := '{}';
+  v_staff   jsonb;
+  v_item    jsonb;
+  v_break   integer;
+begin
+  if (select auth.uid()) is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+
+  for v_venue in select distinct private.venue_workspace((p->>'venue_id')::uuid) from jsonb_array_elements(coalesce(p_plans,'[]'::jsonb)) p order by 1 loop
+    perform private.assert_workspace_operational(v_venue);
+  end loop;
+
+  for v_plan in select * from jsonb_array_elements(coalesce(p_plans, '[]'::jsonb)) loop
+    v_venue := (v_plan ->> 'venue_id')::uuid;
+    if v_venue is null or not private.can(v_venue, 'shifts') then
+      raise exception 'not_allowed' using errcode = '42501';
+    end if;
+    if btrim(coalesce(v_plan ->> 'title', '')) = '' then
+      raise exception 'title_required' using errcode = '23514';
+    end if;
+
+    v_dates := case
+      when v_plan ? 'dates' then array(select d::date from jsonb_array_elements_text(v_plan -> 'dates') d)
+      else array[(v_plan ->> 'date')::date]
+    end;
+    v_staff := coalesce(v_plan -> 'staff', '[]'::jsonb);
+    v_break := coalesce((v_plan ->> 'break_minutes')::integer, 0);
+    perform private.assert_shift_break(
+      (v_plan ->> 'start_time')::time, (v_plan ->> 'end_time')::time, v_break);
+
+    foreach v_date in array v_dates loop
+      insert into public.shifts (
+        venue_id, title, description, date, start_time, end_time, require_confirmation, positions_total,
+        break_minutes
+      ) values (
+        v_venue, btrim(v_plan ->> 'title'), nullif(btrim(coalesce(v_plan ->> 'description', '')), ''),
+        v_date, (v_plan ->> 'start_time')::time, (v_plan ->> 'end_time')::time,
+        coalesce((v_plan ->> 'require_confirmation')::boolean, false),
+        private.positions_for(v_plan -> 'role_targets', jsonb_array_length(v_staff)),
+        v_break
+      ) returning id into v_shift;
+
+      perform private.replace_requirements(v_shift, v_venue, v_plan -> 'role_targets');
+      for v_item in select * from jsonb_array_elements(v_staff) loop
+        perform private.assign_one(v_shift, (v_item ->> 'venue_member_id')::uuid, (v_item ->> 'role_id')::uuid);
+      end loop;
+      v_ids := v_ids || v_shift;
+    end loop;
+  end loop;
+  return v_ids;
+end;
+$function$
+;
+grant execute on function tests.create_shifts(jsonb) to authenticated;

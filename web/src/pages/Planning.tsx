@@ -753,6 +753,14 @@ export function PlanningPage() {
           shift={panel.shift}
           initialPersonIds={panel.personIds}
           defaultVenueId={activeVenueId}
+          onRecordInstead={
+            canAny("can_view_hours")
+              ? (date) => {
+                  setPanel(null);
+                  setRecording({ date });
+                }
+              : undefined
+          }
           onClose={() => setPanel(null)}
         />
       ) : null}

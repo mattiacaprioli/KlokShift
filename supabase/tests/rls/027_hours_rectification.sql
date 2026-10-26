@@ -37,7 +37,7 @@ begin
    where member_id = tests.id('M_Emp') and venue_id = tests.id('V1');
 
   -- Un turno svolto con il metodo Manuale (quello della sede di default).
-  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  shift_ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V1'), 'title', 'Manuale poi App',
     'date', d_manual::text, 'start_time', '09:00', 'end_time', '15:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm)))));
@@ -91,7 +91,7 @@ begin
     'vale la rettifica del collaboratore con Ore');
 
   -- Verso opposto: un turno App passato non diventa Manuale con il cambio di metodo.
-  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  shift_ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V1'), 'title', 'App poi Manuale',
     'date', d_app::text, 'start_time', '09:00', 'end_time', '13:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm)))));
@@ -111,7 +111,7 @@ begin
 
   -- Righe senza fonte ma con ore: scritte con un metodo che non era Manuale.
   perform public.set_member_clock_method(vm, 'app');
-  shift_ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  shift_ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V1'), 'title', 'Ore App senza fonte',
     'date', d_legacy::text, 'start_time', '09:00', 'end_time', '12:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm)))));

@@ -6,7 +6,12 @@ import {
   type AssignmentStatus,
 } from "@/features/assignments/status";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
-import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
+import {
+  addDaysToDate,
+  formatDate,
+  formatShiftRange,
+  isShiftOver,
+} from "@/lib/format";
 import type { Shift } from "@/features/shifts/api";
 import {
   addDays,
@@ -105,18 +110,29 @@ export function DuplicatePeriodDialog({
 
   // Copiabili: i turni ancora validi che hanno una data dove andare. Un
   // annullato non si duplica — la copia ricreerebbe proprio quello che il
-  // gestore aveva tolto.
-  const { copyable, skippedCancelled, skippedNoSlot, notifications } =
+  // gestore aveva tolto. Nemmeno uno che cadrebbe nel passato: il passato non
+  // si pianifica (`create_shifts` lo rifiuta, 20261026000100), e un turno già
+  // fatto si registra a parte.
+  const { copyable, skippedCancelled, skippedNoSlot, skippedPast, notifications } =
     useMemo(() => {
       const copyable: SourceShift[] = [];
       let skippedCancelled = 0;
       let skippedNoSlot = 0;
+      let skippedPast = 0;
       let notifications = 0;
       for (const s of shifts) {
         if (s.status === "cancelled") {
           skippedCancelled++;
         } else if (!dateMap[s.date]) {
           skippedNoSlot++;
+        } else if (
+          isShiftOver({
+            date: dateMap[s.date],
+            start_time: s.start_time,
+            end_time: s.end_time,
+          })
+        ) {
+          skippedPast++;
         } else {
           copyable.push(s);
           notifications += (s.shift_assignments ?? []).filter((a) =>
@@ -129,7 +145,7 @@ export function DuplicatePeriodDialog({
           ? a.start_time.localeCompare(b.start_time)
           : dateMap[a.date].localeCompare(dateMap[b.date])
       );
-      return { copyable, skippedCancelled, skippedNoSlot, notifications };
+      return { copyable, skippedCancelled, skippedNoSlot, skippedPast, notifications };
     }, [shifts, dateMap]);
 
   // Quanti turni ci sono già nel periodo di destinazione: la copia **aggiunge**,
@@ -188,9 +204,11 @@ export function DuplicatePeriodDialog({
         {copyable.length === 0 ? (
           <>
             <p className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-sm text-t3">
-              {isMonth
-                ? "Questo mese non ha turni interni da copiare."
-                : "Questa settimana non ha turni interni da copiare."}
+              {skippedPast > 0
+                ? "I turni da copiare cadrebbero in giorni già passati: non c'è niente da copiare."
+                : isMonth
+                  ? "Questo mese non ha turni interni da copiare."
+                  : "Questa settimana non ha turni interni da copiare."}
             </p>
             <div className="mt-5">
               <Button onClick={onClose}>Chiudi</Button>
@@ -274,6 +292,14 @@ export function DuplicatePeriodDialog({
                 fuori: cade in una posizione che{" "}
                 <span className="capitalize">{targetLabel}</span> non ha — un 5°
                 venerdì, per esempio. Aggiungilo a mano dal planning.
+              </p>
+            ) : null}
+
+            {skippedPast > 0 ? (
+              <p className="mb-4 rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-xs leading-5 text-t3">
+                {skippedPast === 1 ? "1 turno resta" : `${skippedPast} turni restano`}{" "}
+                fuori: {skippedPast === 1 ? "cadrebbe" : "cadrebbero"} in giorni
+                già passati. Un turno già fatto si registra con «+ Già fatto».
               </p>
             ) : null}
 

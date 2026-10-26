@@ -282,7 +282,7 @@ declare
   v_emp2 uuid := pg_temp.vm('M_Emp2', 'V2');
 begin
   perform tests.login('Ow');
-  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V1'), 'title', 'Ieri', 'date', (current_date - 1)::text, 'start_time', '18:00', 'end_time', '22:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp)))));
   select id into a from public.shift_assignments where shift_id = ids[1];
@@ -291,7 +291,7 @@ begin
   -- Due incarichi distinti possono essere svolti insieme, ma il tempo della
   -- persona non raddoppia: 14–22 + 18–23 = 9 ore. Il turno che inizia dopo si
   -- prende il tratto comune, quindi nello storico risultano 4 h + 5 h.
-  ids := public.create_shifts(jsonb_build_array(
+  ids := tests.create_shifts(jsonb_build_array(
     jsonb_build_object(
       'venue_id', tests.id('V1'), 'title', 'Copertura', 'date', (current_date - 2)::text,
       'start_time', '14:00', 'end_time', '22:00',
@@ -316,7 +316,7 @@ begin
   -- Gli annullati non sono lavoro: non contano neppure con una rettifica
   -- manuale e non sottraggono il tratto comune a un turno valido.
   perform tests.login('Ow');
-  ids := public.create_shifts(jsonb_build_array(
+  ids := tests.create_shifts(jsonb_build_array(
     jsonb_build_object(
       'venue_id', tests.id('V2'), 'title', 'Valido Emp2', 'date', (current_date - 3)::text,
       'start_time', '14:00', 'end_time', '22:00',
@@ -437,7 +437,7 @@ begin
 
   -- Ore storiche in W2, separate da quelle già preparate in W1.
   perform tests.login('Emp');
-  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V3'), 'title', 'W2 storico', 'date', (current_date - 1)::text,
     'start_time', '10:00', 'end_time', '12:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp_w2))

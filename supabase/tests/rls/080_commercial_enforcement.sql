@@ -53,7 +53,7 @@ begin
   perform tests.raises(format('select public.create_venue(%L,''Quarta'')',ws),
     'workspace_venue_capacity','quarta sede rifiutata');
 
-  sid := (public.create_shifts(jsonb_build_array(jsonb_build_object('venue_id',v1,'title','Storico oltre 12 mesi',
+  sid := (tests.create_shifts(jsonb_build_array(jsonb_build_object('venue_id',v1,'title','Storico oltre 12 mesi',
     'date',current_date-800,'start_time','09:00','end_time','13:00'))))[1];
   select id into mid from public.venue_members where member_id=tests.id('M_Emp') and venue_id=v1;
   aid := public.assign(sid,mid);

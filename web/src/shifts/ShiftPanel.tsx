@@ -22,11 +22,18 @@ import {
   plannedDatesOf,
   repeatHint,
   shortDay,
+  shortDays,
   skippedDaysOf,
   skippedNote,
   staffForDate,
   weekOf,
 } from "@/features/shifts/repeat";
+import {
+  PLAN_ENDED,
+  RECORD_ACTION,
+  endedDates,
+  planEndedExtra,
+} from "@/features/shifts/recorded";
 import { usePlanChecks } from "@/features/shifts/usePlanChecks";
 import { useAuth } from "@/lib/auth";
 import { useVenueStaff } from "@/features/staff/hooks";
@@ -55,6 +62,7 @@ import {
   isShiftOver,
   shiftSlotLabel,
   shiftStartsAt,
+  isValidShiftRange,
   todayString,
 } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
@@ -104,10 +112,16 @@ export function ShiftPanel({
   shift,
   initialPersonIds,
   defaultVenueId,
+  onRecordInstead,
   onClose,
 }: {
   date: string;
   shift?: Shift;
+  /**
+   * Passa a «Turno già fatto» per quel giorno, quando l'orario scelto è già
+   * passato. Assente per chi non ha «Ore»: allora il form lo dice e basta.
+   */
+  onRecordInstead?: (date: string) => void;
   /**
    * Persone già selezionate in creazione, come `staff_people.id`. Serve alla
    * vista per persona: si clicca la casella vuota di chi è libero e il turno
@@ -181,6 +195,7 @@ export function ShiftPanel({
             initialPersonIds={initialPersonIds}
             defaultVenueId={defaultVenueId}
             headerActions={headerActions}
+            onRecordInstead={onRecordInstead}
             onClose={onClose}
             onCancelEdit={shift ? () => setEditing(false) : undefined}
           />
@@ -196,6 +211,7 @@ function InternalForm({
   initialPersonIds,
   defaultVenueId,
   headerActions,
+  onRecordInstead,
   onClose,
   onCancelEdit,
 }: {
@@ -203,6 +219,7 @@ function InternalForm({
   shift?: Shift;
   initialPersonIds?: string[];
   defaultVenueId?: string | null;
+  onRecordInstead?: (date: string) => void;
   /** Il contenitore accanto a «Chiudi», dove il form mette «Modelli». */
   headerActions: HTMLElement | null;
   onClose: () => void;
@@ -313,6 +330,19 @@ function InternalForm({
     () => (formDate ? plannedDatesOf(formDate, extraDates) : []),
     [formDate, extraDates]
   );
+  // Il passato non si pianifica (`create_shifts` lo rifiuta): in creazione un
+  // orario già finito lo si dice sotto gli orari, con la strada per registrarlo.
+  // In modifica vale la regola dei turni finiti (Ore), che decide il database.
+  const rangeValid =
+    !!formStart && !!formEnd && isValidShiftRange(formStart, formEnd);
+  const ended =
+    !shift && rangeValid ? endedDates(plannedDates, formStart, formEnd) : [];
+  const mainEnded = ended.includes(formDate);
+  const endedMessage = mainEnded
+    ? PLAN_ENDED
+    : ended.length > 0
+      ? planEndedExtra(shortDays(ended))
+      : null;
   // Chi non c'è e chi lavora già a quell'ora, in uno qualsiasi di quei giorni
   // (un giorno in più per lato, per i notturni). Le stesse due letture servono
   // alla finestra dello spostamento. Senza scope: tutte le sedi.
@@ -642,6 +672,10 @@ function InternalForm({
       toast.show(pauseError, "error");
       return;
     }
+    if (endedMessage) {
+      toast.show(endedMessage, "error");
+      return;
+    }
     // Solo in modifica, e solo se è davvero cambiato *quando*: aggiungere una
     // persona o correggere una nota non riapre niente.
     const moved =
@@ -797,7 +831,20 @@ function InternalForm({
               />
             </Field>
 
-            {formDate && formStart && formEnd ? (
+            {endedMessage ? (
+              <div className="-mt-2 flex flex-col items-start gap-1">
+                <p className="text-xs font-semibold text-error">{endedMessage}</p>
+                {mainEnded && onRecordInstead ? (
+                  <button
+                    type="button"
+                    onClick={() => onRecordInstead(formDate)}
+                    className="focus-gold text-xs font-semibold text-gold hover:underline"
+                  >
+                    {RECORD_ACTION}
+                  </button>
+                ) : null}
+              </div>
+            ) : formDate && formStart && formEnd ? (
               <p className="-mt-2 text-xs text-t4">
                 {formatShiftSummary(formDate, formStart, formEnd, {
                   break_minutes: pause.minutes,
@@ -816,21 +863,28 @@ function InternalForm({
                 <div className="grid grid-cols-7 gap-1">
                   {weekOfForm.map((day) => {
                     const isMain = day === formDate;
+                    // Il passato non si pianifica: né i giorni andati né oggi,
+                    // se a quest'ora il turno sarebbe già finito.
+                    const closed =
+                      !isMain &&
+                      (day < todayString() ||
+                        (rangeValid && endedDates([day], formStart, formEnd).length > 0));
                     const on = isMain || extraDates.includes(day);
                     const { name, num } = shortDay(day);
                     return (
                       <button
                         key={day}
                         type="button"
-                        disabled={isMain}
+                        disabled={isMain || closed}
                         onClick={() => toggleExtraDate(day)}
-                        title={isMain ? "È la data del turno" : undefined}
+                        title={isMain ? "È la data del turno" : closed ? "Giorno già passato" : undefined}
                         className={cn(
                           "focus-gold rounded-xl border py-1.5 text-center transition",
                           on
                             ? "border-border-gold bg-gold/10 text-gold"
                             : "border-border-2 bg-bg-1 text-t3 hover:bg-bg-2",
-                          isMain && "cursor-default"
+                          isMain && "cursor-default",
+                          closed && "cursor-default opacity-40 hover:bg-bg-1"
                         )}
                       >
                         <span className="block text-[10px] uppercase">{name}</span>

@@ -91,7 +91,7 @@ begin
 
   -- ---- turno FINITO ----
   perform tests.login('Ow');
-  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V1'), 'title', 'Ieri', 'date', (current_date - 1)::text,
     'start_time', '18:00', 'end_time', '23:00',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', v_emp), jsonb_build_object('venue_member_id', v_co)))));

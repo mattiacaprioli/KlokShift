@@ -118,9 +118,14 @@ correggono dalle presenze.
 Non parte nessuna notifica di turno assegnato: c'è solo un «Turno registrato»
 facoltativo (`p_notify`). Il turno porta `recorded_at`/`recorded_by` («Inserito a
 mano»). Ci si arriva dal «+» dei giorni passati (agenda e planning) e dalla pagina
-Ore. Le frasi sono in `src/features/shifts/recorded.ts`. ⚠️ `create_shifts` non
-rifiuta ancora i turni passati: il client non gliene manda più, ma il buco
-lato server resta da chiudere.
+Ore. Le frasi sono in `src/features/shifts/recorded.ts`.
+
+**Il passato non si pianifica** (`20261026000100`). `create_shifts` rifiuta i
+turni già finiti (`shift_finished`) e `move_assignment` non fa nascere il
+gemello nel passato. Mettere qualcuno su un turno finito (`assign_one`) chiede
+«Ore», come cambiarne data e orari. «Duplica» lascia fuori i giorni passati e lo
+dice; i form del nuovo turno dicono l'orario passato e portano a «Turno già
+fatto». Nei test SQL lo storico si prepara con `tests.create_shifts` (seed).
 
 ## Pausa (2026-10-16)
 

@@ -30,6 +30,28 @@ export const RECORD_NOTIFY_HINT =
 
 export const RECORD_NOTE_PLACEHOLDER = "Es. turno non segnato in agenda";
 
+/**
+ * Nel form del nuovo turno, quando l'orario scelto è già passato: il passato
+ * non si pianifica (`create_shifts` lo rifiuta), si registra.
+ */
+export const PLAN_ENDED =
+  "Questo orario è già passato: un turno già fatto non si pianifica, si registra.";
+
+/** Lo stesso, quando a essere passato è uno dei giorni da ripetere. */
+export function planEndedExtra(days: string): string {
+  return `${days}: a quest'ora è già passato. Toglilo dai giorni da ripetere.`;
+}
+
+/** I giorni pianificati in cui, con questi orari, il turno è già finito. */
+export function endedDates(
+  dates: string[],
+  start_time: string,
+  end_time: string,
+  now: Date = new Date()
+): string[] {
+  return dates.filter((date) => isShiftOver({ date, start_time, end_time }, now));
+}
+
 /** Il turno è stato registrato a posteriori? */
 export function isRecordedShift(shift: { recorded_at?: string | null }): boolean {
   return !!shift.recorded_at;

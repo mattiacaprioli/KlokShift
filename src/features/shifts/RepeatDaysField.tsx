@@ -10,6 +10,8 @@ type Props = {
   /** I giorni in più su cui ripeterlo. */
   extraDates: string[];
   onToggle: (day: string) => void;
+  /** Giorni da non offrire oltre a quelli passati: oggi, se l'orario è già finito. */
+  isClosed?: (day: string) => boolean;
 };
 
 /**
@@ -21,7 +23,7 @@ type Props = {
  * I giorni già passati non si scelgono: nell'app un turno nuovo non nasce nel
  * passato (`DayPicker` parte da oggi), e la ripetizione non deve aggirarlo.
  */
-export function RepeatDaysField({ date, extraDates, onToggle }: Props) {
+export function RepeatDaysField({ date, extraDates, onToggle, isClosed }: Props) {
   const today = todayString();
   return (
     <View className="gap-2">
@@ -29,7 +31,7 @@ export function RepeatDaysField({ date, extraDates, onToggle }: Props) {
       <View className="flex-row gap-1.5">
         {weekOf(date).map((day) => {
           const isMain = day === date;
-          const past = day < today;
+          const past = day < today || (!!isClosed && isClosed(day));
           const on = isMain || extraDates.includes(day);
           const { name, num } = shortDay(day);
           return (

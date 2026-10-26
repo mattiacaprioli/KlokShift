@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { canRecordShift, isRecordedShift } from "@/features/shifts/recorded";
+import {
+  canRecordShift,
+  endedDates,
+  isRecordedShift,
+  planEndedExtra,
+} from "@/features/shifts/recorded";
 
 describe("turno già fatto", () => {
   // Istanti in ora locale senza offset: la CI gira in UTC.
@@ -32,5 +37,15 @@ describe("turno già fatto", () => {
     expect(isRecordedShift({ recorded_at: "2026-10-26T17:00:00Z" })).toBe(true);
     expect(isRecordedShift({ recorded_at: null })).toBe(false);
     expect(isRecordedShift({})).toBe(false);
+  });
+
+  it("nel form del nuovo turno trova i giorni in cui l'orario è già passato", () => {
+    expect(
+      endedDates(["2026-10-26", "2026-10-27"], "12:00", "15:00", now)
+    ).toEqual(["2026-10-26"]);
+    expect(endedDates(["2026-10-26"], "19:00", "23:00", now)).toEqual([]);
+    expect(planEndedExtra("lun 26")).toBe(
+      "lun 26: a quest'ora è già passato. Toglilo dai giorni da ripetere."
+    );
   });
 });

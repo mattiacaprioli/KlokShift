@@ -18,7 +18,7 @@ create function tests.shift(p_vm uuid, p_venue uuid, p_date date, p_start text, 
 returns uuid language plpgsql as $$
 declare ids uuid[]; v_id uuid;
 begin
-  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', p_venue, 'title', 'Sovrapposizione',
     'date', p_date::text, 'start_time', p_start, 'end_time', p_end,
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', p_vm)))));

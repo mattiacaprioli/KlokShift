@@ -19,7 +19,7 @@ begin
    where x.member_id = tests.id('M_Emp') and x.venue_id = tests.id('V1');
 
   perform tests.login('Ow');
-  ids := public.create_shifts(jsonb_build_array(jsonb_build_object(
+  ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
     'venue_id', tests.id('V1'), 'title', 'Timbratura', 'date', (public.local_now()::date - 1)::text,
     'start_time', '00:01', 'end_time', '23:59',
     'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm)))));

@@ -68,7 +68,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
     // permessi, perché qui c'è una ragione precisa da dire.
     match: ["finished_shift_locked"],
     message:
-      "Questo turno è già finito: data e orari li cambia solo chi ha il permesso Ore, e mai chi ci ha lavorato.",
+      "Questo turno è già finito: lo modifica solo chi ha il permesso Ore, e mai chi ci ha lavorato.",
   },
   // ⚠️ I codici delle RPC (`raise exception '<codice>'`) vanno **prima** del
   // generico sui permessi: sono ragioni precise, e «Non hai i permessi» le
@@ -164,6 +164,8 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questo turno è stato annullato.",
   },
   {
+    // Lo vede anche il professionista che conferma tardi: niente rimandi a
+    // «Turno già fatto» qui, li danno i form di chi gestisce.
     match: ["shift_finished"],
     message: "Questo turno è già finito.",
   },
