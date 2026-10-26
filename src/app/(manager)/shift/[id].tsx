@@ -33,6 +33,8 @@ import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { RECORDED_LABEL, isRecordedShift } from "@/features/shifts/recorded";
+import { ADD_WORKER_LABEL } from "@/features/assignments/addWorker";
+import { AddShiftWorkerModal } from "@/features/assignments/AddShiftWorkerModal";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
   useSetAssignmentPresence,
@@ -377,7 +379,7 @@ export default function ShiftDetailScreen() {
   // Chi gestisce può essere in turno: la propria riga si riconosce, e su di essa
   // presenze e ore sono del titolare e non del collaboratore.
   const myRoster = useMyRosterIds();
-  const { authority, can, venues } = useOwnerVenues();
+  const { authority, can, venues, canUseOperations } = useOwnerVenues();
   // A turno in corso l'etichetta «In ritardo» scatta a un'ora precisa.
   const now = useNow();
 
@@ -403,6 +405,7 @@ export default function ShiftDetailScreen() {
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [addingWorker, setAddingWorker] = useState(false);
 
   function onCancelShift() {
     statusMutation.mutate("cancelled", {
@@ -529,6 +532,14 @@ export default function ShiftDetailScreen() {
     );
   }
   const staffRows = isPast ? presenceRows : assignments;
+  // Il sostituto che nessuno aveva segnato: lo aggiunge chi ha Ore, a turno
+  // finito. Il fuori turno è di chi ha timbrato, l'annullato non ha presenze.
+  const canAddWorker =
+    isPast &&
+    canUseOperations &&
+    can(shift.venue_id, "can_view_hours") &&
+    !shift.unplanned &&
+    shift.status !== "cancelled";
   const roleCoverage = computeCoverage(
     roleRequirements.map((r) => ({
       role_id: r.role_id,
@@ -735,7 +746,9 @@ export default function ShiftDetailScreen() {
                 title={isPast ? "Nessuna presenza" : "Nessuno assegnato"}
                 subtitle={
                   isPast
-                    ? "Chi era assegnato ha rifiutato il turno."
+                    ? assignments.length > 0
+                      ? "Chi era assegnato ha rifiutato il turno."
+                      : "Su questo turno non era segnato nessuno."
                     : "Questo turno non ha ancora nessuno dello staff."
                 }
               />
@@ -796,8 +809,28 @@ export default function ShiftDetailScreen() {
                 );
               })
             )}
+            {canAddWorker ? (
+              <Pressable
+                onPress={() => setAddingWorker(true)}
+                accessibilityRole="button"
+                className="items-center rounded-2xl border border-dashed border-border-2 py-3"
+              >
+                <Text className="text-sm font-sans-semibold text-gold">
+                  + {ADD_WORKER_LABEL}
+                </Text>
+              </Pressable>
+            ) : null}
         </View>
       </ScrollView>
+
+      {addingWorker ? (
+        <AddShiftWorkerModal
+          shiftId={id}
+          venueId={shift.venue_id}
+          assignments={assignments}
+          onClose={() => setAddingWorker(false)}
+        />
+      ) : null}
 
       <ConfirmModal
         visible={cancelVisible}

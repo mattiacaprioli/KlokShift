@@ -45,6 +45,7 @@ import {
 } from "@/features/clock/timezone";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import { UNPLANNED_VOID_NOTICE } from "@/features/clock/unplanned";
+import { AddShiftWorker } from "./AddShiftWorker";
 
 /**
  * Un campo data+ora della correzione, sempre nell'ora di Roma. Nell'ora che a
@@ -539,7 +540,10 @@ export function PresenceSection({
   const locked = !self.canEditOwnPayroll(venueId);
   // Con la timbratura le ore si correggono dagli orari, non dal numero: un
   // numero scritto a mano resterebbe fuori dal consuntivo (B02).
-  const { venues } = useOwnerVenues();
+  const { venues, can, canUseOperations } = useOwnerVenues();
+  // Il sostituto che nessuno aveva segnato: lo aggiunge chi ha Ore. Il fuori
+  // turno è di chi ha timbrato.
+  const canAddWorker = !unplanned && canUseOperations && can(venueId, "can_view_hours");
   const venueMethod = venues.find((v) => v.id === venueId)?.clock_method ?? "manual";
   const clockedOf = (a: AssignmentWithStaff) =>
     hoursAreClocked(
@@ -572,7 +576,20 @@ export function PresenceSection({
   const showApproveRegular = regular.length > 0 && approvable.length > 1;
 
   if (isPending) return <TableSkeleton columns={4} rows={3} label="Caricamento presenze…" />;
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    // Nessuno risulta presente (turno rimasto scoperto, o tutti hanno
+    // rifiutato): è proprio il caso in cui serve aggiungere chi è venuto.
+    if (!canAddWorker) return null;
+    return (
+      <section>
+        <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
+          Presenze e ore
+        </span>
+        <p className="text-xs text-t4">Nessuno risulta presente a questo turno.</p>
+        <AddShiftWorker shiftId={shiftId} venueId={venueId} assignments={data ?? []} />
+      </section>
+    );
+  }
 
   return (
     <section>
@@ -695,6 +712,9 @@ export function PresenceSection({
           );
         })}
       </div>
+      {canAddWorker ? (
+        <AddShiftWorker shiftId={shiftId} venueId={venueId} assignments={data ?? []} />
+      ) : null}
       {rows.some((a) => !clockedOf(a)) ? (
         <p className="mt-2 text-[11px] text-t4">
           Senza timbratura, le ore del turno concluso compaiono automaticamente in Ore.

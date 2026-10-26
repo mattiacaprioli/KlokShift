@@ -142,6 +142,10 @@ conclusi le cui ore non contano ancora, ciascuno con il motivo (non ha timbrato,
 uscita mancante, da approvare), e ogni riga porta al turno. ⚠️ È il complemento
 esatto di `shifts_count` in `get_workspace_hours_summary`: se cambia la regola
 di cosa conta, cambiano insieme (test SQL 037).
+Su un turno finito chi ha «Ore» può aggiungere **chi ha lavorato** senza esserci
+segnato, cioè il sostituto (`add_shift_worker`): risulta presente con le ore del
+turno (`manual_auto`) e non parte nessuna notifica. Chi aveva rifiutato torna
+presente sulla sua riga.
 
 ## Pausa (2026-10-16)
 

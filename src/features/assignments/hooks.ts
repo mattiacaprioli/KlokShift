@@ -30,6 +30,7 @@ import {
   getOwnerTodayAssignments,
   getOwnerHoursSummary,
   getHoursToFix,
+  addShiftWorker,
   reassignShiftAssignment,
   respondToAssignment,
   setAssignmentPresence,
@@ -413,6 +414,16 @@ export function useOwnerHoursSummary(
     queryKey: qk.staff.ownerHours(workspaceId ?? "", periodKey(period)),
     queryFn: () => getOwnerHoursSummary(workspaceId as string, periodBounds(period)),
     enabled: !!workspaceId,
+  });
+}
+
+/** Chi ha lavorato a un turno finito senza esserci segnato: stesse viste delle presenze. */
+export function useAddShiftWorker(shiftId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { venueMemberId: string; roleId: string | null }) =>
+      addShiftWorker({ shiftId, ...input }),
+    onSuccess: () => invalidateWorkViews(qc, shiftId),
   });
 }
 

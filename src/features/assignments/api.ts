@@ -613,6 +613,26 @@ export async function getMyWorkTotals(
  * Il perimetro è l'intersezione fra l'azienda corrente e le sedi su cui chi
  * legge ha il permesso Ore. Le sedi chiuse restano incluse nello storico.
  */
+/**
+ * Aggiunge a un turno finito chi ci ha lavorato senza esserci segnato — il
+ * sostituto (`add_shift_worker`, permesso Ore). Risulta presente, le ore del
+ * turno contano subito e non parte nessuna notifica. Chi aveva rifiutato e poi
+ * è venuto torna presente sulla sua riga.
+ */
+export async function addShiftWorker(input: {
+  shiftId: string;
+  venueMemberId: string;
+  roleId: string | null;
+}): Promise<Assignment> {
+  const { data, error } = await supabase.rpc("add_shift_worker", {
+    p_shift: input.shiftId,
+    p_venue_member: input.venueMemberId,
+    p_role: input.roleId ?? undefined,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Un turno concluso le cui ore non contano ancora (`get_hours_to_fix`). */
 export type HourToFix = {
   assignment_id: string;

@@ -1736,6 +1736,29 @@ export type Database = {
         }
         Returns: Json
       }
+      add_shift_worker: {
+        Args: { p_role?: string; p_shift: string; p_venue_member: string }
+        Returns: {
+          attendance_reviewed_at: string | null
+          attendance_reviewed_by: string | null
+          confirmed_at: string | null
+          created_at: string
+          hours_source: string | null
+          id: string
+          role_id: string | null
+          shift_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          venue_id: string
+          venue_member_id: string
+          worked_hours: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_apply_workspace_action: {
         Args: {
           p_action: string
