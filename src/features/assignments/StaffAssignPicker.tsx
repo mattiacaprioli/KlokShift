@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -5,14 +6,15 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
+import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
-import type { ShiftTimes } from "@/lib/format";
-import { absenceForShift } from "@/features/absences/conflicts";
-import { useAbsenceAvailability } from "@/features/absences/hooks";
-import { absenceCellLabel } from "@/features/absences/labels";
 import { staffRoleNames } from "@/features/staff/api";
+import {
+  STAFF_SEARCH_FROM,
+  matchesStaffSearch,
+} from "@/features/staff/search";
 import type { StaffMemberWithWaiter } from "@/features/staff/types";
 import { useSelfStaff } from "@/features/staff/self";
 import {
@@ -31,10 +33,11 @@ type Props = {
   /** Stato già a sistema (solo in modifica): chi ha rifiutato non copre. */
   statusFor?: (staffId: string) => AssignmentStatus;
   /**
-   * Giorno e orario del turno: servono a segnalare chi è assente. È un avviso e
-   * non un blocco — il titolare può sapere cose che l'app non sa.
+   * Gli avvisi sotto il nome (assente, già in turno a quell'ora), per persona:
+   * li calcola il form con `usePlanChecks`, che conosce i giorni del turno.
+   * Avvisi e non blocchi — il titolare può sapere cose che l'app non sa.
    */
-  shiftTimes?: ShiftTimes;
+  notesFor?: (member: StaffMemberWithWaiter) => string[];
 };
 
 /**
@@ -52,17 +55,17 @@ export function StaffAssignPicker({
   onToggle,
   onRoleChange,
   statusFor,
-  shiftTimes,
+  notesFor,
 }: Props) {
-  const absences =
-    useAbsenceAvailability(
-      shiftTimes?.date ?? "",
-      shiftTimes?.date ?? "",
-      !!shiftTimes
-    ).data ?? [];
   // Chi gestisce la sede può essere in organico: la propria riga si riconosce,
   // altrimenti in un elenco di nomi si cerca il proprio senza trovarlo.
   const self = useSelfStaff();
+  const [search, setSearch] = useState("");
+  // Chi è già scelto resta in vista anche se non corrisponde: la ricerca serve
+  // a trovare, non a far sparire una scelta già fatta.
+  const shown = staff.filter(
+    (m) => m.id in value || matchesStaffSearch(m, search)
+  );
 
   return (
     <View className="gap-3">
@@ -76,7 +79,22 @@ export function StaffAssignPicker({
         />
       ) : (
         <View className="gap-3">
-          {staff.map((m) => {
+          {staff.length >= STAFF_SEARCH_FROM ? (
+            <Input
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Cerca per nome o ruolo…"
+              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+          ) : null}
+          {shown.length === 0 ? (
+            <Text className="text-[13px] text-t3">
+              Nessuno corrisponde a «{search.trim()}».
+            </Text>
+          ) : null}
+          {shown.map((m) => {
             const active = m.id in value;
             const status = statusFor?.(m.id) ?? "assigned";
             const works = isActiveAssignment(status);
@@ -85,12 +103,7 @@ export function StaffAssignPicker({
               .filter((r): r is NonNullable<typeof r> => !!r)
               .sort((a, b) => a.sort_order - b.sort_order);
             const chosen = value[m.id] ?? null;
-            const absence = shiftTimes
-              ? absenceForShift(
-                  shiftTimes,
-                  absences.filter((a) => a.member_id === m.person_id)
-                )
-              : null;
+            const notes = notesFor?.(m) ?? [];
 
             return (
               <Card
@@ -119,11 +132,14 @@ export function StaffAssignPicker({
                     <Text className="text-xs text-t3">
                       {staffRoleNames(m) ?? "Ruoli non indicati"}
                     </Text>
-                    {absence ? (
-                      <Text className="text-xs font-sans-semibold text-warning">
-                        {absenceCellLabel(absence)}
+                    {notes.map((note) => (
+                      <Text
+                        key={note}
+                        className="text-xs font-sans-semibold text-warning"
+                      >
+                        {note}
                       </Text>
-                    ) : null}
+                    ))}
                     {active && !works ? (
                       <Text className="text-xs font-sans-semibold text-error">
                         {ASSIGNMENT_STATUS_LABEL[status]} · non copre il turno

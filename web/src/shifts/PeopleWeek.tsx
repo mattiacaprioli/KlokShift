@@ -2,6 +2,7 @@ import { PlanningSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { DRAG_HINT_PEOPLE } from "./CoverageLegend";
 import {
   computeWeekLoad,
   type PersonShift,
@@ -496,6 +497,7 @@ export function PeopleWeek({
           />{" "}
           assente
         </span>
+        <span className="print:hidden">{DRAG_HINT_PEOPLE}</span>
         </span>,
         legendTarget,
       )}

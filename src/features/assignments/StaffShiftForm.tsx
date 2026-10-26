@@ -27,10 +27,19 @@ import {
   StaffAssignPicker,
   defaultRoleFor,
 } from "@/features/assignments/StaffAssignPicker";
-import { useCreateInternalShift } from "@/features/assignments/hooks";
+import { useCreateInternalShifts } from "@/features/assignments/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
+import { RepeatDaysField } from "@/features/shifts/RepeatDaysField";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
+import { SkippedDaysNotes } from "@/features/shifts/SkippedDaysNotes";
 import { shiftBreakError } from "@/features/shifts/breaks";
+import {
+  plannedDatesOf,
+  skippedDaysOf,
+  staffForDate,
+  weekOf,
+} from "@/features/shifts/repeat";
+import { usePlanChecks } from "@/features/shifts/usePlanChecks";
 import { useShiftBreak } from "@/features/shifts/useShiftBreak";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { ShiftTemplate } from "@/features/shiftTemplates/api";
@@ -59,7 +68,10 @@ type Props = {
 };
 
 /**
- * Assegna un turno a uno o più membri dell'organico.
+ * Crea un turno e lo assegna a zero, una o più persone dell'organico, anche su
+ * più giorni della settimana. Senza nessuno il turno nasce «da coprire», come
+ * dalla dashboard: fino al 26/10/2026 qui serviva almeno una persona, e la
+ * stessa cosa si faceva in un modo sul web e in un altro sul telefono.
  *
  * ⚠️ **La sede è un campo del form, non un contesto.** È il perno del
  * riposizionamento del 14/09/2026: non si "entra" in una sede per creare i suoi
@@ -81,9 +93,16 @@ export function StaffShiftForm({ initialDate, header }: Props) {
   );
   const rolesQuery = useVenueRoles(venueId);
   const roles = rolesQuery.data ?? [];
-  const create = useCreateInternalShift();
+  const create = useCreateInternalShifts();
 
   const [date, setDate] = useState(() => initialDate ?? new Date());
+  // Giorni **in più** su cui ripetere lo stesso turno («Ripeti anche il…»).
+  const [extraDates, setExtraDates] = useState<string[]>([]);
+  /**
+   * Chi va messo in turno anche nei giorni in cui ha un'assenza approvata. Di
+   * norma lì resta fuori (`staffForDate`); il titolare può forzare.
+   */
+  const [forcedAbsent, setForcedAbsent] = useState<Set<string>>(new Set());
   const [start, setStart] = useState(defaultTime(8));
   const [end, setEnd] = useState(defaultTime(17));
   // Chi è selezionato **e** in che ruolo: la chiave è la persona, il valore il
@@ -123,6 +142,43 @@ export function StaffShiftForm({ initialDate, header }: Props) {
   }
 
   const selectedIds = Object.keys(selected);
+  const plannedDates = plannedDatesOf(toDateString(date), extraDates);
+  const checks = usePlanChecks({
+    dates: plannedDates,
+    start_time: toTimeString(start),
+    end_time: toTimeString(end),
+  });
+  const selectedStaff = staff.filter((m) => m.id in selected);
+  // Chi resta fuori da qualche copia per un'assenza approvata: la stessa regola
+  // del pannello web, anche con un giorno solo.
+  const skippedDays = skippedDaysOf(selectedStaff, (m) =>
+    checks.absenceHitsFor(m.person_id)
+  );
+
+  /**
+   * Cambiando settimana i giorni spuntati prima non esistono più in griglia: si
+   * azzerano invece di restare invisibili e creare turni a sorpresa.
+   */
+  function chooseDate(next: Date) {
+    setDate(next);
+    const week = weekOf(toDateString(next));
+    setExtraDates((prev) => prev.filter((d) => week.includes(d)));
+  }
+
+  function toggleExtraDate(day: string) {
+    setExtraDates((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  }
+
+  function toggleForced(id: string) {
+    setForcedAbsent((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   /**
    * Cambiare sede azzera persone e fabbisogni.
@@ -143,6 +199,7 @@ export function StaffShiftForm({ initialDate, header }: Props) {
     const hadSelection = selectedIds.length > 0 || Object.keys(targets).length > 0;
     setSelected({});
     setTargets({});
+    setForcedAbsent(new Set());
     // I modelli sono della sede: quello applicato non vale per l'altra.
     setTemplate(null);
     choose(id);
@@ -208,21 +265,22 @@ export function StaffShiftForm({ initialDate, header }: Props) {
       toast.show("Configura prima la tua sede.", "error");
       return;
     }
-    if (selectedIds.length === 0) {
-      toast.show("Seleziona almeno una persona.", "error");
-      return;
-    }
     const error = timesError();
     if (error) {
       toast.show(error, "error");
       return;
     }
-    const dateStr = toDateString(date);
     const roleTargets = roles
       .map((role) => ({ role_id: role.id, count: targets[role.id] ?? 0 }))
       .filter((t) => t.count > 0);
+    const people = selectedIds.map((id) => ({
+      venue_member_id: id,
+      role_id: selected[id],
+    }));
+    // Un turno o sette passano dalla stessa RPC, tutto o niente: la data è
+    // l'unica cosa che cambia fra le copie.
     create.mutate(
-      {
+      plannedDates.map((dateStr) => ({
         venue_id: venueId,
         // Il nome del modello se si è partiti da uno, altrimenti la fascia
         // oraria. Mai la data: è già una colonna del turno, e ripeterla nel
@@ -235,15 +293,19 @@ export function StaffShiftForm({ initialDate, header }: Props) {
         description: note.trim() || null,
         require_confirmation: requireConfirmation,
         break_minutes: pause.minutes,
-        staff: selectedIds.map((id) => ({
-          venue_member_id: id,
-          role_id: selected[id],
-        })),
+        // Chi quel giorno è assente resta fuori da quella copia sola.
+        staff: staffForDate(people, dateStr, skippedDays, forcedAbsent),
         roleTargets,
-      },
+      })),
       {
         onSuccess: () => {
-          toast.show("Turno assegnato allo staff");
+          toast.show(
+            plannedDates.length > 1
+              ? `Creati ${plannedDates.length} turni`
+              : selectedIds.length === 0
+                ? "Turno creato: è da coprire"
+                : "Turno assegnato allo staff"
+          );
           router.back();
         },
         onError: (e) =>
@@ -277,7 +339,7 @@ export function StaffShiftForm({ initialDate, header }: Props) {
 
         <View className="gap-3">
           <Mono>Giorno</Mono>
-          <DayPicker value={date} onChange={setDate} />
+          <DayPicker value={date} onChange={chooseDate} />
         </View>
 
         <ShiftTimeFields
@@ -293,6 +355,12 @@ export function StaffShiftForm({ initialDate, header }: Props) {
           }}
         />
 
+        <RepeatDaysField
+          date={toDateString(date)}
+          extraDates={extraDates}
+          onToggle={toggleExtraDate}
+        />
+
         <RoleRequirementsField
           roles={roles}
           targets={targets}
@@ -306,11 +374,14 @@ export function StaffShiftForm({ initialDate, header }: Props) {
           value={selected}
           onToggle={toggle}
           onRoleChange={setRole}
-          shiftTimes={{
-            date: toDateString(date),
-            start_time: toTimeString(start),
-            end_time: toTimeString(end),
-          }}
+          notesFor={(m) => checks.notesFor(m.person_id)}
+        />
+
+        <SkippedDaysNotes
+          staff={selectedStaff.filter((m) => skippedDays.has(m.id))}
+          skippedDays={skippedDays}
+          forced={forcedAbsent}
+          onToggle={toggleForced}
         />
 
         <RequireConfirmationField
@@ -334,12 +405,16 @@ export function StaffShiftForm({ initialDate, header }: Props) {
           className="mt-1"
           label={
             create.isPending
-              ? "Assegnazione…"
-              : selectedIds.length > 1
-                ? `Assegna a ${selectedIds.length} persone`
-                : "Assegna turno"
+              ? "Creazione…"
+              : plannedDates.length > 1
+                ? `Crea ${plannedDates.length} turni`
+                : selectedIds.length === 0
+                  ? "Crea turno da coprire"
+                  : selectedIds.length > 1
+                    ? `Assegna a ${selectedIds.length} persone`
+                    : "Assegna turno"
           }
-          disabled={create.isPending || selectedIds.length === 0}
+          disabled={create.isPending}
           onPress={onSubmit}
         />
         {/* Non chiede persone: il modello non le ricorda. */}

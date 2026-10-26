@@ -72,8 +72,22 @@ export type CoverageEmbeds = {
      * costerebbe più del campo. È la riga di organico (`venue_members.id`).
      */
     venue_member_id?: string | null;
+    /**
+     * Facoltativo anche lui: il nome della persona (la scheda), che l'agenda
+     * mostra sulla card. Lo porta solo `getOwnerShifts`/`getOwnerEndedShifts`.
+     */
+    display_name?: string | null;
   }[];
 };
+
+/**
+ * Il fabbisogno nei form del turno, detto senza gergo: «fabbisogno per ruolo»
+ * era la parola del codice, non quella di chi organizza la sala. Le stesse
+ * frasi su app e dashboard.
+ */
+export const ROLE_TARGETS_LABEL = "Quante persone servono";
+export const ROLE_TARGETS_HINT =
+  "Es. 2 in sala e 1 al bar: finché ne manca qualcuno, il turno resta da coprire. Se non lo indichi, conta chi scegli.";
 
 /** Un fabbisogno come arriva dal DB → come lo vogliono i conteggi. */
 export function toRoleRequirement(r: RoleRequirementEmbed): RoleRequirement {

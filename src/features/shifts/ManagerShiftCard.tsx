@@ -10,6 +10,7 @@ import {
   shiftTone,
   type ShiftTone,
 } from "@/features/assignments/coverage";
+import { isActiveAssignment } from "@/features/assignments/status";
 import {
   formatDayLabel,
   formatShiftHours,
@@ -38,6 +39,23 @@ function shiftLabel(shift: ShiftWithCount): string {
   const title = shift.title?.trim();
   if (title && !AUTO_TITLE.test(title)) return title;
   return shiftSlotLabel(shift.start_time);
+}
+
+/** Quanti nomi prima del «+N»: una riga, anche su un telefono stretto. */
+const MAX_NAMES = 3;
+
+/**
+ * «Anna, Bruno, Carla +2»: chi lavora davvero (non chi ha rifiutato). Vuota se
+ * la query non porta i nomi — lo storico non li chiede.
+ */
+function assigneeNames(shift: ShiftWithCount): string | null {
+  const names = shift.shift_assignments
+    .filter((a) => isActiveAssignment(a.status) && a.display_name)
+    .map((a) => a.display_name as string);
+  if (names.length === 0) return null;
+  const shown = names.slice(0, MAX_NAMES).join(", ");
+  const rest = names.length - MAX_NAMES;
+  return rest > 0 ? `${shown} +${rest}` : shown;
 }
 
 /**
@@ -81,6 +99,8 @@ export function ManagerShiftCard({
   const tone = shiftTone(shift);
   const label = shiftLabel(shift);
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
+  // Chi c'è, sulla card: per saperlo prima bisognava aprire ogni turno.
+  const names = cancelled ? null : assigneeNames(shift);
 
   // Le relazioni della copertura viaggiano già con il turno: nessuna query in
   // più per sapere che il buco è sul barista e non sul cameriere.
@@ -236,6 +256,11 @@ export function ManagerShiftCard({
               {total > 0 ? `${filled}/${total} coperti` : "Nessun fabbisogno"}
             </Text>
           )}
+          {names ? (
+            <Text className="mt-1.5 text-[13px] text-t3" numberOfLines={1}>
+              {names}
+            </Text>
+          ) : null}
           {footer}
         </View>
       </View>

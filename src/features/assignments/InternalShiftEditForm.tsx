@@ -40,17 +40,15 @@ import { DayPicker } from "@/features/shifts/DayPicker";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
 import { shiftBreakError } from "@/features/shifts/breaks";
 import { useShiftBreak } from "@/features/shifts/useShiftBreak";
-import { useOwnerShiftsRange } from "@/features/shifts/hooks";
+import { usePlanChecks } from "@/features/shifts/usePlanChecks";
 import {
   hasMoveImpact,
   MOVE_IMPACT_LOADING,
   MOVE_IMPACT_UNAVAILABLE,
   moveHeadline,
-  moveImpactWindow,
   moveImpactLines,
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
-import { useAbsenceAvailability } from "@/features/absences/hooks";
 import type { Shift } from "@/features/shifts/types";
 
 type SeededProps = {
@@ -145,22 +143,19 @@ function EditForm({
    */
   const [pendingMove, setPendingMove] = useState<string | null>(null);
   const assignmentsQuery = useShiftAssignments(shift.id);
-  const targetDate = toDateString(date);
-  const impactWindow = moveImpactWindow(targetDate);
-  const absencesQuery = useAbsenceAvailability(
-    impactWindow.from,
-    impactWindow.to
-  );
-  const targetDayQuery = useOwnerShiftsRange(
-    impactWindow.from,
-    impactWindow.to
-  );
+  // Le stesse due letture servono agli avvisi sotto i nomi (assente, già in
+  // turno) e alla finestra dello spostamento.
+  const checks = usePlanChecks({
+    dates: [toDateString(date)],
+    start_time: toTimeString(start),
+    end_time: toTimeString(end),
+    excludeShiftId: shift.id,
+  });
+  const absencesQuery = checks.absences;
+  const targetDayQuery = checks.dayShifts;
 
+  // Togliere tutti è permesso, come dalla dashboard: il turno resta da coprire.
   function onSubmit() {
-    if (selectedIds.length === 0) {
-      toast.show("Seleziona almeno una persona.", "error");
-      return;
-    }
     if (!isValidShiftRange(toTimeString(start), toTimeString(end))) {
       toast.show(SHIFT_RANGE_ERROR, "error");
       return;
@@ -240,8 +235,14 @@ function EditForm({
     const dateStr = toDateString(date);
     update.mutate(
       {
-        // Vedi `StaffShiftForm`: la fascia oraria, non la data.
-        title: shiftSlotLabel(toTimeString(start)),
+        // Il titolo scelto (un modello, o scritto dalla dashboard) resta; segue
+        // l'orario solo quello automatico — la fascia, mai la data (vedi
+        // `StaffShiftForm`). Fino al 26/10/2026 qui si riscriveva sempre, e
+        // «Brunch» modificato dal telefono diventava «Mattina».
+        title:
+          shift.title === shiftSlotLabel(shift.start_time)
+            ? shiftSlotLabel(toTimeString(start))
+            : shift.title,
         date: dateStr,
         start_time: toTimeString(start),
         end_time: toTimeString(end),
@@ -329,11 +330,7 @@ function EditForm({
           onToggle={toggle}
           onRoleChange={setRole}
           statusFor={memberStatus}
-          shiftTimes={{
-            date: toDateString(date),
-            start_time: toTimeString(start),
-            end_time: toTimeString(end),
-          }}
+          notesFor={(m) => checks.notesFor(m.person_id)}
         />
 
         <RequireConfirmationField
@@ -356,7 +353,7 @@ function EditForm({
         <GoldButton
           className="mt-1"
           label={update.isPending ? "Salvataggio…" : "Salva modifiche"}
-          disabled={update.isPending || selectedIds.length === 0}
+          disabled={update.isPending}
           onPress={onSubmit}
         />
       </ScrollView>

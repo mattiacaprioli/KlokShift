@@ -62,6 +62,7 @@ import {
   isPastDay,
   isSameMonth,
   isToday,
+  monthDays,
   monthGridDays,
   monthTitle,
   PAST_DAY_REASON,
@@ -72,7 +73,11 @@ import {
   weekLabel,
 } from "../lib/week";
 import { ClockAttentionBanner } from "../shifts/ClockAttentionBanner";
-import { CoverageLegend, TONE_BORDER } from "../shifts/CoverageLegend";
+import {
+  CoverageLegend,
+  DRAG_HINT_DAYS,
+  TONE_BORDER,
+} from "../shifts/CoverageLegend";
 import {
   dropClass,
   ShiftDragProvider,
@@ -208,6 +213,12 @@ export function PlanningPage() {
     () => (isWeekly ? weekDays(monday) : monthGridDays(month)),
     [isWeekly, monday, month],
   );
+  // Il giorno da cui parte «Nuovo turno»: oggi se è nel periodo che si sta
+  // guardando, altrimenti il primo giorno di quel periodo.
+  const periodDays = isWeekly ? weekDays(monday) : monthDays(month);
+  const createDay = periodDays.includes(todayString())
+    ? todayString()
+    : periodDays[0];
 
   // Il filtro per sede è **del server**: cambia l'insieme di `venue_id`
   // interrogato, non nasconde righe già scaricate. Con dieci sedi e un mese
@@ -586,6 +597,19 @@ export function PlanningPage() {
             >
               →
             </Button>
+            {/* Il «+» di ogni giorno resta; questo è il comando che si vede
+                subito, senza sapere dove cercare. Stessa porta (`openCreate`),
+                quindi anche lui spiega perché un'azienda non operativa non
+                può ancora creare turni. */}
+            {canAny("can_manage_shifts") ? (
+              <Button
+                variant="gold"
+                className="ml-2"
+                onClick={() => openCreate(createDay)}
+              >
+                Nuovo turno
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -927,7 +951,7 @@ function WeekGrid({
           );
         })}
       </div>
-      <CoverageLegend />
+      <CoverageLegend dragHint={DRAG_HINT_DAYS} />
     </div>
   );
 }
@@ -1024,7 +1048,9 @@ function MonthGrid({
                     onCreate(day);
                   }}
                   aria-label={`Aggiungi turno il ${day}`}
-                  className="focus-gold rounded px-1 text-xs text-t4 opacity-0 transition hover:text-gold group-hover:opacity-100 print:hidden"
+                  // Sempre visibile, tenue: finché compariva solo al passaggio
+                  // del mouse, dal mese non si sapeva come creare un turno.
+                  className="focus-gold rounded px-1 text-xs text-t4 transition hover:text-gold group-hover:text-t2 print:hidden"
                 >
                   +
                 </button>
@@ -1144,7 +1170,7 @@ function MonthGrid({
         })}
       </div>
 
-      <CoverageLegend />
+      <CoverageLegend dragHint={DRAG_HINT_DAYS} />
     </div>
   );
 }

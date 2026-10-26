@@ -173,6 +173,11 @@ export function shiftMoveImpact(input: {
 
   const absent: MoveImpact["absent"] = [];
   const overlaps: MoveImpact["overlaps"] = [];
+  const clashes = personClashes({
+    times: [to],
+    excludeShiftId: shiftId,
+    dayShifts,
+  });
   for (const person of active) {
     const hit = absenceForShift(
       to,
@@ -180,27 +185,69 @@ export function shiftMoveImpact(input: {
     );
     if (hit) absent.push({ name: person.displayName, status: hit.status });
 
-    const clash = dayShifts.find(
-      (other) =>
-        other.id !== shiftId &&
-        other.status !== "cancelled" &&
-        other.shift_assignments.some(
-          (x) =>
-            isActiveAssignment(x.status) &&
-            x.staff_member?.person_id === person.personId
-        ) &&
-        shiftsOverlap(to, other)
-    );
+    const clash = clashes.get(person.personId)?.[0];
     if (clash) {
       overlaps.push({
         name: person.displayName,
         title: clash.title,
-        range: formatShiftRange(clash.start_time, clash.end_time),
+        range: clash.range,
       });
     }
   }
 
   return { notify, reopens, absent, overlaps };
+}
+
+/** Un altro turno della stessa persona che si accavalla con quello pianificato. */
+export type ShiftClash = {
+  /** Il giorno pianificato su cui cade l'accavallamento. */
+  date: string;
+  title: string;
+  range: string;
+};
+
+/**
+ * Per persona (`person_id`), gli altri turni attivi che si accavallano con
+ * quello che si sta pianificando, su ciascuno dei giorni in cui nasce.
+ *
+ * È la regola delle sovrapposizioni per **tutte** le strade: lo spostamento
+ * (`shiftMoveImpact`) e la scelta delle persone nei form di creazione e
+ * modifica. Fino al 26/10/2026 la controllava solo lo spostamento, e dal form
+ * si metteva una persona su due turni alla stessa ora senza saperlo. Avviso,
+ * mai blocco: il titolare può sapere cose che l'app non sa.
+ *
+ * Un accavallamento per giorno e per persona basta: l'avviso dice che c'è,
+ * non li elenca tutti.
+ */
+export function personClashes(input: {
+  /** Un orario per giorno pianificato (il turno ripetuto ne ha più d'uno). */
+  times: ShiftTimes[];
+  /** Il turno stesso, in modifica: non si accavalla con sé. */
+  excludeShiftId?: string;
+  /** I turni attorno ai giorni pianificati, di tutte le sedi gestite. */
+  dayShifts: ShiftWithAssignees[];
+}): Map<string, ShiftClash[]> {
+  const { times, excludeShiftId, dayShifts } = input;
+  const out = new Map<string, ShiftClash[]>();
+  for (const t of times) {
+    for (const other of dayShifts) {
+      if (other.id === excludeShiftId || other.status === "cancelled") continue;
+      if (!shiftsOverlap(t, other)) continue;
+      for (const a of other.shift_assignments) {
+        const personId = a.staff_member?.person_id;
+        if (!personId || !isActiveAssignment(a.status)) continue;
+        const list = out.get(personId) ?? [];
+        if (list.some((c) => c.date === t.date)) continue;
+        list.push({
+          date: t.date,
+          title: other.title,
+          range: formatShiftRange(other.start_time, other.end_time),
+        });
+        out.set(personId, list);
+      }
+    }
+  }
+  return out;
 }
 
 /**

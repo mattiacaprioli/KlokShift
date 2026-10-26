@@ -15,7 +15,6 @@ import {
 import type { InternalShiftPlan } from "./api";
 import { periodBounds, periodKey, type ReportPeriod } from "./reportPeriod";
 import {
-  createInternalShift,
   createInternalShifts,
   getInternalShiftPlans,
   moveAssignment,
@@ -118,23 +117,11 @@ function invalidateAfterShiftWrite(qc: ReturnType<typeof useQueryClient>) {
 }
 
 /**
- * Crea un turno interno + le assegnazioni, poi aggiorna le viste del gestore.
+ * Crea uno o più turni interni in una volta (es. lo stesso turno su
+ * lun-mar-ven) con le loro assegnazioni, poi aggiorna le viste del gestore.
  *
- * ⚠️ `venue_id` sta **nell'input**, non nell'hook: è il turno ad avere una sede,
+ * ⚠️ `venue_id` sta **sul piano**, non sull'hook: è il turno ad avere una sede,
  * e gliela passa il form, dove la sede è il primo campo.
- */
-export function useCreateInternalShift() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: Parameters<typeof createInternalShift>[0]) =>
-      createInternalShift(input),
-    onSuccess: () => invalidateAfterShiftWrite(qc),
-  });
-}
-
-/**
- * Crea **più** turni interni in una volta (es. lo stesso turno su lun-mar-ven).
- * Stesse invalidazioni della creazione singola. Ogni piano porta la sua sede.
  */
 export function useCreateInternalShifts() {
   const qc = useQueryClient();

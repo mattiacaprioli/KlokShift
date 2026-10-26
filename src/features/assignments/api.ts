@@ -179,29 +179,6 @@ export async function createInternalShifts(
   return data ?? [];
 }
 
-/** Crea un turno interno e lo assegna alle persone indicate. */
-export async function createInternalShift(
-  input: Omit<
-    InternalShiftPlan,
-    "require_confirmation" | "roleTargets" | "break_minutes"
-  > & {
-    /** Fabbisogno per ruolo (es. 2 Cameriere + 1 Sommelier). */
-    roleTargets?: RoleTargetInput[];
-    require_confirmation?: boolean;
-    break_minutes?: number;
-  }
-): Promise<string> {
-  const [id] = await createInternalShifts([
-    {
-      ...input,
-      roleTargets: input.roleTargets ?? [],
-      require_confirmation: input.require_confirmation ?? false,
-      break_minutes: input.break_minutes ?? 0,
-    },
-  ]);
-  return id;
-}
-
 /** Legge i turni indicati e ne ricava i piani riproducibili. */
 export async function getInternalShiftPlans(
   shiftIds: string[]

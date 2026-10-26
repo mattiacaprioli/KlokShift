@@ -64,9 +64,9 @@ export async function getOwnerShifts(
     // refetch e l'altro — la lista balla sotto il dito.
     .order("venue_id", { ascending: true });
   if (error) throw new Error(error.message);
-  return ((data as ShiftWithCount[] | null) ?? []).filter(
-    (s) => !isShiftOver(s)
-  );
+  return ((data as unknown as AgendaRow[] | null) ?? [])
+    .map(toAgendaShift)
+    .filter((s) => !isShiftOver(s));
 }
 
 /**
@@ -77,9 +77,33 @@ export async function getOwnerShifts(
  * `venue_member_id` non serve alla copertura: serve al filtro «I miei turni»
  * dell'agenda, da quando chi gestisce la sede può esserci sopra. È una colonna
  * della riga già embeddata, non un join in più.
+ *
+ * Il nome (dal 26/10/2026) serve alla card dell'agenda: «2/3 coperti» diceva
+ * quanti, e per sapere *chi* c'è stasera bisognava aprire ogni turno.
  */
 const AGENDA_SELECT =
-  "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, venue_member_id)";
+  "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id, venue_member_id, venue_member:venue_members(member:workspace_members(display_name)))";
+
+type AgendaRow = Shift & {
+  shift_role_requirements: ShiftWithCount["shift_role_requirements"];
+  shift_assignments: (Omit<
+    ShiftWithCount["shift_assignments"][number],
+    "display_name"
+  > & {
+    venue_member: { member: { display_name: string } | null } | null;
+  })[];
+};
+
+/** La persona sotto la riga di organico, ridotta al nome sull'assegnazione. */
+function toAgendaShift({ shift_assignments, ...shift }: AgendaRow): ShiftWithCount {
+  return {
+    ...shift,
+    shift_assignments: shift_assignments.map(({ venue_member, ...a }) => ({
+      ...a,
+      display_name: venue_member?.member?.display_name ?? null,
+    })),
+  };
+}
 
 /**
  * Turni **già conclusi** dell'azienda fra `from` e `to`: il passato dell'agenda,
@@ -107,9 +131,9 @@ export async function getOwnerEndedShifts(
     .order("start_time", { ascending: true })
     .order("venue_id", { ascending: true });
   if (error) throw new Error(error.message);
-  return ((data as ShiftWithCount[] | null) ?? []).filter((s) =>
-    isShiftOver(s)
-  );
+  return ((data as unknown as AgendaRow[] | null) ?? [])
+    .map(toAgendaShift)
+    .filter((s) => isShiftOver(s));
 }
 
 /**

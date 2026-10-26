@@ -4,6 +4,7 @@ import {
   moveImpactCandidates,
   moveImpactWindow,
   moveAssignmentImpact,
+  personClashes,
   shiftMoveImpact,
   type MoveAssignee,
 } from "@/features/shifts/moveImpact";
@@ -375,5 +376,120 @@ describe("moveAssignmentImpact", () => {
     expect(impact.absence?.status).toBe("pending");
     expect(impact.leavesEmpty).toBe(true);
     expect(impact.targetFull).toBe(true);
+  });
+});
+
+describe("personClashes", () => {
+  const evening = { start_time: "18:00", end_time: "23:00" };
+
+  it("trova chi lavora già a quell'ora, anche in un'altra sede", () => {
+    const clashes = personClashes({
+      times: [{ date: "2026-09-23", ...evening }],
+      dayShifts: [
+        shift({
+          id: "other",
+          title: "Sera",
+          venue_id: "venue-2",
+          date: "2026-09-23",
+          start_time: "19:00",
+          end_time: "23:30",
+          shift_assignments: [assignment("a1", "anna"), assignment("a2", "bruno")],
+        }),
+      ],
+    });
+
+    expect(clashes.get("anna")).toEqual([
+      { date: "2026-09-23", title: "Sera", range: "19:00–23:30" },
+    ]);
+    expect([...clashes.keys()]).toEqual(["anna", "bruno"]);
+  });
+
+  it("vede il notturno del giorno prima che sconfina", () => {
+    const clashes = personClashes({
+      times: [{ date: "2026-09-24", start_time: "02:00", end_time: "06:00" }],
+      dayShifts: [
+        shift({
+          id: "night",
+          date: "2026-09-23",
+          start_time: "22:00",
+          end_time: "04:00",
+          shift_assignments: [assignment("a1", "anna")],
+        }),
+      ],
+    });
+
+    expect(clashes.get("anna")?.[0].date).toBe("2026-09-24");
+  });
+
+  it("ignora turni annullati, assegnazioni rifiutate, il turno stesso e i turni adiacenti", () => {
+    const clashes = personClashes({
+      times: [{ date: "2026-09-23", ...evening }],
+      excludeShiftId: "self",
+      dayShifts: [
+        shift({
+          id: "self",
+          date: "2026-09-23",
+          ...evening,
+          shift_assignments: [assignment("a1", "anna")],
+        }),
+        shift({
+          id: "cancelled",
+          status: "cancelled",
+          date: "2026-09-23",
+          ...evening,
+          shift_assignments: [assignment("a2", "anna")],
+        }),
+        shift({
+          id: "declined",
+          date: "2026-09-23",
+          ...evening,
+          shift_assignments: [assignment("a3", "bruno", "declined")],
+        }),
+        shift({
+          id: "before",
+          date: "2026-09-23",
+          start_time: "12:00",
+          end_time: "18:00",
+          shift_assignments: [assignment("a4", "carla")],
+        }),
+      ],
+    });
+
+    expect(clashes.size).toBe(0);
+  });
+
+  it("su più giorni dà un accavallamento per giorno e per persona", () => {
+    const clashes = personClashes({
+      times: [
+        { date: "2026-09-23", ...evening },
+        { date: "2026-09-25", ...evening },
+      ],
+      dayShifts: [
+        shift({
+          id: "wed-1",
+          date: "2026-09-23",
+          ...evening,
+          shift_assignments: [assignment("a1", "anna")],
+        }),
+        shift({
+          id: "wed-2",
+          date: "2026-09-23",
+          start_time: "20:00",
+          end_time: "22:00",
+          shift_assignments: [assignment("a2", "anna")],
+        }),
+        shift({
+          id: "fri",
+          date: "2026-09-25",
+          ...evening,
+          shift_assignments: [assignment("a3", "anna")],
+        }),
+      ],
+    });
+
+    expect(clashes.get("anna")?.map((c) => [c.date, c.title])).toEqual([
+      ["2026-09-23", "wed-1"],
+      ["2026-09-25", "fri"],
+    ]);
   });
 });

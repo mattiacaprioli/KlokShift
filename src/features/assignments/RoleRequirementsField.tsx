@@ -4,6 +4,7 @@ import { Mono } from "@/components/ui/Mono";
 import { SelectChip } from "@/components/ui/SelectChip";
 import { cn } from "@/lib/cn";
 import type { VenueRole } from "@/features/roles/api";
+import { ROLE_TARGETS_HINT, ROLE_TARGETS_LABEL } from "./coverage";
 
 type Props = {
   /** I ruoli della sede (già caricati da chi ospita il form). */
@@ -40,12 +41,11 @@ export function RoleRequirementsField({
 
   return (
     <View className="gap-2">
-      <Mono>Fabbisogno per ruolo · facoltativo</Mono>
+      <Mono>{ROLE_TARGETS_LABEL} · facoltativo</Mono>
 
       {active.length === 0 && !picking ? (
         <Text className="text-[13px] leading-5 text-t3">
-          Nessun fabbisogno impostato: il turno è coperto da chi selezioni qui
-          sotto.
+          {ROLE_TARGETS_HINT}
         </Text>
       ) : null}
 

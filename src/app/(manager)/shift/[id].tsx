@@ -577,54 +577,13 @@ export default function ShiftDetailScreen() {
         ) : null}
 
         {/* Azioni turno. Il fuori turno descrive lavoro già svolto: non si
-            chiude, non si annulla e non si modifica (C06); se è sbagliato si
-            annulla la timbratura, dalle presenze qui sotto. */}
+            annulla e non si modifica (C06); se è sbagliato si annulla la
+            timbratura, dalle presenze qui sotto.
+            «Chiudi turno» non c'è più (26/10/2026): era un avanzo del
+            marketplace — chiudeva le candidature — e accanto ad «Annulla» non
+            si capiva cosa facesse. La dashboard non l'ha mai avuto. I turni
+            chiusi prima restano riapribili. */}
         <View className="mt-6 gap-2.5">
-          {shift.unplanned ? null : shift.status === "open" ? (
-            <View className="flex-row gap-2.5">
-              <Pressable
-                disabled={busy}
-                onPress={() => onChangeShiftStatus("closed")}
-                className="flex-1 items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-              >
-                <Text className="text-sm font-sans-semibold text-t1">
-                  Chiudi turno
-                </Text>
-              </Pressable>
-              <Pressable
-                disabled={busy}
-                onPress={() => setCancelVisible(true)}
-                className="flex-1 items-center rounded-2xl border border-border-2 py-3.5"
-              >
-                <Text className="text-sm font-sans-semibold text-error">
-                  Annulla
-                </Text>
-              </Pressable>
-            </View>
-          ) : shift.status === "closed" ? (
-            <Pressable
-              disabled={busy}
-              onPress={() => onChangeShiftStatus("open")}
-              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-t1">
-                Riapri turno
-              </Text>
-            </Pressable>
-          ) : (
-            /* Annullato: senza questo, un tocco sbagliato costava il turno — si
-               poteva solo ricrearlo da zero e riassegnare tutti. */
-            <Pressable
-              disabled={busy}
-              onPress={() => setRestoreVisible(true)}
-              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-gold">
-                Ripristina turno
-              </Text>
-            </Pressable>
-          )}
-
           {!isPast && !shift.unplanned && shift.status !== "cancelled" ? (
             <Pressable
               disabled={busy}
@@ -650,6 +609,42 @@ export default function ShiftDetailScreen() {
               </Text>
             </Pressable>
           ) : null}
+
+          {/* In fondo: l'azione che toglie il turno a tutti non è la prima che
+              si incontra. */}
+          {shift.unplanned ? null : shift.status === "open" ? (
+            <Pressable
+              disabled={busy}
+              onPress={() => setCancelVisible(true)}
+              className="items-center rounded-2xl border border-border-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-error">
+                Annulla turno
+              </Text>
+            </Pressable>
+          ) : shift.status === "closed" ? (
+            <Pressable
+              disabled={busy}
+              onPress={() => onChangeShiftStatus("open")}
+              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-t1">
+                Riapri turno
+              </Text>
+            </Pressable>
+          ) : (
+            /* Annullato: senza questo, un tocco sbagliato costava il turno — si
+               poteva solo ricrearlo da zero e riassegnare tutti. */
+            <Pressable
+              disabled={busy}
+              onPress={() => setRestoreVisible(true)}
+              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-gold">
+                Ripristina turno
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {roleRequirements.length > 0 ? (

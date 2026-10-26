@@ -2,9 +2,6 @@ import { PersonAvatar } from "../ui/PersonAvatar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { userErrorMessage } from "@/lib/errors";
-import { absencesOnDates } from "@/features/absences/conflicts";
-import { useAbsenceAvailability } from "@/features/absences/hooks";
-import { absenceCellLabel } from "@/features/absences/labels";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -13,31 +10,46 @@ import {
   useShiftRoleRequirements,
   useUpdateInternalShift,
 } from "@/features/assignments/hooks";
-import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import {
   hasMoveImpact,
   MOVE_IMPACT_LOADING,
   MOVE_IMPACT_UNAVAILABLE,
   moveHeadline,
-  moveImpactWindow,
   moveImpactLines,
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
+import {
+  plannedDatesOf,
+  repeatHint,
+  shortDay,
+  skippedDaysOf,
+  skippedNote,
+  staffForDate,
+  weekOf,
+} from "@/features/shifts/repeat";
+import { usePlanChecks } from "@/features/shifts/usePlanChecks";
 import { useAuth } from "@/lib/auth";
 import { useVenueStaff } from "@/features/staff/hooks";
+import {
+  STAFF_SEARCH_FROM,
+  matchesStaffSearch,
+} from "@/features/staff/search";
 import { useVenueRoles } from "@/features/roles/hooks";
 import {
   staffRoleNames,
   type StaffMemberWithWaiter,
 } from "@/features/staff/api";
-import { computeCoverage } from "@/features/assignments/coverage";
+import {
+  computeCoverage,
+  ROLE_TARGETS_HINT,
+  ROLE_TARGETS_LABEL,
+} from "@/features/assignments/coverage";
 import {
   ASSIGNMENT_STATUS_LABEL,
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
 import {
-  addDaysToDate,
   formatDate,
   formatShiftSummary,
   isShiftOver,
@@ -58,7 +70,6 @@ import {
   applicableRoleTargets,
   type ShiftTemplateInput,
 } from "@/features/shiftTemplates/template";
-import { dayLabel, startOfWeek, weekDays } from "../lib/week";
 import {
   Button,
   Field,
@@ -295,30 +306,24 @@ function InternalForm({
     formStart && formEnd
       ? shiftBreakError(formStart, formEnd, pause.minutes)
       : null;
-  const impactWindow = moveImpactWindow(formDate);
   // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
   const [extraDates, setExtraDates] = useState<string[]>([]);
   // Tutti i giorni su cui nascerà il turno: la data e le ripetizioni.
   const plannedDates = useMemo(
-    () =>
-      formDate
-        ? [formDate, ...extraDates.filter((d) => d !== formDate)].sort()
-        : [],
+    () => (formDate ? plannedDatesOf(formDate, extraDates) : []),
     [formDate, extraDates]
   );
-  // Chi non c'è in uno qualsiasi di quei giorni. Un giorno in più per lato per
-  // i turni notturni, come `moveImpactWindow` (che per un giorno solo coincide).
-  const absencesQuery = useAbsenceAvailability(
-    plannedDates.length ? addDaysToDate(plannedDates[0], -1) : "",
-    plannedDates.length ? addDaysToDate(plannedDates[plannedDates.length - 1], 1) : "",
-    plannedDates.length > 0
-  );
-  // La finestra adiacente trova anche i turni notturni iniziati il giorno prima
-  // o quelli che cominciano dopo mezzanotte. Senza scope include tutte le sedi.
-  const targetDayQuery = useOwnerShiftsRange(
-    impactWindow.from,
-    impactWindow.to
-  );
+  // Chi non c'è e chi lavora già a quell'ora, in uno qualsiasi di quei giorni
+  // (un giorno in più per lato, per i notturni). Le stesse due letture servono
+  // alla finestra dello spostamento. Senza scope: tutte le sedi.
+  const checks = usePlanChecks({
+    dates: plannedDates,
+    start_time: formStart ?? "",
+    end_time: formEnd ?? "",
+    excludeShiftId: shift?.id,
+  });
+  const absencesQuery = checks.absences;
+  const targetDayQuery = checks.dayShifts;
   const staffQuery = useVenueStaff(formVenueId || undefined);
   const rolesQuery = useVenueRoles(formVenueId || undefined);
 
@@ -414,43 +419,26 @@ function InternalForm({
     );
   }, [changeRequests.data, assignmentsQuery.data]);
   const staffIds = useMemo(() => Object.keys(staffRoles), [staffRoles]);
+  const [staffSearch, setStaffSearch] = useState("");
+  // Chi è già scelto resta in vista anche se non corrisponde: la ricerca serve
+  // a trovare, non a far sparire una scelta già fatta.
+  const shownStaff = staff.filter(
+    (m) => m.id in staffRoles || matchesStaffSearch(m, staffSearch)
+  );
   const selectedStaff = useMemo(
     () => staff.filter((m) => m.id in staffRoles),
     [staff, staffRoles]
   );
 
   // Per ogni scheda, i giorni scelti in cui la persona ha un'assenza.
-  const absencesByStaff = useMemo(() => {
-    const out = new Map<string, { date: string; absence: AbsenceSlot }[]>();
-    if (!formStart || !formEnd) return out;
-    const all = absencesQuery.data ?? [];
-    for (const m of staff) {
-      const hits = absencesOnDates(
-        plannedDates,
-        { start_time: formStart, end_time: formEnd },
-        all.filter((a) => a.member_id === m.person_id)
-      );
-      if (hits.length) out.set(m.id, hits);
-    }
-    return out;
-  }, [staff, plannedDates, formStart, formEnd, absencesQuery.data]);
-
   /**
    * In creazione, i giorni in cui una persona scelta resta fuori: quelli con
    * un'assenza approvata, se il titolare non ha forzato. Una richiesta ancora
    * da decidere non toglie nessuno: resta l'avviso.
    */
-  const skippedDays = useMemo(() => {
-    const out = new Map<string, string[]>();
-    if (shift) return out;
-    for (const m of selectedStaff) {
-      const days = (absencesByStaff.get(m.id) ?? [])
-        .filter((h) => h.absence.status === "approved")
-        .map((h) => h.date);
-      if (days.length) out.set(m.id, days);
-    }
-    return out;
-  }, [shift, selectedStaff, absencesByStaff]);
+  const skippedDays = shift
+    ? new Map<string, string[]>()
+    : skippedDaysOf(selectedStaff, (m) => checks.absenceHitsFor(m.person_id));
 
   // Stato reale dell'assegnazione. Chi ha rifiutato (o è stato segnato assente)
   // resta in elenco ma NON copre il suo ruolo: darlo per `assigned` faceva
@@ -573,7 +561,7 @@ function InternalForm({
   // I sette giorni della settimana della data scelta: è lì che si ripete un
   // turno di servizio ("anche giovedì e sabato"), non a distanza di mesi.
   const weekOfForm = useMemo(
-    () => (formDate ? weekDays(startOfWeek(new Date(`${formDate}T00:00:00`))) : []),
+    () => (formDate ? weekOf(formDate) : []),
     [formDate]
   );
 
@@ -637,11 +625,7 @@ function InternalForm({
         venue_id: values.venue_id,
         date: d,
         // Chi quel giorno è assente resta fuori da quella copia sola.
-        staff: payload.staff.filter(
-          (p) =>
-            forcedAbsent.has(p.venue_member_id) ||
-            !skippedDays.get(p.venue_member_id)?.includes(d)
-        ),
+        staff: staffForDate(payload.staff, d, skippedDays, forcedAbsent),
       })),
       {
         onSuccess: () => {
@@ -832,7 +816,7 @@ function InternalForm({
                   {weekOfForm.map((day) => {
                     const isMain = day === formDate;
                     const on = isMain || extraDates.includes(day);
-                    const { name, num } = dayLabel(day);
+                    const { name, num } = shortDay(day);
                     return (
                       <button
                         key={day}
@@ -855,9 +839,7 @@ function InternalForm({
                   })}
                 </div>
                 <p className="mt-1.5 text-xs text-t4">
-                  {extraDates.length === 0
-                    ? "Stessi orari, staff e fabbisogno su più giorni della settimana."
-                    : `Verranno creati ${extraDates.length + 1} turni identici, uno per giorno.`}
+                  {repeatHint(extraDates.length)}
                 </p>
               </section>
             ) : null}
@@ -874,7 +856,7 @@ function InternalForm({
               <section>
                 <div className="mb-2 flex items-baseline justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-                    Fabbisogno per ruolo
+                    {ROLE_TARGETS_LABEL}
                   </span>
                   {coverage.required > 0 ? (
                     <Pill tone={coverage.missing > 0 ? "warning" : "success"}>
@@ -882,6 +864,11 @@ function InternalForm({
                     </Pill>
                   ) : null}
                 </div>
+                {coverage.required === 0 ? (
+                  <p className="mb-2 text-xs leading-4 text-t4">
+                    {ROLE_TARGETS_HINT}
+                  </p>
+                ) : null}
                 <div className="grid grid-cols-2 gap-2">
                   {roles.map((role) => {
                     const count =
@@ -927,7 +914,27 @@ function InternalForm({
                 </p>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {staff.map((member) => {
+                  {staff.length >= STAFF_SEARCH_FROM ? (
+                    <Input
+                      type="search"
+                      value={staffSearch}
+                      onChange={(e) => setStaffSearch(e.target.value)}
+                      // Sta dentro il form del turno: Invio qui salverebbe il
+                      // turno a metà scelta.
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.preventDefault();
+                      }}
+                      placeholder="Cerca per nome o ruolo…"
+                      aria-label="Cerca nell'organico"
+                      className="mb-1"
+                    />
+                  ) : null}
+                  {shownStaff.length === 0 ? (
+                    <p className="px-1 py-2 text-xs text-t4">
+                      Nessuno corrisponde a «{staffSearch.trim()}».
+                    </p>
+                  ) : null}
+                  {shownStaff.map((member) => {
                     const on = member.id in staffRoles;
                     const status = staffStatus(member.id);
                     const works = isActiveAssignment(status);
@@ -944,10 +951,8 @@ function InternalForm({
                       shift && liveAssignment
                         ? liveClockStatusIn(venues, shift, liveAssignment, now)
                         : null;
-                    const absenceLabel = absenceHitsLabel(
-                      absencesByStaff.get(member.id) ?? [],
-                      plannedDates.length > 1
-                    );
+                    // Assente, già in turno a quell'ora: avvisi, mai blocchi.
+                    const notes = checks.notesFor(member.person_id);
                     return (
                       <div key={member.id}>
                         <button
@@ -969,11 +974,14 @@ function InternalForm({
                               {staffRoleNames(member) ?? "Ruoli non indicati"}
                             </span>
                             {live ? <LiveClockLine status={live} /> : null}
-                            {absenceLabel ? (
-                              <span className="block truncate text-xs font-semibold text-warning">
-                                {absenceLabel}
+                            {notes.map((note) => (
+                              <span
+                                key={note}
+                                className="block truncate text-xs font-semibold text-warning"
+                              >
+                                {note}
                               </span>
-                            ) : null}
+                            ))}
                             {requestedByStaff.has(member.id) ? (
                               <span className="block truncate text-xs font-semibold text-gold">
                                 {requestedByStaff.get(member.id) === "hours"
@@ -1136,39 +1144,6 @@ function InternalForm({
   );
 }
 
-type AbsenceSlot = NonNullable<
-  ReturnType<typeof useAbsenceAvailability>["data"]
->[number];
-
-/** «gio 1, ven 2». */
-function shortDays(dates: string[]): string {
-  return dates
-    .map((d) => {
-      const { name, num } = dayLabel(d);
-      return `${name} ${num}`;
-    })
-    .join(", ");
-}
-
-/**
- * La riga arancione sotto il nome. Su un giorno solo l'etichetta del planning;
- * su più giorni anche quali, raggruppati per etichetta:
- * «Non disponibile gio 1, ven 2 · Assenza richiesta mer 30».
- */
-function absenceHitsLabel(
-  hits: { date: string; absence: AbsenceSlot }[],
-  manyDays: boolean
-): string | null {
-  if (!hits.length) return null;
-  if (!manyDays) return absenceCellLabel(hits[0].absence);
-  const byLabel = new Map<string, string[]>();
-  for (const h of hits) {
-    const label = absenceCellLabel(h.absence);
-    byLabel.set(label, [...(byLabel.get(label) ?? []), h.date]);
-  }
-  return [...byLabel].map(([label, days]) => `${label} ${shortDays(days)}`).join(" · ");
-}
-
 /**
  * Chi resta fuori da qualche giorno per un'assenza approvata, e l'interruttore
  * per metterlo comunque. Avviso, non blocco.
@@ -1188,19 +1163,20 @@ function SkippedNotes({
   return (
     <div className="mt-2 flex flex-col gap-1 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2">
       {staff.map((m) => {
-        const days = shortDays(skippedDays.get(m.id) ?? []);
-        const isForced = forced.has(m.id);
+        const note = skippedNote(
+          m.display_name,
+          skippedDays.get(m.id) ?? [],
+          forced.has(m.id)
+        );
         return (
           <p key={m.id} className="text-xs leading-5 text-t2">
-            {isForced
-              ? `${m.display_name} è in turno anche ${days}, nonostante l'assenza approvata.`
-              : `${m.display_name} resta fuori ${days}: non è disponibile.`}{" "}
+            {note.text}{" "}
             <button
               type="button"
               onClick={() => onToggle(m.id)}
               className="focus-gold font-semibold text-gold hover:underline"
             >
-              {isForced ? "Lascia fuori" : "Metti in turno comunque"}
+              {note.action}
             </button>
           </p>
         );
