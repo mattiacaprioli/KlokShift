@@ -27,7 +27,9 @@ import {
   formatShiftSummary,
   isShiftOver,
   shiftStartsAt,
+  toDateString,
 } from "@/lib/format";
+import { RECORDED_LABEL, isRecordedShift } from "@/features/shifts/recorded";
 import { useNow } from "@/lib/useNow";
 import { Button, Pill } from "../ui/primitives";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -166,6 +168,13 @@ export function ShiftDetails({
             {shift.require_confirmation ? (
               <p className="text-xs text-t3">
                 Conferma chiesta a tutti, anche a chi è assunto fisso.
+              </p>
+            ) : null}
+
+            {isRecordedShift(shift) && shift.recorded_at ? (
+              <p className="text-xs text-t3">
+                {RECORDED_LABEL} il {formatDate(toDateString(new Date(shift.recorded_at)))}:
+                non era stato pianificato, e nessuno ha dovuto confermarlo.
               </p>
             ) : null}
 

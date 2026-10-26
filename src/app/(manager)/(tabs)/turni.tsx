@@ -33,6 +33,7 @@ import {
 } from "@/features/shifts/hooks";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
+import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { clockAttentionItems } from "@/features/clock/attention";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
@@ -97,6 +98,9 @@ export default function ManagerShiftsScreen() {
   // permesso sui turni la RLS rifiuterebbe l'insert, e il form si chiuderebbe
   // con un errore che non spiega niente.
   const canCreateShift = venueQuery.canUseOperations && venueQuery.canAny("can_manage_shifts");
+  // Un giorno passato non si pianifica: ci si registra un turno già fatto, e
+  // quello è un lavoro di chi ha «Ore» (`record_past_shift`).
+  const canRecordShift = venueQuery.canUseOperations && venueQuery.canAny("can_view_hours");
   const upcomingQuery = useOwnerShifts();
 
   const today = todayString();
@@ -371,6 +375,16 @@ export default function ManagerShiftsScreen() {
 
   const openShift = (id: string) => router.push(`/(manager)/shift/${id}`);
   const away = anchorDay !== today;
+  // Il «+» porta il giorno che si sta guardando: nel passato apre la
+  // registrazione di un turno già fatto, da oggi in poi il nuovo turno.
+  const pastDay = visibleDay < today;
+  const canAdd = pastDay ? canRecordShift : canCreateShift;
+  const addShift = () =>
+    router.push(
+      pastDay
+        ? `/(manager)/shift/record?date=${visibleDay}`
+        : `/(manager)/shift/new?date=${visibleDay}`
+    );
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 12 }}>
@@ -390,14 +404,12 @@ export default function ManagerShiftsScreen() {
             {/* Tondo e non a tutta larghezza: il bottone grande si prendeva lo
                 spazio che ora serve al calendario. Porta con sé il giorno
                 selezionato, così il form si apre già sulla data giusta. */}
-            {canCreateShift ? (
+            {canAdd ? (
               <Pressable
-                onPress={() =>
-                  router.push(`/(manager)/shift/new?date=${visibleDay}`)
-                }
+                onPress={addShift}
                 className="h-12 w-12 items-center justify-center rounded-full bg-gold"
                 accessibilityRole="button"
-                accessibilityLabel="Nuovo turno"
+                accessibilityLabel={pastDay ? RECORD_ACTION : "Nuovo turno"}
               >
                 <Icon name="close" size={24} color="#1a1206" style={{ transform: [{ rotate: "45deg" }] }} />
               </Pressable>
@@ -684,7 +696,7 @@ export default function ManagerShiftsScreen() {
                       : "Tocca «Turni di tutti» per tornare all'agenda completa."
                   }
                 />
-              ) : canCreateShift ? (
+              ) : canAdd ? (
                 <EmptyState
                   title={
                     away
@@ -692,14 +704,14 @@ export default function ManagerShiftsScreen() {
                       : "Nessun turno in programma"
                   }
                   subtitle={
-                    away
-                      ? "Tocca «Oggi» per tornare ai prossimi, oppure crea un turno in questo giorno."
-                      : "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
+                    pastDay
+                      ? "Tocca «Oggi» per tornare ai prossimi, oppure registra un turno già fatto in questo giorno."
+                      : away
+                        ? "Tocca «Oggi» per tornare ai prossimi, oppure crea un turno in questo giorno."
+                        : "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
                   }
-                  actionLabel="Crea un turno"
-                  onAction={() =>
-                    router.push(`/(manager)/shift/new?date=${visibleDay}`)
-                  }
+                  actionLabel={pastDay ? RECORD_ACTION : "Crea un turno"}
+                  onAction={addShift}
                 />
               ) : venueQuery.canAny("can_manage_shifts") ? (
                 // Il permesso c'è, l'azienda non è operativa: si dice perché.

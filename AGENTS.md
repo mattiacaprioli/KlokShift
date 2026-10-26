@@ -107,6 +107,21 @@ restano solo su `shift_assignments`: non introdurre una seconda fonte di ore. I
 turni nati così non notificano (`app.unplanned_clock`) e i colleghi li vedono solo
 dopo l'approvazione. Dettagli in [plans/UNPLANNED-CLOCK.md](plans/UNPLANNED-CLOCK.md).
 
+## Turno già fatto (2026-10-26)
+
+Un turno svolto ma mai pianificato («mi sono dimenticato di metterlo») si
+registra a posteriori con `record_past_shift`, non col form del turno. Serve il
+permesso **Ore**, non «Turni», ed è accettato solo un turno già finito. Le persone
+risultano presenti (`confirmed`) e le ore contano subito con la regola del turno
+concluso senza timbratura (`manual_auto`), anche per chi timbra dall'app, e si
+correggono dalle presenze.
+Non parte nessuna notifica di turno assegnato: c'è solo un «Turno registrato»
+facoltativo (`p_notify`). Il turno porta `recorded_at`/`recorded_by` («Inserito a
+mano»). Ci si arriva dal «+» dei giorni passati (agenda e planning) e dalla pagina
+Ore. Le frasi sono in `src/features/shifts/recorded.ts`. ⚠️ `create_shifts` non
+rifiuta ancora i turni passati: il client non gliene manda più, ma il buco
+lato server resta da chiudere.
+
 ## Pausa (2026-10-16)
 
 La sede (chi ha «Ore») decide se la pausa è retribuita: retribuita resta nelle

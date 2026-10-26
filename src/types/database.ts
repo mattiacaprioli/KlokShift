@@ -1057,6 +1057,8 @@ export type Database = {
           id: string
           positions_filled: number
           positions_total: number
+          recorded_at: string | null
+          recorded_by: string | null
           require_confirmation: boolean
           start_time: string
           status: Database["public"]["Enums"]["shift_status"]
@@ -1074,6 +1076,8 @@ export type Database = {
           id?: string
           positions_filled?: number
           positions_total?: number
+          recorded_at?: string | null
+          recorded_by?: string | null
           require_confirmation?: boolean
           start_time: string
           status?: Database["public"]["Enums"]["shift_status"]
@@ -1091,6 +1095,8 @@ export type Database = {
           id?: string
           positions_filled?: number
           positions_total?: number
+          recorded_at?: string | null
+          recorded_by?: string | null
           require_confirmation?: boolean
           start_time?: string
           status?: Database["public"]["Enums"]["shift_status"]
@@ -1099,6 +1105,13 @@ export type Database = {
           venue_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shifts_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shifts_venue_id_fkey"
             columns: ["venue_id"]
@@ -2304,6 +2317,8 @@ export type Database = {
           id: string
           positions_filled: number
           positions_total: number
+          recorded_at: string | null
+          recorded_by: string | null
           require_confirmation: boolean
           start_time: string
           status: Database["public"]["Enums"]["shift_status"]
@@ -2467,6 +2482,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_past_shift: {
+        Args: {
+          p_break_minutes: number
+          p_date: string
+          p_end: string
+          p_note: string
+          p_notify?: boolean
+          p_staff: Json
+          p_start: string
+          p_title: string
+          p_venue: string
+        }
+        Returns: string
       }
       register_push_token: {
         Args: { p_platform: string; p_token: string }

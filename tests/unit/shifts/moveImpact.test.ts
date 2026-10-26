@@ -49,6 +49,8 @@ function shift(
     status: "open",
     title: input.id,
     unplanned: false,
+    recorded_at: null,
+    recorded_by: null,
     venue_id: "venue-1",
     shift_role_requirements: [],
     shift_assignments: [],

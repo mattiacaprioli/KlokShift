@@ -87,6 +87,11 @@ import {
   type ReassignTarget,
 } from "../shifts/dragContext";
 import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
+import { RecordPastShiftDialog } from "../shifts/RecordPastShiftDialog";
+import {
+  RECORD_ACTION,
+  RECORD_NEEDS_HOURS,
+} from "@/features/shifts/recorded";
 import { MovePersonDialog } from "../shifts/MovePersonDialog";
 import { PeopleWeek } from "../shifts/PeopleWeek";
 import { ShiftPanel } from "../shifts/ShiftPanel";
@@ -185,6 +190,11 @@ export function PlanningPage() {
     personIds?: string[];
   } | null>(null);
   const [duplicating, setDuplicating] = useState(false);
+  /** «Turno già fatto»: aperto dal «+» di un giorno passato. */
+  const [recording, setRecording] = useState<{
+    date: string;
+    personIds?: string[];
+  } | null>(null);
 
   const [params, setParams] = useSearchParams();
   const deepLinkId = params.get("shift");
@@ -214,11 +224,11 @@ export function PlanningPage() {
     [isWeekly, monday, month],
   );
   // Il giorno da cui parte «Nuovo turno»: oggi se è nel periodo che si sta
-  // guardando, altrimenti il primo giorno di quel periodo.
+  // guardando, il primo giorno se il periodo è futuro, oggi se è tutto passato
+  // (un turno nuovo non nasce nel passato).
   const periodDays = isWeekly ? weekDays(monday) : monthDays(month);
-  const createDay = periodDays.includes(todayString())
-    ? todayString()
-    : periodDays[0];
+  const createDay =
+    periodDays[0] > todayString() ? periodDays[0] : todayString();
 
   // Il filtro per sede è **del server**: cambia l'insieme di `venue_id`
   // interrogato, non nasconde righe già scaricate. Con dieci sedi e un mese
@@ -322,14 +332,25 @@ export function PlanningPage() {
    * Ogni «+ Turno» passa da qui. Con l'azienda non operativa il server
    * rifiuterebbe il salvataggio dopo che il form è stato compilato: meglio
    * dirlo al tocco, e al titolare in preparazione portare dritto alla prova.
+   *
+   * Un giorno passato non si pianifica: il «+» apre «Turno già fatto», che è
+   * lavoro di chi ha «Ore». Fino al 26/10/2026 apriva il form del turno, che
+   * poi rifiutava la data senza dire dove andare.
    */
   const openCreate = (date: string, personIds?: string[]) => {
+    const past = isPastDay(date);
+    if (past && !canAny("can_view_hours")) {
+      toast.show(RECORD_NEEDS_HOURS, "error");
+      return;
+    }
+    const open = () =>
+      past ? setRecording({ date, personIds }) : setPanel({ date, personIds });
     if (canUseOperations) {
-      setPanel({ date, personIds });
+      open();
       return;
     }
     const gate = operationsGate(access, { isOwner });
-    if (gate.allowed) setPanel({ date, personIds });
+    if (gate.allowed) open();
     else if (gate.canStartTrial) navigate("/prova");
     else toast.show(gate.reason, "error");
   };
@@ -717,6 +738,15 @@ export function PlanningPage() {
         />
       ) : null}
 
+      {recording ? (
+        <RecordPastShiftDialog
+          date={recording.date}
+          initialPersonIds={recording.personIds}
+          defaultVenueId={activeVenueId}
+          onClose={() => setRecording(null)}
+        />
+      ) : null}
+
       {panel ? (
         <ShiftPanel
           date={panel.date}
@@ -944,8 +974,9 @@ function WeekGrid({
                   onCreate(day);
                 }}
                 className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold print:hidden"
+                title={isPastDay(day) ? RECORD_ACTION : undefined}
               >
-                + Turno
+                {isPastDay(day) ? "+ Già fatto" : "+ Turno"}
               </button>
             </section>
           );
@@ -1047,7 +1078,12 @@ function MonthGrid({
                     if (dnd.swallowClick()) return;
                     onCreate(day);
                   }}
-                  aria-label={`Aggiungi turno il ${day}`}
+                  aria-label={
+                    isPastDay(day)
+                      ? `${RECORD_ACTION} il ${day}`
+                      : `Aggiungi turno il ${day}`
+                  }
+                  title={isPastDay(day) ? RECORD_ACTION : undefined}
                   // Sempre visibile, tenue: finché compariva solo al passaggio
                   // del mouse, dal mese non si sapeva come creare un turno.
                   className="focus-gold rounded px-1 text-xs text-t4 transition hover:text-gold group-hover:text-t2 print:hidden"

@@ -168,6 +168,19 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questo turno è già finito.",
   },
   {
+    // `record_past_shift`: solo lavoro già svolto.
+    match: ["shift_not_finished"],
+    message: "Questo turno non è ancora finito: pianificalo come nuovo turno.",
+  },
+  {
+    match: ["staff_required"],
+    message: "Scegli almeno una persona.",
+  },
+  {
+    match: ["shift_times_invalid"],
+    message: "Inizio e fine non possono coincidere.",
+  },
+  {
     // Il turno «Fuori turno» descrive lavoro già svolto (C06).
     match: ["unplanned_shift_locked"],
     message:

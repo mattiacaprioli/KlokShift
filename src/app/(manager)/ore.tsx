@@ -1,5 +1,6 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
@@ -29,6 +30,7 @@ import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
+import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { useOwnerHoursSummary } from "@/features/assignments/hooks";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
@@ -77,7 +79,12 @@ export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { profile } = useAuth();
-  const { workspaceId, venues, historyVenues } = useOwnerVenues();
+  const router = useRouter();
+  const { workspaceId, venues, historyVenues, canUseOperations, canAny } =
+    useOwnerVenues();
+  // Il turno dimenticato si registra da qui: è una questione di ore, e qui si
+  // accorge che mancano (come in 7shifts o Deputy, dal foglio ore).
+  const canRecord = canUseOperations && canAny("can_view_hours");
 
   const [month, setMonth] = useState(monthKey());
   const atCurrentMonth = month >= monthKey();
@@ -149,7 +156,22 @@ export default function VenueHoursScreen() {
   return (
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Organico" title="Ore" />
+        <ScreenHeader
+          eyebrow="Organico"
+          title="Ore"
+          right={
+            canRecord ? (
+              <Pressable
+                onPress={() => router.push("/(manager)/shift/record")}
+                accessibilityRole="button"
+                accessibilityLabel={RECORD_ACTION}
+                className="rounded-full border border-border-gold bg-bg-2 px-3 py-1.5"
+              >
+                <Mono gold>+ Turno già fatto</Mono>
+              </Pressable>
+            ) : undefined
+          }
+        />
       </View>
 
       <ScrollView

@@ -18,6 +18,7 @@ import {
   isOvernightShift,
   shiftSlotLabel,
 } from "@/lib/format";
+import { RECORDED_LABEL, isRecordedShift } from "./recorded";
 import type { ShiftWithCount } from "./types";
 
 /**
@@ -233,6 +234,10 @@ export function ManagerShiftCard({
               <Pill label="Annullato" variant="cancelled" />
             ) : closed ? (
               <Pill label="Chiuso" variant="closed" />
+            ) : isRecordedShift(shift) ? (
+              // Non pianificato, registrato dopo: si vede perché non ha avuto
+              // né notifiche né conferme.
+              <Pill label={RECORDED_LABEL} variant="neutral" />
             ) : null}
           </View>
           {showRoles ? (

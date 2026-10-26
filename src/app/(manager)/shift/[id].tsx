@@ -26,11 +26,13 @@ import {
   shiftStartsAt,
   shiftEndsAt,
   shiftCountedHours,
+  toDateString,
   type ShiftBreak,
 } from "@/lib/format";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
+import { RECORDED_LABEL, isRecordedShift } from "@/features/shifts/recorded";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
   useSetAssignmentPresence,
@@ -568,6 +570,13 @@ export default function ShiftDetailScreen() {
             value={`${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`}
           />
         </Card>
+
+        {isRecordedShift(shift) && shift.recorded_at ? (
+          <Text className="mt-3 text-xs leading-4 text-t3">
+            {RECORDED_LABEL} il {formatDate(toDateString(new Date(shift.recorded_at)))}:
+            non era stato pianificato, e nessuno ha dovuto confermarlo.
+          </Text>
+        ) : null}
 
         {shift.description ? (
           <View className="mt-6">

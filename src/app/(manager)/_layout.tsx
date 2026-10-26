@@ -20,6 +20,7 @@ export default function ManagerLayout() {
       />
       <Stack.Screen name="venue/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="shift/new" options={{ headerShown: false }} />
+      <Stack.Screen name="shift/record" options={{ headerShown: false }} />
       <Stack.Screen name="shift/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="shift/edit/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="staff/new" options={{ headerShown: false }} />

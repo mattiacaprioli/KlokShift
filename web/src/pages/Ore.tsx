@@ -44,6 +44,8 @@ import {
   StickyHeader,
 } from "../ui/primitives";
 import { FullExportCard } from "../export/FullExportCard";
+import { RecordPastShiftDialog } from "../shifts/RecordPastShiftDialog";
+import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { NoVenues } from "../venues/NoVenues";
 
 /**
@@ -59,7 +61,12 @@ import { NoVenues } from "../venues/NoVenues";
  */
 export function OrePage() {
   const { profile } = useAuth();
-  const { workspaceId, venues, historyVenues } = useOwnerVenues();
+  const { workspaceId, venues, historyVenues, canUseOperations, canAny } =
+    useOwnerVenues();
+  // Il turno dimenticato si registra da qui: è una questione di ore, ed è qui
+  // che ci si accorge che mancano (come dal foglio ore di 7shifts o Deputy).
+  const canRecord = canUseOperations && canAny("can_view_hours");
+  const [recording, setRecording] = useState(false);
   const [month, setMonth] = useState(monthKey(new Date()));
   const [mode, setMode] = useState<"month" | "range">("month");
   // `range` è quello nei campi, `applied` l'ultimo valido: con le date
@@ -175,7 +182,17 @@ export function OrePage() {
         <PageHeader
           title="Ore"
           subtitle={`${label} · ${formatHours(totalHours)} lavorate effettive${toReview > 0 ? ` · ${toReview} turni da verificare` : ""}`}
+          actions={
+            canRecord ? (
+              <Button variant="gold" onClick={() => setRecording(true)}>
+                {RECORD_ACTION}
+              </Button>
+            ) : undefined
+          }
         />
+        {recording ? (
+          <RecordPastShiftDialog onClose={() => setRecording(false)} />
+        ) : null}
 
         {/* Una riga sotto il titolo, come i filtri dello Storico. Niente
             `items-center`: lo stretch dà a frecce, tendina e bottoni la stessa

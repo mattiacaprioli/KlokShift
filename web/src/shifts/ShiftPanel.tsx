@@ -761,9 +761,10 @@ function InternalForm({
 
             <div className="grid grid-cols-3 gap-3">
               <Field label="Data" error={errors.date?.message}>
-                {/* Nel passato non si programma: correggere uno storico è
-                    un'operazione della pagina Ore, non di questo form (e il
-                    database la concede solo a chi ha quel permesso). */}
+                {/* Nel passato non si programma: un turno già fatto si
+                    registra con «Turno già fatto» (`RecordPastShiftDialog`,
+                    dal «+» dei giorni passati o dalla pagina Ore), che chiede
+                    il permesso Ore. */}
                 <Input type="date" min={todayString()} {...register("date")} />
               </Field>
               <Field label="Inizio" error={errors.start_time?.message}>

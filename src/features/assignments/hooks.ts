@@ -12,10 +12,11 @@ import {
   invalidateShiftViews,
   invalidateWorkViews,
 } from "@/features/shifts/invalidation";
-import type { InternalShiftPlan } from "./api";
+import type { InternalShiftPlan, PastShiftRecord } from "./api";
 import { periodBounds, periodKey, type ReportPeriod } from "./reportPeriod";
 import {
   createInternalShifts,
+  recordPastShift,
   getInternalShiftPlans,
   moveAssignment,
   getMyAssignedUpcoming,
@@ -127,6 +128,15 @@ export function useCreateInternalShifts() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (plans: InternalShiftPlan[]) => createInternalShifts(plans),
+    onSuccess: () => invalidateAfterShiftWrite(qc),
+  });
+}
+
+/** Registra un turno già fatto: stesse invalidazioni, ore comprese. */
+export function useRecordPastShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PastShiftRecord) => recordPastShift(input),
     onSuccess: () => invalidateAfterShiftWrite(qc),
   });
 }

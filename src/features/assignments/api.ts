@@ -179,6 +179,43 @@ export async function createInternalShifts(
   return data ?? [];
 }
 
+/**
+ * Un turno **già fatto** che non era stato pianificato, registrato da chi ha
+ * «Ore» (RPC `record_past_shift`). Le persone risultano presenti e le ore del
+ * turno contano subito, correggibili dalle presenze; nessuna notifica di turno
+ * assegnato, salvo `notify`. Il database rifiuta un turno non ancora finito
+ * (`shift_not_finished`): quello si pianifica con `createInternalShifts`.
+ */
+export type PastShiftRecord = {
+  venue_id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  note: string | null;
+  staff: StaffAssignmentInput[];
+  /** Avvisa le persone con «Turno registrato». Di norma no: non c'è niente da fare. */
+  notify: boolean;
+};
+
+export async function recordPastShift(input: PastShiftRecord): Promise<string> {
+  const { data, error } = await supabase.rpc("record_past_shift", {
+    p_venue: input.venue_id,
+    p_date: input.date,
+    p_start: input.start_time,
+    p_end: input.end_time,
+    p_break_minutes: input.break_minutes,
+    p_title: input.title,
+    // Vuota diventa null nel database (`nullif(btrim(...))`).
+    p_note: input.note ?? "",
+    p_staff: input.staff,
+    p_notify: input.notify,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Legge i turni indicati e ne ricava i piani riproducibili. */
 export async function getInternalShiftPlans(
   shiftIds: string[]
