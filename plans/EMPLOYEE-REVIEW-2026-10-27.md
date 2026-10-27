@@ -16,9 +16,9 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E03 | «Timbra entrata» al momento giusto | ✅ 27/10 |
 | E04 | Frasi giuste a turno finito | ✅ 27/10 |
 | E05 | Rifiuto per sbaglio: si torna indietro, e la sede lo sa | ✅ 27/10 (migration da applicare via CI) |
-| E06 | Cambio turno: nomi e refuso | ☐ |
-| E07 | Ritirare la richiesta dal turno | ☐ |
-| E08 | «Orario diverso» prima di confermare | ☐ |
+| E06 | Cambio turno: nomi e refuso | ✅ 27/10 |
+| E07 | Ritirare la richiesta dal turno | ✅ 27/10 |
+| E08 | «Orario diverso» prima di confermare | ✅ 27/10 |
 | E09 | Correzioni della sede visibili | ☐ |
 | E10 | Promemoria di timbratura | ☐ |
 | E11 | Stesso numero di ore ovunque | ☐ |
@@ -127,11 +127,20 @@ del sede», con un refuso, e falso se si era chiesto un orario diverso.
 
 **Correzione.** «Chiedi un cambio» ovunque; la richiesta in attesa detta per tipo.
 
+**Fatto.** `src/features/changeRequests/labels.ts` (`REQUEST_CHANGE_LABEL`,
+`myPendingRequestText`, con test), usato da dettaglio e finestra. Aggiornata
+anche la risposta dell'Aiuto («Non posso coprire un turno»), e quella sulla
+timbratura con l'ora di E03.
+
 ## E07 · Ritirare la richiesta dal turno
 
 **Problema.** Una richiesta in attesa si ritira solo dalla card in chat.
 
 **Correzione.** Nel dettaglio del turno «Ritira la richiesta» e «Apri la chat».
+
+**Fatto.** Sotto la richiesta in attesa: «Ritira la richiesta» (stesso hook della
+card in chat, senza conferma come lì) e «Vedi in chat», che apre il thread col
+titolare dove sta la card.
 
 ## E08 · «Orario diverso» prima di confermare
 
@@ -141,6 +150,12 @@ server accetta già la richiesta su un turno da confermare.
 
 **Correzione.** Terza scelta «Ci sono, ma a un altro orario»: manda la richiesta
 di orario e conferma la presenza.
+
+**Fatto.** Nel dettaglio del turno da confermare. `RequestChangeModal` con
+`withConfirm` (solo orario, «Conferma e invia») e `onSent`: prima la richiesta,
+poi la conferma; se la conferma fallisce il toast lo dice. La finestra ora si
+monta solo aperta. Le card di Home e agenda restano a due pulsanti. Aggiornata
+l'Aiuto.
 
 ## E09 · Correzioni della sede visibili
 

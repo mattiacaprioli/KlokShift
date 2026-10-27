@@ -10,6 +10,7 @@ import { useToast } from "@/providers/Toast";
 import { TimeField } from "@/features/shifts/TimeField";
 import { useRequestShiftChange } from "./hooks";
 import type { ChangeRequestKind } from "./api";
+import { HOURS_WITH_CONFIRM_LABEL, REQUEST_CHANGE_LABEL } from "./labels";
 
 const KINDS = [
   { id: "substitution" as const, label: "Non posso venire" },
@@ -28,6 +29,12 @@ const KINDS = [
  * Il motivo è sempre obbligatorio: la richiesta arriva come card in chat, e
  * senza il perché il titolare non può decidere — dovrebbe scrivere per chiedere,
  * e a quel punto tanto valeva scrivere e basta.
+ *
+ * `withConfirm`: la stessa richiesta d'orario, ma come risposta a un turno
+ * ancora da confermare («Ci sono, ma a un altro orario»). Niente scelta del
+ * tipo — «non posso» lì è il rifiuto — e dopo l'invio chi apre la finestra
+ * conferma la presenza (`onSent`). Va montata solo quando si apre: lo stato
+ * iniziale dipende da come la si apre.
  */
 export function RequestChangeModal({
   visible,
@@ -35,6 +42,8 @@ export function RequestChangeModal({
   shiftLabel,
   shiftStart,
   shiftEnd,
+  withConfirm = false,
+  onSent,
   onClose,
 }: {
   visible: boolean;
@@ -44,10 +53,16 @@ export function RequestChangeModal({
   /** Orario del turno, da cui partono i due campi: "HH:MM[:SS]". */
   shiftStart: string;
   shiftEnd: string;
+  /** Risposta a un turno da confermare: solo orario, poi la conferma. */
+  withConfirm?: boolean;
+  /** Dopo l'invio, al posto del toast: il passo dopo lo fa chi apre la finestra. */
+  onSent?: () => void;
   onClose: () => void;
 }) {
   const toast = useToast();
-  const [kind, setKind] = useState<ChangeRequestKind>("substitution");
+  const [kind, setKind] = useState<ChangeRequestKind>(
+    withConfirm ? "hours" : "substitution"
+  );
   const [reason, setReason] = useState("");
   const [start, setStart] = useState(() => timeToDate(shiftStart));
   const [end, setEnd] = useState(() => timeToDate(shiftEnd));
@@ -72,7 +87,8 @@ export function RequestChangeModal({
         onSuccess: () => {
           setReason("");
           onClose();
-          toast.show("Richiesta inviata alla sede");
+          if (onSent) onSent();
+          else toast.show("Richiesta inviata alla sede");
         },
         onError: (e) =>
           toast.show(
@@ -101,11 +117,12 @@ export function RequestChangeModal({
           className="max-h-[85%] w-full rounded-3xl border border-border-2 bg-bg-card p-6"
         >
           <Text className="text-lg font-sans-bold text-t1">
-            Chiedi un cambio
+            {withConfirm ? HOURS_WITH_CONFIRM_LABEL : REQUEST_CHANGE_LABEL}
           </Text>
           <Text className="mt-2 text-sm leading-5 text-t2">
-            La sede riceve la richiesta in chat e decide: fino ad allora il
-            turno di {shiftLabel} resta come sta.
+            {withConfirm
+              ? `Confermi la presenza e chiedi un orario diverso. La sede decide in chat: fino ad allora il turno di ${shiftLabel} resta come sta.`
+              : `La sede riceve la richiesta in chat e decide: fino ad allora il turno di ${shiftLabel} resta come sta.`}
           </Text>
 
           <ScrollView
@@ -113,10 +130,12 @@ export function RequestChangeModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Segmented options={KINDS} value={kind} onChange={setKind} />
+            {withConfirm ? null : (
+              <Segmented options={KINDS} value={kind} onChange={setKind} />
+            )}
 
             {kind === "hours" ? (
-              <View className="mt-5 gap-2.5">
+              <View className={withConfirm ? "gap-2.5" : "mt-5 gap-2.5"}>
                 <View className="flex-row gap-4">
                   <TimeField
                     className="flex-1"
@@ -166,7 +185,13 @@ export function RequestChangeModal({
 
           <View className="mt-6 gap-2.5">
             <GoldButton
-              label={request.isPending ? "Invio…" : "Invia richiesta"}
+              label={
+                request.isPending
+                  ? "Invio…"
+                  : withConfirm
+                    ? "Conferma e invia"
+                    : "Invia richiesta"
+              }
               disabled={!canSend}
               onPress={onSend}
             />

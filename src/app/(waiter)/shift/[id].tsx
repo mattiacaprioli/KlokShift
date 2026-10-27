@@ -33,7 +33,15 @@ import {
 import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
 import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
 import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal";
-import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
+import {
+  usePendingRequestsForShift,
+  useWithdrawShiftChangeRequest,
+} from "@/features/changeRequests/hooks";
+import {
+  HOURS_WITH_CONFIRM_LABEL,
+  myPendingRequestText,
+  REQUEST_CHANGE_LABEL,
+} from "@/features/changeRequests/labels";
 import { usePunchClock } from "@/features/clock/hooks";
 import {
   clockInNote,
@@ -110,11 +118,33 @@ export default function WaiterShiftDetailScreen() {
   }
 
   const [declineVisible, setDeclineVisible] = useState(false);
-  const [requestVisible, setRequestVisible] = useState(false);
+  /**
+   * Quale richiesta si sta scrivendo: un cambio su un turno confermato, o la
+   * richiesta d'orario che accompagna la conferma («Ci sono, ma a un altro
+   * orario»). La finestra si monta solo aperta, così parte dallo stato giusto.
+   */
+  const [requestMode, setRequestMode] = useState<"change" | "withConfirm" | null>(
+    null
+  );
   const [punchAction, setPunchAction] = useState<"in" | "out" | null>(null);
 
   // La RLS filtra già: qui torna solo la **propria** richiesta aperta.
   const pendingRequest = usePendingRequestsForShift(id).data?.[0] ?? null;
+  const withdraw = useWithdrawShiftChangeRequest();
+
+  /**
+   * Ritirare dal turno, non solo dalla card in chat: è qui che si guarda la
+   * richiesta in attesa. Senza conferma, come nella card: ritirarla per sbaglio
+   * costa una richiesta nuova.
+   */
+  function onWithdraw() {
+    if (!pendingRequest) return;
+    withdraw.mutate(pendingRequest.id, {
+      onSuccess: () => toast.show("Richiesta ritirata"),
+      onError: (e) =>
+        toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
+    });
+  }
 
   /**
    * A turno concluso non si risponde più.
@@ -142,6 +172,27 @@ export default function WaiterShiftDetailScreen() {
           ),
         onError: (e) =>
           toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
+      }
+    );
+  }
+
+  /**
+   * «Ci sono, ma a un altro orario»: la richiesta è partita, ora la conferma.
+   * Prima la richiesta perché è lei la cosa che conta: se fallisce non è
+   * cambiato niente; se fallisce la conferma, la richiesta c'è e lo si dice.
+   */
+  function confirmAfterHoursRequest() {
+    if (!myAssignment) return;
+    respond.mutate(
+      { id: myAssignment.id, status: "confirmed" },
+      {
+        onSuccess: () =>
+          toast.show("Presenza confermata e richiesta d'orario inviata"),
+        onError: () =>
+          toast.show(
+            "Richiesta inviata, ma la presenza non è confermata: tocca «Conferma presenza».",
+            "error"
+          ),
       }
     );
   }
@@ -312,6 +363,20 @@ export default function WaiterShiftDetailScreen() {
                   disabled={respond.isPending}
                   onPress={() => onRespond("confirmed")}
                 />
+                {/* Chi può venire ma su un altro orario non deve prima
+                    impegnarsi sull'orario intero: la richiesta parte con la
+                    conferma. Il server la accetta anche da confermare. */}
+                {pendingRequest ? (
+                  <Text className="text-sm leading-5 text-gold">
+                    {myPendingRequestText(pendingRequest)}
+                  </Text>
+                ) : (
+                  <GhostButton
+                    label={HOURS_WITH_CONFIRM_LABEL}
+                    disabled={respond.isPending}
+                    onPress={() => setRequestMode("withConfirm")}
+                  />
+                )}
                 <GhostButton
                   label="Non posso"
                   disabled={respond.isPending}
@@ -329,18 +394,37 @@ export default function WaiterShiftDetailScreen() {
                     : "Sei in turno. Non serve confermare."}
                 </Text>
                 {/* Dopo la conferma il turno non si molla da soli: la sede ci
-                    ha pianificato sopra. Resta la richiesta di sostituzione, che
-                    decide lui. Per il dipendente fisso è l'unica via d'uscita, ed
-                    è esattamente come funziona con un dipendente. */}
+                    ha pianificato sopra. Resta la richiesta di cambio
+                    (sostituzione o orario diverso), che decide la sede. Per il
+                    dipendente fisso è l'unica via d'uscita. */}
                 {pendingRequest ? (
-                  <Text className="text-sm text-gold">
-                    Richiesta di sostituzione inviata: attendi la risposta del
-                    sede.
-                  </Text>
+                  <>
+                    <Text className="text-sm leading-5 text-gold">
+                      {myPendingRequestText(pendingRequest)}
+                    </Text>
+                    {/* La card della richiesta sta nel thread col titolare,
+                        lo stesso che apre «Contatta la sede». */}
+                    <View className="flex-row gap-2">
+                      <GhostButton
+                        className="flex-1"
+                        size="sm"
+                        label={withdraw.isPending ? "Attendere…" : "Ritira la richiesta"}
+                        disabled={withdraw.isPending}
+                        onPress={onWithdraw}
+                      />
+                      <GhostButton
+                        className="flex-1"
+                        size="sm"
+                        label="Vedi in chat"
+                        disabled={startConversation.isPending}
+                        onPress={onContact}
+                      />
+                    </View>
+                  </>
                 ) : (
                   <GhostButton
-                    label="Chiedi sostituzione"
-                    onPress={() => setRequestVisible(true)}
+                    label={REQUEST_CHANGE_LABEL}
+                    onPress={() => setRequestMode("change")}
                   />
                 )}
               </View>
@@ -483,14 +567,16 @@ export default function WaiterShiftDetailScreen() {
         onCancel={() => setPunchAction(null)}
       />
 
-      {myAssignment ? (
+      {myAssignment && requestMode ? (
         <RequestChangeModal
-          visible={requestVisible}
+          visible
           assignmentId={myAssignment.id}
           shiftLabel={formatDate(shift.date)}
           shiftStart={shift.start_time}
           shiftEnd={shift.end_time}
-          onClose={() => setRequestVisible(false)}
+          withConfirm={requestMode === "withConfirm"}
+          onSent={requestMode === "withConfirm" ? confirmAfterHoursRequest : undefined}
+          onClose={() => setRequestMode(null)}
         />
       ) : null}
     </View>

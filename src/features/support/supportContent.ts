@@ -51,12 +51,12 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
   },
   {
     q: "Non posso coprire un turno: cosa faccio?",
-    a: "Apri il turno e premi «Chiedi sostituzione». La richiesta arriva al titolare in chat e la sua risposta arriva a te. Per ferie, permessi e malattia c'è la guida qui sopra.",
+    a: "Se il turno è ancora da confermare, rispondi «Non posso», oppure «Ci sono, ma a un altro orario» se puoi venire su un orario diverso. Se l'hai già confermato, aprilo e premi «Chiedi un cambio»: puoi chiedere una sostituzione o un orario diverso. La richiesta arriva al titolare in chat e la sua risposta arriva a te. Per ferie, permessi e malattia c'è la guida qui sopra.",
     audience: ["waiter"],
   },
   {
     q: "Come timbro entrata e uscita?",
-    a: "Se la tua sede usa la timbratura dall'app, quando è ora del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se la sede ti ha abilitato, puoi timbrare anche senza un turno: all'uscita nasce un turno «Fuori turno» che chi gestisce le ore deve approvare. Se non vedi niente, la sede registra le ore senza timbratura.",
+    a: "Se la tua sede usa la timbratura dall'app, da un'ora prima dell'inizio del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se la sede ti ha abilitato, puoi timbrare anche senza un turno: all'uscita nasce un turno «Fuori turno» che chi gestisce le ore deve approvare. Se non vedi niente, la sede registra le ore senza timbratura.",
     audience: ["waiter"],
   },
   {
