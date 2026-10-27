@@ -498,6 +498,15 @@ export const WORK_HISTORY_PAGE_SIZE = 20;
  */
 export type WorkHoursSource = "approved" | "adjusted" | "pending" | "planned";
 
+/**
+ * Perché una riga non conta ancora per la sede: gli stessi `kind` di «Ore da
+ * sistemare» (`get_hours_to_fix`).
+ */
+export type WorkPendingReason = "not_clocked" | "missing_out" | "to_approve";
+
+/** Chi ha messo mano agli orari della timbratura: inseriti o corretti dalla sede. */
+export type WorkClockEdit = "entered" | "corrected";
+
 export type WorkHistoryRow = {
   key: string;
   venue_name: string | null;
@@ -519,30 +528,73 @@ export type WorkHistoryRow = {
    * (pausa non retribuita compresa). Null senza timbratura o senza uscita.
    */
   proposed_hours: number | null;
+  /**
+   * La riga conta per la sede, con la stessa regola del riepilogo Ore
+   * (20261027000000). Le ore di una riga che non conta sono in attesa: quelle
+   * proposte dalla timbratura o quelle del turno. Null = database non migrato.
+   */
+  counts: boolean | null;
+  /** Solo sulle righe che non contano. */
+  pending_reason: WorkPendingReason | null;
+  clock_edit: WorkClockEdit | null;
+  /** L'ultimo motivo scritto da chi ha corretto gli orari, se c'è. */
+  clock_edit_reason: string | null;
 };
 
 export type WorkHistoryCursor = { date: string; key: string };
 
-const WORK_HOURS_SOURCES: readonly string[] = [
+const WORK_HOURS_SOURCES = [
   "approved",
   "adjusted",
   "pending",
   "planned",
-] satisfies WorkHoursSource[];
+] as const satisfies WorkHoursSource[];
+
+const WORK_PENDING_REASONS = [
+  "not_clocked",
+  "missing_out",
+  "to_approve",
+] as const satisfies WorkPendingReason[];
+
+const WORK_CLOCK_EDITS = [
+  "entered",
+  "corrected",
+] as const satisfies WorkClockEdit[];
+
+/** Un valore `text` del DB ristretto a quelli che si conoscono, altrimenti null. */
+function oneOf<T extends string>(
+  allowed: readonly T[],
+  value: string | null | undefined
+): T | null {
+  return (allowed as readonly string[]).includes(value ?? "")
+    ? (value as T)
+    : null;
+}
+
+type RawWorkHistoryRow = Omit<
+  WorkHistoryRow,
+  "hours_source" | "counts" | "pending_reason" | "clock_edit" | "clock_edit_reason"
+> & {
+  hours_source: string | null;
+  counts?: boolean | null;
+  pending_reason?: string | null;
+  clock_edit?: string | null;
+  clock_edit_reason?: string | null;
+};
 
 /**
- * Il DB dichiara `hours_source` come `text`: qui si restringe all'enum. Un
+ * Il DB dichiara le colonne come `text`: qui si restringono agli enum. Un
  * valore che non si conosce (o che manca, da un database non ancora migrato)
  * diventa `null`, e la card non dice niente invece di dire una cosa sbagliata.
  */
-function toWorkHistoryRow<T extends { hours_source: string | null }>(
-  row: T
-): Omit<T, "hours_source"> & { hours_source: WorkHoursSource | null } {
+function toWorkHistoryRow(row: RawWorkHistoryRow): WorkHistoryRow {
   return {
     ...row,
-    hours_source: WORK_HOURS_SOURCES.includes(row.hours_source ?? "")
-      ? (row.hours_source as WorkHoursSource)
-      : null,
+    hours_source: oneOf(WORK_HOURS_SOURCES, row.hours_source),
+    counts: row.counts ?? null,
+    pending_reason: oneOf(WORK_PENDING_REASONS, row.pending_reason),
+    clock_edit: oneOf(WORK_CLOCK_EDITS, row.clock_edit),
+    clock_edit_reason: row.clock_edit_reason ?? null,
   };
 }
 
@@ -559,17 +611,33 @@ export async function getMyWorkHistoryPage(
 }
 
 /**
- * Solo i due totali (turni svolti, ore). Esistono a parte perché la schermata
+ * Solo i totali (turni svolti, ore). Esistono a parte perché la schermata
  * Profilo mostra **solo questi**: prima, per due numeri, scaricava tutto.
+ *
+ * `total_hours` sono le ore che contano per la sede; quelle che aspettano orari
+ * o approvazione stanno in `pending_hours`.
  */
-export type WorkHistoryTotals = { total_count: number; total_hours: number };
+export type WorkHistoryTotals = {
+  total_count: number;
+  total_hours: number;
+  pending_count: number;
+  pending_hours: number;
+};
+
+const NO_WORK_TOTALS: WorkHistoryTotals = {
+  total_count: 0,
+  total_hours: 0,
+  pending_count: 0,
+  pending_hours: 0,
+};
 
 export async function getMyWorkHistoryTotals(): Promise<WorkHistoryTotals> {
   const { data, error } = await supabase
     .rpc("get_my_work_history_totals")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data ?? { total_count: 0, total_hours: 0 };
+  // Lo spread tiene gli zeri per le colonne che un database non migrato non ha.
+  return { ...NO_WORK_TOTALS, ...data };
 }
 
 /** Lo storico fra `from` e `to` (inclusi, max 62 giorni), dal più recente. */
@@ -594,7 +662,7 @@ export async function getMyWorkTotals(
     .rpc("get_my_work_totals", { p_from: from, p_to: to })
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data ?? { total_count: 0, total_hours: 0 };
+  return { ...NO_WORK_TOTALS, ...data };
 }
 
 /**

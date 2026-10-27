@@ -376,10 +376,17 @@ export default function WaiterProfiloScreen() {
               value={String(work.count)}
               label="Turni svolti"
             />
+            {/* Le ore che contano per la sede; quelle che aspettano orari o
+                approvazione a parte, come nello storico. */}
             <StatCard
               loading={work.isLoading}
               value={formatHours(work.totalHours)}
               label="Ore lavorate"
+              hint={
+                work.pendingHours > 0
+                  ? `+ ${formatHours(work.pendingHours)} in attesa della sede`
+                  : undefined
+              }
             />
           </View>
           <GhostButton

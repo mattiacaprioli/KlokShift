@@ -12,7 +12,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | Punto | Cosa | Stato |
 | ----- | ---- | ----- |
 | E01 | Turno annullato ancora in Home e nel dettaglio | ✅ 27/10 |
-| E02 | Le mie ore con le stesse regole della sede | ☐ |
+| E02 | Le mie ore con le stesse regole della sede | ✅ 27/10 (migration da applicare via CI) |
 | E03 | «Timbra entrata» al momento giusto | ☐ |
 | E04 | Frasi giuste a turno finito | ☐ |
 | E05 | Rifiuto per sbaglio: si torna indietro, e la sede lo sa | ☐ |
@@ -60,6 +60,14 @@ stessa migration le colonne che servono a E09. Test SQL che confronta i due lati
 File: nuova migration, `src/features/assignments/api.ts` e `history.ts`,
 `src/app/(waiter)/storico.tsx`, `src/app/(waiter)/(tabs)/profilo.tsx`, nuovo test
 `supabase/tests/rls/039_my_work_history.sql`.
+
+**Fatto.** Migration `20261027000000_my_work_history_counts.sql` (da applicare
+via CI): `counts`, `pending_reason`, `clock_edit`, `clock_edit_reason` sulle righe,
+`pending_count`/`pending_hours` sui totali, `total_hours` solo ore che contano.
+Il test 039 confronta storico personale, riepilogo e «Ore da sistemare» sugli
+stessi turni. In app: «Ore lavorate» con «+ X h in attesa della sede», e ogni
+turno in attesa dice cosa manca (non timbrato, uscita mancante, da approvare).
+Le build vecchie restano compatibili (colonne in più, stessi nomi).
 
 ## E03 · «Timbra entrata» al momento giusto
 

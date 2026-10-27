@@ -7,9 +7,11 @@ import {
   getMyWorkHistoryRange,
   getMyWorkHistoryTotals,
   getMyWorkTotals,
+  type WorkClockEdit,
   type WorkHistoryRow,
   type WorkHistoryCursor,
   type WorkHoursSource,
+  type WorkPendingReason,
 } from "./api";
 
 export type WorkHistoryItem = {
@@ -32,10 +34,23 @@ export type WorkHistoryItem = {
   proposedHours: number | null;
   /** Null = non si sa (database non migrato): meglio tacere che indovinare. */
   source: WorkHoursSource | null;
+  /**
+   * Conta per la sede (stessa regola del riepilogo Ore). `false` = le ore sono
+   * in attesa, e `pendingReason` dice cosa manca. Null = database non migrato.
+   */
+  counts: boolean | null;
+  pendingReason: WorkPendingReason | null;
+  clockEdit: WorkClockEdit | null;
+  clockEditReason: string | null;
 };
 
+/** Le ore di una riga in attesa: non contano finché la sede non sistema. */
+function isPending(item: Pick<WorkHistoryItem, "counts">): boolean {
+  return item.counts === false;
+}
+
 /**
- * I due totali dello storico: turni svolti e ore. Nient'altro.
+ * I totali dello storico: turni svolti, ore che contano e ore in attesa.
  *
  * La schermata Profilo mostra solo questi, e prima per averli scaricava
  * l'intera storia dei turni con sede annidata, per poi contarla in memoria.
@@ -49,6 +64,7 @@ export function useMyWorkHistoryTotals(waiterId: string, enabled = true) {
   return {
     count: query.data?.total_count ?? 0,
     totalHours: query.data?.total_hours ?? 0,
+    pendingHours: query.data?.pending_hours ?? 0,
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
@@ -73,12 +89,17 @@ function toItem(r: WorkHistoryRow): WorkHistoryItem {
     clockOutAt: r.clock_out_at,
     proposedHours: r.proposed_hours ?? null,
     source: r.hours_source,
+    counts: r.counts,
+    pendingReason: r.pending_reason,
+    clockEdit: r.clock_edit,
+    clockEditReason: r.clock_edit_reason,
   };
 }
 
 /**
  * Lo storico di un periodo (settimana o mese), per intero: i totali sono la
- * somma di quello che è a schermo, perché a schermo c'è tutto.
+ * somma di quello che è a schermo, perché a schermo c'è tutto. Le ore in attesa
+ * stanno a parte, come nei totali del database.
  */
 export function useMyWorkHistoryRange(
   waiterId: string,
@@ -95,7 +116,12 @@ export function useMyWorkHistoryRange(
   return {
     items,
     count: items.length,
-    totalHours: items.reduce((sum, i) => sum + i.hours, 0),
+    totalHours: items
+      .filter((i) => !isPending(i))
+      .reduce((sum, i) => sum + i.hours, 0),
+    pendingHours: items
+      .filter(isPending)
+      .reduce((sum, i) => sum + i.hours, 0),
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
@@ -116,6 +142,7 @@ export function useMyWorkTotals(waiterId: string, from: string, to: string) {
   return {
     count: query.data?.total_count ?? 0,
     totalHours: query.data?.total_hours ?? 0,
+    pendingHours: query.data?.pending_hours ?? 0,
     isLoading: query.isLoading,
   };
 }
@@ -154,6 +181,7 @@ export function useMyWorkHistory(waiterId: string, enabled = true) {
     // I totali coprono **tutto** lo storico, non solo le pagine caricate:
     // vengono da una query a parte, non dalla somma di ciò che è a schermo.
     totalHours: totals.totalHours,
+    pendingHours: totals.pendingHours,
     count: totals.count,
     isLoading: list.isLoading || totals.isLoading,
     isError: list.isError || totals.isError,

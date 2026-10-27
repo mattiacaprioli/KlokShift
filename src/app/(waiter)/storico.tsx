@@ -15,6 +15,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import {
   formatDate,
   formatHours,
@@ -64,28 +65,30 @@ export default function WaiterHistoryScreen() {
     setOffset(0);
   };
 
-  // Nel totale le ore non ancora approvate valgono l'orario del turno: lo si
-  // dice, invece di farle passare per definitive. Solo su un periodo, dove le
-  // righe a schermo sono tutte quelle del totale.
-  const unconfirmedHours =
-    filter === "all"
-      ? 0
-      : history.items
-          .filter((i) => i.source === "pending" || i.source === "planned")
-          .reduce((sum, i) => sum + i.hours, 0);
-
+  // Il totale sono le ore che contano per la sede, come nel riepilogo Ore.
+  // Quelle che aspettano orari o approvazione stanno a parte, e ogni card dice
+  // cosa manca: un numero solo farebbe passare per lavorate ore che il
+  // consulente non riceverà.
   const stats = (
-    <View className="flex-row gap-2.5">
-      <StatCard value={String(history.count)} label="Turni svolti" />
-      <StatCard
-        value={formatHours(history.totalHours)}
-        label="Ore lavorate"
-        hint={
-          unconfirmedHours > 0
-            ? `di cui ${formatHours(unconfirmedHours)} da orario`
-            : undefined
-        }
-      />
+    <View className="gap-2.5">
+      <View className="flex-row gap-2.5">
+        <StatCard value={String(history.count)} label="Turni svolti" />
+        <StatCard
+          value={formatHours(history.totalHours)}
+          label="Ore lavorate"
+          hint={
+            history.pendingHours > 0
+              ? `+ ${formatHours(history.pendingHours)} in attesa della sede`
+              : undefined
+          }
+        />
+      </View>
+      {history.pendingHours > 0 ? (
+        <Text className="text-xs leading-4 text-t3">
+          Le ore in attesa contano quando la sede inserisce o approva gli
+          orari. Sotto, turno per turno, cosa manca.
+        </Text>
+      ) : null}
     </View>
   );
 
@@ -207,16 +210,20 @@ function HistoryCard({
   onPress: () => void;
 }) {
   const detail = [i.title, i.roleName].filter(Boolean).join(" · ");
+  const pending = i.counts === false;
   // Lo scarto si dice solo su ore definitive: una proposta da approvare o
   // l'orario del turno non sono uno scostamento.
   const variance =
-    i.workedHours != null ? formatHoursVariance(i.workedHours - i.plannedHours) : null;
+    !pending && i.workedHours != null
+      ? formatHoursVariance(i.workedHours - i.plannedHours)
+      : null;
   const clock =
     i.clockInAt && i.clockOutAt
       ? `Timbrato ${formatClockTime(i.clockInAt)}–${formatClockTime(i.clockOutAt)}`
       : i.clockInAt
         ? `Entrata ${formatClockTime(i.clockInAt)}, uscita non timbrata`
         : null;
+  const line = sourceLine(i, clock);
 
   return (
     <Pressable onPress={onPress} accessibilityRole="button">
@@ -237,29 +244,32 @@ function HistoryCard({
             </Text>
           </View>
           <View className="items-end">
-            <Text className="text-sm font-sans-bold text-gold">
+            <Text
+              className={cn(
+                "text-sm font-sans-bold",
+                pending ? "text-t3" : "text-gold"
+              )}
+            >
               {formatHours(i.hours)}
             </Text>
-            {variance ? (
+            {pending ? (
+              <Text className="text-[11px] text-t3">in attesa</Text>
+            ) : variance ? (
               <Text className="text-[11px] text-t3">{variance} sul turno</Text>
             ) : null}
           </View>
         </View>
 
-        {i.source ? (
+        {line ? (
           <View className="mt-3 flex-row items-center justify-between gap-3 border-t border-border pt-3">
             <View className="flex-1 flex-row items-center gap-2">
               <Icon name="clock" size={14} color="#8c857a" />
-              <Text className="flex-1 text-xs text-t3" numberOfLines={2}>
-                {sourceLine(i.source, i, clock)}
+              <Text className="flex-1 text-xs text-t3" numberOfLines={3}>
+                {line.text}
               </Text>
             </View>
-            {i.source === "approved" ? (
-              <Pill label="Approvate" variant="accepted" />
-            ) : i.source === "adjusted" ? (
-              <Pill label="Rettificate" variant="tag" />
-            ) : i.source === "pending" ? (
-              <Pill label="Da approvare" variant="pending" />
+            {line.pill ? (
+              <Pill label={line.pill.label} variant={line.pill.variant} />
             ) : null}
           </View>
         ) : null}
@@ -268,27 +278,69 @@ function HistoryCard({
   );
 }
 
-function sourceLine(
-  source: NonNullable<WorkHistoryItem["source"]>,
-  i: WorkHistoryItem,
-  clock: string | null
-): string {
-  switch (source) {
-    case "approved":
-      return clock ?? "Timbratura approvata";
-    case "adjusted":
-      return clock
-        ? `${clock} · ore inserite da chi gestisce`
-        : "Ore inserite da chi gestisce";
-    case "pending": {
-      const proposed =
-        i.proposedHours != null ? ` (${formatHours(i.proposedHours)})` : "";
-      return `${clock ?? "Timbratura"}${proposed} · finché non è approvata valgono le ore del turno`;
+type SourceLine = {
+  text: string;
+  pill: { label: string; variant: "accepted" | "tag" | "pending" } | null;
+};
+
+/**
+ * Da dove vengono le ore di un turno e, se non contano ancora, cosa manca. I
+ * motivi sono quelli di «Ore da sistemare» sul lato sede: la stessa riga, vista
+ * da chi l'ha lavorata.
+ */
+function sourceLine(i: WorkHistoryItem, clock: string | null): SourceLine | null {
+  const proposed =
+    i.proposedHours != null ? ` (${formatHours(i.proposedHours)})` : "";
+
+  if (i.counts === false) {
+    switch (i.pendingReason) {
+      case "not_clocked":
+        return {
+          text: "Non hai timbrato: le ore contano quando la sede inserisce gli orari",
+          pill: { label: "Non timbrato", variant: "pending" },
+        };
+      case "missing_out":
+        return {
+          text: `${clock ?? "Uscita non timbrata"}: le ore contano quando la sede inserisce l'uscita`,
+          pill: { label: "Uscita mancante", variant: "pending" },
+        };
+      default:
+        return {
+          text: `${clock ?? "Timbratura"}${proposed} · le ore contano quando la sede le approva`,
+          pill: { label: "Da approvare", variant: "pending" },
+        };
     }
+  }
+
+  switch (i.source) {
+    case "approved":
+      return {
+        text: clock ?? "Timbratura approvata",
+        pill: { label: "Approvate", variant: "accepted" },
+      };
+    case "adjusted":
+      return {
+        text: clock
+          ? `${clock} · ore inserite da chi gestisce`
+          : "Ore inserite da chi gestisce",
+        pill: { label: "Rettificate", variant: "tag" },
+      };
+    case "pending":
+      // Solo da un database non ancora migrato, che non dice se la riga conta.
+      return {
+        text: `${clock ?? "Timbratura"}${proposed} · da approvare dalla sede`,
+        pill: { label: "Da approvare", variant: "pending" },
+      };
     case "planned":
       // Due turni sovrapposti: il tratto comune conta una volta sola.
-      return i.hours < i.plannedHours
-        ? "Orario del turno · le ore in comune con un altro turno contano una volta"
-        : "Orario del turno, senza timbratura";
+      return {
+        text:
+          i.hours < i.plannedHours
+            ? "Orario del turno · le ore in comune con un altro turno contano una volta"
+            : "Orario del turno, senza timbratura",
+        pill: null,
+      };
+    default:
+      return null;
   }
 }

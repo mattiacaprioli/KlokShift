@@ -2280,14 +2280,18 @@ export type Database = {
           p_limit?: number
         }
         Returns: {
+          clock_edit: string
+          clock_edit_reason: string
           clock_in_at: string
           clock_out_at: string
+          counts: boolean
           date: string
           end_time: string
           hours: number
           hours_source: string
           key: string
           logo_url: string
+          pending_reason: string
           planned_hours: number
           proposed_hours: number
           role_name: string
@@ -2301,14 +2305,18 @@ export type Database = {
       get_my_work_history_range: {
         Args: { p_from: string; p_to: string }
         Returns: {
+          clock_edit: string
+          clock_edit_reason: string
           clock_in_at: string
           clock_out_at: string
+          counts: boolean
           date: string
           end_time: string
           hours: number
           hours_source: string
           key: string
           logo_url: string
+          pending_reason: string
           planned_hours: number
           proposed_hours: number
           role_name: string
@@ -2322,6 +2330,8 @@ export type Database = {
       get_my_work_history_totals: {
         Args: never
         Returns: {
+          pending_count: number
+          pending_hours: number
           total_count: number
           total_hours: number
         }[]
@@ -2329,6 +2339,8 @@ export type Database = {
       get_my_work_totals: {
         Args: { p_from: string; p_to: string }
         Returns: {
+          pending_count: number
+          pending_hours: number
           total_count: number
           total_hours: number
         }[]
