@@ -177,7 +177,7 @@ correzione), il dettaglio sì.
 **Problema.** Nessun avviso né per l'entrata né per l'uscita dimenticata: è la
 causa naturale di «non ha timbrato» e «uscita mancante».
 
-**Correzione.** Funzione programmata ogni 5 minuti (pg_cron, come i promemoria
+**Correzione.** Funzione programmata ogni 10 minuti (pg_cron, come i promemoria
 dell'archivio): «Timbra l'entrata» poco prima dell'inizio, «Hai ancora l'entrata
 aperta» dopo la fine, «Sei ancora in servizio fuori turno» dopo molte ore. Mai due
 volte lo stesso avviso, solo per chi timbra dall'app, categoria disattivabile in
@@ -188,7 +188,8 @@ l'inizio), uscita 20 min dopo la fine, spegnimento per persona. Migration
 `20261027000400` (tipo `clock_reminder`) e `20261027000500` (categoria
 `reminders`, indici `shifts_date_active_idx` e `shift_clock_records_open_idx`,
 `private.clock_reminders`, `private.queue_clock_reminders(p_at)` /
-`run_clock_reminders`, trigger `close_clock_reminders`, pg_cron ogni 5 minuti e
+`run_clock_reminders`, trigger `close_clock_reminders`, pg_cron (ogni 10 minuti da
+`20261027000600`, scelta dell'utente: metà delle esecuzioni) e
 pulizia notturna di `cron.job_run_details`). Esclusi: ferie/permessi approvati,
 già in servizio altrove, metodo manuale, aziende non operative, promemoria
 spenti. Push `ttl` 1 h e priorità alta. App: categoria «Promemoria timbratura»,

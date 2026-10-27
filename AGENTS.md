@@ -111,7 +111,7 @@ dopo l'approvazione. Dettagli in [plans/UNPLANNED-CLOCK.md](plans/UNPLANNED-CLOC
 
 Chi timbra dall'app riceve un promemoria solo quando manca qualcosa: l'entrata
 5 minuti dopo l'inizio, l'uscita 20 minuti dopo la fine, il fuori turno aperto
-da 10 ore. Lo decide il database (`private.queue_clock_reminders`, ogni 5
+da 10 ore. Lo decide il database (`private.queue_clock_reminders`, ogni 10
 minuti con pg_cron), non l'app: niente a chi è in ferie approvate, già in
 servizio altrove, in una sede senza timbratura o ha spento la categoria
 `reminders` (allora non nasce nemmeno la riga). `private.clock_reminders`
