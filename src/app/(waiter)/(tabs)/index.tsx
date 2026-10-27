@@ -30,6 +30,7 @@ import { UnplannedClockCard } from "@/features/clock/UnplannedClockCard";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useMyPendingInvites } from "@/features/staff/hooks";
 import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
 import { isShiftOver } from "@/lib/format";
@@ -117,7 +118,8 @@ export default function WaiterHomeScreen() {
       { id, status: "confirmed" },
       {
         onSuccess: () => toast.show("Presenza confermata"),
-        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+        onError: (e) =>
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
       }
     );
   }

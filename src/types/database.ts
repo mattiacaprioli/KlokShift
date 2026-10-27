@@ -647,6 +647,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          decline_reason: string | null
           hours_source: string | null
           id: string
           role_id: string | null
@@ -661,6 +662,7 @@ export type Database = {
           attendance_reviewed_by?: string | null
           confirmed_at?: string | null
           created_at?: string
+          decline_reason?: string | null
           hours_source?: string | null
           id?: string
           role_id?: string | null
@@ -675,6 +677,7 @@ export type Database = {
           attendance_reviewed_by?: string | null
           confirmed_at?: string | null
           created_at?: string
+          decline_reason?: string | null
           hours_source?: string | null
           id?: string
           role_id?: string | null
@@ -1743,6 +1746,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          decline_reason: string | null
           hours_source: string | null
           id: string
           role_id: string | null
@@ -1869,6 +1873,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          decline_reason: string | null
           hours_source: string | null
           id: string
           role_id: string | null
@@ -2126,6 +2131,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          decline_reason: string | null
           hours_source: string | null
           id: string
           role_id: string | null
@@ -2547,6 +2553,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          decline_reason: string | null
           hours_source: string | null
           id: string
           role_id: string | null
@@ -2624,6 +2631,7 @@ export type Database = {
       respond_assignment: {
         Args: {
           p_assignment: string
+          p_reason?: string
           p_status: Database["public"]["Enums"]["assignment_status"]
         }
         Returns: {
@@ -2631,6 +2639,7 @@ export type Database = {
           attendance_reviewed_by: string | null
           confirmed_at: string | null
           created_at: string
+          decline_reason: string | null
           hours_source: string | null
           id: string
           role_id: string | null

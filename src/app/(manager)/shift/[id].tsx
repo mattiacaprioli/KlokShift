@@ -123,6 +123,12 @@ function AssignedRow({
           <Text className="text-xs text-t3">
             {assignment.role?.name ?? "Ruolo da assegnare"}
           </Text>
+          {/* Il motivo facoltativo di «Non posso», finché la riga è rifiutata. */}
+          {assignment.status === "declined" && assignment.decline_reason ? (
+            <Text className="text-xs text-t3" numberOfLines={2}>
+              «{assignment.decline_reason}»
+            </Text>
+          ) : null}
           {changeRequested ? (
             <Text className="text-xs font-sans-semibold text-gold">
               {changeRequested === "hours"

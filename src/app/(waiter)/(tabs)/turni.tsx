@@ -607,7 +607,7 @@ export default function WaiterShiftsScreen() {
                   subtitle={
                     away
                       ? `Dal ${formatDayLabel(anchorDay).toLowerCase()} non hai turni assegnati. Tocca «Oggi» per tornare ai prossimi.`
-                      : "Quando una sede ti assegna un turno lo trovi qui. Lo storico delle ore è nel Profilo."
+                      : "Quando una sede ti assegna un turno lo trovi qui. Le ore lavorate sono nel Profilo, in «Le mie ore»."
                   }
                 />
               </View>

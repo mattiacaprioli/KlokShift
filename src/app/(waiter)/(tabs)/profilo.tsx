@@ -390,7 +390,7 @@ export default function WaiterProfiloScreen() {
             />
           </View>
           <GhostButton
-            label="Vedi storico turni"
+            label="Le mie ore"
             onPress={() => router.push("/(waiter)/storico")}
           />
         </View>

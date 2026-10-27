@@ -333,11 +333,11 @@ export default function WaiterShiftDetailScreen() {
           </View>
         ) : null}
 
-        <Mono className="mb-3 mt-8">Turno dello staff</Mono>
+        <Mono className="mb-3 mt-8">Il tuo turno</Mono>
         {myAssignment ? (
           <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t2">
-              Sei stato assegnato a questo turno da {venueName}
+              {venueName} ti ha messo in questo turno
               {myAssignment.role ? ` come ${myAssignment.role.name}` : ""}.
             </Text>
             <View className="mt-2 flex-row">
@@ -437,8 +437,10 @@ export default function WaiterShiftDetailScreen() {
             ) : (
               <View className="mt-3 gap-2.5">
                 <Text className="text-sm leading-5 text-t3">
-                  Hai rifiutato questo turno. Se ci ripensi, la sede viene
-                  avvisata.
+                  {myAssignment.decline_reason
+                    ? `Hai rifiutato questo turno: «${myAssignment.decline_reason}».`
+                    : "Hai rifiutato questo turno."}{" "}
+                  Se ci ripensi, la sede viene avvisata.
                 </Text>
                 <GhostButton
                   label="Ci sono, conferma"
@@ -451,7 +453,7 @@ export default function WaiterShiftDetailScreen() {
         ) : (
           <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t3">
-              Questo è un turno riservato allo staff della sede.
+              Non sei in questo turno.
             </Text>
           </Card>
         )}

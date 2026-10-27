@@ -1029,6 +1029,13 @@ function InternalForm({
                               {staffRoleNames(member) ?? "Ruoli non indicati"}
                             </span>
                             {live ? <LiveClockLine status={live} /> : null}
+                            {/* Il motivo facoltativo di «Non posso». */}
+                            {on && status === "declined" &&
+                            assignmentByStaff.get(member.id)?.decline_reason ? (
+                              <span className="block truncate text-xs text-t3">
+                                «{assignmentByStaff.get(member.id)?.decline_reason}»
+                              </span>
+                            ) : null}
                             {notes.map((note) => (
                               <span
                                 key={note}

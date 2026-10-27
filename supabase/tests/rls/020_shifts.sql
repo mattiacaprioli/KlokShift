@@ -96,6 +96,19 @@ begin
   perform tests.logout();
   perform tests.eq((select count(*) from public.notifications where type = 'shift_reconfirmed'
     and user_id = tests.id('Co')), 1::bigint, 'nessun ripensamento se a confermare è chi gestisce');
+  -- Il motivo del rifiuto, facoltativo (E12).
+  perform tests.login('Emp');
+  r := public.respond_assignment(a_emp, 'declined', '  ho un altro impegno  ');
+  perform tests.eq(r.decline_reason, 'ho un altro impegno', 'il motivo resta, senza spazi attorno');
+  perform tests.logout();
+  perform tests.ok(exists (select 1 from public.notifications where type = 'shift_declined'
+    and user_id = tests.id('Ow') and body like '%: «ho un altro impegno»'), 'e arriva a chi gestisce');
+  perform tests.login('Emp');
+  r := public.respond_assignment(a_emp, 'confirmed');
+  perform tests.eq(r.decline_reason, null::text, 'riconfermando il motivo sparisce');
+  r := public.respond_assignment(a_emp, 'declined', '   ');
+  perform tests.eq(r.decline_reason, null::text, 'un motivo vuoto non è un motivo');
+  r := public.respond_assignment(a_emp, 'confirmed');
 
   -- ---- «su me stesso»: turno FUTURO ----
   perform tests.login('Co');

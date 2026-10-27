@@ -22,7 +22,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E09 | Correzioni della sede visibili | ✅ 27/10 |
 | E10 | Promemoria di timbratura | ☐ |
 | E11 | Stesso numero di ore ovunque | ✅ 27/10 |
-| E12 | Testi minori e motivo del rifiuto | ☐ |
+| E12 | Testi minori e motivo del rifiuto | ✅ 27/10 (migration da applicare via CI) |
 
 ---
 
@@ -205,3 +205,14 @@ a un decimale.
 - Profilo: «Vedi storico turni» → «Le mie ore».
 - «Non posso» con un motivo facoltativo, che arriva a chi gestisce nella notifica
   e accanto a «Rifiutato».
+
+**Fatto.** Migration `20261027000300_decline_reason.sql` (da applicare via CI):
+colonna `shift_assignments.decline_reason` (≤ 300), `respond_assignment` con
+`p_reason` facoltativo (le build vecchie restano compatibili), motivo in coda
+alla notifica «Turno rifiutato», cancellato a ogni cambio di stato
+(`clear_decline_reason`); casi nel test SQL 020. `ConfirmModal` accetta un
+contenuto sotto il messaggio. Il motivo si vede nel dettaglio del dipendente,
+nella riga della persona (app di chi gestisce) e nella lista «Chi lavora» della
+dashboard. Testi: «In turno» per il fisso, «{sede} ti ha messo in questo
+turno», «Il tuo turno», «Non sei in questo turno», errore vero in Home,
+«Le mie ore» nel Profilo.

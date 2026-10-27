@@ -332,14 +332,19 @@ export async function getShiftAssignments(
  * Il professionista conferma o rifiuta il **proprio** turno (RPC
  * `respond_assignment`). Ritorna la riga aggiornata: un turno finito o
  * annullato, o non suo, è un errore e non un 200 muto.
+ *
+ * `reason`: il motivo facoltativo del rifiuto. Si manda solo se c'è, così la
+ * chiamata resta quella di prima per chi non lo scrive.
  */
 export async function respondToAssignment(
   id: string,
-  status: Extract<Enums<"assignment_status">, "confirmed" | "declined">
+  status: Extract<Enums<"assignment_status">, "confirmed" | "declined">,
+  reason?: string | null
 ): Promise<Assignment> {
   const { data, error } = await supabase.rpc("respond_assignment", {
     p_assignment: id,
     p_status: status,
+    ...(reason ? { p_reason: reason } : {}),
   });
   if (error) throw new Error(error.message);
   return data;

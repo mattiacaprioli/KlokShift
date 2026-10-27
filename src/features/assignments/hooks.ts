@@ -92,7 +92,9 @@ export function useRespondToAssignment() {
     mutationFn: (vars: {
       id: string;
       status: Extract<Enums<"assignment_status">, "confirmed" | "declined">;
-    }) => respondToAssignment(vars.id, vars.status),
+      /** Solo per il rifiuto, facoltativo. */
+      reason?: string | null;
+    }) => respondToAssignment(vars.id, vars.status, vars.reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.assignments.all }),
   });
 }
