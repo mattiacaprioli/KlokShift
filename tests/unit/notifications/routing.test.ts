@@ -35,6 +35,14 @@ describe("dove atterra una notifica", () => {
     }
   });
 
+  it("promemoria di timbratura: dove c'è il pulsante per timbrare", () => {
+    expect(routeForNotification("waiter", "clock_reminder", "s1")).toBe("/(waiter)/shift/s1");
+    // Fuori turno: nessun turno da aprire, l'uscita sta in Home.
+    expect(routeForNotification("waiter", "clock_reminder", null)).toBe("/(waiter)/(tabs)");
+    // Chi gestisce e lavora timbra dalla sua Home.
+    expect(routeForNotification("manager", "clock_reminder", "s1")).toBe("/(manager)/(tabs)");
+  });
+
   it("professionista: il turno annullato si apre, il dettaglio dice «Annullato»", () => {
     // Le assegnazioni restano e il turno resta leggibile (my_shift_ids).
     expect(routeForNotification("waiter", "shift_cancelled", "s1")).toBe("/(waiter)/shift/s1");

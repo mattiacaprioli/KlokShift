@@ -20,7 +20,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E07 | Ritirare la richiesta dal turno | ✅ 27/10 |
 | E08 | «Orario diverso» prima di confermare | ✅ 27/10 |
 | E09 | Correzioni della sede visibili | ✅ 27/10 |
-| E10 | Promemoria di timbratura | ☐ |
+| E10 | Promemoria di timbratura | ✅ 27/10 (migration via CI; push da pubblicare a mano; prova su telefono) |
 | E11 | Stesso numero di ore ovunque | ✅ 27/10 |
 | E12 | Testi minori e motivo del rifiuto | ✅ 27/10 (migration da applicare via CI) |
 
@@ -182,6 +182,22 @@ dell'archivio): «Timbra l'entrata» poco prima dell'inizio, «Hai ancora l'entr
 aperta» dopo la fine, «Sei ancora in servizio fuori turno» dopo molte ore. Mai due
 volte lo stesso avviso, solo per chi timbra dall'app, categoria disattivabile in
 Impostazioni. Prova vera su telefono.
+
+**Fatto.** Scelte dell'utente: entrata solo a chi se ne dimentica (5 min dopo
+l'inizio), uscita 20 min dopo la fine, spegnimento per persona. Migration
+`20261027000400` (tipo `clock_reminder`) e `20261027000500` (categoria
+`reminders`, indici `shifts_date_active_idx` e `shift_clock_records_open_idx`,
+`private.clock_reminders`, `private.queue_clock_reminders(p_at)` /
+`run_clock_reminders`, trigger `close_clock_reminders`, pg_cron ogni 5 minuti e
+pulizia notturna di `cron.job_run_details`). Esclusi: ferie/permessi approvati,
+già in servizio altrove, metodo manuale, aziende non operative, promemoria
+spenti. Push `ttl` 1 h e priorità alta. App: categoria «Promemoria timbratura»,
+icona, routing (turno; Home per fuori turno e per chi gestisce); web: categoria e
+icona. Test SQL 041, test di routing.
+
+**Da fare fuori dal codice:** pubblicare la Edge Function `push` (non passa dalla
+CI); dopo il push controllare `cron.job` e `cron.job_run_details` sul remoto;
+prova su telefono vero.
 
 ## E11 · Stesso numero di ore ovunque
 

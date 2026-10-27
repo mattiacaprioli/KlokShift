@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database";
 
 /** Categorie degli switch push in Impostazioni. Rispecchia `notification_category()` in DB. */
-export type NotificationCategory = "messages" | "shifts" | "staff";
+export type NotificationCategory = "messages" | "shifts" | "staff" | "reminders";
 
 export const NOTIFICATION_CATEGORIES: {
   id: NotificationCategory;
@@ -21,6 +21,13 @@ export const NOTIFICATION_CATEGORIES: {
     id: "staff",
     label: "Staff e inviti",
     description: "Inviti e cambiamenti nel tuo staff.",
+  },
+  {
+    // Spegnerla toglie anche la riga nella campanella: il promemoria non nasce
+    // (`private.queue_clock_reminders`), non solo la push.
+    id: "reminders",
+    label: "Promemoria timbratura",
+    description: "Se dimentichi l'entrata o l'uscita.",
   },
 ];
 

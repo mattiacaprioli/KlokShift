@@ -38,6 +38,9 @@ const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
   shift_change_response: [qk.changeRequests.all, qk.assignments.all],
   shift_declined: [qk.assignments.all],
   shift_reconfirmed: [qk.assignments.all],
+  // Il promemoria arriva quando manca una timbratura: la card in Home va
+  // riletta, per esempio se nel frattempo il turno è cambiato.
+  clock_reminder: [qk.assignments.all],
   // Ferie, permessi e malattia: la card in chat e le liste leggono lo stato
   // dell'assenza, che nessun altro canale porta.
   absence_request: [qk.absences.all],

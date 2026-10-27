@@ -107,6 +107,18 @@ restano solo su `shift_assignments`: non introdurre una seconda fonte di ore. I
 turni nati così non notificano (`app.unplanned_clock`) e i colleghi li vedono solo
 dopo l'approvazione. Dettagli in [plans/UNPLANNED-CLOCK.md](plans/UNPLANNED-CLOCK.md).
 
+## Promemoria di timbratura (2026-10-27)
+
+Chi timbra dall'app riceve un promemoria solo quando manca qualcosa: l'entrata
+5 minuti dopo l'inizio, l'uscita 20 minuti dopo la fine, il fuori turno aperto
+da 10 ore. Lo decide il database (`private.queue_clock_reminders`, ogni 5
+minuti con pg_cron), non l'app: niente a chi è in ferie approvate, già in
+servizio altrove, in una sede senza timbratura o ha spento la categoria
+`reminders` (allora non nasce nemmeno la riga). `private.clock_reminders`
+impedisce i doppioni; una timbratura qualsiasi segna letti i promemoria aperti
+della persona; la push scade dopo un'ora (Edge Function `push`, deploy a mano).
+Test SQL 041.
+
 ## Turno già fatto (2026-10-26)
 
 Un turno svolto ma mai pianificato («mi sono dimenticato di metterlo») si

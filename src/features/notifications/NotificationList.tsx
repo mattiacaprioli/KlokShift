@@ -29,6 +29,7 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   absence_response: "check",
   absence_sick: "alert",
   archive_reminder: "clock",
+  clock_reminder: "clock",
 };
 
 type Props = {

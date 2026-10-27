@@ -23,6 +23,11 @@ export function routeForNotification(
     // `related_id` è una `venue_members`, quindi il ramo finale la scambierebbe
     // per un turno e aprirebbe una schermata vuota.
     if (type === "staff_linked") return "/(waiter)/(tabs)";
+    // Promemoria di timbratura: il turno, dove c'è il pulsante; un fuori
+    // turno non ha un turno da aprire, e la sua uscita sta in Home.
+    if (type === "clock_reminder") {
+      return relatedId ? `/(waiter)/shift/${relatedId}` : "/(waiter)/(tabs)";
+    }
     // Per i messaggi related_id è la conversazione, non un turno. Vale anche per
     // l'esito di un cambio turno: la card con la risposta vive nel thread, ed è
     // lì che ha senso atterrare — il turno, se approvato, non è più suo.
@@ -63,6 +68,8 @@ export function routeForNotification(
   // Chi è appena entrato in un'azienda atterra sulla sua home: il `related_id` è
   // una sede, non un turno, e il ramo finale lo aprirebbe come tale.
   if (type === "team_linked") return "/(manager)/(tabs)";
+  // Chi gestisce e lavora timbra dalla sua Home, non dal turno della sede.
+  if (type === "clock_reminder") return "/(manager)/(tabs)";
   if (type === "team_joined") return "/(manager)/team";
   // Revoca: non c'è più niente da aprire. Stessa scelta di `staff_removed`.
   if (type === "team_removed") return null;

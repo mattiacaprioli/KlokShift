@@ -36,7 +36,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
 /** Lo stesso raggruppamento dell'icona: messaggi, turni, assenze, il resto. */
 function categoryOf(type: Enums<"notification_type">): Exclude<Category, "all"> {
   if (type === "new_message") return "messages";
-  if (type.startsWith("shift_")) return "shifts";
+  if (type.startsWith("shift_") || type === "clock_reminder") return "shifts";
   if (type.startsWith("absence_")) return "absences";
   return "team";
 }

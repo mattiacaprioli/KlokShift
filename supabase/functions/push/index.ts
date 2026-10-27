@@ -67,11 +67,16 @@ Deno.serve(async (req) => {
     .filter((t) => Expo.isExpoPushToken(t));
   if (tokens.length === 0) return json({ sent: 0 });
 
+  // I promemoria di timbratura valgono adesso: scadono dopo un'ora (un «timbra
+  // l'entrata» consegnato a fine serata è rumore) e partono subito anche con
+  // Android in risparmio energetico. Gli altri tipi restano come sono.
+  const reminder = payload.type === "clock_reminder";
   const messages: ExpoPushMessage[] = tokens.map((to) => ({
     to,
     sound: "default",
     title: payload.title,
     body: payload.body,
+    ...(reminder ? { ttl: 3600, priority: "high" as const } : {}),
     data: {
       type: payload.type,
       related_id: payload.related_id,

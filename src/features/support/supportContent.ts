@@ -56,7 +56,7 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
   },
   {
     q: "Come timbro entrata e uscita?",
-    a: "Se la tua sede usa la timbratura dall'app, da un'ora prima dell'inizio del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se la sede ti ha abilitato, puoi timbrare anche senza un turno: all'uscita nasce un turno «Fuori turno» che chi gestisce le ore deve approvare. Se non vedi niente, la sede registra le ore senza timbratura.",
+    a: "Se la tua sede usa la timbratura dall'app, da un'ora prima dell'inizio del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se la sede ti ha abilitato, puoi timbrare anche senza un turno: all'uscita nasce un turno «Fuori turno» che chi gestisce le ore deve approvare. Se dimentichi l'entrata o l'uscita ti arriva un promemoria, che puoi spegnere in Impostazioni › Notifiche. Se non vedi niente, la sede registra le ore senza timbratura.",
     audience: ["waiter"],
   },
   {
