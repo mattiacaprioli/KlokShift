@@ -10,8 +10,9 @@ import {
   toTimeString,
   type ShiftTimes,
 } from "@/lib/format";
+import type { Enums } from "@/types/database";
 import type { MyUnplannedClock } from "./api";
-import { effectiveClockTimes } from "./hours";
+import { effectiveClockTimes, type ClockRecordWithCorrections } from "./hours";
 import { effectiveClockMethod } from "./methods";
 
 export type HomeClockState = "in" | "out";
@@ -101,6 +102,71 @@ export function homeClockState(
   return method === "app" && clockInPhase(item.shift, now) === "open"
     ? "in"
     : null;
+}
+
+/**
+ * La sezione Timbratura di un turno **senza timbratura**: il pulsante
+ * d'entrata, oppure la frase che dice perché non c'è. Dopo la fine non si dice
+ * più «sarà disponibile»: le ore di chi non ha timbrato le inserisce la sede.
+ */
+export type ClockInNote = { kind: "button" } | { kind: "note"; text: string };
+
+export function clockInNote(
+  shift: ShiftTimes,
+  method: Enums<"clock_method">,
+  now: Date = new Date()
+): ClockInNote {
+  if (method === "manual") {
+    return {
+      kind: "note",
+      text: "Per questa sede gli orari li registra chi gestisce.",
+    };
+  }
+  if (method !== "app") {
+    return {
+      kind: "note",
+      text: "Questo metodo di timbratura sarà disponibile in una prossima versione.",
+    };
+  }
+  switch (clockInPhase(shift, now)) {
+    case "open":
+      return { kind: "button" };
+    case "early":
+      return {
+        kind: "note",
+        text: `Potrai timbrare l'entrata dalle ${clockInOpensLabel(shift)}.`,
+      };
+    case "over":
+      return {
+        kind: "note",
+        text: "Non hai timbrato: la sede deve inserire gli orari. Scrivile se serve.",
+      };
+  }
+}
+
+/**
+ * La riga sotto lo stato di un turno finito. Chi è ancora in servizio oltre
+ * l'orario non legge «Turno concluso»: deve timbrare l'uscita. Le ore «le
+ * registra la sede» solo dove non si timbra: con la timbratura le ha già
+ * registrate lui, o la sezione sotto dice cosa manca.
+ */
+export function shiftOverNote(
+  shift: ShiftTimes,
+  method: Enums<"clock_method">,
+  clock: ClockRecordWithCorrections | null,
+  now: Date = new Date()
+): string {
+  if (
+    clock &&
+    !effectiveClockTimes(clock).outAt &&
+    isClockWindowOpen(shift, todayString(now))
+  ) {
+    return "L'orario del turno è finito: timbra l'uscita quando smetti.";
+  }
+  if (!clock && method === "manual") {
+    return "Turno concluso. Le ore le registra la sede.";
+  }
+  return "Turno concluso.";
 }
 
 /** Oltre questo scarto dall'orario del turno, la conferma lo dice. */

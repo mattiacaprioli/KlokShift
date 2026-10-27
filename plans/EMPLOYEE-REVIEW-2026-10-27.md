@@ -14,7 +14,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E01 | Turno annullato ancora in Home e nel dettaglio | ✅ 27/10 |
 | E02 | Le mie ore con le stesse regole della sede | ✅ 27/10 (migration da applicare via CI) |
 | E03 | «Timbra entrata» al momento giusto | ✅ 27/10 |
-| E04 | Frasi giuste a turno finito | ☐ |
+| E04 | Frasi giuste a turno finito | ✅ 27/10 |
 | E05 | Rifiuto per sbaglio: si torna indietro, e la sede lo sa | ☐ |
 | E06 | Cambio turno: nomi e refuso | ☐ |
 | E07 | Ritirare la richiesta dal turno | ☐ |
@@ -98,6 +98,10 @@ sede» compare anche a chi ha timbrato o è ancora in servizio oltre l'orario.
 **Correzione.** Una regola sola decide la frase della sezione Timbratura: troppo
 presto, aperta, in servizio oltre l'orario, finita senza timbratura («Non hai
 timbrato: la sede deve inserire gli orari»), metodo manuale.
+
+**Fatto.** `clockInNote` e `shiftOverNote` in `src/features/clock/availability.ts`,
+con test. Chi è ancora in servizio oltre l'orario legge «L'orario del turno è
+finito: timbra l'uscita quando smetti» invece di «Turno concluso».
 
 ## E05 · Rifiuto per sbaglio
 

@@ -4,12 +4,14 @@ import {
   blocksPlannedClockIn,
   blocksUnplannedClock,
   canStartUnplannedClock,
+  clockInNote,
   clockInOpensLabel,
   clockInPhase,
   hasOpenPlannedClock,
   homeClockState,
   isClockWindowOpen,
   punchConfirmMessage,
+  shiftOverNote,
 } from "../../../src/features/clock/availability";
 
 function item(
@@ -135,6 +137,63 @@ describe("homeClockState", () => {
     expect(
       homeClockState(item({ shiftStatus: "cancelled", venueMethod: "app" }), at("17:30"))
     ).toBe(null);
+  });
+});
+
+describe("clockInNote", () => {
+  const shift = item().shift; // 24/09 18:00–23:00
+  const at = (local: string) => new Date(local);
+
+  it("il pulsante solo da un'ora prima alla fine", () => {
+    expect(clockInNote(shift, "app", at("2026-09-24T17:30:00"))).toEqual({ kind: "button" });
+    expect(clockInNote(shift, "app", at("2026-09-24T08:00:00"))).toEqual({
+      kind: "note",
+      text: "Potrai timbrare l'entrata dalle 17:00.",
+    });
+  });
+
+  it("a turno finito non promette più la timbratura: la sede inserisce gli orari", () => {
+    expect(clockInNote(shift, "app", at("2026-09-26T10:00:00"))).toEqual({
+      kind: "note",
+      text: "Non hai timbrato: la sede deve inserire gli orari. Scrivile se serve.",
+    });
+  });
+
+  it("senza timbratura dall'app gli orari li registra la sede", () => {
+    expect(clockInNote(shift, "manual", at("2026-09-24T17:30:00")).kind).toBe("note");
+  });
+});
+
+describe("shiftOverNote", () => {
+  const shift = item().shift; // 24/09 18:00–23:00
+  const after = new Date("2026-09-24T23:30:00");
+  const open = item({ inAt: "2026-09-24T16:00:00.000Z" }).clock;
+  const closed = item({
+    inAt: "2026-09-24T16:00:00.000Z",
+    outAt: "2026-09-24T21:00:00.000Z",
+  }).clock;
+
+  it("chi è ancora in servizio non legge «Turno concluso»", () => {
+    expect(shiftOverNote(shift, "app", open, after)).toBe(
+      "L'orario del turno è finito: timbra l'uscita quando smetti."
+    );
+  });
+
+  it("con la timbratura chiusa o mancante dice solo che è concluso", () => {
+    expect(shiftOverNote(shift, "app", closed, after)).toBe("Turno concluso.");
+    expect(shiftOverNote(shift, "app", null, after)).toBe("Turno concluso.");
+  });
+
+  it("dove non si timbra le ore le registra la sede", () => {
+    expect(shiftOverNote(shift, "manual", null, after)).toBe(
+      "Turno concluso. Le ore le registra la sede."
+    );
+  });
+
+  it("finita la finestra, l'entrata aperta non chiede più l'uscita", () => {
+    expect(shiftOverNote(shift, "app", open, new Date("2026-09-26T10:00:00"))).toBe(
+      "Turno concluso."
+    );
   });
 });
 

@@ -35,10 +35,10 @@ import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { usePunchClock } from "@/features/clock/hooks";
 import {
-  clockInOpensLabel,
-  clockInPhase,
+  clockInNote,
   isClockWindowOpen,
   punchConfirmMessage,
+  shiftOverNote,
 } from "@/features/clock/availability";
 import { ClockBreakButton } from "@/features/clock/ClockBreakButton";
 import {
@@ -222,9 +222,9 @@ export default function WaiterShiftDetailScreen() {
     myAssignment.status !== "declined" &&
     myAssignment.status !== "no_show";
   const clockWindowOpen = isClockWindowOpen(shift);
-  // L'entrata si propone da un'ora prima dell'inizio alla fine del turno,
-  // come in Home: prima le ore partirebbero da un momento in cui non si lavora.
-  const inPhase = clockInPhase(shift);
+  // Senza timbratura: il pulsante d'entrata (da un'ora prima dell'inizio alla
+  // fine, come in Home) o la frase che dice perché non c'è.
+  const inNote = clockInNote(shift, clockMethod);
 
   return (
     <View className="flex-1 bg-bg-0">
@@ -319,7 +319,7 @@ export default function WaiterShiftDetailScreen() {
               </Text>
             ) : isOver ? (
               <Text className="mt-3 text-sm leading-5 text-t3">
-                Turno concluso. Le presenze e le ore le registra la sede.
+                {shiftOverNote(shift, clockMethod, clock)}
               </Text>
             ) : myAssignment.status === "assigned" ? (
               <View className="mt-4 gap-2.5">
@@ -443,7 +443,7 @@ export default function WaiterShiftDetailScreen() {
                     )}
                   </>
                 )
-              ) : clockMethod === "app" && inPhase === "open" ? (
+              ) : inNote.kind === "button" ? (
                 <>
                   <Text className="text-sm leading-5 text-t3">
                     Le ore partono da quando timbri; la sede le verifica.
@@ -455,22 +455,8 @@ export default function WaiterShiftDetailScreen() {
                     onPress={() => setPunchAction("in")}
                   />
                 </>
-              ) : clockMethod === "app" && inPhase === "early" ? (
-                <Text className="text-sm leading-5 text-t3">
-                  Potrai timbrare l’entrata dalle {clockInOpensLabel(shift)}.
-                </Text>
-              ) : clockMethod === "app" ? (
-                <Text className="text-sm leading-5 text-t3">
-                  La timbratura sarà disponibile vicino al giorno del turno.
-                </Text>
-              ) : clockMethod === "manual" ? (
-                <Text className="text-sm leading-5 text-t3">
-                  Per questa sede gli orari vengono registrati da chi gestisce.
-                </Text>
               ) : (
-                <Text className="text-sm leading-5 text-t3">
-                  Questo metodo di timbratura sarà disponibile in una prossima versione.
-                </Text>
+                <Text className="text-sm leading-5 text-t3">{inNote.text}</Text>
               )}
             </Card>
           </View>
