@@ -20,7 +20,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E07 | Ritirare la richiesta dal turno | ✅ 27/10 |
 | E08 | «Orario diverso» prima di confermare | ✅ 27/10 |
 | E09 | Correzioni della sede visibili | ✅ 27/10 |
-| E10 | Promemoria di timbratura | ✅ 27/10 (migration via CI; push da pubblicare a mano; prova su telefono) |
+| E10 | Promemoria di timbratura | ✅ 27/10 (rilasciato; `push` v10 pubblicata; prova su telefono) |
 | E11 | Stesso numero di ore ovunque | ✅ 27/10 |
 | E12 | Testi minori e motivo del rifiuto | ✅ 27/10 (migration da applicare via CI) |
 

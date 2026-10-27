@@ -152,7 +152,7 @@ export function useMyWorkTotals(waiterId: string, from: string, to: string) {
  * passate non rifiutate né segnate come assenza. Solo ore lavorate, nessun dato
  * economico.
  *
- * L'ordinamento lo fa il database (`get_my_work_history`): erano
+ * L'ordinamento lo fa il database (`get_my_work_history_page`): erano
  * impossibili lato client senza scaricare tutto, perché si ordina per la data
  * del turno, che sta in una tabella collegata.
  */

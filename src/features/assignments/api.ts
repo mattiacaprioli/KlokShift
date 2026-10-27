@@ -878,7 +878,7 @@ export async function getMyAssignmentsInRange(
 }
 
 // Lo storico passato del professionista non si legge più da qui: è paginato da
-// `getMyWorkHistoryPage` (RPC `get_my_work_history`). Questa versione scaricava
+// `getMyWorkHistoryPage` (RPC `get_my_work_history_page`). Questa versione scaricava
 // tutta la storia in un colpo.
 
 /** La propria assegnazione a un turno, col ruolo per cui si è chiamati. */

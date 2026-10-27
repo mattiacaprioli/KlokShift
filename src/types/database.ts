@@ -2266,19 +2266,6 @@ export type Database = {
           workspace_name: string
         }[]
       }
-      get_my_work_history: {
-        Args: { p_limit?: number; p_offset?: number }
-        Returns: {
-          date: string
-          end_time: string
-          hours: number
-          key: string
-          logo_url: string
-          start_time: string
-          title: string
-          venue_name: string
-        }[]
-      }
       get_my_work_history_page: {
         Args: {
           p_before_date?: string
