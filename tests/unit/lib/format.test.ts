@@ -113,11 +113,15 @@ describe("orari dei turni", () => {
 });
 
 describe("ore in italiano", () => {
-  it("un decimale con la virgola, nessuno se intero", () => {
+  it("fino a due decimali con la virgola, nessuno se intero", () => {
     expect(formatHours(5)).toBe("5 h");
     expect(formatHours(12.5)).toBe("12,5 h");
-    expect(formatHours(7.96)).toBe("8 h");
-    expect(formatHours(0.25)).toBe("0,3 h");
+    // Il quarto d'ora resta tale: 7 h 45 non è «7,8 h».
+    expect(formatHours(7.75)).toBe("7,75 h");
+    expect(formatHours(0.25)).toBe("0,25 h");
+    // Il rumore delle somme in virgola mobile non si vede.
+    expect(formatHours(7.999999)).toBe("8 h");
+    expect(formatHours(20 / 60)).toBe("0,33 h");
   });
 
   it("lo scostamento ha il segno, e nessuno scostamento è null", () => {

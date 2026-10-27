@@ -144,11 +144,14 @@ export function formatShiftSummary(
   return `${base} · ${pause} · ${counted} conteggiate`;
 }
 
-// Ore in italiano, 1 decimale con virgola, senza decimale se intero: "5 h", "12,5 h".
+// Ore in italiano, fino a 2 decimali con virgola, senza decimali se intero:
+// "5 h", "12,5 h", "7,75 h". Le ore si contano al quarto d'ora: con un decimale
+// 7 h 45 diventava "7,8 h", e lo stesso turno diceva due numeri diversi.
 export function formatHours(hours: number): string {
-  const rounded = Math.round(hours * 10) / 10;
-  const label =
-    rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1).replace(".", ",");
+  const rounded = Math.round(hours * 100) / 100;
+  const label = Number.isInteger(rounded)
+    ? String(rounded)
+    : String(rounded).replace(".", ",");
   return `${label} h`;
 }
 

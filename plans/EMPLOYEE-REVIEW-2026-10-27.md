@@ -19,9 +19,9 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E06 | Cambio turno: nomi e refuso | ✅ 27/10 |
 | E07 | Ritirare la richiesta dal turno | ✅ 27/10 |
 | E08 | «Orario diverso» prima di confermare | ✅ 27/10 |
-| E09 | Correzioni della sede visibili | ☐ |
+| E09 | Correzioni della sede visibili | ✅ 27/10 |
 | E10 | Promemoria di timbratura | ☐ |
-| E11 | Stesso numero di ore ovunque | ☐ |
+| E11 | Stesso numero di ore ovunque | ✅ 27/10 |
 | E12 | Testi minori e motivo del rifiuto | ☐ |
 
 ---
@@ -165,6 +165,13 @@ timbrato, il dipendente legge «Timbrato 18:00–23:00» come se l'avesse fatto 
 **Correzione.** Dettaglio: orari timbrati e orari corretti, con il motivo, oppure
 «Orari inseriti dalla sede». Storico: la stessa distinzione, con le colonne di E02.
 
+**Fatto.** `clockEdit` / `clockEditText` in `src/features/clock/hours.ts`, con
+test: nel dettaglio «Avevi timbrato 18:02–23:40 · orari corretti dalla sede ·
+«motivo»» (o pausa corretta, uscita inserita, orari inseriti). Nello storico
+«Orari inseriti dalla sede: …» / «Timbratura corretta dalla sede: …» con il
+motivo; lì orari e pausa non si distinguono (la colonna dice solo che c'è una
+correzione), il dettaglio sì.
+
 ## E10 · Promemoria di timbratura
 
 **Problema.** Nessun avviso né per l'entrata né per l'uscita dimenticata: è la
@@ -182,6 +189,11 @@ Impostazioni. Prova vera su telefono.
 
 **Correzione.** Un solo formato (`formatHours`), con due decimali quando servono:
 le ore sono al quarto d'ora.
+
+**Fatto.** `formatHours` fino a due decimali («7,75 h»), usato anche dal dettaglio
+del turno. Vale per app, dashboard e riepilogo PDF del mese. Unica eccezione:
+la stima settimanale del contratto («173 h al mese ≈ 39,9 h a settimana») resta
+a un decimale.
 
 ## E12 · Testi minori e motivo del rifiuto
 

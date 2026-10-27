@@ -4,6 +4,8 @@ import {
   actualChipText,
   assignmentActual,
   clockBreakText,
+  clockEdit,
+  clockEditText,
   clockedHours,
   clockRecordHours,
   effectiveClockBreak,
@@ -439,5 +441,74 @@ describe("pausa", () => {
         AFTER
       )
     ).toEqual({ measured: 1, deviations: [] });
+  });
+});
+
+describe("clockEdit", () => {
+  // Istanti UTC: formatClockTime li legge sempre in Europe/Rome (UTC+2 a settembre).
+  const record = (
+    method: "app" | "manual",
+    corrections: Partial<ClockRecordWithCorrections["corrections"][number]>[],
+    outAt: string | null = "2026-09-24T21:40:00Z"
+  ) =>
+    ({
+      method,
+      clock_in_at: "2026-09-24T16:02:00Z",
+      clock_out_at: outAt,
+      breaks: [],
+      corrections: corrections.map((c, i) => ({
+        id: String(i),
+        created_at: `2026-09-24T22:0${i}:00Z`,
+        corrected_in_at: null,
+        corrected_out_at: null,
+        corrected_break_minutes: null,
+        reason: null,
+        ...c,
+      })),
+    }) as unknown as ClockRecordWithCorrections;
+
+  it("una timbratura non toccata resta sua", () => {
+    expect(clockEdit(record("app", []))).toBeNull();
+    expect(clockEditText(clockEdit(record("app", [])))).toBeNull();
+  });
+
+  it("orari inseriti dalla sede, con il motivo se c'è", () => {
+    const edit = clockEdit(
+      record("manual", [{ corrected_in_at: "2026-09-24T16:00:00Z", reason: "dimenticato" }])
+    );
+    expect(edit).toEqual({ kind: "entered", reason: "dimenticato" });
+    expect(clockEditText(edit)).toBe("Orari inseriti dalla sede · «dimenticato»");
+  });
+
+  it("orari corretti: dice cosa si era timbrato", () => {
+    const edit = clockEdit(
+      record("app", [{ corrected_out_at: "2026-09-24T20:00:00Z" }])
+    );
+    expect(clockEditText(edit)).toBe(
+      "Avevi timbrato 18:02–23:40 · orari corretti dalla sede"
+    );
+  });
+
+  it("solo la pausa, o un'uscita che mancava", () => {
+    expect(
+      clockEditText(clockEdit(record("app", [{ corrected_break_minutes: 30 }])))
+    ).toBe("Avevi timbrato 18:02–23:40 · pausa corretta dalla sede");
+    expect(
+      clockEditText(
+        clockEdit(record("app", [{ corrected_out_at: "2026-09-24T20:00:00Z" }], null))
+      )
+    ).toBe("Avevi timbrato l'entrata alle 18:02, senza uscita · uscita inserita dalla sede");
+  });
+
+  it("il motivo è l'ultimo scritto", () => {
+    const edit = clockEdit(
+      record("app", [
+        { corrected_out_at: "2026-09-24T20:00:00Z", reason: "primo" },
+        { corrected_break_minutes: 15 },
+      ])
+    );
+    expect(clockEditText(edit)).toBe(
+      "Avevi timbrato 18:02–23:40 · orari e pausa corretti dalla sede · «primo»"
+    );
   });
 });

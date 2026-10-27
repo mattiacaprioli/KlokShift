@@ -217,12 +217,7 @@ function HistoryCard({
     !pending && i.workedHours != null
       ? formatHoursVariance(i.workedHours - i.plannedHours)
       : null;
-  const clock =
-    i.clockInAt && i.clockOutAt
-      ? `Timbrato ${formatClockTime(i.clockInAt)}–${formatClockTime(i.clockOutAt)}`
-      : i.clockInAt
-        ? `Entrata ${formatClockTime(i.clockInAt)}, uscita non timbrata`
-        : null;
+  const clock = clockLine(i);
   const line = sourceLine(i, clock);
 
   return (
@@ -276,6 +271,29 @@ function HistoryCard({
       </Card>
     </Pressable>
   );
+}
+
+/**
+ * Gli orari della timbratura, e di chi sono: «Timbrato» solo se li ha timbrati
+ * il dipendente e nessuno li ha toccati. Inseriti o corretti dalla sede si
+ * dice, con il motivo se c'è: altrimenti si leggerebbero come propri orari che
+ * ha scritto qualcun altro. Il dettaglio del turno mostra anche quelli timbrati.
+ */
+function clockLine(i: WorkHistoryItem): string | null {
+  if (!i.clockInAt) return null;
+  if (!i.clockOutAt) {
+    return `Entrata ${formatClockTime(i.clockInAt)}, uscita non timbrata`;
+  }
+  const range = `${formatClockTime(i.clockInAt)}–${formatClockTime(i.clockOutAt)}`;
+  const why = i.clockEditReason ? ` · «${i.clockEditReason}»` : "";
+  switch (i.clockEdit) {
+    case "entered":
+      return `Orari inseriti dalla sede: ${range}${why}`;
+    case "corrected":
+      return `Timbratura corretta dalla sede: ${range}${why}`;
+    default:
+      return `Timbrato ${range}`;
+  }
 }
 
 type SourceLine = {

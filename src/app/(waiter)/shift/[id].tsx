@@ -21,6 +21,7 @@ import { useToast } from "@/providers/Toast";
 import {
   formatBreakMinutes,
   formatDate,
+  formatHours,
   formatShiftRange,
   isShiftOver,
 } from "@/lib/format";
@@ -51,6 +52,8 @@ import {
 } from "@/features/clock/availability";
 import { ClockBreakButton } from "@/features/clock/ClockBreakButton";
 import {
+  clockEdit,
+  clockEditText,
   clockRecordHours,
   effectiveClockTimes,
   formatClockTime,
@@ -250,6 +253,9 @@ export default function WaiterShiftDetailScreen() {
   const clockTimes = clock ? effectiveClockTimes(clock) : null;
   const openPause = clock ? openClockBreak(clock) : null;
   const clockHours = clock ? clockRecordHours(clock, shift) : null;
+  // Orari inseriti o corretti dalla sede: si mostrano quelli corretti, e questa
+  // riga dice da dove vengono e cosa si era timbrato.
+  const editNote = clock ? clockEditText(clockEdit(clock)) : null;
   const clockMethod = myAssignment?.clock_method ?? shift.venue?.clock_method ?? "manual";
   const canClock =
     !!myAssignment &&
@@ -461,12 +467,13 @@ export default function WaiterShiftDetailScreen() {
                       {formatClockTime(clockTimes.inAt)}–{formatClockTime(clockTimes.outAt)}
                     </Text>
                     <Text className="mt-1 text-sm text-t3">
-                      {(clockHours ?? 0)
-                        .toString()
-                        .replace(".", ",")} h · {myAssignment.attendance_reviewed_at
+                      {formatHours(clockHours ?? 0)} · {myAssignment.attendance_reviewed_at
                         ? "ore approvate"
                         : "in attesa di verifica"}
                     </Text>
+                    {editNote ? (
+                      <Text className="mt-2 text-xs leading-4 text-t3">{editNote}</Text>
+                    ) : null}
                   </>
                 ) : (
                   <>
@@ -476,6 +483,9 @@ export default function WaiterShiftDetailScreen() {
                         ? ` · in pausa dalle ${formatClockTime(openPause.started_at)}`
                         : ""}
                     </Text>
+                    {editNote ? (
+                      <Text className="mt-2 text-xs leading-4 text-t3">{editNote}</Text>
+                    ) : null}
                     {clockWindowOpen && clock ? (
                       openPause ? (
                         <>

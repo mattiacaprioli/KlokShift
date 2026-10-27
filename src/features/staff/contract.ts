@@ -160,5 +160,6 @@ export function targetExplainer(
   target: number | null
 ): string | null {
   if (!contract || target == null || contract.period === "week") return null;
-  return `${formatContract(contract)} ≈ ${formatHours(target)} a settimana`;
+  // Una stima («≈»): un decimale basta, il quarto d'ora qui non c'entra.
+  return `${formatContract(contract)} ≈ ${formatHours(Math.round(target * 10) / 10)} a settimana`;
 }

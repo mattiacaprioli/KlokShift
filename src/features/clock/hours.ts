@@ -322,6 +322,65 @@ export function shiftDeviations(
   return { measured, deviations };
 }
 
+/**
+ * Chi ha messo mano a una timbratura, visto da chi l'ha fatta. Gli orari
+ * corretti si mostrano al posto di quelli timbrati (`effectiveClockTimes`), e
+ * senza questa riga il dipendente leggeva come suoi orari che aveva scritto la
+ * sede. Lo stesso dato dello storico (`clock_edit` in `my_work_history`).
+ *
+ * - `entered`: nessuna timbratura, gli orari li ha inseriti chi gestisce
+ *   (`enter_clock_record`, metodo `manual`);
+ * - `corrected`: timbrata dal dipendente e poi corretta (orari, pausa o
+ *   un'uscita mancante), con gli orari di partenza.
+ *
+ * Il motivo è l'ultimo scritto, se c'è: è facoltativo.
+ */
+export type ClockEdit =
+  | { kind: "entered"; reason: string | null }
+  | {
+      kind: "corrected";
+      original: { inAt: string; outAt: string | null };
+      times: boolean;
+      breakMinutes: boolean;
+      reason: string | null;
+    };
+
+export function clockEdit(record: ClockRecordWithCorrections): ClockEdit | null {
+  const corrections = latestFirst(record);
+  const reason = corrections.find((c) => c.reason)?.reason ?? null;
+  if (record.method === "manual") return { kind: "entered", reason };
+  if (corrections.length === 0) return null;
+  return {
+    kind: "corrected",
+    original: { inAt: record.clock_in_at, outAt: record.clock_out_at },
+    times: corrections.some(
+      (c) => c.corrected_in_at != null || c.corrected_out_at != null
+    ),
+    breakMinutes: corrections.some((c) => c.corrected_break_minutes != null),
+    reason,
+  };
+}
+
+/** La riga sotto la timbratura nel dettaglio del turno, o `null`. */
+export function clockEditText(edit: ClockEdit | null): string | null {
+  if (!edit) return null;
+  const why = edit.reason ? ` · «${edit.reason}»` : "";
+  if (edit.kind === "entered") return `Orari inseriti dalla sede${why}`;
+  const { original } = edit;
+  const timbrato = original.outAt
+    ? `Avevi timbrato ${formatClockTime(original.inAt)}–${formatClockTime(original.outAt)}`
+    : `Avevi timbrato l'entrata alle ${formatClockTime(original.inAt)}, senza uscita`;
+  const what =
+    edit.times && edit.breakMinutes
+      ? "orari e pausa corretti dalla sede"
+      : edit.times
+        ? original.outAt
+          ? "orari corretti dalla sede"
+          : "uscita inserita dalla sede"
+        : "pausa corretta dalla sede";
+  return `${timbrato} · ${what}${why}`;
+}
+
 export function formatClockTime(value: string): string {
   return new Intl.DateTimeFormat("it-IT", {
     hour: "2-digit",
