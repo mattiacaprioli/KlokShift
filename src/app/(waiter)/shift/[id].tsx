@@ -203,6 +203,9 @@ export default function WaiterShiftDetailScreen() {
   }
 
   const venueName = shift.venue?.name ?? "Sede";
+  // Annullare un turno non toglie le assegnazioni: il turno resta leggibile, e
+  // qui deve dirlo invece di offrire una conferma che il server rifiuterebbe.
+  const cancelled = shift.status === "cancelled";
   const clock = myAssignment?.clock ?? null;
   const clockTimes = clock ? effectiveClockTimes(clock) : null;
   const openPause = clock ? openClockBreak(clock) : null;
@@ -290,17 +293,23 @@ export default function WaiterShiftDetailScreen() {
             </Text>
             <View className="mt-2 flex-row">
               <Pill
-                label={ASSIGN_STATUS_LABEL[myAssignment.status]}
+                label={
+                  cancelled ? "Annullato" : ASSIGN_STATUS_LABEL[myAssignment.status]
+                }
                 variant={
-                  myAssignment.status === "confirmed"
-                    ? "accepted"
-                    : myAssignment.status === "declined"
-                      ? "cancelled"
+                  cancelled || myAssignment.status === "declined"
+                    ? "cancelled"
+                    : myAssignment.status === "confirmed"
+                      ? "accepted"
                       : "pending"
                 }
               />
             </View>
-            {isOver ? (
+            {cancelled ? (
+              <Text className="mt-3 text-sm leading-5 text-t3">
+                {venueName} ha annullato questo turno: non devi presentarti.
+              </Text>
+            ) : isOver ? (
               <Text className="mt-3 text-sm leading-5 text-t3">
                 Turno concluso. Le presenze e le ore le registra la sede.
               </Text>
@@ -458,11 +467,13 @@ export default function WaiterShiftDetailScreen() {
         {/* Sotto l'azione, non sopra: la schermata esiste per confermare la
             presenza, e la squadra è il contesto di quel gesto. Si toglie da sé
             quando si è da soli o quando la sede non condivide il planning. */}
-        <ShiftTeamSection
-          className="mt-8"
-          shiftId={shift.id}
-          date={shift.date}
-        />
+        {cancelled ? null : (
+          <ShiftTeamSection
+            className="mt-8"
+            shiftId={shift.id}
+            date={shift.date}
+          />
+        )}
 
         {shift.venue ? (
           <GhostButton

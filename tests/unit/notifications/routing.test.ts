@@ -29,10 +29,15 @@ describe("dove atterra una notifica", () => {
     expect(routeForNotification("waiter", "staff_linked", "vm1")).toBe("/(waiter)/(tabs)");
   });
 
-  it("professionista: niente da aprire su annullamenti e rimozioni", () => {
-    for (const type of ["shift_cancelled", "staff_removed", "shift_unassigned"] as const) {
+  it("professionista: niente da aprire sulle rimozioni", () => {
+    for (const type of ["staff_removed", "shift_unassigned"] as const) {
       expect(routeForNotification("waiter", type, "s1")).toBeNull();
     }
+  });
+
+  it("professionista: il turno annullato si apre, il dettaglio dice «Annullato»", () => {
+    // Le assegnazioni restano e il turno resta leggibile (my_shift_ids).
+    expect(routeForNotification("waiter", "shift_cancelled", "s1")).toBe("/(waiter)/shift/s1");
   });
 
   it("gestione: assenze nel thread col titolare, oppure alla pagina Assenze", () => {

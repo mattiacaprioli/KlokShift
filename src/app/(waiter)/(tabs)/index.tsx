@@ -90,7 +90,11 @@ export default function WaiterHomeScreen() {
   const plannedInBlocked = blocksPlannedClockIn(unplanned);
   // Un'entrata ancora aperta resta nella query anche oltre la fine pianificata,
   // perché la Home deve offrire l'uscita. Non è però il «prossimo turno».
-  const upcomingItems = items.filter((item) => !isShiftOver(item.shift));
+  // Un turno annullato tiene le sue assegnazioni e resta leggibile: l'agenda lo
+  // mostra barrato, ma qui non è né il prossimo turno né uno da confermare.
+  const upcomingItems = items.filter(
+    (item) => !isShiftOver(item.shift) && item.shift.status !== "cancelled"
+  );
   // Senza nome un saluto neutro, mai un mestiere al posto della persona.
   const firstName = (profile?.full_name ?? "").split(" ")[0];
 

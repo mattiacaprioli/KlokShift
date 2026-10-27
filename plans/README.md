@@ -1,5 +1,12 @@
 # Piani e decisioni
 
+## Esperienza del dipendente — 2026-10-27
+
+[EMPLOYEE-REVIEW-2026-10-27.md](EMPLOYEE-REVIEW-2026-10-27.md): revisione di
+conferma turni, cambio turno, timbratura e ore viste dal dipendente. 12 punti
+E01–E12 da fare tutti, uno alla volta; lo stato di ciascuno è nella tabella in
+testa al file.
+
 ## Modelli di turno — 2026-10-16
 
 [SHIFT-TEMPLATES.md](SHIFT-TEMPLATES.md): un turno tipo si salva come modello

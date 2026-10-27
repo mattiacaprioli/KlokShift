@@ -9,8 +9,8 @@ type NotificationType = Enums<"notification_type">;
 /**
  * Rotta da aprire per una notifica, in base alla vista attiva e al tipo. Fonte unica usata
  * sia dagli screen Notifiche (`onOpen`) sia dal tap sulle push (`PushRegistrar`).
- * `null` = niente da aprire (es. turno annullato: la RLS lo nasconde già al
- * cameriere; rimozione dallo staff: non c'è più una risorsa da mostrare).
+ * `null` = niente da aprire (es. rimozione dallo staff: non c'è più una risorsa
+ * da mostrare).
  */
 export function routeForNotification(
   role: Role,
@@ -45,9 +45,10 @@ export function routeForNotification(
     )
       return null;
     // shift_unassigned: togliendo l'assegnazione gli si toglie anche la lettura
-    // del turno (is_my_assigned_shift), quindi non c'è nulla da aprire.
+    // del turno (my_shift_ids), quindi non c'è nulla da aprire. Un turno
+    // annullato invece tiene le assegnazioni e resta leggibile: va al ramo
+    // finale, dove il dettaglio dice «Annullato».
     if (
-      type === "shift_cancelled" ||
       type === "staff_removed" ||
       type === "shift_unassigned" ||
       type === "archive_reminder"
