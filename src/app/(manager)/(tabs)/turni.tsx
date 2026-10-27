@@ -34,6 +34,7 @@ import {
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
+import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
 import { clockAttentionItems } from "@/features/clock/attention";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
@@ -141,6 +142,7 @@ export default function ManagerShiftsScreen() {
    * filtro di vista, non una sede attiva sotto mentite spoglie.
    */
   const [hiddenVenues, setHiddenVenues] = useState<Set<string>>(new Set());
+  const [duplicating, setDuplicating] = useState(false);
 
   const listRef = useRef<SectionList<ShiftWithCount, ShiftSection>>(null);
   const syncing = useRef(false);
@@ -438,6 +440,19 @@ export default function ManagerShiftsScreen() {
               </Pressable>
             );
           })}
+          {/* La settimana che si sta guardando, copiata su quella dopo: dal
+              27/10/2026 anche dal telefono, non solo dalla dashboard. */}
+          {canCreateShift ? (
+            <Pressable
+              onPress={() => setDuplicating(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Duplica la settimana"
+              className="ml-auto flex-row items-center gap-1"
+              hitSlop={8}
+            >
+              <Mono gold>Duplica</Mono>
+            </Pressable>
+          ) : null}
           {/* I turni già fatti si sfogliano dal calendario; lo Storico resta
               per cercarli con i filtri (sede, persona, stato) su tutto il
               passato. Da qui perché è dove si cercano — non in fondo alla
@@ -445,7 +460,7 @@ export default function ManagerShiftsScreen() {
           <Pressable
             onPress={() => router.push("/(manager)/storico")}
             accessibilityRole="button"
-            className="ml-auto flex-row items-center gap-1"
+            className={cn("flex-row items-center gap-1", !canCreateShift && "ml-auto")}
             hitSlop={8}
           >
             <Mono>Storico</Mono>
@@ -552,6 +567,15 @@ export default function ManagerShiftsScreen() {
           />
         )}
       </View>
+
+      {duplicating ? (
+        <DuplicateWeekModal
+          monday={startOfWeek(visibleDay)}
+          // Le sedi accese nell'agenda, su cui si possono fare turni.
+          venueIds={scope.filter((venueId) => venueQuery.can(venueId, "can_manage_shifts"))}
+          onClose={() => setDuplicating(false)}
+        />
+      ) : null}
 
       {mode === "people" ? (
         <PeopleWeekList

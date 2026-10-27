@@ -126,6 +126,9 @@ gemello nel passato. Mettere qualcuno su un turno finito (`assign_one`) chiede
 «Ore», come cambiarne data e orari. «Duplica» lascia fuori i giorni passati e lo
 dice; i form del nuovo turno dicono l'orario passato e portano a «Turno già
 fatto». Nei test SQL lo storico si prepara con `tests.create_shifts` (seed).
+«Duplica settimana» c'è anche nell'app (solo la settimana; il mese resta sulla
+dashboard): cosa si copia e cosa resta fuori lo decide
+`src/features/shifts/duplicate.ts` per entrambe.
 
 ## Correggere le ore (2026-10-26)
 

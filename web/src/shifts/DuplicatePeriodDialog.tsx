@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
 import { userErrorMessage } from "@/lib/errors";
 import { useCopyInternalShifts } from "@/features/assignments/hooks";
-import {
-  isActiveAssignment,
-  type AssignmentStatus,
-} from "@/features/assignments/status";
+import type { AssignmentStatus } from "@/features/assignments/status";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
+import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
 import {
-  addDaysToDate,
-  formatDate,
-  formatShiftRange,
-  isShiftOver,
-} from "@/lib/format";
+  DUPLICATE_BULK_WARN,
+  DUPLICATE_NOTHING_PAST,
+  DUPLICATE_WITH_STAFF_LABEL,
+  classifyDuplicate,
+  duplicateCreatedToast,
+  duplicateDateMap,
+  duplicateSkippedPastText,
+  duplicateWithStaffHint,
+} from "@/features/shifts/duplicate";
 import type { Shift } from "@/features/shifts/api";
 import {
   addDays,
@@ -32,7 +34,7 @@ import { useToast } from "../ui/Toast";
  */
 type SourceShift = Pick<
   Shift,
-  "id" | "title" | "date" | "start_time" | "end_time" | "status"
+  "id" | "title" | "date" | "start_time" | "end_time" | "status" | "unplanned"
 > & {
   /** Se c'è, serve solo a contare quante notifiche partiranno. */
   shift_assignments?: { status: AssignmentStatus }[];
@@ -41,8 +43,6 @@ type SourceShift = Pick<
 /** Cosa si sta duplicando. Cambia il passo, le etichette e la regola delle date. */
 export type DuplicatePeriod = "week" | "month";
 
-/** Oltre questa soglia la copia smette di essere un gesto e diventa un impegno. */
-const BULK_WARN = 30;
 /** Righe di anteprima mostrate: un mese intero ne farebbe centinaia. */
 const PREVIEW_ROWS = 24;
 
@@ -97,56 +97,21 @@ export function DuplicatePeriodDialog({
   /** Data di origine → data di destinazione. Vuota quella che non ha posto. */
   const dateMap = useMemo(() => {
     const targetMonth = addMonths(new Date(anchorTime), offset);
-    const map: Record<string, string> = {};
-    for (const s of shifts) {
-      if (map[s.date]) continue;
-      const to = isMonth
-        ? sameWeekdaySlot(s.date, targetMonth)
-        : addDaysToDate(s.date, offset * 7);
-      if (to) map[s.date] = to;
-    }
-    return map;
+    return duplicateDateMap(shifts, (date) =>
+      isMonth ? sameWeekdaySlot(date, targetMonth) : addDaysToDate(date, offset * 7)
+    );
   }, [shifts, isMonth, offset, anchorTime]);
 
-  // Copiabili: i turni ancora validi che hanno una data dove andare. Un
-  // annullato non si duplica — la copia ricreerebbe proprio quello che il
-  // gestore aveva tolto. Nemmeno uno che cadrebbe nel passato: il passato non
-  // si pianifica (`create_shifts` lo rifiuta, 20261026000100), e un turno già
-  // fatto si registra a parte.
-  const { copyable, skippedCancelled, skippedNoSlot, skippedPast, notifications } =
-    useMemo(() => {
-      const copyable: SourceShift[] = [];
-      let skippedCancelled = 0;
-      let skippedNoSlot = 0;
-      let skippedPast = 0;
-      let notifications = 0;
-      for (const s of shifts) {
-        if (s.status === "cancelled") {
-          skippedCancelled++;
-        } else if (!dateMap[s.date]) {
-          skippedNoSlot++;
-        } else if (
-          isShiftOver({
-            date: dateMap[s.date],
-            start_time: s.start_time,
-            end_time: s.end_time,
-          })
-        ) {
-          skippedPast++;
-        } else {
-          copyable.push(s);
-          notifications += (s.shift_assignments ?? []).filter((a) =>
-            isActiveAssignment(a.status)
-          ).length;
-        }
-      }
-      copyable.sort((a, b) =>
-        dateMap[a.date] === dateMap[b.date]
-          ? a.start_time.localeCompare(b.start_time)
-          : dateMap[a.date].localeCompare(dateMap[b.date])
-      );
-      return { copyable, skippedCancelled, skippedNoSlot, skippedPast, notifications };
-    }, [shifts, dateMap]);
+  // Cosa si copia e cosa resta fuori: la stessa regola della finestra dell'app
+  // (`classifyDuplicate`), con i giorni già passati e il fuori turno esclusi.
+  const {
+    copyable,
+    skippedCancelled,
+    skippedUnplanned,
+    skippedNoSlot,
+    skippedPast,
+    notifications,
+  } = useMemo(() => classifyDuplicate(shifts, dateMap), [shifts, dateMap]);
 
   // Quanti turni ci sono già nel periodo di destinazione: la copia **aggiunge**,
   // non sostituisce, quindi va detto prima e non dopo. Gli annullati non
@@ -169,9 +134,7 @@ export function DuplicatePeriodDialog({
       { sourceIds: copyable.map((s) => s.id), dateMap, withStaff },
       {
         onSuccess: (created) => {
-          toast.show(
-            `${created.length} ${created.length === 1 ? "turno copiato" : "turni copiati"} su ${targetLabel}`
-          );
+          toast.show(duplicateCreatedToast(created.length, targetLabel));
           onClose();
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
@@ -205,7 +168,7 @@ export function DuplicatePeriodDialog({
           <>
             <p className="rounded-xl border border-dashed border-border-2 px-4 py-6 text-center text-sm text-t3">
               {skippedPast > 0
-                ? "I turni da copiare cadrebbero in giorni già passati: non c'è niente da copiare."
+                ? DUPLICATE_NOTHING_PAST
                 : isMonth
                   ? "Questo mese non ha turni interni da copiare."
                   : "Questa settimana non ha turni interni da copiare."}
@@ -265,12 +228,10 @@ export function DuplicatePeriodDialog({
               />
               <span>
                 <span className="block text-sm text-t1">
-                  Copia anche le persone assegnate
+                  {DUPLICATE_WITH_STAFF_LABEL}
                 </span>
                 <span className="mt-0.5 block text-xs leading-4 text-t4">
-                  {withStaff
-                    ? "Ognuno riceverà la notifica del nuovo turno. Chi aveva rifiutato o era assente non viene ricopiato."
-                    : "Copia solo orari e fabbisogno per ruolo: i turni restano da assegnare e nessuno riceve notifiche."}
+                  {duplicateWithStaffHint(withStaff)}
                 </span>
               </span>
             </label>
@@ -278,7 +239,7 @@ export function DuplicatePeriodDialog({
             {/* Un mese sono decine di turni e altrettante notifiche sui telefoni
                 di altre persone: il numero va davanti agli occhi prima del
                 click, non nella cronologia dopo. */}
-            {withStaff && notifications >= BULK_WARN ? (
+            {withStaff && notifications >= DUPLICATE_BULK_WARN ? (
               <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
                 Partiranno <b>{notifications} notifiche</b> a chi è assegnato.
                 Togli la spunta qui sopra per copiare solo la griglia e assegnare
@@ -297,9 +258,7 @@ export function DuplicatePeriodDialog({
 
             {skippedPast > 0 ? (
               <p className="mb-4 rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-xs leading-5 text-t3">
-                {skippedPast === 1 ? "1 turno resta" : `${skippedPast} turni restano`}{" "}
-                fuori: {skippedPast === 1 ? "cadrebbe" : "cadrebbero"} in giorni
-                già passati. Un turno già fatto si registra con «+ Già fatto».
+                {duplicateSkippedPastText(skippedPast)}
               </p>
             ) : null}
 
@@ -341,10 +300,15 @@ export function DuplicatePeriodDialog({
                 </p>
               ) : null}
 
-              {skippedCancelled > 0 ? (
+              {skippedCancelled > 0 || skippedUnplanned > 0 ? (
                 <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-t4">
                   Esclusi:
-                  <Pill tone="neutral">{skippedCancelled} annullati</Pill>
+                  {skippedCancelled > 0 ? (
+                    <Pill tone="neutral">{skippedCancelled} annullati</Pill>
+                  ) : null}
+                  {skippedUnplanned > 0 ? (
+                    <Pill tone="neutral">{skippedUnplanned} fuori turno</Pill>
+                  ) : null}
                 </p>
               ) : null}
             </section>
