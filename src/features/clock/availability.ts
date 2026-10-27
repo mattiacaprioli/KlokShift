@@ -2,10 +2,12 @@ import type { AgendaItem } from "@/features/assignments/agenda";
 import { isActiveAssignment } from "@/features/assignments/status";
 import {
   addDaysToDate,
+  formatTime,
   shiftEndsAt,
   shiftStartsAt,
   todayString,
   toDateString,
+  toTimeString,
   type ShiftTimes,
 } from "@/lib/format";
 import type { MyUnplannedClock } from "./api";
@@ -35,10 +37,49 @@ export function isClockWindowOpen(
   );
 }
 
+/** Da quanto prima dell'inizio l'app propone l'entrata di un turno. */
+export const CLOCK_IN_OPENS_BEFORE_MIN = 60;
+
+/** Quando l'app comincia a proporre l'entrata di questo turno. */
+export function clockInOpensAt(shift: ShiftTimes): Date {
+  return new Date(
+    shiftStartsAt(shift.date, shift.start_time).getTime() -
+      CLOCK_IN_OPENS_BEFORE_MIN * 60_000
+  );
+}
+
+/** «18:00»: l'ora da cui si potrà timbrare l'entrata. */
+export function clockInOpensLabel(shift: ShiftTimes): string {
+  return toTimeString(clockInOpensAt(shift));
+}
+
+export type ClockInPhase = "early" | "open" | "over";
+
+/**
+ * A che punto è l'entrata di un turno: troppo presto, da timbrare, o turno
+ * finito. Si misura sull'ora, non sul giorno: un turno delle 19 alle 8 del
+ * mattino è ancora `early`, e un'entrata alle 8 farebbe partire le ore da lì.
+ *
+ * Il server accetta una finestra più larga (dal giorno prima al giorno dopo la
+ * fine, `clock_punch`), che resta la rete per i notturni: è l'app a non
+ * proporre l'entrata fuori da queste ore. Dopo la fine un'entrata non ha senso:
+ * gli orari li inserisce chi gestisce le ore.
+ */
+export function clockInPhase(
+  shift: ShiftTimes,
+  now: Date = new Date()
+): ClockInPhase {
+  if (now < clockInOpensAt(shift)) return "early";
+  if (now >= shiftEndsAt(shift.date, shift.start_time, shift.end_time)) {
+    return "over";
+  }
+  return "open";
+}
+
 /** Cosa deve mostrare la Home per questa assegnazione, se deve mostrarla. */
 export function homeClockState(
   item: AgendaItem,
-  today: string = todayString()
+  now: Date = new Date()
 ): HomeClockState | null {
   if (
     item.shift.status === "cancelled" ||
@@ -47,23 +88,50 @@ export function homeClockState(
     return null;
   }
 
-  const windowOpen = isClockWindowOpen(item.shift, today);
   if (item.clock) {
     const times = effectiveClockTimes(item.clock);
     if (times.outAt) return null;
-    return windowOpen ? "out" : null;
+    return isClockWindowOpen(item.shift, todayString(now)) ? "out" : null;
   }
 
   const method = effectiveClockMethod(
     item.clock_method,
     item.shift.venue?.clock_method ?? "manual"
   );
-  // La RPC tollera il giorno precedente per i casi a cavallo della mezzanotte,
-  // ma la Home non deve invitare a timbrare un turno di domani con ore di
-  // anticipo. Il dettaglio resta il ripiego esplicito per i casi eccezionali.
-  return method === "app" && windowOpen && today >= item.shift.date
+  return method === "app" && clockInPhase(item.shift, now) === "open"
     ? "in"
     : null;
+}
+
+/** Oltre questo scarto dall'orario del turno, la conferma lo dice. */
+export const PUNCH_DRIFT_WARN_MIN = 15;
+
+/**
+ * La frase della conferma di entrata, uscita o pausa: l'ora che si sta per
+ * registrare e, se è lontana dall'orario del turno, cosa comporta — le ore
+ * partono, o si fermano, da quel momento. Senza turno (fuori turno, pausa) solo
+ * l'ora.
+ */
+export function punchConfirmMessage(
+  action: "in" | "out" | "break",
+  shift: ShiftTimes | null,
+  now: Date = new Date()
+): string {
+  const time = toTimeString(now);
+  const warnMs = PUNCH_DRIFT_WARN_MIN * 60_000;
+  if (shift && action === "in") {
+    const starts = shiftStartsAt(shift.date, shift.start_time);
+    if (starts.getTime() - now.getTime() > warnMs) {
+      return `Il turno inizia alle ${formatTime(shift.start_time)}: le ore partono da adesso (${time}).`;
+    }
+  }
+  if (shift && action === "out") {
+    const ends = shiftEndsAt(shift.date, shift.start_time, shift.end_time);
+    if (ends.getTime() - now.getTime() > warnMs) {
+      return `Il turno finisce alle ${formatTime(shift.end_time)}: le ore si fermano adesso (${time}).`;
+    }
+  }
+  return `Registriamo l'ora di adesso: ${time}.`;
 }
 
 /** Da quanto prima dell'inizio un turno pianificato «si timbra quello». */

@@ -10,6 +10,7 @@ import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { Pressable, Text, View } from "@/tw";
 import type { MyUnplannedClock } from "./api";
+import { punchConfirmMessage } from "./availability";
 import { ClockBreakButton } from "./ClockBreakButton";
 import { useClockBreaks, usePunchUnplannedClock } from "./hooks";
 import { formatClockTime } from "./hours";
@@ -94,7 +95,7 @@ export function UnplannedClockCard({
       title={
         confirming === "out" ? "Timbrare l’uscita?" : "Timbrare l’entrata?"
       }
-      message={`Verrà registrato l’orario corrente del server per ${entry.venueName}.`}
+      message={confirming ? punchConfirmMessage(confirming, null) : ""}
       confirmLabel={
         confirming === "out" ? "Timbra uscita" : "Timbra entrata"
       }

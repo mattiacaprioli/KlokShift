@@ -4,6 +4,7 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
+import { punchConfirmMessage } from "./availability";
 import { useClockBreak } from "./hooks";
 
 /**
@@ -65,7 +66,7 @@ export function ClockBreakButton({
       <ConfirmModal
         visible={confirming}
         title="Iniziare la pausa?"
-        message="Verrà registrato l’orario corrente del server. Quando riprendi, tocca «Fine pausa»."
+        message={`${punchConfirmMessage("break", null)} Quando riprendi, tocca «Fine pausa».`}
         confirmLabel="Inizia pausa"
         pending={clockBreak.isPending}
         onConfirm={() => run("start")}

@@ -4,9 +4,12 @@ import {
   blocksPlannedClockIn,
   blocksUnplannedClock,
   canStartUnplannedClock,
+  clockInOpensLabel,
+  clockInPhase,
   hasOpenPlannedClock,
   homeClockState,
   isClockWindowOpen,
+  punchConfirmMessage,
 } from "../../../src/features/clock/availability";
 
 function item(
@@ -70,61 +73,97 @@ describe("isClockWindowOpen", () => {
   });
 });
 
+describe("clockInPhase", () => {
+  // Istanti in ora locale senza offset: la CI gira in UTC.
+  const at = (local: string) => new Date(local);
+  const shift = item().shift; // 24/09 18:00–23:00
+
+  it("si apre un'ora prima dell'inizio e si chiude alla fine", () => {
+    expect(clockInPhase(shift, at("2026-09-24T08:00:00"))).toBe("early");
+    expect(clockInPhase(shift, at("2026-09-24T16:59:00"))).toBe("early");
+    expect(clockInPhase(shift, at("2026-09-24T17:00:00"))).toBe("open");
+    expect(clockInPhase(shift, at("2026-09-24T22:59:00"))).toBe("open");
+    expect(clockInPhase(shift, at("2026-09-24T23:00:00"))).toBe("over");
+    expect(clockInOpensLabel(shift)).toBe("17:00");
+  });
+
+  it("segue il notturno oltre la mezzanotte", () => {
+    const night = { date: "2026-09-24", start_time: "22:00:00", end_time: "04:00:00" };
+    expect(clockInPhase(night, at("2026-09-24T20:30:00"))).toBe("early");
+    expect(clockInPhase(night, at("2026-09-25T02:00:00"))).toBe("open");
+    expect(clockInPhase(night, at("2026-09-25T04:00:00"))).toBe("over");
+  });
+});
+
 describe("homeClockState", () => {
-  it("propone l'entrata solo per il metodo app e dal giorno del turno", () => {
-    expect(homeClockState(item({ venueMethod: "app" }), "2026-09-24")).toBe(
-      "in"
-    );
-    expect(homeClockState(item({ venueMethod: "manual" }), "2026-09-24")).toBe(
-      null
-    );
+  const at = (time: string, date = "2026-09-24") => new Date(`${date}T${time}:00`);
+
+  it("propone l'entrata solo per il metodo app, da un'ora prima alla fine", () => {
+    expect(homeClockState(item({ venueMethod: "app" }), at("17:30"))).toBe("in");
+    expect(homeClockState(item({ venueMethod: "manual" }), at("17:30"))).toBe(null);
+    // La mattina del turno serale: troppo presto, resta il prossimo turno.
+    expect(homeClockState(item({ venueMethod: "app" }), at("08:00"))).toBe(null);
+    // Turno finito senza entrata: gli orari li inserisce la sede.
+    expect(homeClockState(item({ venueMethod: "app" }), at("23:30"))).toBe(null);
     expect(
-      homeClockState(
-        item({ date: "2026-09-25", venueMethod: "app" }),
-        "2026-09-24"
-      )
+      homeClockState(item({ date: "2026-09-25", venueMethod: "app" }), at("17:30"))
     ).toBe(null);
   });
 
   it("rispetta l'override personale rispetto alla sede", () => {
     expect(
-      homeClockState(
-        item({ memberMethod: "app", venueMethod: "manual" }),
-        "2026-09-24"
-      )
+      homeClockState(item({ memberMethod: "app", venueMethod: "manual" }), at("17:30"))
     ).toBe("in");
     expect(
-      homeClockState(
-        item({ memberMethod: "manual", venueMethod: "app" }),
-        "2026-09-24"
-      )
+      homeClockState(item({ memberMethod: "manual", venueMethod: "app" }), at("17:30"))
     ).toBe(null);
   });
 
-  it("mostra l'uscita aperta e sparisce dopo la timbratura completa", () => {
+  it("mostra l'uscita aperta, anche oltre la fine, e sparisce dopo la timbratura completa", () => {
     const inAt = "2026-09-24T16:00:00.000Z";
-    expect(homeClockState(item({ inAt }), "2026-09-24")).toBe("out");
+    expect(homeClockState(item({ inAt }), at("19:00"))).toBe("out");
+    expect(homeClockState(item({ inAt }), at("09:00", "2026-09-25"))).toBe("out");
     expect(
-      homeClockState(
-        item({ inAt, outAt: "2026-09-24T21:00:00.000Z" }),
-        "2026-09-24"
-      )
+      homeClockState(item({ inAt, outAt: "2026-09-24T21:00:00.000Z" }), at("19:00"))
     ).toBe(null);
   });
 
   it("non mostra turni rifiutati o annullati", () => {
     expect(
-      homeClockState(
-        item({ assignmentStatus: "declined", venueMethod: "app" }),
-        "2026-09-24"
-      )
+      homeClockState(item({ assignmentStatus: "declined", venueMethod: "app" }), at("17:30"))
     ).toBe(null);
     expect(
-      homeClockState(
-        item({ shiftStatus: "cancelled", venueMethod: "app" }),
-        "2026-09-24"
-      )
+      homeClockState(item({ shiftStatus: "cancelled", venueMethod: "app" }), at("17:30"))
     ).toBe(null);
+  });
+});
+
+describe("punchConfirmMessage", () => {
+  const shift = item().shift; // 24/09 18:00–23:00
+  const at = (time: string) => new Date(`2026-09-24T${time}:00`);
+
+  it("dice l'ora che si registra", () => {
+    expect(punchConfirmMessage("in", shift, at("17:50"))).toBe(
+      "Registriamo l'ora di adesso: 17:50."
+    );
+    expect(punchConfirmMessage("out", shift, at("22:50"))).toBe(
+      "Registriamo l'ora di adesso: 22:50."
+    );
+    expect(punchConfirmMessage("break", null, at("20:00"))).toBe(
+      "Registriamo l'ora di adesso: 20:00."
+    );
+  });
+
+  it("avvisa quando l'entrata è lontana dall'inizio", () => {
+    expect(punchConfirmMessage("in", shift, at("17:20"))).toBe(
+      "Il turno inizia alle 18:00: le ore partono da adesso (17:20)."
+    );
+  });
+
+  it("avvisa quando l'uscita è lontana dalla fine", () => {
+    expect(punchConfirmMessage("out", shift, at("21:00"))).toBe(
+      "Il turno finisce alle 23:00: le ore si fermano adesso (21:00)."
+    );
   });
 });
 

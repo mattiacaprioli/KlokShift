@@ -34,7 +34,12 @@ import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
 import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { usePunchClock } from "@/features/clock/hooks";
-import { isClockWindowOpen } from "@/features/clock/availability";
+import {
+  clockInOpensLabel,
+  clockInPhase,
+  isClockWindowOpen,
+  punchConfirmMessage,
+} from "@/features/clock/availability";
 import { ClockBreakButton } from "@/features/clock/ClockBreakButton";
 import {
   clockRecordHours,
@@ -217,6 +222,9 @@ export default function WaiterShiftDetailScreen() {
     myAssignment.status !== "declined" &&
     myAssignment.status !== "no_show";
   const clockWindowOpen = isClockWindowOpen(shift);
+  // L'entrata si propone da un'ora prima dell'inizio alla fine del turno,
+  // come in Home: prima le ore partirebbero da un momento in cui non si lavora.
+  const inPhase = clockInPhase(shift);
 
   return (
     <View className="flex-1 bg-bg-0">
@@ -435,10 +443,10 @@ export default function WaiterShiftDetailScreen() {
                     )}
                   </>
                 )
-              ) : clockMethod === "app" && clockWindowOpen ? (
+              ) : clockMethod === "app" && inPhase === "open" ? (
                 <>
                   <Text className="text-sm leading-5 text-t3">
-                    L’orario viene registrato dal server e sarà verificato dalla sede.
+                    Le ore partono da quando timbri; la sede le verifica.
                   </Text>
                   <GoldButton
                     className="mt-4"
@@ -447,6 +455,10 @@ export default function WaiterShiftDetailScreen() {
                     onPress={() => setPunchAction("in")}
                   />
                 </>
+              ) : clockMethod === "app" && inPhase === "early" ? (
+                <Text className="text-sm leading-5 text-t3">
+                  Potrai timbrare l’entrata dalle {clockInOpensLabel(shift)}.
+                </Text>
               ) : clockMethod === "app" ? (
                 <Text className="text-sm leading-5 text-t3">
                   La timbratura sarà disponibile vicino al giorno del turno.
@@ -499,7 +511,7 @@ export default function WaiterShiftDetailScreen() {
       <ConfirmModal
         visible={punchAction != null}
         title={punchAction === "out" ? "Timbrare l’uscita?" : "Timbrare l’entrata?"}
-        message="Verrà registrato l’orario corrente del server."
+        message={punchAction ? punchConfirmMessage(punchAction, shift) : ""}
         confirmLabel={punchAction === "out" ? "Timbra uscita" : "Timbra entrata"}
         pending={punch.isPending}
         onConfirm={doPunch}

@@ -10,7 +10,35 @@ import {
   formatShiftRange,
 } from "@/lib/format";
 import { Text, View } from "@/tw";
+import {
+  clockInOpensAt,
+  clockInOpensLabel,
+  clockInPhase,
+} from "@/features/clock/availability";
+import { effectiveClockMethod } from "@/features/clock/methods";
 import type { AgendaItem } from "./agenda";
+
+/** Entro quanto dall'apertura dell'entrata la card dice da che ora si timbra. */
+const CLOCK_HINT_WITHIN_MS = 12 * 3_600_000;
+
+/**
+ * «Timbri l'entrata dalle 18:00»: finché l'entrata non si apre, il turno resta
+ * in questa card, e senza la riga non si saprebbe quando arriva il pulsante.
+ * Solo per chi timbra dall'app e solo il giorno stesso, non per un turno fra
+ * una settimana.
+ */
+function clockInHint(item: AgendaItem, now: Date = new Date()): string | null {
+  if (item.clock) return null;
+  const method = effectiveClockMethod(
+    item.clock_method,
+    item.shift.venue?.clock_method ?? "manual"
+  );
+  if (method !== "app" || clockInPhase(item.shift, now) !== "early") return null;
+  if (clockInOpensAt(item.shift).getTime() - now.getTime() > CLOCK_HINT_WITHIN_MS) {
+    return null;
+  }
+  return `Timbri l'entrata dalle ${clockInOpensLabel(item.shift)}`;
+}
 
 /**
  * Il turno imminente, in home.
@@ -36,6 +64,7 @@ export function NextShiftCard({
   const { shift } = item;
   const venueName = shift.venue?.name ?? "Sede";
   const canRespond = item.status === "assigned";
+  const clockHint = clockInHint(item);
 
   return (
     <Card
@@ -69,6 +98,10 @@ export function NextShiftCard({
           </Text>
         </View>
       </View>
+
+      {clockHint ? (
+        <Text className="mt-3 text-[13px] text-t3">{clockHint}</Text>
+      ) : null}
 
       {/* Confermato: una riga verde, perché questa card non ha la barra di
           stato delle altre e senza di essa un turno già confermato è identico a

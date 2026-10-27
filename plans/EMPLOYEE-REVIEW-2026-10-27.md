@@ -13,7 +13,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | ----- | ---- | ----- |
 | E01 | Turno annullato ancora in Home e nel dettaglio | ✅ 27/10 |
 | E02 | Le mie ore con le stesse regole della sede | ✅ 27/10 (migration da applicare via CI) |
-| E03 | «Timbra entrata» al momento giusto | ☐ |
+| E03 | «Timbra entrata» al momento giusto | ✅ 27/10 |
 | E04 | Frasi giuste a turno finito | ☐ |
 | E05 | Rifiuto per sbaglio: si torna indietro, e la sede lo sa | ☐ |
 | E06 | Cambio turno: nomi e refuso | ☐ |
@@ -82,6 +82,12 @@ turno (regola pura in `clock/availability.ts`, stessa soglia del fuori turno);
 prima resta la card del prossimo turno con «Timbri dalle …». La conferma dice
 l'ora e avvisa se si è lontani dall'inizio o dalla fine. Server invariato: la sua
 finestra larga resta la rete per i notturni.
+
+**Fatto.** `clockInPhase` / `clockInOpensLabel` / `punchConfirmMessage` in
+`src/features/clock/availability.ts`, usati da Home (anche la Home di chi
+gestisce, che condivide la card), dettaglio, fuori turno e pausa. Prima
+dell'apertura la card del prossimo turno dice «Timbri l'entrata dalle …» (solo
+nelle 12 ore prima). Le frasi a turno finito restano a E04.
 
 ## E04 · Frasi giuste a turno finito
 

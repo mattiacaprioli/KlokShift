@@ -10,7 +10,7 @@ import { formatShiftRange } from "@/lib/format";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { Text, View } from "@/tw";
-import { homeClockState } from "./availability";
+import { homeClockState, punchConfirmMessage } from "./availability";
 import { ClockBreakButton } from "./ClockBreakButton";
 import { usePunchClock } from "./hooks";
 import { effectiveClockTimes, formatClockTime, openClockBreak } from "./hours";
@@ -100,7 +100,7 @@ export function HomeClockCard({
           </Text>
         ) : (
           <Text className="mt-4 text-sm leading-5 text-t3">
-            Verrà registrato l’orario corrente del server.
+            Le ore partono da quando timbri; la sede le verifica.
           </Text>
         )}
 
@@ -146,7 +146,9 @@ export function HomeClockCard({
         title={
           confirming === "out" ? "Timbrare l’uscita?" : "Timbrare l’entrata?"
         }
-        message={`Verrà registrato l’orario corrente del server per ${venueName}.`}
+        message={
+          confirming ? punchConfirmMessage(confirming, item.shift) : ""
+        }
         confirmLabel={
           confirming === "out" ? "Timbra uscita" : "Timbra entrata"
         }
