@@ -21,6 +21,7 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   shift_change_request: "users",
   shift_change_response: "check",
   shift_declined: "alert",
+  shift_reconfirmed: "check",
   team_linked: "shield",
   team_joined: "shield",
   team_removed: "close",

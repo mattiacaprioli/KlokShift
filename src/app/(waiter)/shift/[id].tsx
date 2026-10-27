@@ -30,6 +30,7 @@ import {
   useMyAssignmentForShift,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
+import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
 import { ShiftTeamSection } from "@/features/planning/ShiftTeamSection";
 import { RequestChangeModal } from "@/features/changeRequests/RequestChangeModal";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
@@ -141,23 +142,6 @@ export default function WaiterShiftDetailScreen() {
           ),
         onError: (e) =>
           toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
-      }
-    );
-  }
-
-  function doDecline() {
-    if (!myAssignment) return;
-    respond.mutate(
-      { id: myAssignment.id, status: "declined" },
-      {
-        onSuccess: () => {
-          setDeclineVisible(false);
-          toast.show("Turno rifiutato");
-        },
-        onError: (e) => {
-          setDeclineVisible(false);
-          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error");
-        },
       }
     );
   }
@@ -362,8 +346,9 @@ export default function WaiterShiftDetailScreen() {
               </View>
             ) : (
               <View className="mt-3 gap-2.5">
-                <Text className="text-sm text-t3">
-                  Hai rifiutato questo turno.
+                <Text className="text-sm leading-5 text-t3">
+                  Hai rifiutato questo turno. Se ci ripensi, la sede viene
+                  avvisata.
                 </Text>
                 <GhostButton
                   label="Ci sono, conferma"
@@ -483,15 +468,9 @@ export default function WaiterShiftDetailScreen() {
         ) : null}
       </ScrollView>
 
-      <ConfirmModal
-        visible={declineVisible}
-        title="Rifiutare il turno?"
-        message="La sede verrà avvisata."
-        confirmLabel="Rifiuta"
-        destructive
-        pending={respond.isPending}
-        onConfirm={doDecline}
-        onCancel={() => setDeclineVisible(false)}
+      <DeclineShiftModal
+        assignmentId={declineVisible && myAssignment ? myAssignment.id : null}
+        onClose={() => setDeclineVisible(false)}
       />
 
       <ConfirmModal

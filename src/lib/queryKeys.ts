@@ -203,6 +203,9 @@ export const qk = {
     mineUpcoming: (waiterId: string) =>
       ["assignments", "mineUpcoming", waiterId] as const,
     /** Le proprie assegnazioni in un intervallo, passate comprese: la griglia. */
+    /** I turni futuri rifiutati: restano in agenda come «Rifiutato». */
+    mineDeclined: (waiterId: string) =>
+      ["assignments", "mineDeclined", waiterId] as const,
     mineRange: (waiterId: string, from: string, to: string) =>
       ["assignments", "mineRange", waiterId, from, to] as const,
     mineForShift: (shiftId: string, waiterId: string) =>

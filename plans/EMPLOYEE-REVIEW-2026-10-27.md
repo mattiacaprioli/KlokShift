@@ -15,7 +15,7 @@ commit** del punto. Migration sempre nuove, rilasciate dalla CI.
 | E02 | Le mie ore con le stesse regole della sede | ✅ 27/10 (migration da applicare via CI) |
 | E03 | «Timbra entrata» al momento giusto | ✅ 27/10 |
 | E04 | Frasi giuste a turno finito | ✅ 27/10 |
-| E05 | Rifiuto per sbaglio: si torna indietro, e la sede lo sa | ☐ |
+| E05 | Rifiuto per sbaglio: si torna indietro, e la sede lo sa | ✅ 27/10 (migration da applicare via CI) |
 | E06 | Cambio turno: nomi e refuso | ☐ |
 | E07 | Ritirare la richiesta dal turno | ☐ |
 | E08 | «Orario diverso» prima di confermare | ☐ |
@@ -112,6 +112,12 @@ gestisce non lo sa: un posto già riassegnato si raddoppia in silenzio.
 **Correzione.** I turni futuri rifiutati restano in agenda come «Rifiutato», la
 conferma del rifiuto lo dice (finestra unica, oggi copiata in tre schermate), e
 chi gestisce riceve una notifica quando un rifiutato torna confermato.
+
+**Fatto.** `DeclineShiftModal` (Home, agenda, dettaglio); `getMyDeclinedUpcoming`
+per l'elenco dell'agenda (non la vista a settimana, non la Home). Migration
+`20261027000100` (tipo `shift_reconfirmed`) e `20261027000200` (trigger
+`notify_on_assignment_reconfirmed`, persona della notifica), da applicare via
+CI; casi nel test SQL 020. Avvisa solo se a riconfermare è la persona stessa.
 
 ## E06 · Cambio turno: nomi e refuso
 

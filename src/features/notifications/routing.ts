@@ -35,11 +35,12 @@ export function routeForNotification(
     ) {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
-    // Il professionista non riceve mai le altre due (sono per la sede), ma la
+    // Il professionista non riceve mai questi tipi (sono per la sede), ma la
     // funzione è totale sui tipi: meglio dirlo che lasciarlo al ramo finale.
     if (
       type === "shift_change_request" ||
       type === "shift_declined" ||
+      type === "shift_reconfirmed" ||
       type === "absence_request" ||
       type === "absence_sick"
     )

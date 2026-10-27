@@ -79,6 +79,23 @@ begin
   perform tests.login('Emp');
   r := public.respond_assignment(a_emp, 'confirmed');
   perform tests.ok(r.confirmed_at is not null, 'la conferma di persona è registrata');
+  -- Il ripensamento dopo un rifiuto si dice a chi l'aveva letto (E05).
+  perform tests.logout();
+  perform tests.eq((select count(*) from public.notifications where type = 'shift_reconfirmed'
+    and user_id = tests.id('Ow') and related_id = fut and person_id = tests.id('M_Emp')),
+    1::bigint, 'il titolare sa del ripensamento, con la persona');
+  perform tests.ok(exists (select 1 from public.notifications where type = 'shift_reconfirmed' and user_id = tests.id('Co')),
+    'chi ha «Turni» pure');
+  perform tests.ok(not exists (select 1 from public.notifications where type = 'shift_reconfirmed' and user_id = tests.id('Emp')),
+    'chi riconferma non si avvisa da sé');
+  -- Chi gestisce che segna «c'era» su un rifiuto non genera il ripensamento.
+  perform tests.login('Emp');
+  perform public.respond_assignment(a_emp, 'declined');
+  perform tests.login('Ow');
+  perform public.record_attendance(a_emp, '{"status":"confirmed"}'::jsonb);
+  perform tests.logout();
+  perform tests.eq((select count(*) from public.notifications where type = 'shift_reconfirmed'
+    and user_id = tests.id('Co')), 1::bigint, 'nessun ripensamento se a confermare è chi gestisce');
 
   -- ---- «su me stesso»: turno FUTURO ----
   perform tests.login('Co');

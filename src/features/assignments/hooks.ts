@@ -20,6 +20,7 @@ import {
   getInternalShiftPlans,
   moveAssignment,
   getMyAssignedUpcoming,
+  getMyDeclinedUpcoming,
   getMyAssignmentsInRange,
   getMyAssignmentForShift,
   getShiftAssignments,
@@ -41,6 +42,15 @@ export function useMyAssignedUpcoming(waiterId: string | undefined) {
   return useQuery({
     queryKey: qk.assignments.mineUpcoming(waiterId ?? ""),
     queryFn: () => getMyAssignedUpcoming(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+/** I turni futuri rifiutati, per l'agenda (`getMyDeclinedUpcoming`). */
+export function useMyDeclinedUpcoming(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.assignments.mineDeclined(waiterId ?? ""),
+    queryFn: () => getMyDeclinedUpcoming(waiterId as string),
     enabled: !!waiterId,
   });
 }

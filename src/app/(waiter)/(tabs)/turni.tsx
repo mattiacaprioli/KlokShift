@@ -9,7 +9,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, View } from "@/tw";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
@@ -33,9 +32,11 @@ import {
   loadAgendaLayout,
   saveAgendaLayout,
 } from "@/features/assignments/agendaLayoutStorage";
+import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
 import {
   useMyAssignedUpcoming,
   useMyAssignmentsInRange,
+  useMyDeclinedUpcoming,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
@@ -225,16 +226,28 @@ export default function WaiterShiftsScreen() {
     );
   }, [endedQuery.data, items]);
   const endedIds = useMemo(() => new Set(ended.map((a) => a.id)), [ended]);
+  /**
+   * I turni futuri rifiutati restano in elenco come «Rifiutato»: un «Non posso»
+   * per sbaglio si ripara aprendo il turno. Non nei conteggi in testa né in
+   * Home, dove un rifiuto non è un turno da fare.
+   */
+  const declinedQuery = useMyDeclinedUpcoming(
+    mode === "mine" && layout === "list" ? waiterId : undefined
+  );
+  const declined = useMemo(
+    () => withShift(declinedQuery.data ?? []),
+    [declinedQuery.data]
+  );
   const agendaItems = useMemo(
     () =>
-      ended.length === 0
+      ended.length === 0 && declined.length === 0
         ? items
-        : [...ended, ...items].sort(
+        : [...ended, ...items, ...declined].sort(
             (a, b) =>
               a.shift.date.localeCompare(b.shift.date) ||
               a.shift.start_time.localeCompare(b.shift.start_time)
           ),
-    [ended, items]
+    [ended, items, declined]
   );
   const sections = useMemo(
     () =>
@@ -329,7 +342,11 @@ export default function WaiterShiftsScreen() {
         ? [planning.refetch()]
         : layout === "week"
           ? [assignedQuery.refetch(), weekQuery.refetch()]
-          : [assignedQuery.refetch(), endedQuery.refetch()]
+          : [
+              assignedQuery.refetch(),
+              endedQuery.refetch(),
+              declinedQuery.refetch(),
+            ]
     )
   );
 
@@ -368,23 +385,6 @@ export default function WaiterShiftsScreen() {
         onSuccess: () => toast.show("Presenza confermata"),
         onError: (e) =>
           toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
-      }
-    );
-  }
-
-  function doDecline() {
-    if (!declining) return;
-    respond.mutate(
-      { id: declining, status: "declined" },
-      {
-        onSuccess: () => {
-          setDeclining(null);
-          toast.show("Turno rifiutato");
-        },
-        onError: (e) => {
-          setDeclining(null);
-          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error");
-        },
       }
     );
   }
@@ -616,15 +616,9 @@ export default function WaiterShiftsScreen() {
         )}
       </View>
 
-      <ConfirmModal
-        visible={declining != null}
-        title="Rifiutare il turno?"
-        message="La sede verrà avvisata."
-        confirmLabel="Rifiuta"
-        destructive
-        pending={respond.isPending}
-        onConfirm={doDecline}
-        onCancel={() => setDeclining(null)}
+      <DeclineShiftModal
+        assignmentId={declining}
+        onClose={() => setDeclining(null)}
       />
     </>
   );

@@ -2981,6 +2981,7 @@ export type Database = {
         | "absence_response"
         | "absence_sick"
         | "archive_reminder"
+        | "shift_reconfirmed"
       shift_status: "open" | "closed" | "cancelled"
       venue_scope: "all" | "selected"
     }
@@ -3146,6 +3147,7 @@ export const Constants = {
         "absence_response",
         "absence_sick",
         "archive_reminder",
+        "shift_reconfirmed",
       ],
       shift_status: ["open", "closed", "cancelled"],
       venue_scope: ["all", "selected"],

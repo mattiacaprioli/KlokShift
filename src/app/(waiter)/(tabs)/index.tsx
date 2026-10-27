@@ -5,7 +5,6 @@ import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, View } from "@/tw";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Mono } from "@/components/ui/Mono";
@@ -17,6 +16,7 @@ import {
   useMyAssignedUpcoming,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
+import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { HomeClockCard } from "@/features/clock/HomeClockCard";
@@ -118,23 +118,6 @@ export default function WaiterHomeScreen() {
       {
         onSuccess: () => toast.show("Presenza confermata"),
         onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
-      }
-    );
-  }
-
-  function doDecline() {
-    if (!declining) return;
-    respond.mutate(
-      { id: declining, status: "declined" },
-      {
-        onSuccess: () => {
-          setDeclining(null);
-          toast.show("Turno rifiutato");
-        },
-        onError: () => {
-          setDeclining(null);
-          toast.show("Operazione non riuscita. Riprova.", "error");
-        },
       }
     );
   }
@@ -283,15 +266,9 @@ export default function WaiterHomeScreen() {
 
       </ScrollView>
 
-      <ConfirmModal
-        visible={declining != null}
-        title="Rifiutare il turno?"
-        message="La sede verrà avvisata."
-        confirmLabel="Rifiuta"
-        destructive
-        pending={respond.isPending}
-        onConfirm={doDecline}
-        onCancel={() => setDeclining(null)}
+      <DeclineShiftModal
+        assignmentId={declining}
+        onClose={() => setDeclining(null)}
       />
     </View>
   );

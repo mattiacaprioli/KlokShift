@@ -821,6 +821,33 @@ export async function getMyAssignedUpcoming(
 }
 
 /**
+ * Waiter side: i turni futuri che ho rifiutato. Restano in agenda come
+ * «Rifiutato», così un rifiuto per sbaglio si ripara dal dettaglio («Ci sono,
+ * conferma»). Letti a parte: i «prossimi» li usano anche Home e tab bar, dove
+ * un turno rifiutato non è un turno da fare.
+ */
+export async function getMyDeclinedUpcoming(
+  waiterId: string
+): Promise<AssignmentWithShift[]> {
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(MY_ASSIGNMENT_SELECT)
+    .eq("venue_member.member.user_id", waiterId)
+    .eq("status", "declined")
+    .gte("shift.date", addDaysToDate(todayString(), -1));
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .map(toMyAssignment)
+    .filter(
+      (r) =>
+        r.shift != null &&
+        r.shift.status !== "cancelled" &&
+        !isShiftOver(r.shift)
+    )
+    .sort(bySchedule);
+}
+
+/**
  * Waiter side: le proprie assegnazioni fra `from` e `to` (inclusi), **anche
  * quelle già concluse** — è la settimana a griglia oraria: lunedì passato resta
  * al suo posto, come in qualunque calendario. I rifiutati restano fuori, come
