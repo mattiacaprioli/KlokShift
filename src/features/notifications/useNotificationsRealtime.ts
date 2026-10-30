@@ -13,7 +13,7 @@ export type IncomingNotification = {
 /**
  * Domini da rinfrescare quando arriva una notifica di quel tipo.
  *
- * È il canale notifiche a tenere aggiornato il professionista: essendo
+ * È il canale notifiche a tenere aggiornato il dipendente: essendo
  * filtrato per `user_id`, riceve solo ciò che lo riguarda davvero. Prima
  * `RealtimeSync` sottoscriveva `shifts`, `shift_assignments` e `venue_members`
  * senza filtro per ottenere lo stesso risultato, svegliando ogni client a ogni

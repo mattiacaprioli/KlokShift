@@ -27,7 +27,7 @@ export async function getWorkspaceAvatars(workspaceId: string) {
 }
 
 /**
- * L'organico dell'azienda, dal DB nuovo ai tipi di sempre.
+ * Il team dell'azienda, dal DB nuovo ai tipi di sempre.
  *
  * Sotto ci sono `workspace_members` (la **persona**: anagrafica, account,
  * `member_hr` per note e contratto) e `venue_members` (la sua **riga di organico**
@@ -248,7 +248,7 @@ export function staffRoleNames(member: {
 }
 
 /**
- * Le sedi (aperte) in cui la persona lavora: i chip della riga dell'organico.
+ * Le sedi (aperte) in cui la persona lavora: i chip della riga del team.
  *
  * Le sedi chiuse restano fuori — un chip "Osteria Como" per una sede chiusa sei
  * mesi fa manda solo a cercare un turno che non si può fare.
@@ -303,7 +303,7 @@ export function personEmploymentType(
 // Letture
 // ---------------------------------------------------------------------------
 
-/** L'organico di una sede: le righe di `venue_members` con la persona e i ruoli. */
+/** Il team di una sede: le righe di `venue_members` con la persona e i ruoli. */
 export async function getVenueStaff(
   venueId: string
 ): Promise<StaffMemberWithWaiter[]> {
@@ -378,9 +378,9 @@ export async function getStaffPerson(
 }
 
 /**
- * Tutte le persone dell'organico dell'azienda, **attraverso le sedi**.
+ * Tutte le persone del team dell'azienda, **attraverso le sedi**.
  *
- * È **l'elenco dell'organico**: la tab Staff mostra questo, e serve anche alla
+ * È **l'elenco del team**: la tab Staff mostra questo, e serve anche alla
  * chat, dove il thread è per persona. Una persona compare se lavora **adesso** in
  * almeno una sede: chi è solo collaboratore (nessuna riga di organico) sta nella
  * pagina Collaboratori, chi se n'è andato resta raggiungibile da Ore e dallo
@@ -477,7 +477,7 @@ async function callAddMember(args: {
 }
 
 /**
- * Manda l'email d'invito a una persona in organico (o a un collaboratore) che
+ * Manda l'email d'invito a una persona nel team (o a un collaboratore) che
  * non ha ancora un account. Il server prende l'indirizzo dalla scheda: qui si
  * passa solo il membro, così nessuna chiamata può spedire a un indirizzo
  * arbitrario. Il canale (link alla vetrina / token per la dashboard) lo decide
@@ -532,7 +532,7 @@ export async function sendStaffInvite(memberId: string): Promise<void> {
 
 /**
  * Come è finita l'aggiunta di una persona. Serve alla UI per dire la cosa
- * giusta: "Aggiunto allo staff" e "Invito spedito" non sono la stessa frase, e
+ * giusta: "Aggiunto al team" e "Invito spedito" non sono la stessa frase, e
  * `already` non è nemmeno un successo.
  */
 export type AddStaffResult =
@@ -549,7 +549,7 @@ export type AddStaffResult =
   | { kind: "already"; personId: string };
 
 /**
- * Aggiunge una persona all'organico, email o no: una sola RPC (`add_member`).
+ * Aggiunge una persona al team, email o no: una sola RPC (`add_member`).
  *
  * ⚠️ La domanda «questa persona ha già KlokShift?» **non è del titolare** e non
  * è nemmeno del client: `add_member` guarda l'email e risponde con l'esito.
@@ -647,7 +647,7 @@ export async function addSelfToStaff(args: {
 }
 
 /**
- * Aggiunge (o rimette) una persona in organico in una sede. Nessun invito:
+ * Aggiunge (o rimette) una persona nel team in una sede. Nessun invito:
  * l'accordo con l'azienda c'è già. Se in quella sede c'era stata e se n'era
  * andata, la RPC rianima la riga di prima, con le mansioni che aveva — l'unique
  * `(member, venue)` non ne ammette una seconda. Ritorna l'id della riga di
@@ -713,11 +713,11 @@ export async function updateStaffMember(args: {
 }
 
 /**
- * Toglie una persona dall'organico: da una sede (`venueId`) o da tutta l'azienda.
+ * Toglie una persona dal team: da una sede (`venueId`) o da tutta l'azienda.
  *
  * ⚠️ **Non è un delete.** Le assegnazioni passate restano (sono le ore che
  * vanno al commercialista): la RPC segna l'uscita, libera i turni futuri e avvisa
- * il professionista. Il titolare non esce dall'azienda (si passa la titolarità):
+ * il dipendente. Il titolare non esce dall'azienda (si passa la titolarità):
  * per lui si può solo togliere una sede alla volta.
  */
 export async function removeStaffMember(args: {
@@ -732,7 +732,7 @@ export async function removeStaffMember(args: {
 }
 
 // ---------------------------------------------------------------------------
-// Lato professionista
+// Lato dipendente
 // ---------------------------------------------------------------------------
 
 /** Una sede in cui lavoro, con la riga di organico (`venue_members.id`). */
@@ -747,7 +747,7 @@ export type MyEmployer = Pick<
     city: string | null;
     logo_url: string | null;
     workspace_id: string;
-    /** Il titolare condivide il planning della sede con l'organico. */
+    /** Il titolare condivide il planning della sede con il team. */
     staff_sees_planning: boolean;
   } | null;
 };
@@ -764,7 +764,7 @@ type RawEmployer = {
   venue: MyEmployer["venue"];
 };
 
-/** Le sedi in cui sono in organico **adesso** (appartenenza attiva). */
+/** Le sedi in cui sono nel team **adesso** (appartenenza attiva). */
 export async function getMyEmployers(userId: string): Promise<MyEmployer[]> {
   const select: string =
     "id, venue_id, member_id, workspace_id, employment_type, left_at, created_at, " +
@@ -794,7 +794,7 @@ export async function getMyEmployers(userId: string): Promise<MyEmployer[]> {
 
 /**
  * Lascio una sede (`leave`). Prende l'id della **riga di organico**, come il
- * resto dell'app lato professionista, e da lì ricava persona e sede.
+ * resto dell'app lato dipendente, e da lì ricava persona e sede.
  */
 export async function leaveVenue(venueMemberId: string): Promise<void> {
   const { data, error } = await supabase

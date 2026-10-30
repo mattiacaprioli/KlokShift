@@ -62,7 +62,7 @@ export type ShiftDragPayload =
        */
       venueId: string;
       /**
-       * Le sedi in cui **questa persona** è in organico. Servono al ramo «altro
+       * Le sedi in cui **questa persona** è nel team. Servono al ramo «altro
        * giorno»: il turno d'arrivo dev'essere di una di queste, altrimenti la
        * RPC risponde `not_in_roster` e la finestra avrebbe offerto una scelta
        * impossibile.

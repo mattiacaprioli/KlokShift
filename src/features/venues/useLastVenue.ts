@@ -13,13 +13,13 @@ import { loadLastVenueId, saveLastVenueId } from "@/features/venues/lastVenueSto
  * Non è uno stato globale, ed è la differenza che tiene in piedi tutto il
  * refactor del 14/09/2026: ogni form che ne ha bisogno chiama questo hook e ha
  * la sua scelta. Cambiare sede nel form turno non cambia cosa vede l'agenda, non
- * cambia l'organico, non cambia niente fuori da quel form. Se un giorno questo
+ * cambia il team, non cambia niente fuori da quel form. Se un giorno questo
  * valore risalisse in un provider sarebbe di nuovo la sede attiva, con un altro
  * nome.
  *
  * `venueId` è `undefined` finché la preferenza non è letta dal disco **e** le
  * sedi non sono arrivate: in quella finestra i form non devono partire su una
- * sede a caso, che è il modo in cui si vedrebbe lampeggiare l'organico di Roma
+ * sede a caso, che è il modo in cui si vedrebbe lampeggiare il team di Roma
  * aprendo un turno di Milano.
  *
  * Nessun import di Expo o di React Native: lo storage passa da un alias (vedi

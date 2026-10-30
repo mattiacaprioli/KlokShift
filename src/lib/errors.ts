@@ -54,9 +54,9 @@ const PATTERNS: { match: string[]; message: string }[] = [
   // Vale sia per l'azienda nuova (prova non avviata) sia per quella in archivio,
   // e la legge anche l'app nativa: niente inviti all'acquisto (App Store 3.1.3).
   { match: ["workspace_read_only"], message: "Il lavoro operativo non è attivo per questa azienda: chi la gestisce può attivarlo. Lo storico resta consultabile." },
-  { match: ["workspace_people_capacity"], message: "La capacità di persone dell'azienda è raggiunta. Il lavoro esistente continua." },
-  { match: ["workspace_venue_capacity"], message: "La capacità di sedi aperte dell'azienda è raggiunta. Chiudere una sede conserva lo storico." },
-  { match: ["attendance_window_closed"], message: "La rettifica non rientra nella finestra per le presenze pregresse. Contatta l'assistenza." },
+  { match: ["workspace_people_capacity"], message: "Hai raggiunto il numero massimo di persone del tuo piano. Quello che hai già continua a funzionare." },
+  { match: ["workspace_venue_capacity"], message: "Hai raggiunto il numero massimo di sedi aperte del tuo piano. Se chiudi una sede, il suo storico resta." },
+  { match: ["attendance_window_closed"], message: "Il tempo per correggere le presenze passate è scaduto. Contatta l'assistenza." },
   { match: ["workspace_access_unavailable"], message: "Lo stato dell'azienda non è disponibile. Aggiorna e riprova." },
   {
     // Il browser e React Native usano parole diverse per la stessa cosa.
@@ -144,11 +144,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
   },
   {
     match: ["role_not_in_venue"],
-    message: "Quella mansione non appartiene a questa sede.",
+    message: "Quel ruolo non appartiene a questa sede.",
   },
   {
     match: ["not_in_roster"],
-    message: "Questa persona non è in organico in questa sede.",
+    message: "Questa persona non fa parte del team di questa sede.",
   },
   {
     match: ["already_assigned"],
@@ -164,7 +164,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questo turno è stato annullato.",
   },
   {
-    // Lo vede anche il professionista che conferma tardi: niente rimandi a
+    // Lo vede anche il dipendente che conferma tardi: niente rimandi a
     // «Turno già fatto» qui, li danno i form di chi gestisce.
     match: ["shift_finished"],
     message: "Questo turno è già finito.",
@@ -227,9 +227,9 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "C'è già una timbratura per questo turno: correggi quella.",
   },
   {
-    // Chiusa da un altro nel frattempo: il gestore o il professionista (C13).
+    // Chiusa da un altro nel frattempo: il gestore o il dipendente (C13).
     match: ["clock_already_closed"],
-    message: "L'uscita è già stata registrata. Aggiorna la pagina.",
+    message: "L'uscita è già stata registrata nel frattempo.",
   },
   {
     match: ["break_not_clocked"],
@@ -254,7 +254,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
   },
   {
     match: ["template_invalid"],
-    message: "Controlla orari e fabbisogno del modello.",
+    message: "Controlla orari e persone che servono nel modello.",
   },
   {
     match: ["break_rule_invalid"],
@@ -264,7 +264,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
   {
     match: ["clock_open_too_long"],
     message:
-      "L’entrata è aperta da troppe ore: l’uscita la registra chi gestisce.",
+      "L’entrata è aperta da troppe ore: l’uscita la inserisce la sede.",
   },
   {
     match: ["note_too_long"],
@@ -291,7 +291,7 @@ const PATTERNS: { match: string[]; message: string }[] = [
   },
   {
     match: ["invalid_status"],
-    message: "Stato non valido per questa azione.",
+    message: "Nel frattempo è cambiato qualcosa: aggiorna e riprova.",
   },
   {
     match: ["title_required", "name_required"],
@@ -311,11 +311,11 @@ const PATTERNS: { match: string[]; message: string }[] = [
   },
   {
     match: ["duplicate key", "unique constraint"],
-    message: "Esiste già un elemento con questi dati.",
+    message: "Esiste già, con questi stessi dati.",
   },
   {
     match: ["foreign key constraint"],
-    message: "Non si può fare: questo dato è collegato ad altro.",
+    message: "Non si può fare: è ancora usato altrove.",
   },
   {
     match: ["check constraint", "invalid input syntax", "violates not-null"],

@@ -128,7 +128,7 @@ export function shiftMoveImpact(input: {
   assignees: MoveAssignee[];
   /** Dove finisce: data e orari nuovi (gli orari possono non cambiare). */
   to: ShiftTimes;
-  /** Chi sta spostando, se è anche in organico: il trigger lo salta. */
+  /** Chi sta spostando, se è anche nel team: il trigger lo salta. */
   myWaiterId?: string;
   /** Le assenze della finestra adiacente, di chiunque: filtrate per persona. */
   absences: PersonAbsence[];

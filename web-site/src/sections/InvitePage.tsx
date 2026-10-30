@@ -16,7 +16,7 @@ import { t } from "../content";
  * già preparato. Tutto il resto della pagina è contorno; quella frase è la
  * pagina.
  *
- * Solo per la persona in organico: il collaboratore riceve un link monouso
+ * Solo per la persona nel team: il collaboratore riceve un link monouso
  * alla dashboard (`#/invito`) e non passa da qui. Il collegamento lo fa l'email
  * confermata (`private.link_member_invites`), non questa pagina.
  *
@@ -70,7 +70,7 @@ export function InvitePage() {
           </ol>
 
           {/* La frase da cui dipende tutto il meccanismo: chi si registra con un
-              altro indirizzo entra in KlokShift ma non nell'organico. */}
+              altro indirizzo entra in KlokShift ma non nel team. */}
           <div className="mt-8 rounded-2xl border border-border-gold bg-bg-card p-6">
             <h2 className="font-semibold text-gold">
               {c.calloutTitle}

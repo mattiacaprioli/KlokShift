@@ -100,7 +100,7 @@ export function FirstStepsCard() {
           />
           {steps.next.id === "people" && !steps.hasSelfCard ? (
             <GhostButton
-              label="Lavori anche tu? Mettiti in organico"
+              label="Lavori anche tu? Mettiti nel team"
               onPress={() => router.push("/(manager)/staff/new?self=1")}
             />
           ) : null}

@@ -15,7 +15,7 @@ export async function downloadFullExport(workspaceId: string, onProgress?: (mess
   const { data, error } = await supabase.rpc("export_workspace_data", { p_workspace: workspaceId });
   if (error) {
     if (/export_not_allowed/.test(error.message)) {
-      throw new UserFacingError("L’export completo è per chi gestisce l’azienda: titolare, oppure collaboratore con «Organico» e «Ore» su tutte le sedi.");
+      throw new UserFacingError("L’export completo è per chi gestisce l’azienda: titolare, oppure collaboratore con «Team» e «Ore» su tutte le sedi.");
     }
     if (/workspace_not_readable/.test(error.message)) {
       throw new UserFacingError("Il periodo di consultazione di questa azienda è terminato: i dati non sono più disponibili.");

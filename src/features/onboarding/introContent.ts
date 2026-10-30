@@ -47,7 +47,7 @@ export const INTRO_SLIDES: Record<IntroAudience, IntroSlide[]> = {
     {
       icon: "shield",
       title: "Gestisci quello che ti hanno affidato",
-      body: "Il titolare ha scelto cosa puoi fare: turni, organico, ore o dati della sede.",
+      body: "Il titolare ha scelto cosa puoi fare: turni, team, ore o dati della sede.",
     },
     {
       icon: "calendar",

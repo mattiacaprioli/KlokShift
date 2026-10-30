@@ -25,7 +25,7 @@ export function PersonAvatarProvider({ children }: { children: ReactNode }) {
     enabled: !!workspaceId,
   });
   useEffect(() => {
-    if (error) reportError(error, "foto organico");
+    if (error) reportError(error, "foto team");
   }, [error]);
   const photos = useMemo(() => {
     const people = new Map<string, Photo>();

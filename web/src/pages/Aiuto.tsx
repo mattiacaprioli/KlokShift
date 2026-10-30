@@ -22,7 +22,7 @@ import { SidebarIcon, type SidebarIconName } from "../ui/SidebarIcon";
  */
 export function AiutoPage() {
   // Una guida compare solo a chi può fare quello che spiega: i collaboratori
-  // sono del titolare, le assenze di chi gestisce l'organico. Domande e
+  // sono del titolare, le assenze di chi gestisce il team. Domande e
   // contatto li vedono tutti.
   const { isOwner, canAny, workspaceId, workspaceName } = useOwnerVenues();
   const canStaff = canAny("can_manage_staff");

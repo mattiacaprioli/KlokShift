@@ -66,7 +66,7 @@ export function buildHoursHtml(
   /** Ferie, permessi e malattia del periodo: una seconda tabella, se ce ne sono. */
   absences: AbsenceSummaryRow[] = [],
   /**
-   * I nomi delle persone scelte; vuoto = tutto l'organico. Il documento lo
+   * I nomi delle persone scelte; vuoto = tutto il team. Il documento lo
    * dice, perché chi lo riceve deve sapere che non è l'azienda intera.
    */
   selection: readonly string[] = []
@@ -251,7 +251,7 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
  * Il nome resta nel file per la ragione vera: nella cartella Download tre file
  * "ore-settembre-2026.csv" sono indistinguibili, e uno di essi è l'allegato che
  * parte verso il commercialista. *Quale* nome — la sede o il titolare — lo decide
- * `companyName()`, con la stessa regola di `chat_counterpart`: se al professionista
+ * `companyName()`, con la stessa regola di `chat_counterpart`: se al dipendente
  * in chat compare "Giuseppe Buffa", al commercialista non può comparire
  * "Trattoria Roma".
  */

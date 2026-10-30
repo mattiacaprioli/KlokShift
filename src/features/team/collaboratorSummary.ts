@@ -25,9 +25,9 @@ export type CollaboratorSummary = {
 /** Dove porta ciascun permesso, nell'ordine in cui conviene cominciare. */
 const START: Record<TeamPermission, { path: string; label: string }> = {
   can_manage_shifts: { path: "/planning", label: "Apri il planning" },
-  can_manage_staff: { path: "/staff", label: "Apri lo staff" },
+  can_manage_staff: { path: "/staff", label: "Apri il team" },
   can_view_hours: { path: "/ore", label: "Apri le ore" },
-  can_manage_documents: { path: "/staff", label: "Apri lo staff" },
+  can_manage_documents: { path: "/staff", label: "Apri il team" },
   can_manage_venue: { path: "/sede", label: "Apri la sede" },
 };
 

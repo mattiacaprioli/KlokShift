@@ -12,7 +12,7 @@ export type CompanyAbsenceFilters = {
   personId: string | null;
   /** Vuoto = tutti i tipi. */
   kinds: AbsenceKind[];
-  /** Le persone in organico in quella sede (anche se poi ne sono uscite). */
+  /** Le persone nel team in quella sede (anche se poi ne sono uscite). */
   venueId: string | null;
 };
 
@@ -39,10 +39,10 @@ export function toggleAbsenceKind(
 }
 
 /**
- * `venueMemberIds`: le persone della sede scelta, ricavate dall'organico. Se la
- * sede è scelta ma l'organico non è ancora arrivato, meglio una lista vuota
+ * `venueMemberIds`: le persone della sede scelta, ricavate dal team. Se la
+ * sede è scelta ma il team non è ancora arrivato, meglio una lista vuota
  * che una lista non filtrata spacciata per filtrata. Attesa ed errore
- * dell'organico li deve dire la pagina: qui sono solo «vuota».
+ * del team li deve dire la pagina: qui sono solo «vuota».
  */
 export function filterCompanyAbsences<
   T extends Pick<AbsenceWithPerson, "member_id" | "kind">,
@@ -61,7 +61,7 @@ export function filterCompanyAbsences<
 
 /**
  * Le persone da scegliere: solo chi ha almeno un'assenza nella finestra, in
- * ordine alfabetico. Un elenco di tutto l'organico porterebbe quasi sempre a
+ * ordine alfabetico. Un elenco di tutto il team porterebbe quasi sempre a
  * una lista vuota.
  */
 export function absencePeopleOf(

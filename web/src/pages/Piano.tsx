@@ -61,14 +61,14 @@ export function PianoPage() {
               <Value label="Sedi aperte" value={current.usage?.venues ?? "Non disponibile"} />
               <Value label="Sedi consentite" value={current.limits.venues ?? "Non assegnato"} />
               {current.operational_from ? <Value label="Inizio accesso" value={date(current.operational_from)} /> : null}
-              {current.operational_until ? <Value label={current.source === "trial" ? "Fine prova" : current.source === "subscription" ? "Fine del periodo pagato" : current.source === "payment_grace" ? "Termine per il pagamento" : "Fine operatività"} value={date(current.operational_until)} /> : current.source === "complimentary_lifetime" ? <Value label="Scadenza" value="Senza scadenza commerciale" /> : null}
-              {current.attendance_until ? <Value label="Termine rettifiche pregresse" value={date(current.attendance_until)} /> : null}
+              {current.operational_until ? <Value label={current.source === "trial" ? "Fine prova" : current.source === "subscription" ? "Fine del periodo pagato" : current.source === "payment_grace" ? "Termine per il pagamento" : "Attiva fino al"} value={date(current.operational_until)} /> : current.source === "complimentary_lifetime" ? <Value label="Scadenza" value="Senza scadenza commerciale" /> : null}
+              {current.attendance_until ? <Value label="Correzioni alle presenze passate fino al" value={date(current.attendance_until)} /> : null}
               {current.archive_until ? <Value label="Termine consultazione ed export" value={date(current.archive_until)} /> : null}
             </dl>
           ) : null}
           {current?.state === "migration_pending" ? <p className="mt-5 text-sm text-t2">Questa azienda esisteva già prima dei nuovi piani. Il piano e i limiti devono essere assegnati esplicitamente; la prova non parte automaticamente.</p> : null}
-          {current?.source === "complimentary_lifetime" ? <p className="mt-5 text-sm text-t2">La gratuità vale per questa azienda e per la capacità indicata. Non prevede pagamenti o rinnovi.</p> : null}
-          {current?.plan && current.usage ? <p className="mt-5 text-xs text-t3">Ogni persona conta una volta nell’azienda, anche se lavora in più sedi. I gestori senza appartenenza all’organico non consumano posti.</p> : null}
+          {current?.source === "complimentary_lifetime" ? <p className="mt-5 text-sm text-t2">La gratuità vale per questa azienda e nei limiti indicati. Non prevede pagamenti o rinnovi.</p> : null}
+          {current?.plan && current.usage ? <p className="mt-5 text-xs text-t3">Ogni persona conta una volta nell’azienda, anche se lavora in più sedi. Chi gestisce senza lavorare nei turni non occupa posti.</p> : null}
           {current?.limits.people === 30 && (current.usage?.people ?? 0) >= 28 ? <p className="mt-3 text-sm text-gold">Il limite di 30 persone è vicino o raggiunto. Le persone e i turni già presenti restano utilizzabili.</p> : null}
           {current?.state === "setup" ? (
             <div className="mt-5 space-y-3 border-t border-border-2 pt-5">
@@ -91,7 +91,7 @@ export function PianoPage() {
               <Link className="focus-gold underline" to="/storico">Storico turni</Link>
               {canAny("can_view_hours") ? <Link className="focus-gold underline" to="/ore">Ore ed export</Link> : null}
             </div>
-            {current?.state === "archive" && current.can_complete_attendance ? <p className="mt-3 text-sm text-t2">Puoi ancora completare le presenze pregresse entro il termine indicato. Questa finestra non consente di creare nuovi turni e non prolunga l’archivio.</p> : null}
+            {current?.state === "archive" && current.can_complete_attendance ? <p className="mt-3 text-sm text-t2">Puoi ancora completare le presenze passate entro la data indicata. Questa finestra non consente di creare nuovi turni e non prolunga l’archivio.</p> : null}
             {current?.state !== "expired" ? <FullExportCard compact /> : null}
           </Card>
         ) : null}
@@ -212,7 +212,7 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
           : billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
       </dl>
       {notice ? <p className="mt-5 text-sm text-t2" role="status">{notice}</p> : null}
-      {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; l’operatività continua per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
+      {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; puoi continuare a lavorare per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
       {pausing ? <p className="mt-5 text-sm text-t2">Pausa programmata: lavori normalmente fino all’ultimo giorno indicato, poi gli addebiti si fermano e l’azienda passa alla consultazione ed export, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.</p>
         : stopping ? <p className="mt-5 text-sm text-t2">Abbonamento in chiusura: lavori normalmente fino all’ultimo giorno indicato, poi l’azienda passa alla consultazione ed export per 12 mesi. Per tornare dopo servirà un nuovo acquisto.</p> : null}
       {paused ? <p className="mt-5 text-sm text-t2">L’abbonamento è in pausa e non ci sono addebiti. L’azienda è in consultazione ed export: turni, ore e documenti restano come li hai lasciati. Quando riparti, Paddle addebita subito un nuovo {yearly ? "anno" : "mese"} da quel giorno.</p> : null}

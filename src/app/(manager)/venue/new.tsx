@@ -93,8 +93,8 @@ export default function VenueNewScreen() {
       title="Nuova sede"
       intro={
         venues.length > 0
-          ? "Una sede in più: avrà un suo organico, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
-          : "Serve solo il nome: lo vede il tuo organico sui turni. Il resto puoi completarlo dopo."
+          ? "Una sede in più: avrà il suo team, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
+          : "Serve solo il nome: lo vede il tuo team sui turni. Il resto puoi completarlo dopo."
       }
       // La prima sede apre l'ultimo passo del setup: la prova. Senza, il
       // titolare si troverebbe persone e turni chiusi senza sapere perché.

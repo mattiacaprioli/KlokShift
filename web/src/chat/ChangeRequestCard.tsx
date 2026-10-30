@@ -54,7 +54,7 @@ export function ChangeRequestCard({
   // pannello del turno (migration 20260915140000).
   const isHours = request?.kind === "hours";
   const deciding = !!request && pending && !isRequester && !isResponse;
-  // Le liste dell'organico servono solo a chi deve scegliere un sostituto, e
+  // Le liste del team servono solo a chi deve scegliere un sostituto, e
   // solo finché la richiesta è aperta: senza `enabled` ogni card vecchia del
   // thread farebbe tre query per niente.
   const picking = deciding && !isHours;

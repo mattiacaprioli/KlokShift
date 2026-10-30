@@ -10,7 +10,7 @@ import { pickAvatar } from "./avatarPicker";
 /**
  * La foto profilo di chi è loggato: scegliere, caricare, togliere.
  *
- * Vale per tutti i ruoli — il professionista dalla sua scheda, il gestore dal
+ * Vale per tutti i ruoli — il dipendente dalla sua scheda, il gestore dal
  * suo account — perché è lo stesso gesto sullo stesso bucket. Stava scritto due
  * volte nelle due schermate, ed era il modo più veloce per far divergere
  * l'ordine delle operazioni, che è l'unica parte delicata:

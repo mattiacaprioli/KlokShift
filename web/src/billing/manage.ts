@@ -14,7 +14,7 @@ type ChangeSelection = { workspaceId: string; plan: "base" | "team"; extraVenues
 
 const ERRORS: [string, string][] = [
   ["billing_downgrade_unsupported", "Per passare a un piano più piccolo o ridurre le sedi scrivi a info@klokshift.com."],
-  ["billing_no_change", "La capacità scelta è uguale a quella attuale."],
+  ["billing_no_change", "È la stessa scelta che hai già."],
   ["billing_change_scheduled", "C’è già una pausa o una chiusura programmata: annullala prima di cambiare."],
   ["billing_past_due", "Il rinnovo non è andato a buon fine: aggiorna prima il metodo di pagamento."],
   ["billing_paused", "L'abbonamento è in pausa: ripartilo da questa pagina prima di cambiarlo."],

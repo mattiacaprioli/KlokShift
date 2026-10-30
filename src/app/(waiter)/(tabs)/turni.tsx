@@ -83,7 +83,7 @@ const MODES = [
 type Mode = (typeof MODES)[number]["id"];
 
 /**
- * L'agenda del professionista: i turni che le sedi gli hanno assegnato,
+ * L'agenda del dipendente: i turni che le sedi gli hanno assegnato,
  * raggruppati per giorno sotto un calendario.
  *
  * **Scegliere un giorno fa ripartire l'agenda da lì**, non la fa scorrere fino
@@ -115,7 +115,7 @@ type Mode = (typeof MODES)[number]["id"];
  * domanda («cosa succede giovedì») e non la risposta. Per la stessa ragione le
  * due liste non tengono uno stato per uno: lo leggono da qui.
  *
- * Il selettore compare solo se almeno una delle sedi in cui si è in organico
+ * Il selettore compare solo se almeno una delle sedi in cui si è nel team
  * condivide il planning (`venues.staff_sees_planning`, che il titolare
  * comanda dalla scheda della sede): altrimenti la seconda vista non avrebbe
  * niente da mostrare, e un selettore con metà dei tocchi inerti è peggio di
@@ -189,7 +189,7 @@ export default function WaiterShiftsScreen() {
     (a) => a.shift.status !== "cancelled" && a.status === "assigned"
   );
 
-  // Chi è in organico da qualche parte: decide se il selettore ha senso, e se
+  // Chi è nel team da qualche parte: decide se il selettore ha senso, e se
   // sulle card serve il nome della sede.
   const employers = useMyEmployers(waiterId);
   // La vista «La sede» esiste solo se almeno una sede condivide il planning

@@ -20,7 +20,7 @@ export type WaiterProfileInput = {
 /**
  * Esempi mostrati come placeholder sotto il campo "ruolo principale". Il campo è
  * **testo libero**: era una lista chiusa finché coincideva con quella
- * dell'organico, ma i ruoli ora li scrive ogni sede per sé e nessun elenco
+ * del team, ma i ruoli ora li scrive ogni sede per sé e nessun elenco
  * fisso potrebbe descrivere tutti. È come la persona si presenta, non un dato
  * che deve combaciare con i ruoli che le assegna una sede.
  */
@@ -53,7 +53,7 @@ export const LANGUAGE_OPTIONS = [
  * Prende un id e non `auth.uid()` perché è così che la chiama chi ha già la
  * sessione in mano, ma l'unico id che ci passa è il proprio: la variante «per
  * id di un altro» esisteva per le schede che il gestore apriva su un
- * professionista, cadute col CV.
+ * dipendente, cadute col CV.
  */
 export async function getMyWaiterProfile(
   userId: string

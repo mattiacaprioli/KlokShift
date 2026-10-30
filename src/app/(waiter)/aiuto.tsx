@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { SupportView } from "@/features/support/SupportView";
 
-/** «Aiuto e supporto» del professionista: la vista è condivisa col gestore. */
+/** «Aiuto e supporto» del dipendente: la vista è condivisa col gestore. */
 export default function WaiterSupportScreen() {
   const router = useRouter();
   return (

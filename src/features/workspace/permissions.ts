@@ -32,7 +32,7 @@ export const PERM_OF: Record<TeamPermission, Perm> = {
 
 export const TEAM_PERMISSION_LABEL: Record<TeamPermission, string> = {
   can_manage_shifts: "Turni",
-  can_manage_staff: "Organico",
+  can_manage_staff: "Team",
   can_view_hours: "Ore ed export",
   can_manage_documents: "Documenti",
   can_manage_venue: "Dati della sede",
@@ -40,10 +40,10 @@ export const TEAM_PERMISSION_LABEL: Record<TeamPermission, string> = {
 
 export const TEAM_PERMISSION_HINT: Record<TeamPermission, string> = {
   can_manage_shifts: "Crea, modifica e assegna i turni della sede",
-  can_manage_staff: "Aggiunge persone alla sede e assegna le mansioni",
+  can_manage_staff: "Aggiunge persone al team e sceglie i loro ruoli",
   can_view_hours: "Vede le ore lavorate e scarica gli export",
   can_manage_documents: "Vede e carica HACCP, contratti e scadenze",
-  can_manage_venue: "Modifica i dati della sede e l'elenco delle mansioni",
+  can_manage_venue: "Modifica i dati della sede e l'elenco dei ruoli",
 };
 
 export type TeamPermissions = Record<TeamPermission, boolean>;

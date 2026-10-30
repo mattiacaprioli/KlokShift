@@ -6,7 +6,7 @@ export type ChangeRequest = Tables<"shift_change_requests">;
 export type ChangeRequestKind = Enums<"change_request_kind">;
 
 /**
- * Cosa sta chiedendo il professionista.
+ * Cosa sta chiedendo il dipendente.
  *
  * `hours` non è una mezza sostituzione: dice «ci sono, ma su un altro orario».
  * Approvarla **non scrive niente** — è un accordo, e l'orario del turno lo
@@ -90,7 +90,7 @@ export async function getChangeRequest(
 /**
  * Le richieste ancora aperte su un turno, per la riga «cambio richiesto» nel
  * pannello del titolare. La RLS fa già il filtro giusto: il titolare vede quelle
- * dei suoi turni, il professionista solo le proprie.
+ * dei suoi turni, il dipendente solo le proprie.
  */
 export async function getPendingRequestsForShift(
   shiftId: string

@@ -95,7 +95,7 @@ describe("Piano e accesso del cliente", () => {
     const html = situation(render());
     expect(html).toContain('href="/storico"');
     expect(html).toContain('href="/ore"');
-    expect(html).toContain("Termine rettifiche pregresse");
+    expect(html).toContain("Correzioni alle presenze passate fino al");
     expect(html).toContain("Termine consultazione ed export");
     expect(html).toContain("non prolunga l’archivio");
     expect(html).not.toContain("Avvia la prova");
@@ -143,7 +143,7 @@ describe("Piano e accesso del cliente", () => {
     const html = render();
     expect(html).toContain("Rinnovo non riuscito");
     expect(html).toContain("Team · annuale");
-    expect(html).toContain("l’operatività continua per 7 giorni");
+    expect(html).toContain("puoi continuare a lavorare per 7 giorni");
     expect(html).not.toContain("Procedi al pagamento");
   });
   const subscriptionAccess = () => context.mockReturnValue({ ...base, access: { ...trialAccess, source: "subscription" } });

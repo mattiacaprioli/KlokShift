@@ -115,7 +115,7 @@ export function NotifichePage() {
       {items.length === 0 ? (
         <Placeholder
           title="Nessuna notifica"
-          detail="Risposte dello staff, aggiornamenti dei turni e messaggi arrivano qui."
+          detail="Risposte del team, aggiornamenti dei turni e messaggi arrivano qui."
         />
       ) : (
         <PageColumns

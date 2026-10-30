@@ -108,7 +108,7 @@ function AssignedRow({
   live?: LiveClockStatus | null;
 }) {
   const sm = assignment.staff_member;
-  const name = sm?.display_name ?? "Staff";
+  const name = sm?.display_name ?? "Persona";
   return (
     <Card className="rounded-3xl border-border-2 p-4" onPress={onPress}>
       <View className="flex-row items-center gap-3">
@@ -198,7 +198,7 @@ function PresenceRow({
   const presence = useSetAssignmentPresence(shiftId);
   const toast = useToast();
   const sm = assignment.staff_member;
-  const name = sm?.display_name ?? "Staff";
+  const name = sm?.display_name ?? "Persona";
   const present = isWorked(assignment.status);
   const effective = present ? (assignment.worked_hours ?? plannedHours) : 0;
 
@@ -595,7 +595,7 @@ export default function ShiftDetailScreen() {
             />
           ) : null}
           <InfoRow
-            label="Staff"
+            label="Team"
             value={`${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`}
           />
         </Card>
@@ -724,7 +724,7 @@ export default function ShiftDetailScreen() {
         ) : null}
 
         <View className="mt-8 gap-3">
-          <Mono>{isPast ? "Presenze" : "Staff assegnato"}</Mono>
+          <Mono>{isPast ? "Presenze" : "Chi lavora"}</Mono>
             {isPast ? (
               <Text className="-mt-1 text-xs text-t3">
                 Segna chi ha svolto il turno e correggi le ore se serve.
@@ -745,7 +745,7 @@ export default function ShiftDetailScreen() {
             {assignmentsQuery.isError ? (
               <QueryError
                 onRetry={() => assignmentsQuery.refetch()}
-                subtitle="Non siamo riusciti a caricare lo staff. Riprova."
+                subtitle="Non siamo riusciti a caricare le persone del turno. Riprova."
               />
             ) : staffRows.length === 0 ? (
               <EmptyState
@@ -755,7 +755,7 @@ export default function ShiftDetailScreen() {
                     ? assignments.length > 0
                       ? "Chi era assegnato ha rifiutato il turno."
                       : "Su questo turno non era segnato nessuno."
-                    : "Questo turno non ha ancora nessuno dello staff."
+                    : "In questo turno non c'è ancora nessuno."
                 }
               />
             ) : isPast ? (
@@ -841,7 +841,7 @@ export default function ShiftDetailScreen() {
       <ConfirmModal
         visible={cancelVisible}
         title="Annullare il turno?"
-        message="I professionisti coinvolti ricevono una notifica e il turno sparisce dalle loro viste. Potrai ripristinarlo da qui."
+        message="Le persone del turno ricevono una notifica e il turno sparisce dalle loro viste. Potrai ripristinarlo da qui."
         confirmLabel="Annulla turno"
         cancelLabel="Indietro"
         destructive

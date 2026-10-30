@@ -24,7 +24,7 @@ export async function updateMyProfile(
 }
 
 /**
- * Il professionista lascia una sede in cui è in organico (`leave`): si dimette
+ * Il dipendente lascia una sede in cui è nel team (`leave`): si dimette
  * da quel posto di lavoro, non dall'azienda. I suoi turni futuri lì vengono
  * tolti dal server.
  */

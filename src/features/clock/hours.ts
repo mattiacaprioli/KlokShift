@@ -102,7 +102,7 @@ export function clockBreakText(
   }, ${paid ? "retribuita" : "non retribuita"}`;
 }
 
-/** La pausa aperta adesso, se il professionista è in pausa. */
+/** La pausa aperta adesso, se il dipendente è in pausa. */
 export function openClockBreak(
   record: ClockRecordWithCorrections
 ): ClockBreak | null {
@@ -314,7 +314,7 @@ export function shiftDeviations(
     const delta = actual.hours - planned;
     if (Math.abs(delta) < 0.001) continue;
     deviations.push({
-      name: assignment.staff_member?.display_name || "Professionista",
+      name: assignment.staff_member?.display_name || "Persona",
       delta,
       kind: actual.kind,
     });

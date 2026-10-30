@@ -19,7 +19,7 @@ import { Button, Card, Pill } from "../ui/primitives";
 import { useUnsavedEdit } from "@/lib/unsavedEdits";
 
 /**
- * «Fagli gestire l'azienda»: la promozione di una persona dell'organico.
+ * «Fagli gestire l'azienda»: la promozione di una persona del team.
  *
  * Gemella di `src/features/team/PromoteSection.tsx`, che è l'app. Due file e non
  * uno perché la parte condivisa (api + hooks) è già condivisa: qui resta solo il
@@ -156,7 +156,7 @@ export function PromoteSection({
         Gestione dell&apos;azienda
       </span>
       <p className="-mt-1 text-xs leading-5 text-t3">
-        {firstName} continua a essere un professionista con i suoi turni: gli si
+        {firstName} continua a essere un dipendente con i suoi turni: gli si
         aggiunge un secondo accesso, non gli si cambia l&apos;account. Può
         mettersi in turno da solo, ma le sue presenze e le sue ore le segna chi
         ha il permesso Ore.
@@ -192,7 +192,7 @@ export function PromoteSection({
           ) : editing ? null : confirming ? (
             <span className="flex items-center gap-2">
               <span className="text-xs text-t3">
-                Torna a essere solo un professionista?
+                Torna a essere solo un dipendente?
               </span>
               <Button onClick={() => setConfirming(false)}>Annulla</Button>
               <Button

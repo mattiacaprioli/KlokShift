@@ -18,7 +18,7 @@ const KINDS = [
 ];
 
 /**
- * Cosa chiede il professionista sul proprio turno, dopo averlo confermato (e
+ * Cosa chiede il dipendente sul proprio turno, dopo averlo confermato (e
  * l'unica strada del dipendente fisso, la cui assegnazione nasce confermata).
  *
  * Due richieste diverse, non due gradi della stessa: «non posso venire» chiede a

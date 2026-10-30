@@ -119,13 +119,13 @@ export function clockInNote(
   if (method === "manual") {
     return {
       kind: "note",
-      text: "Per questa sede gli orari li registra chi gestisce.",
+      text: "In questa sede non si timbra: gli orari li inserisce la sede.",
     };
   }
   if (method !== "app") {
     return {
       kind: "note",
-      text: "Questo metodo di timbratura sarà disponibile in una prossima versione.",
+      text: "Questa sede timbra in un modo che l’app non fa ancora: chiedi alla sede.",
     };
   }
   switch (clockInPhase(shift, now)) {

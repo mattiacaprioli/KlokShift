@@ -66,7 +66,7 @@ export const BREAK_POLICY_COPY = {
 } as const;
 
 /**
- * Come si registra la pausa (20261022000000): timbrata dal professionista o
+ * Come si registra la pausa (20261022000000): timbrata dal dipendente o
  * fissa, cioè quella del turno senza pulsante. La sede sceglie, la persona può
  * fare eccezione (null = come la sede). Stesse parole in app e dashboard.
  */
@@ -79,9 +79,9 @@ export const BREAK_CLOCKED_LABEL = {
 
 export const BREAK_CLOCKED_COPY = {
   clocked:
-    "Il professionista timbra inizio e fine pausa dall’app. Se non la timbra, vale la pausa del turno.",
+    "Il dipendente timbra inizio e fine pausa dall’app. Se non la timbra, vale la pausa del turno.",
   fixed:
-    "Il professionista non timbra la pausa: vale quella scritta sul turno, e chi gestisce le ore può correggerla.",
+    "Il dipendente non timbra la pausa: vale quella scritta sul turno, e chi gestisce le ore può correggerla.",
   note: "Vale dalla prossima entrata: le timbrature già aperte restano come sono.",
 } as const;
 

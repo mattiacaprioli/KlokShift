@@ -113,7 +113,7 @@ export const DUPLICATE_WITH_STAFF_LABEL = "Copia anche le persone assegnate";
 export function duplicateWithStaffHint(withStaff: boolean): string {
   return withStaff
     ? "Ognuno riceverà la notifica del nuovo turno. Chi aveva rifiutato o era assente non viene ricopiato."
-    : "Copia solo orari e fabbisogno per ruolo: i turni restano da assegnare e nessuno riceve notifiche.";
+    : "Copia solo orari e persone che servono per ruolo: i turni restano da assegnare e nessuno riceve notifiche.";
 }
 
 /** «2 turni restano fuori: cadrebbero in giorni già passati…». */

@@ -14,7 +14,7 @@ type Props = {
 };
 
 /**
- * I ruoli di una persona dell'organico: scelta **multipla** sui ruoli del
+ * I ruoli di una persona del team: scelta **multipla** sui ruoli del
  * sede. Prima era un ruolo solo, ma chi fa il cameriere il venerdì e il barman
  * il sabato non era rappresentabile — e sul turno si sceglie poi quale dei due
  * ricopre quel giorno.

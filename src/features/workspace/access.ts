@@ -238,17 +238,17 @@ export function workspaceAccessMessage(
         ? "L'azienda è pronta: avvia la prova di 30 giorni, senza carta, per aggiungere persone e creare turni."
         : "Apri una sede, poi avvia la prova di 30 giorni senza carta.";
     case "archive": return access.can_complete_attendance
-      ? "Puoi consultare ed esportare lo storico e completare le presenze pregresse entro il termine indicato."
+      ? "Puoi consultare ed esportare lo storico e completare le presenze passate entro la data indicata."
       : "L'accesso operativo è terminato. Puoi consultare ed esportare lo storico.";
     case "expired": return "Il periodo di consultazione dell'archivio è terminato. Contatta l'assistenza per le richieste sui tuoi dati.";
     case "operational": return access.source === "trial"
       ? "Prova di 30 giorni attiva."
       : access.source === "complimentary_lifetime"
-        ? "Accesso gratuito permanente attivo, entro la capacità concessa."
+        ? "Accesso gratuito permanente attivo, nei limiti concessi."
         : access.source === "subscription"
           ? "Abbonamento attivo."
           : access.source === "payment_grace"
-            ? "Il rinnovo dell'abbonamento non è andato a buon fine. L'operatività continua per pochi giorni: il titolare può sistemarlo."
+            ? "Il rinnovo dell'abbonamento non è andato a buon fine. Puoi continuare a lavorare ancora per pochi giorni: il titolare può sistemarlo."
             : "Accesso operativo attivo.";
   }
 }
@@ -284,7 +284,7 @@ export function operationsGate(
       };
     }
     case "archive":
-      return { allowed: false, canStartTrial: false, reason: "L'operatività dell'azienda è terminata: puoi consultare ed esportare lo storico." };
+      return { allowed: false, canStartTrial: false, reason: "L'azienda non è più attiva: puoi consultare ed esportare lo storico." };
     case "expired":
       return { allowed: false, canStartTrial: false, reason: "Il periodo di consultazione dell'archivio è terminato." };
     default:

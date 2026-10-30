@@ -6,7 +6,7 @@ import { ConfirmMock } from "../mock/ConfirmMock";
 import { t } from "../content";
 
 /*
- * Il lato professionista. Layout a due colonne da `lg`: il telefono a sinistra
+ * Il lato dipendente. Layout a due colonne da `lg`: il telefono a sinistra
  * (è un'app da telefono) e l'elenco a destra. Sotto `lg` il mockup viene dopo
  * il testo, perché su uno schermo piccolo la promessa deve arrivare prima
  * dell'illustrazione.

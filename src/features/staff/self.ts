@@ -26,7 +26,7 @@ export type SelfStaffState = {
   /** `session.user.id`, o stringa vuota se non c'è sessione. */
   myId: string;
   /**
-   * La mia persona nell'organico di questa azienda, se mi ci sono messo.
+   * La mia persona nel team di questa azienda, se mi ci sono messo.
    * `undefined` per chi gestisce e non lavora, che è ancora il caso normale.
    */
   person: OwnerPerson | undefined;
@@ -49,7 +49,7 @@ export type SelfStaffState = {
    * dell'azienda, non della singola sede.
    */
   canEditOwnPayroll: (venueId?: string) => boolean;
-  /** L'organico non è ancora arrivato: non si sa se una scheda c'è. */
+  /** Il team non è ancora arrivato: non si sa se una scheda c'è. */
   isPending: boolean;
 };
 

@@ -85,7 +85,7 @@ export function formatShiftHours(
     : hours;
 }
 
-// "Pausa 30 min" — con `paid` aggiunge se è retribuita. Al professionista non
+// "Pausa 30 min" — con `paid` aggiunge se è retribuita. Al dipendente non
 // si dice: decide la sede, e a lui serve sapere solo quanto dura.
 export function formatBreak(minutes: number, paid?: boolean): string {
   const label = `Pausa ${formatBreakMinutes(minutes)}`;

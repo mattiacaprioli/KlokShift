@@ -48,7 +48,7 @@ export type AssignmentWithShift = Assignment & {
 type WaiterMini = Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url">;
 
 /**
- * Assignment + la persona in organico (e il suo account, se ce l'ha).
+ * Assignment + la persona nel team (e il suo account, se ce l'ha).
  *
  * La chiave resta `staff_member`: è la riga di organico (`venue_members`) letta
  * nella forma `StaffMember`, con nome e account che stanno sulla persona.
@@ -100,7 +100,7 @@ export type StaffAssignmentInput = {
   role_id: string | null;
 };
 
-/** Fabbisogno per ruolo così come lo scrivono i form. */
+/** Persone che servono così come lo scrivono i form. */
 export type RoleTargetInput = { role_id: string; count: number };
 
 /**
@@ -118,7 +118,7 @@ export type InternalShiftPlan = {
    *
    * Anche `venue_member_id` e `role_id` sono legati alla sede del turno che ha
    * generato il piano: il server rifiuta (`not_in_roster`, `role_not_in_venue`)
-   * chi non è in organico o un ruolo che non è di quella sede.
+   * chi non è nel team o un ruolo che non è di quella sede.
    */
   venue_id: string;
   title: string;
@@ -298,7 +298,7 @@ export type ShiftRoleRequirement = Tables<"shift_role_requirements"> & {
   role: { id: string; name: string; sort_order: number } | null;
 };
 
-/** Fabbisogno per ruolo di un turno, col nome del ruolo per l'etichetta. */
+/** Persone che servono di un turno, col nome del ruolo per l'etichetta. */
 export async function getShiftRoleRequirements(
   shiftId: string
 ): Promise<ShiftRoleRequirement[]> {
@@ -329,7 +329,7 @@ export async function getShiftAssignments(
 }
 
 /**
- * Il professionista conferma o rifiuta il **proprio** turno (RPC
+ * Il dipendente conferma o rifiuta il **proprio** turno (RPC
  * `respond_assignment`). Ritorna la riga aggiornata: un turno finito o
  * annullato, o non suo, è un errore e non un 200 muto.
  *
@@ -420,7 +420,7 @@ export async function setAssignmentPresence(
 }
 
 /**
- * Statistiche di una **persona** dell'organico (il blocco "Questo mese" della
+ * Statistiche di una **persona** del team (il blocco "Questo mese" della
  * scheda). Sette numeri, calcolati dal database.
  *
  * Sono i numeri dell'**azienda**, non di una sede: chi lavora a Roma e a Milano
@@ -487,7 +487,7 @@ export async function getPersonWorkedShifts(
 }
 
 /**
- * Storico lavoro del professionista ("Le mie ore"): i turni svolti.
+ * Storico lavoro del dipendente ("Le mie ore"): i turni svolti.
  *
  * La lista la fa il database (`get_my_work_history_page`). Il client non può
  * paginare da solo: l'ordinamento è per `shifts.date`, che sta in una tabella
@@ -766,7 +766,7 @@ export async function getOwnerHoursSummary(
 /**
  * Le due funzioni qui sotto filtravano per data **dopo** aver scaricato tutto:
  * ciascuna si portava a casa l'intera storia delle assegnazioni del
- * professionista e ne buttava via metà. Due query, lo stesso identico dataset
+ * dipendente e ne buttava via metà. Due query, lo stesso identico dataset
  * completo, due volte. Ora il filtro è server-side (`shift.date` sull'embed
  * `!inner`), quindi ognuna scarica solo la propria metà.
  *
@@ -800,7 +800,7 @@ function bySchedule(a: AssignmentWithShift, b: AssignmentWithShift): number {
 /**
  * Waiter side: i prossimi turni assegnati. Conserva anche un turno appena
  * concluso se ha ancora un'entrata aperta: deve restare raggiungibile dalla
- * Home finché il professionista non timbra l'uscita.
+ * Home finché il dipendente non timbra l'uscita.
  */
 export async function getMyAssignedUpcoming(
   waiterId: string
@@ -810,7 +810,7 @@ export async function getMyAssignedUpcoming(
     .select(MY_ASSIGNMENT_SELECT)
     .eq("venue_member.member.user_id", waiterId)
     .neq("status", "declined")
-    // Da ieri: il turno che il professionista sta lavorando adesso non deve
+    // Da ieri: il turno che il dipendente sta lavorando adesso non deve
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
     .gte("shift.date", addDaysToDate(todayString(), -1));
   if (error) throw new Error(error.message);
@@ -877,7 +877,7 @@ export async function getMyAssignmentsInRange(
     .sort(bySchedule);
 }
 
-// Lo storico passato del professionista non si legge più da qui: è paginato da
+// Lo storico passato del dipendente non si legge più da qui: è paginato da
 // `getMyWorkHistoryPage` (RPC `get_my_work_history_page`). Questa versione scaricava
 // tutta la storia in un colpo.
 

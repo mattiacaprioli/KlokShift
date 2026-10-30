@@ -16,9 +16,9 @@ import { TeamRow } from "./TeamRow";
  * visibilità sarebbe la prima a divergere da questa.
  *
  * Non compare **niente** quando la sede non condivide il planning o quando il
- * turno è di una sede in cui non si è più in organico: la RPC non restituisce la
+ * turno è di una sede in cui non si è più nel team: la RPC non restituisce la
  * riga, `team` resta null e la sezione si toglie di mezzo. È voluto — un blocco
- * «non disponibile» spiegherebbe al professionista una scelta del titolare che
+ * «non disponibile» spiegherebbe al dipendente una scelta del titolare che
  * non è affar suo.
  */
 export function ShiftTeamSection({

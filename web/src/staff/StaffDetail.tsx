@@ -121,7 +121,7 @@ export function StaffDetail({
           ) : (
             <Placeholder
               title="Scheda non trovata"
-              detail="Questa persona non fa più parte del tuo organico."
+              detail="Questa persona non fa più parte del tuo team."
             />
           )}
         </div>
@@ -196,7 +196,7 @@ function PersonPanel({
   /**
    * Questa scheda sono io.
    *
-   * Da quando chi gestisce la sede può mettersi in organico, la propria scheda
+   * Da quando chi gestisce la sede può mettersi nel team, la propria scheda
    * si apre da qui — e metà di ciò che c'è dentro è scritto per guardare
    * qualcun altro: la chat, la promozione a collaboratore.
    */
@@ -217,7 +217,7 @@ function PersonPanel({
   // Un tab compare solo se chi guarda ha qualcosa da farci: stessi permessi che
   // prima nascondevano le sezioni.
   const tabs: { id: TabId; label: string }[] = [
-    { id: "anagrafica", label: "Anagrafica" },
+    { id: "anagrafica", label: "Dati personali" },
     {
       id: "sedi",
       label: multiVenue ? `Sedi e ruoli · ${liveMemberships.length}` : "Sedi e ruoli",
@@ -285,7 +285,7 @@ function PersonPanel({
                 scheda: sta in testa, non in fondo a un tab. */}
             {/* Anche da collaboratore: da quando la conversazione è fra due
                 membri qualsiasi dell'azienda (20260920001900), il thread è suo
-                e porta il suo nome — non più un messaggio che al professionista
+                e porta il suo nome — non più un messaggio che al dipendente
                 arrivava da uno sconosciuto. */}
             {/* Con sé stessi non esiste. */}
             {person.waiter_id && !isMe ? (
@@ -436,7 +436,7 @@ function Anagrafica({ person }: { person: StaffPersonDetail }) {
   return (
     <section className="flex flex-col gap-3">
       <SectionHeading
-        title="Anagrafica"
+        title="Dati personali"
         onEdit={editing ? undefined : () => setEditing(true)}
       />
 
@@ -504,7 +504,7 @@ function AnagraficaForm({
           note: notes.trim() || null,
         },
       });
-      toast.show("Anagrafica aggiornata");
+      toast.show("Dati aggiornati");
       onDone();
     } catch (e) {
       // L'unique (owner_id, email) tiene l'aggancio non ambiguo: detto in
@@ -678,7 +678,7 @@ function InviteRow({ person }: { person: StaffPersonDetail }) {
     return (
       <p className="rounded-xl border border-border bg-bg-card px-4 py-3 text-sm text-t2">
         Questa email appartiene a un account già collegato a un&apos;altra scheda
-        del tuo organico. Controlla se sono la stessa persona: in tal caso usa
+        del tuo team. Controlla se sono la stessa persona: in tal caso usa
         quella scheda ed elimina questa.
       </p>
     );
@@ -730,7 +730,7 @@ function InviteRow({ person }: { person: StaffPersonDetail }) {
 /**
  * Il compleanno, in sola lettura e fuori dal modulo.
  *
- * Non è un dato del titolare: lo mette il professionista dal suo profilo
+ * Non è un dato del titolare: lo mette il dipendente dal suo profilo
  * nell'app, e arriva qui solo se ha scelto di metterlo. Giorno e mese, mai
  * l'anno — in `profiles` l'anno non c'è proprio (20260914160000). Sparisce
  * quando non è stato messo: una riga «non indicato» inviterebbe a chiederlo.
@@ -754,7 +754,7 @@ function BirthdayRow({ person }: { person: StaffPersonDetail }) {
 
 /**
  * Le lingue parlate, in sola lettura come il compleanno qui sopra: le mette il
- * professionista dal suo profilo nell'app, e spariscono quando non ce ne sono.
+ * dipendente dal suo profilo nell'app, e spariscono quando non ce ne sono.
  *
  * A differenza del compleanno servono a comporre una squadra — chi fa i turni
  * del sabato vuole sapere chi può stare in sala con dei turisti. È quel che
@@ -914,11 +914,11 @@ function Workplaces({
   // Riprendere qualcuno o dargli un'altra sede è del titolare: l'update su
   // `staff_members` la RLS lo concede solo a lui. Con un account, poi, solo se
   // lavora ancora per lui da qualche parte: chi ha lasciato tutte le sedi
-  // l'accordo l'ha chiuso, e rimetterlo in organico senza chiederglielo sarebbe
+  // l'accordo l'ha chiuso, e rimetterlo nel team senza chiederglielo sarebbe
   // decidere al posto suo.
   const canReassign = isOwner && (!person.waiter_id || liveCount > 0);
   // Le sedi dove non c'è mai stata. Quelle lasciate hanno già la loro card, con
-  // il suo «Rimetti in organico».
+  // il suo «Rimetti nel team».
   const otherVenues = venues.filter(
     (v) => !person.memberships.some((m) => m.venue_id === v.id)
   );
@@ -936,7 +936,7 @@ function Workplaces({
           isOnly={!multiVenue}
           canRestore={canReassign}
           // `remove_staff_member` rifiuta la propria scheda a un collaboratore
-          // (uscire dall'organico non si fa coi poteri con cui si gestiscono
+          // (uscire dal team non si fa coi poteri con cui si gestiscono
           // gli altri): senza questo il bottone chiederebbe conferma per poi
           // mostrare un errore. Il titolare invece può — la sua scheda
           // altrimenti sarebbe inamovibile.
@@ -1067,11 +1067,11 @@ function WorkplaceCard({
   membership,
   /** Unica sede: la rimozione sta nel bottone globale in fondo al pannello. */
   isOnly,
-  /** Può rimettere in organico un'appartenenza finita: vedi `Workplaces`. */
+  /** Può rimettere nel team un'appartenenza finita: vedi `Workplaces`. */
   canRestore,
   /** Può togliere questa appartenenza: vedi `Workplaces`. */
   canRemove = true,
-  /** Il metodo di timbratura usa il permesso Ore, non Organico. */
+  /** Il metodo di timbratura usa il permesso Ore, non Team. */
   canEditClock,
 }: {
   person: StaffPersonDetail;
@@ -1202,7 +1202,7 @@ function WorkplaceCard({
             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-t2">
               {venueName}
             </span>
-            <Pill tone="neutral">Non più in organico</Pill>
+            <Pill tone="neutral">Non più nel team</Pill>
           </div>
           <p className="text-xs leading-5 text-t3">
             {membership.left_at
@@ -1224,13 +1224,13 @@ function WorkplaceCard({
                   },
                   {
                     onSuccess: () =>
-                      toast.show(`Di nuovo in organico a ${venueName}`),
+                      toast.show(`Di nuovo nel team di ${venueName}`),
                     onError: (e) => toast.show(userErrorMessage(e), "error"),
                   }
                 )
               }
             >
-              {restore.isPending ? "Un momento…" : "Rimetti in organico"}
+              {restore.isPending ? "Un momento…" : "Rimetti nel team"}
             </Button>
           </div>
         ) : null}
@@ -1438,9 +1438,9 @@ function WorkplaceCard({
         // `link_status = 'left'` e lo storico resta. Spariscono solo i turni
         // futuri, che nessuno coprirebbe.
         <p className="text-xs leading-5 text-warning">
-          {person.full_name} non sarà più in organico a {venueName}. I turni
+          {person.full_name} non sarà più nel team di {venueName}. I turni
           futuri già assegnati vengono annullati e tornano da coprire; le ore dei
-          turni passati restano nel rendiconto. Resta nel tuo organico nelle
+          turni passati restano nel rendiconto. Resta nel tuo team nelle
           altre sedi.
         </p>
       ) : null}
@@ -1452,7 +1452,7 @@ function WorkplaceCard({
  * Il mese della persona in tre numeri, su **tutte** le sedi dell'azienda: sono
  * le ore della sua busta paga. Sta in anagrafica e non in una scheda sua: turni
  * e ore di sempre e una percentuale di «affidabilità» servivano a scegliere uno
- * sconosciuto sul marketplace, non a chi la persona ce l'ha già in organico. Il
+ * sconosciuto sul marketplace, non a chi la persona ce l'ha già nel team. Il
  * dettaglio è in Ore e Storico.
  *
  * Il confronto col contratto solo se è mensile: convertire una settimana o un
@@ -1536,7 +1536,7 @@ function RemoveSection({
         </div>
       ) : (
         <Button variant="danger" onClick={() => setConfirming(true)}>
-          Rimuovi dall&apos;organico
+          Togli dal team
         </Button>
       )}
     </section>

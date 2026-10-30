@@ -78,7 +78,7 @@ export function ChatPage() {
       {conversations.length === 0 && !id ? (
         <Placeholder
           title="Nessuna conversazione"
-          detail="Scegli “Nuovo messaggio” per scrivere a una persona del tuo organico, oppure parti dalla sua scheda nello Staff."
+          detail="Scegli “Nuovo messaggio” per scrivere a una persona del tuo team, oppure parti dalla sua scheda in Team."
         />
       ) : (
         <div className="grid h-[calc(100dvh-12rem)] grid-cols-[20rem_1fr] gap-6">
@@ -222,7 +222,7 @@ function ContactPicker({
         <QueryError error={error} />
       ) : contacts.length === 0 ? (
         <p className="py-6 text-center text-xs text-t4">
-          Nessuno nel tuo organico ha un account collegato: invitali dallo Staff
+          Nessuno nel tuo team ha un account collegato: invitali da Team
           per poterci scrivere.
         </p>
       ) : (

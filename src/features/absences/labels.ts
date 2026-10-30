@@ -69,7 +69,7 @@ export function absenceDays(a: Pick<Absence, "start_date" | "end_date">): number
 }
 
 /**
- * Il professionista può ancora ritirarla? Specchio di `withdraw_absence`: in
+ * Il dipendente può ancora ritirarla? Specchio di `withdraw_absence`: in
  * sospeso sempre, approvata solo se non è ancora cominciata. Il database resta
  * l'arbitro (usa l'ora di Roma); qui decide solo se mostrare il bottone.
  */
@@ -187,7 +187,7 @@ export function absenceCellLabel(a: {
     : base;
 }
 
-/** La dicitura sul turno del professionista che cade in una sua assenza. */
+/** La dicitura sul turno del dipendente che cade in una sua assenza. */
 export const MY_ABSENCE_NOTE: Record<AbsenceKind, string> = {
   ferie: "Sei in ferie",
   permesso: "Sei in permesso",

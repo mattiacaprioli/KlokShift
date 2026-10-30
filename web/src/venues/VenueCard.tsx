@@ -9,7 +9,7 @@ import { VenueInfoCard } from "./VenueInfoCard";
  * il suo «Modifica» sulla scheda giusta del dialog.
  *
  * Fino al 21/09/2026 a chi aveva `can_manage_venue` la pagina apriva
- * direttamente il modulo: nome, indirizzo e logo — quello che i professionisti
+ * direttamente il modulo: nome, indirizzo e logo — quello che i dipendenti
  * vedono sui turni — si cambiavano con un tasto nel punto sbagliato. Il logo
  * sta dentro la modifica per lo stesso motivo: «Rimuovi» era a un clic.
  *

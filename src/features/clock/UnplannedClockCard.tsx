@@ -16,7 +16,7 @@ import { useClockBreaks, usePunchUnplannedClock } from "./hooks";
 import { formatClockTime } from "./hours";
 
 /**
- * Timbratura senza turno, nella Home del professionista: una card per sede in
+ * Timbratura senza turno, nella Home del dipendente: una card per sede in
  * cui chi gestisce l'ha abilitata.
  *
  * Il turno non esiste ancora: nasce all'uscita, con gli orari timbrati, e va a
@@ -175,7 +175,7 @@ export function UnplannedClockCard({
           <View className="mt-4 gap-4">
             {entry.roles.length > 1 ? (
               <View className="gap-2">
-                <Mono>Mansione</Mono>
+                <Mono>Ruolo</Mono>
                 <View className="flex-row flex-wrap gap-1.5">
                   {entry.roles.map((role) => (
                     <Chip

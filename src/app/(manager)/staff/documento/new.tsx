@@ -8,7 +8,7 @@ import { useCreateStaffDocument } from "@/features/documents/hooks";
 
 /**
  * Aggiunta di un documento a un dipendente, lato sede. Resta la sede a poter
- * caricare per conto suo, perché metà dell'organico è fatto di schede senza
+ * caricare per conto suo, perché metà del team è fatto di schede senza
  * account e quelle persone non possono caricarsi niente da sole.
  *
  * `personId` e non la scheda: il documento vale in tutte le sedi del titolare in

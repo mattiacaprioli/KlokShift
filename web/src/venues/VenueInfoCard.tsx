@@ -15,9 +15,9 @@ import type { VenueEditTab } from "./VenueEditDialog";
  * schede di «Modifica»:
  *
  * - **la sede** — nome, logo, tipo, indirizzo, descrizione: quello che i
- *   professionisti vedono sui turni (`can_manage_venue`);
+ *   dipendenti vedono sui turni (`can_manage_venue`);
  * - **come si lavora qui** — timbratura e pausa (permesso Ore) e planning per
- *   l'organico (`can_manage_venue`): regole che cambiano le ore e quello che
+ *   il team (`can_manage_venue`): regole che cambiano le ore e quello che
  *   vede lo staff, ognuna con la frase che ne dice l'effetto.
  *
  * Ogni sezione ha il suo «Modifica», che apre il dialog sulla scheda giusta.
@@ -125,7 +125,7 @@ export function VenueInfoCard({
             </div>
           </RuleTile>
           <RuleTile
-            label="Planning per l’organico"
+            label="Planning per il team"
             value={
               venue.staff_sees_planning
                 ? "Tutti i turni della sede"

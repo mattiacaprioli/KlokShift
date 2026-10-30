@@ -171,7 +171,7 @@ function CompanySection({ workspaceId }: { workspaceId: string }) {
   const { workspaceName, access } = useOwnerVenues();
   const summary = access?.plan
     ? [access.plan === "team" ? "Team" : "Base", access.source ? ACCESS_SOURCE[access.source] : null].filter(Boolean).join(" · ")
-    : "Stato, capacità e abbonamento";
+    : "Stato, limiti e abbonamento";
   return (
     <SettingsCard icon="venue" title="Azienda" description={workspaceName ?? undefined}>
       <Link
@@ -213,7 +213,7 @@ function StaffChatRow({ workspaceId }: { workspaceId: string }) {
               Chat fra colleghi
             </span>
             <span className="mt-0.5 block text-xs text-t3">
-              Chi è in organico può scriversi. A te e ai collaboratori si scrive
+              Le persone del team possono scriversi. A te e ai collaboratori si scrive
               comunque.
             </span>
             {isError ? (

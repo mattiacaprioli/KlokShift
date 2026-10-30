@@ -148,7 +148,7 @@ export default function VenueRolesScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <View className="flex-1 bg-bg-0">
         <View className="shrink-0 px-5 pb-2" style={{ paddingTop: insets.top + 8 }}>
-          <ScreenHeader eyebrow="Organico" title="Ruoli" />
+          <ScreenHeader eyebrow="Team" title="Ruoli" />
         </View>
 
         <ScrollView
@@ -168,7 +168,7 @@ export default function VenueRolesScreen() {
           }
         >
           <Text className="text-[13px] leading-5 text-t3">
-            Le mansioni che assegni al tuo staff e che chiedi sui turni. Scrivi
+            I ruoli che dai alle persone e chiedi sui turni. Scrivi
             quelle che usi davvero: ogni sede ha le sue
             {isMultiVenue && venue ? `, e queste sono quelle di ${venue.name}` : ""}.
           </Text>
@@ -220,7 +220,7 @@ export default function VenueRolesScreen() {
               {roles.length === 0 ? (
                 <EmptyState
                   title="Nessun ruolo"
-                  subtitle="Aggiungi le mansioni della tua sede: potrai assegnarle allo staff e chiederle sui turni."
+                  subtitle="Aggiungi i ruoli della tua sede (sala, bar, cucina…): potrai darli alle persone e chiederli sui turni."
                 />
               ) : (
                 <View className="gap-1 rounded-3xl border border-border-2 bg-bg-card px-4 py-2">

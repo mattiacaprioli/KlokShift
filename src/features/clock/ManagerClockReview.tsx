@@ -89,7 +89,7 @@ export function ManagerClockReview({
   const voidClock = useVoidClockRecord();
   const clock = assignment.clock;
   const times = clock ? effectiveClockTimes(clock) : null;
-  const personName = assignment.staff_member?.display_name ?? "Il professionista";
+  const personName = assignment.staff_member?.display_name ?? "Il dipendente";
   const [mode, setMode] = useState<EditMode>(null);
   const [inAt, setInAt] = useState(() => new Date());
   const [outAt, setOutAt] = useState(() => scheduledOutAt);
@@ -372,7 +372,7 @@ export function ManagerClockReview({
                       {item.reason ?? "Nessun motivo indicato"}
                     </Text>
                     <Text className="mt-1 text-[11px] text-t4">
-                      {item.corrector?.full_name ?? "Gestore"} ·{" "}
+                      {item.corrector?.full_name ?? "La sede"} ·{" "}
                       {formatCorrectionDate(item.created_at)}
                     </Text>
                   </View>

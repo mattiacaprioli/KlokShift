@@ -18,7 +18,7 @@ export type VenueEditTab = "dati" | "timbrature" | "pausa" | "organico";
  *
  * Si apre sulla scheda da cui si è partiti (`initialTab`): ogni sezione della
  * pagina Sede ha il suo «Modifica». Chi ha solo il permesso Ore vede soltanto
- * Timbrature e Pausa — i dati e l'organico sono `can_manage_venue`.
+ * Timbrature e Pausa — i dati e il team sono `can_manage_venue`.
  */
 export function VenueEditDialog({
   venue,
@@ -62,7 +62,7 @@ export function VenueEditDialog({
           { id: "pausa" as const, label: "Pausa" },
         ]
       : []),
-    ...(canManageVenue ? [{ id: "organico" as const, label: "Organico" }] : []),
+    ...(canManageVenue ? [{ id: "organico" as const, label: "Team" }] : []),
   ];
   const tab = tabs.some((item) => item.id === selected) ? selected : tabs[0].id;
 

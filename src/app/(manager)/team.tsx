@@ -361,7 +361,7 @@ export default function TeamScreen() {
       <ConfirmModal
         visible={!!confirm}
         title="Togliere l'accesso?"
-        message="Non gestirà più le tue sedi. Quello che ha già fatto — turni, presenze, ore — resta dov'è, e se lavora con voi resta in organico."
+        message="Non gestirà più le tue sedi. Quello che ha già fatto — turni, presenze, ore — resta dov'è, e se lavora con voi resta nel team."
         confirmLabel="Togli"
         destructive
         pending={revoke.isPending}

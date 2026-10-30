@@ -34,7 +34,7 @@ export function reminderMail(r: Reminder, dashboardUrl: string): Mail {
     : r.kind === "30_days" ? `${name}: l'archivio scade il ${date}`
     : `${name}: fra 7 giorni i dati vengono cancellati`;
   const opening = r.kind === "started"
-    ? `l'operatività di ${name} su KlokShift è terminata.`
+    ? `${name} su KlokShift non è più attiva.`
     : r.kind === "30_days" ? `l'archivio di ${name} su KlokShift scade il ${date}.`
     : `fra 7 giorni, dopo il ${date}, i dati di ${name} su KlokShift vengono cancellati.`;
   const paragraphs = [

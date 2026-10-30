@@ -11,7 +11,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
 
 /**
- * I documenti del professionista, **un elenco per azienda**.
+ * I documenti del dipendente, **un elenco per azienda**.
  *
  * Ogni `workspace_members` che ho è un'appartenenza a un'azienda: un documento
  * sta lì, ed è l'unico modo in cui l'azienda può tenerne uno anche per chi
@@ -60,7 +60,7 @@ export default function WaiterDocumentsScreen() {
         ) : active.length === 0 ? (
           <EmptyState
             title="Non fai ancora parte di un'azienda"
-            subtitle="I documenti si caricano sull'anagrafica che l'azienda ha di te: appena entri in un organico, li trovi qui."
+            subtitle="I documenti stanno sulla scheda che la sede ha di te: appena entri in un team, li trovi qui."
           />
         ) : (
           active.map((m) => (

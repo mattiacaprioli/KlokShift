@@ -28,7 +28,7 @@ export function DeleteAccountSection() {
   const [pending, setPending] = useState(false);
 
   const message = isOwner
-    ? "Foto e recapiti del profilo vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative, i loro documenti e lo storico restano alle aziende, scollegati dall'account. Se sei l'unico titolare, l'azienda si chiude: le sedi vengono chiuse e i turni futuri annullati, con una notifica al personale assegnato. Se ci sono altri titolari, esci e l'azienda continua. Al termine l'operazione non è reversibile."
+    ? "Foto e recapiti del profilo vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative, i loro documenti e lo storico restano alle aziende, scollegati dall'account. Se sei l'unico titolare, l'azienda si chiude: le sedi vengono chiuse e i turni futuri annullati, con una notifica a chi era in turno. Se ci sono altri titolari, esci e l'azienda continua. Al termine l'operazione non è reversibile."
     : "Foto e recapiti del profilo vengono rimossi; il nome del profilo diventa «Utente eliminato». Le schede nominative, i loro documenti e lo storico restano alle aziende, scollegati dall'account. Al termine l'operazione non è reversibile.";
 
   async function onConfirm() {
@@ -54,7 +54,7 @@ export function DeleteAccountSection() {
       <Text className="text-[13px] leading-5 text-t3">
         {isOwner
           ? "Eliminando l'account, se sei l'unico titolare l'azienda si chiude e i turni futuri vengono annullati."
-          : "Foto e recapiti del profilo vengono rimossi; le schede dell'organico restano alle aziende, scollegate dall'account."}
+          : "Foto e recapiti del profilo vengono rimossi; le schede del team restano alle aziende, scollegate dall'account."}
       </Text>
       <View className="mt-1">
         <GhostButton

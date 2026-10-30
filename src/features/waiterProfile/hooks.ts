@@ -4,7 +4,7 @@ import { getMyWaiterProfile, saveWaiterProfile, type WaiterProfileInput } from "
 
 /**
  * Il proprio profilo professionale. Non esiste il gemello «per id di un altro»:
- * lo usavano le due schede che il gestore apriva su un professionista, e quelle
+ * lo usavano le due schede che il gestore apriva su un dipendente, e quelle
  * sono cadute col CV — chi ha la persona in azienda la guarda dalla scheda di
  * organico, dove i dati sono suoi e non una vetrina.
  */

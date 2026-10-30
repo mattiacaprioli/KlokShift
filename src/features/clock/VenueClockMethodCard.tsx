@@ -57,8 +57,8 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
         />
       </Card>
       <Text className="px-1 text-[12px] leading-5 text-t4">
-        Vale solo per questa sede e per chi usa «Come la sede». Le impostazioni
-        personali dello staff non cambiano.
+        Vale solo per questa sede e per chi usa «Come la sede». Le scelte fatte
+        per le singole persone non cambiano.
       </Text>
     </View>
   );

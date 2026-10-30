@@ -172,7 +172,7 @@ export default function VenueHoursScreen() {
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
         <ScreenHeader
-          eyebrow="Organico"
+          eyebrow="Team"
           title="Ore"
           right={
             canRecord ? (

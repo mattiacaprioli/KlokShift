@@ -67,12 +67,12 @@ function isShort(shift: ShiftWithCount): boolean {
  * sede appartiene. Chi ha una sede sola non vede alcuna differenza: i badge e i
  * filtri compaiono da due sedi in su.
  *
- * Stesso impianto dell'agenda del professionista, e per le stesse ragioni:
+ * Stesso impianto dell'agenda del dipendente, e per le stesse ragioni:
  * scegliere un giorno **fa ripartire la lista da lì** invece di farla scorrere
  * fino a lì, perché `SectionList.scrollToLocation` fallisce in silenzio (vedi
  * il commento esteso in `(waiter)/(tabs)/turni.tsx`).
  *
- * La differenza è cosa si cerca: il professionista vuole sapere quando lavora,
+ * La differenza è cosa si cerca: il dipendente vuole sapere quando lavora,
  * la sede vuole sapere **cosa è scoperto**. Per questo il pallino sul
  * calendario diventa arancio sui giorni con un buco, sotto c'è il conto della
  * settimana, e un filtro riduce l'agenda ai soli turni da coprire: il quadro
@@ -123,10 +123,10 @@ export default function ManagerShiftsScreen() {
   const [expanded, setExpanded] = useState(false);
   /** L'agenda ridotta a ciò che manca da coprire. */
   const [onlyShort, setOnlyShort] = useState(false);
-  /** «I miei turni»: esiste solo per chi gestisce ed è anche in organico. */
+  /** «I miei turni»: esiste solo per chi gestisce ed è anche nel team. */
   const [onlyMine, setOnlyMine] = useState(false);
   /**
-   * Cosa si sta guardando: i turni per giorno, o l'organico per persona.
+   * Cosa si sta guardando: i turni per giorno, o il team per persona.
    *
    * Due viste sotto lo stesso calendario e gli stessi chip di sede, non due
    * schermate: sono gli stessi turni girati di lato — «cosa succede mercoledì»
@@ -642,14 +642,14 @@ export default function ManagerShiftsScreen() {
                 accessibilityLabel={
                   filtering
                     ? "Mostra tutti i turni"
-                    : `Mostra solo i turni scoperti, ${shortCount}`
+                    : `Mostra solo i turni da coprire, ${shortCount}`
                 }
               >
                 <Icon name="alert" size={13} color="#E2922F" strokeWidth={2.4} />
                 <Text className="text-[13px] font-sans-semibold text-warning">
                   {filtering
                     ? "Mostra tutti i turni"
-                    : `Solo i turni scoperti (${shortCount})`}
+                    : `Solo i turni da coprire (${shortCount})`}
                 </Text>
               </Pressable>
             ) : null}

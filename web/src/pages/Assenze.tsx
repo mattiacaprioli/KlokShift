@@ -32,7 +32,7 @@ import {
 /**
  * Ferie, permessi e malattie di tutta l'azienda: da decidere, in corso e
  * prossime, passate da poco. Lo storico intero di una persona sta nella sua
- * scheda in Staff.
+ * scheda in Team.
  *
  * ⚠️ Gemello app in `src/app/(manager)/assenze.tsx`.
  */
@@ -41,7 +41,7 @@ export function AssenzePage() {
   const canStaff = canAny("can_manage_staff");
   const query = useCompanyAbsences(canStaff);
   const [filters, setFilters] = useState<CompanyAbsenceFilters>(NO_ABSENCE_FILTERS);
-  // L'organico serve solo per il filtro per sede.
+  // Il team serve solo per il filtro per sede.
   const people = useOwnerPeople(isMultiVenue && canStaff ? ownerId : undefined).data;
 
   const rows = query.data;
@@ -63,15 +63,15 @@ export function AssenzePage() {
   );
   const activeFilters = activeAbsenceFilterCount(filters);
 
-  const subtitle = `Ferie, permessi e malattia di tutto lo staff · ultimi ${COMPANY_ABSENCES_DAYS_BACK} giorni`;
+  const subtitle = `Ferie, permessi e malattia di tutto il team · ultimi ${COMPANY_ABSENCES_DAYS_BACK} giorni`;
 
   if (!canStaff) {
     return (
       <>
         <PageHeader title="Assenze" />
         <Placeholder
-          title="Non gestisci l'organico"
-          detail="Le assenze le vede chi ha il permesso sull'organico. Nel planning trovi comunque chi non è disponibile."
+          title="Non gestisci il team"
+          detail="Le assenze le vede chi ha il permesso «Team». Nel planning trovi comunque chi non è disponibile."
         />
       </>
     );
@@ -81,7 +81,7 @@ export function AssenzePage() {
     return (
       <>
         <PageHeader title="Assenze" />
-        <NoVenues detail="Le assenze sono del tuo organico: apri una sede per iniziare a crearlo." />
+        <NoVenues detail="Le assenze sono del tuo team: apri una sede per iniziare a crearlo." />
       </>
     );
   }
@@ -96,7 +96,7 @@ export function AssenzePage() {
       ) : (rows ?? []).length === 0 ? (
         <Placeholder
           title="Nessuna assenza"
-          detail="Le richieste di ferie e permessi arrivano in chat e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona, in Staff."
+          detail="Le richieste di ferie e permessi arrivano in chat e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona, in Team."
         />
       ) : (
         <div className="flex max-w-7xl flex-col gap-6">
@@ -175,7 +175,7 @@ export function AssenzePage() {
             {visible.length === 0 ? (
               <Placeholder
                 title="Nessuna assenza con questi filtri"
-                detail={`Negli ultimi ${COMPANY_ABSENCES_DAYS_BACK} giorni non c'è niente che corrisponda. Lo storico completo di una persona è nella sua scheda, in Staff.`}
+                detail={`Negli ultimi ${COMPANY_ABSENCES_DAYS_BACK} giorni non c'è niente che corrisponda. Lo storico completo di una persona è nella sua scheda, in Team.`}
               />
             ) : (
               <>

@@ -11,14 +11,14 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useCreateFirstVenue } from "./hooks";
 
 /**
- * «Apri la tua azienda», dal lato professionista.
+ * «Apri la tua azienda», dal lato dipendente.
  *
  * Nel modello nuovo un account non ha un ruolo: ha delle appartenenze. Chi
  * lavora per qualcun altro può benissimo aprire un proprio posto — capita
  * davvero, ed è il senso del poter stare in più aziende con cappelli diversi.
  * Il database lo permette già (`create_workspace` è aperta a chiunque sia
  * autenticato): mancava la porta nell'app, e senza quella chi si era registrato
- * come professionista non aveva nessun modo di arrivarci.
+ * come dipendente non aveva nessun modo di arrivarci.
  *
  * Compare solo a chi non gestisce ancora niente: chi ha già un'azienda le sedi
  * le aggiunge da lì, dove c'è il modulo completo e il controllo sul piano.
@@ -52,7 +52,7 @@ export function OpenWorkspaceSection() {
           // appena l'appartenenza esiste. `setMode` la rende anche quella
           // ricordata, così il prossimo avvio parte di lì.
           setMode("manager");
-          toast.show(`${trimmed} è aperta: aggiungi il tuo organico`);
+          toast.show(`${trimmed} è aperta: aggiungi il tuo team`);
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
@@ -88,8 +88,8 @@ export function OpenWorkspaceSection() {
               Apri la tua azienda
             </Text>
             <Text className="text-[13px] leading-4 text-t3">
-              Organizza i turni del tuo posto e tieni l&apos;organico. Il tuo
-              profilo da professionista resta com&apos;è: potrai passare da una
+              Organizza i turni e il team del tuo posto. Il tuo
+              profilo da dipendente resta com&apos;è: potrai passare da una
               parte all&apos;altra quando vuoi.
             </Text>
           </Pressable>

@@ -174,7 +174,7 @@ async function claimInvites(): Promise<void> {
   try {
     const { data } = await supabase.rpc("claim_invites");
     // Invalidazione larga e non mirata: agganciare un invito cambia le sedi, i
-    // collaboratori, l'organico e le notifiche insieme, e capita una volta
+    // collaboratori, il team e le notifiche insieme, e capita una volta
     // nella vita di un account. Elencare le chiavi vorrebbe dire dimenticarne
     // una alla prossima feature.
     if ((data ?? 0) > 0) await queryClient.invalidateQueries();

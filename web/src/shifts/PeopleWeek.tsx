@@ -108,7 +108,7 @@ export function PeopleWeek({
 }) {
   const { ownerId, venues, isMultiVenue, can } = useOwnerVenues();
   const peopleQuery = useOwnerPeople(ownerId);
-  // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
+  // La propria riga, per chi gestisce e lavora. Stessa query del team.
   const self = useSelfStaff();
   const dnd = useShiftDrag();
 
@@ -179,7 +179,7 @@ export function PeopleWeek({
     return map;
   }, [peopleQuery.data]);
 
-  /** Le sedi in cui una persona è in organico, per il ramo «altro giorno». */
+  /** Le sedi in cui una persona è nel team, per il ramo «altro giorno». */
   const venueIdsOf = (personId: string) =>
     (peopleQuery.data ?? [])
       .find((p) => p.id === personId)
@@ -212,12 +212,12 @@ export function PeopleWeek({
     return filtered ? (
       <Placeholder
         title="Nessuno lavora in questa sede"
-        detail="Assegna delle persone a questa sede dalla sezione Staff, oppure togli il filtro per vedere tutta l'azienda."
+        detail="Assegna delle persone a questa sede dalla sezione Team, oppure togli il filtro per vedere tutta l'azienda."
       />
     ) : (
       <Placeholder
-        title="Nessuno nel tuo organico"
-        detail="Aggiungi le persone che lavorano per te dalla sezione Staff: qui vedrai come si distribuiscono i turni fra loro."
+        title="Nessuno nel tuo team"
+        detail="Aggiungi le persone che lavorano per te dalla sezione Team: qui vedrai come si distribuiscono i turni fra loro."
       />
     );
   }

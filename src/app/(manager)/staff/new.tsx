@@ -78,12 +78,12 @@ function VenueMultiSelect({
 }
 
 /**
- * Aggiungi una persona all'organico.
+ * Aggiungi una persona al team.
  *
  * Dal 14/09/2026 si aggiunge **una persona**, non una scheda di sede: prima
  * chi, poi dove. È sparita la modalità «Dalle tue sedi» — esisteva per
- * rimediare al fatto che l'organico era della sede attiva, e riusare qualcuno
- * significava ricopiarlo qui. Ora l'organico è dell'azienda: chi c'è già è già
+ * rimediare al fatto che il team era della sede attiva, e riusare qualcuno
+ * significava ricopiarlo qui. Ora il team è dell'azienda: chi c'è già è già
  * in elenco, e gli si aggiunge una sede dalla sua scheda.
  *
  * Dal 16/09/2026 è sparito anche il bivio «Manuale / Invita»: chiedeva al
@@ -111,7 +111,7 @@ export default function StaffNewScreen() {
   // non è l'azienda, e la persona appartiene a quest'ultima. Vedi
   // `OwnerVenuesProvider`.
   const { workspaceId, venuesWith } = useOwnerVenues();
-  // Solo le sedi in cui si può gestire l'organico: un collaboratore con i soli
+  // Solo le sedi in cui si può gestire il team: un collaboratore con i soli
   // turni non deve trovare fra i chip una sede su cui l'insert verrebbe
   // rifiutato dalla RLS.
   const venues = venuesWith("can_manage_staff");
@@ -162,7 +162,7 @@ export default function StaffNewScreen() {
   const [phone, setPhone] = useState("");
 
   /**
-   * La persona era già in organico. Non è un errore da toast: l'accordo con lei
+   * La persona era già nel team. Non è un errore da toast: l'accordo con lei
    * esiste, basta aprirla e aggiungerle la sede — nome, documenti e ore restano
    * quelli che ha già.
    */
@@ -171,12 +171,12 @@ export default function StaffNewScreen() {
   function messageFor(res: AddStaffResult): string {
     if (res.kind === "app_invite") return "Richiesta inviata";
     if (res.kind === "email_invite") {
-      if (res.emailSent) return "Aggiunto allo staff · invito spedito";
+      if (res.emailSent) return "Aggiunto al team · invito spedito";
       return res.emailError
-        ? `Aggiunto allo staff · invito non spedito: ${res.emailError}`
-        : "Aggiunto allo staff · invito non spedito, riprova dalla sua scheda";
+        ? `Aggiunto al team · invito non spedito: ${res.emailError}`
+        : "Aggiunto al team · invito non spedito, riprova dalla sua scheda";
     }
-    return "Aggiunto allo staff";
+    return "Aggiunto al team";
   }
 
   /**
@@ -188,7 +188,7 @@ export default function StaffNewScreen() {
    * mansioni con un messaggio d'errore che non diceva cosa fare.
    */
   function finish(msg: string) {
-    toast.show(singleVenue || roleIds.length === 0 ? msg : `${msg} · assegna le mansioni in ogni sede`);
+    toast.show(singleVenue || roleIds.length === 0 ? msg : `${msg} · scegli i ruoli in ogni sede`);
     router.back();
   }
 
@@ -210,7 +210,7 @@ export default function StaffNewScreen() {
           roleIds: roles,
         },
         {
-          onSuccess: () => finish("Sei in organico"),
+          onSuccess: () => finish("Sei nel team"),
           onError: (e) => toast.show(userErrorMessage(e), "error"),
         }
       );
@@ -246,8 +246,8 @@ export default function StaffNewScreen() {
         className="flex-1 bg-bg-0 px-5"
         style={{ paddingTop: insets.top + 8 }}
       >
-        <ScreenHeader eyebrow="Staff" title={isSelf ? "Sei tu" : "Aggiungi"} />
-        <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
+        <ScreenHeader eyebrow="Team" title={isSelf ? "Sei tu" : "Aggiungi"} />
+        <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo team." />
       </View>
     );
   }
@@ -256,7 +256,7 @@ export default function StaffNewScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <View className="flex-1 bg-bg-0">
         <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
-          <ScreenHeader eyebrow="Staff" title={isSelf ? "Sei tu" : "Aggiungi"} />
+          <ScreenHeader eyebrow="Team" title={isSelf ? "Sei tu" : "Aggiungi"} />
         </View>
 
         <ScrollView
@@ -271,7 +271,7 @@ export default function StaffNewScreen() {
           <View className="gap-5">
             {isSelf ? (
               <Text className="text-sm leading-5 text-t2">
-                Ti aggiungi al tuo organico: da qui in poi puoi assegnarti i turni
+                Ti aggiungi al tuo team: da qui in poi puoi assegnarti i turni
                 come a chiunque altro, e le tue ore entrano nel riepilogo e
                 nell&apos;export.
               </Text>
@@ -327,8 +327,8 @@ export default function StaffNewScreen() {
             {already ? (
               <Card className="gap-4 rounded-3xl border-border-2 p-5">
                 <Text className="text-sm leading-5 text-t2">
-                  Questa persona è già nel tuo organico. Aprila per aggiungerle una
-                  sede o cambiarle i ruoli: anagrafica e documenti restano quelli
+                  Questa persona è già nel tuo team. Aprila per aggiungerle una
+                  sede o cambiarle i ruoli: dati e documenti restano quelli
                   che ha già.
                 </Text>
                 <GoldButton
@@ -381,8 +381,8 @@ export default function StaffNewScreen() {
                 pending
                   ? "Aggiunta…"
                   : isSelf
-                    ? "Mettimi in organico"
-                    : "Aggiungi allo staff"
+                    ? "Mettimi nel team"
+                    : "Aggiungi al team"
               }
               disabled={pending || !name.trim() || venueIds.size === 0}
               onPress={submit}

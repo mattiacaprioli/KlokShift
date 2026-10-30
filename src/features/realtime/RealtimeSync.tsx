@@ -93,7 +93,7 @@ function useBurstInvalidate(qc: QueryClient, ms = 300) {
  *    `shifts` senza filtro, e ogni modifica di turno di *qualunque* sede
  *    svegliava *tutti* i client — Realtime valuta la RLS per ogni subscriber
  *    su ogni riga cambiata. Ora il ristoratore ascolta solo la propria sede e
- *    il professionista non ascolta `shifts` affatto: quello che lo riguarda gli
+ *    il dipendente non ascolta `shifts` affatto: quello che lo riguarda gli
  *    arriva già dal canale notifiche, filtrato per `user_id` (vedi
  *    `useNotificationsRealtime`).
  *
@@ -129,7 +129,7 @@ export function RealtimeSync({
   const isManager = role === "manager";
 
   // Stessa sorgente delle schermate del ristoratore: è un context, non una
-  // lettura in più. Per il professionista sono vuoti — lo sa il provider, non
+  // lettura in più. Per il dipendente sono vuoti — lo sa il provider, non
   // serve spegnerlo da qui.
   // Solo `venuesKey`, non `venueIds`: vedi il punto 3 qui sopra. La stringa è la
   // stessa lista, ed è l'unica forma che si può mettere nelle dipendenze.
@@ -285,7 +285,7 @@ export function RealtimeSync({
   }, [isManager, workspaceId, venuesKey, invalidate]);
 
   // Cosa **io** posso fare e dove: cambia quando qualcuno accetta un invito,
-  // mi toglie un permesso o mi mette in organico. Vale per ogni vista, quindi
+  // mi toglie un permesso o mi mette nel team. Vale per ogni vista, quindi
   // non dipende da `role`. Il filtro per account tiene il subscriber leggero:
   // gli eventi che arrivano sono solo le mie righe.
   useEffect(() => {

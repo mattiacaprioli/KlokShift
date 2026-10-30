@@ -57,7 +57,7 @@ export function StaffAssignPicker({
   statusFor,
   notesFor,
 }: Props) {
-  // Chi gestisce la sede può essere in organico: la propria riga si riconosce,
+  // Chi gestisce la sede può essere nel team: la propria riga si riconosce,
   // altrimenti in un elenco di nomi si cerca il proprio senza trovarlo.
   const self = useSelfStaff();
   const [search, setSearch] = useState("");
@@ -74,8 +74,8 @@ export function StaffAssignPicker({
         <ActivityIndicator color="#EAB54C" className="mt-2" />
       ) : staff.length === 0 ? (
         <EmptyState
-          title="Nessuno nello staff"
-          subtitle="Aggiungi prima qualcuno dalla scheda «Staff»."
+          title="Nessuno nel team"
+          subtitle="Aggiungi prima qualcuno dalla scheda «Team»."
         />
       ) : (
         <View className="gap-3">

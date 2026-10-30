@@ -80,7 +80,7 @@ export function SaveTemplateModal({
               Salva come modello
             </Text>
             <Text className="mt-2 text-sm leading-5 text-t2">
-              Ricorda orari, pausa, fabbisogno e note. Giorno e persone li
+              Ricorda orari, pausa, persone che servono e note. Giorno e persone li
               scegli ogni volta.
             </Text>
 

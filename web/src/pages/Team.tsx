@@ -54,7 +54,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
  * Una riga per area di permesso, con descrizione e interruttore.
  *
  * Esportata perché la riusa `staff/PromoteSection.tsx`: la promozione di un
- * membro dell'organico (F3) chiede esattamente le stesse cinque cose, e due
+ * membro del team (F3) chiede esattamente le stesse cinque cose, e due
  * copie divergerebbero alla prima area aggiunta.
  */
 export function PermissionChecks({

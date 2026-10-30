@@ -34,7 +34,7 @@ export function ResolveRequestModal({
 }) {
   const toast = useToast();
   // Su una richiesta di orario non c'è nessun sostituto da scegliere: le tre
-  // query dell'organico non servono e non vanno fatte.
+  // query del team non servono e non vanno fatte.
   const isHours = request.kind === "hours";
   const shiftQuery = useShift(request.shift_id, !isHours);
   const venueId = shiftQuery.data?.venue_id;
@@ -105,7 +105,7 @@ export function ResolveRequestModal({
           <Text className="mt-2 text-sm leading-5 text-t2">
             {isHours
               ? "Accettare mette l'accordo per iscritto nella chat. L'orario del turno lo aggiorni tu dal pannello: qui non cambia nulla da solo."
-              : "Scegli una persona dell'organico, oppure approva lasciando il posto scoperto."}
+              : "Scegli una persona del team, oppure approva lasciando il posto scoperto."}
           </Text>
 
           {isHours ? null : loading ? (

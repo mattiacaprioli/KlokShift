@@ -26,7 +26,7 @@ import { userErrorMessage } from "@/lib/errors";
  * Nome, email, permessi, sedi — in quest'ordine, che è quello in cui il titolare
  * pensa: *chi* faccio entrare, *cosa* può fare e *dove*. Non gli si chiede se
  * quella persona abbia già KlokShift: è `addTeamMember` a deciderlo, come per
- * l'organico.
+ * il team.
  */
 export default function TeamNewScreen() {
   const router = useRouter();

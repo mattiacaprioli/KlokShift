@@ -388,7 +388,7 @@ export function useShiftRoleRequirements(shiftId: string, enabled = true) {
 }
 
 /**
- * Statistiche aggregate di una persona dell'organico, su **tutte** le sedi
+ * Statistiche aggregate di una persona del team, su **tutte** le sedi
  * dell'azienda (le calcola il database). `personId` è l'id del **membro**
  * (`StaffPerson.id`), non quello di una riga di organico.
  */

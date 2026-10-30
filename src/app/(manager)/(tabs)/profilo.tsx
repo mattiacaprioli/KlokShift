@@ -160,7 +160,7 @@ function AccountCard({ onPress }: { onPress: () => void }) {
           {profile?.full_name?.trim() || "Aggiungi il tuo nome"}
         </Text>
         <Text className="mt-0.5 text-xs text-t3">
-          Nome e foto con cui ti vede il tuo staff
+          Nome e foto con cui ti vede il tuo team
         </Text>
       </View>
       <Icon name="chevR" size={18} color="#8C8579" />

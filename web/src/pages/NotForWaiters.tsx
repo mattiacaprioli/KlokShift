@@ -26,7 +26,7 @@ import { SupportLine } from "../ui/SupportLine";
  *   (aprirne una seconda per sbaglio è il danno vero, perché poi i turni finiscono
  *   nell'azienda sbagliata): l'invito si mostra per primo;
  * - chi vuole gestire una sede la apre da qui;
- * - il professionista capitato sul link pubblico legge perché non c'è niente per
+ * - il dipendente capitato sul link pubblico legge perché non c'è niente per
  *   lui, invece di essere rimbalzato al login.
  */
 export function NotForWaitersPage() {
@@ -34,7 +34,7 @@ export function NotForWaitersPage() {
   const { pendingInvites } = useOwnerVenues();
   const firstName = profile?.full_name?.trim().split(/\s+/)[0];
   const invited = pendingInvites.length > 0;
-  // Registrato dall'app come professionista: qui non c'è niente per lui, e il
+  // Registrato dall'app come dipendente: qui non c'è niente per lui, e il
   // modulo «crea l'azienda» in primo piano era un invito ad aprirne una per
   // sbaglio. Prima gli si dice dove sono i suoi turni; l'azienda resta a un tocco.
   const worker = !invited && signupIntent(session?.user.user_metadata) === "waiter";
@@ -88,7 +88,7 @@ export function NotForWaitersPage() {
   }
 
   // Il caso normale è chi si è appena registrato per gestire un'azienda: la
-  // creazione viene prima, la nota per il professionista capitato qui dopo.
+  // creazione viene prima, la nota per il dipendente capitato qui dopo.
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-md text-center">
@@ -227,7 +227,7 @@ function PendingInvites() {
           </p>
           <p className="mt-1 text-xs leading-5 text-t3">
             {invite.authority === "none"
-              ? "Ti ha invitato nel suo organico."
+              ? "Ti ha invitato nel suo team."
               : "Ti ha invitato a collaborare alla gestione."}
           </p>
           <div className="mt-4 flex gap-2">

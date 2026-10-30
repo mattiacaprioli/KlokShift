@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
 /**
- * Come il professionista preferisce guardare i propri turni: l'elenco per
+ * Come il dipendente preferisce guardare i propri turni: l'elenco per
  * giorno o la settimana a griglia oraria.
  *
  * È una comodità come `viewModeStorage`, e per la stessa ragione sta in

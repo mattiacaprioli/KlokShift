@@ -2,8 +2,8 @@
  * Suggerimenti per una sede che non ha ancora creato nessun ruolo.
  *
  * Fino al 2026-09-12 questa era `STAFF_ROLES`, una lista canonica di 15 voci:
- * **la** fonte di verità per l'organico, per il fabbisogno dei turni e per il
- * profilo del professionista. Tutto si teneva per stringa esatta, quindi non si
+ * **la** fonte di verità per il team, per il fabbisogno dei turni e per il
+ * profilo del dipendente. Tutto si teneva per stringa esatta, quindi non si
  * poteva né rinominare né riordinare niente senza scollegare in silenzio la
  * copertura dei turni già creati.
  *

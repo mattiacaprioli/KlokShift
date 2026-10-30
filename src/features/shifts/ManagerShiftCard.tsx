@@ -258,7 +258,7 @@ export function ManagerShiftCard({
                lo danno già la barra e la pill, e ripeterlo in arancio faceva
                gridare due volte la stessa cosa. */
             <Text className="mt-1.5 text-[13px] text-t2">
-              {total > 0 ? `${filled}/${total} coperti` : "Nessun fabbisogno"}
+              {total > 0 ? `${filled}/${total} coperti` : "Nessun posto indicato"}
             </Text>
           )}
           {names ? (

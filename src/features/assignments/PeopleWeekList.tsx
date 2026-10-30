@@ -93,7 +93,7 @@ export function PeopleWeekList({
     ])),
     [peopleQuery.data]
   );
-  // La propria riga, per chi gestisce e lavora. Stessa query dell'organico.
+  // La propria riga, per chi gestisce e lavora. Stessa query del team.
   const self = useSelfStaff();
   // Chi non c'è in settimana, senza il perché (`get_absence_availability`).
   const absencesQuery = useAbsenceAvailability(from, to);
@@ -219,8 +219,8 @@ export function PeopleWeekList({
       ListEmptyComponent={
         <View className="flex-1 justify-center">
           <EmptyState
-            title="Nessuno nel tuo organico"
-            subtitle="Aggiungi le persone che lavorano per te dalla scheda Staff: qui vedrai come si distribuiscono i turni fra loro."
+            title="Nessuno nel tuo team"
+            subtitle="Aggiungi le persone che lavorano per te dalla scheda Team: qui vedrai come si distribuiscono i turni fra loro."
           />
         </View>
       }
@@ -253,7 +253,7 @@ function PersonWeekCard({
   absences,
   venueOf,
   onOpenShift,
-  /** È la riga di chi guarda: da quando chi gestisce può stare in organico. */
+  /** È la riga di chi guarda: da quando chi gestisce può stare nel team. */
   isMe,
 }: {
   person: PersonLoad;

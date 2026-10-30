@@ -25,7 +25,7 @@ export function resolvedViewMode({
   intent: ViewMode;
 }): { effective: ViewMode; canSwitch: boolean } {
   // L'onboarding non concede accessi aziendali: dice soltanto che il lato
-  // personale dell'account esiste ancora anche se oggi non lavora in organico.
+  // personale dell'account esiste ancora anche se oggi non lavora nel team.
   const hasPersonalView = canWork || onboardingComplete;
   const canSwitch = canManage && hasPersonalView;
 

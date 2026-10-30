@@ -72,12 +72,12 @@ function useVenueSelection() {
 }
 
 /**
- * Aggiungi una persona all'organico.
+ * Aggiungi una persona al team.
  *
  * Dal 14/09/2026 si aggiunge **una persona**, non una sua scheda di sede: prima
  * chi, poi dove. È sparita la modalità «Dalle tue sedi» — esisteva per rimediare
- * al fatto che l'organico era della sede attiva, e riusare qualcuno significava
- * ricopiarlo qui. Ora l'organico è dell'azienda: chi c'è già è già in elenco, e
+ * al fatto che il team era della sede attiva, e riusare qualcuno significava
+ * ricopiarlo qui. Ora il team è dell'azienda: chi c'è già è già in elenco, e
  * gli si aggiunge una sede dalla sua scheda.
  *
  * Dal 16/09/2026 sono spariti anche i due tab «Scheda manuale / Invita via
@@ -85,7 +85,7 @@ function useVenueSelection() {
  * che non può sapere. Scrive nome ed email, e `addStaff` decide — scheda,
  * invito in-app o email d'invito. Stessa funzione dell'app.
  *
- * Dal 17/09/2026 lo stesso pannello mette in organico **chi guarda** (`self`):
+ * Dal 17/09/2026 lo stesso pannello mette nel team **chi guarda** (`self`):
  * chi gestisce la sede spesso ci lavora, e senza una scheda le sue ore non
  * entrano in nessun conto. Cambiano due campi — il nome è il suo e non si
  * scrive, l'email non serve perché l'account si conosce già — e tutto il resto,
@@ -114,7 +114,7 @@ export function AddStaffPanel({
   const pending = add.isPending || addSelf.isPending;
 
   /**
-   * La persona era già in organico: non è un errore, l'accordo con lei esiste.
+   * La persona era già nel team: non è un errore, l'accordo con lei esiste.
    * Si dice di aprirla dall'elenco invece di crearne una seconda scheda che si
    * porterebbe dietro ore e documenti separati.
    */
@@ -123,12 +123,12 @@ export function AddStaffPanel({
   function messageFor(res: AddStaffResult): string {
     if (res.kind === "app_invite") return "Richiesta inviata";
     if (res.kind === "email_invite") {
-      if (res.emailSent) return "Aggiunto allo staff · invito spedito";
+      if (res.emailSent) return "Aggiunto al team · invito spedito";
       return res.emailError
-        ? `Aggiunto allo staff · invito non spedito: ${res.emailError}`
-        : "Aggiunto allo staff · invito non spedito, riprova dalla sua scheda";
+        ? `Aggiunto al team · invito non spedito: ${res.emailError}`
+        : "Aggiunto al team · invito non spedito, riprova dalla sua scheda";
     }
-    return "Aggiunto allo staff";
+    return "Aggiunto al team";
   }
 
   /**
@@ -138,7 +138,7 @@ export function AddStaffPanel({
    * che le scrive nella stessa transazione della scheda.
    */
   function finish(msg: string) {
-    toast.show(single || roleIds.length === 0 ? msg : `${msg} · assegna le mansioni in ogni sede`);
+    toast.show(single || roleIds.length === 0 ? msg : `${msg} · scegli i ruoli in ogni sede`);
     onClose();
   }
 
@@ -160,7 +160,7 @@ export function AddStaffPanel({
           roleIds: roles,
         },
         {
-          onSuccess: () => finish("Sei in organico"),
+          onSuccess: () => finish("Sei nel team"),
           onError: (e) => toast.show(userErrorMessage(e), "error"),
         }
       );
@@ -247,9 +247,9 @@ export function AddStaffPanel({
 
       {already ? (
         <p className="mt-4 rounded-xl border border-border-2 bg-bg-1 p-3 text-sm text-t2">
-          Questa persona è <b className="text-t1">già nel tuo organico</b>.
+          Questa persona è <b className="text-t1">già nel tuo team</b>.
           Aprila dall&apos;elenco per aggiungerle una sede o cambiarle i ruoli:
-          tiene anagrafica e documenti che ha già.
+          tiene i dati e i documenti che ha già.
         </p>
       ) : null}
 
@@ -278,7 +278,7 @@ export function AddStaffPanel({
           disabled={!name.trim() || venueIds.length === 0 || pending}
           onClick={submit}
         >
-          {pending ? "Salvataggio…" : self ? "Mettimi in organico" : "Aggiungi"}
+          {pending ? "Salvataggio…" : self ? "Mettimi nel team" : "Aggiungi"}
         </Button>
         <span className="text-xs text-t4">
           {self

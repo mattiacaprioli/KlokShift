@@ -14,7 +14,7 @@ export type PlanningSection = DaySection<PlanningShift>;
 
 /**
  * L'agenda del **sede**, per giorno: chi lavora quando, in tutte le sedi in
- * cui il professionista è in organico.
+ * cui il dipendente è nel team.
  *
  * Presentazionale di proposito. Il calendario e il giorno da cui parte stanno
  * nella schermata che la ospita — `(waiter)/(tabs)/turni` li condivide con la
@@ -115,7 +115,7 @@ export function VenuePlanningList({
             subtitle={
               away
                 ? `Dal ${formatDayLabel(anchorDay).toLowerCase()} la sede non ha ancora programmato turni.`
-                : "Qui vedi i turni della sede e chi ci lavora. Se non compare nulla, la sede non ha ancora programmato niente — oppure ha scelto di non condividere il planning con l'organico."
+                : "Qui vedi i turni della sede e chi ci lavora. Se non compare nulla, la sede non ha ancora programmato niente — oppure ha scelto di non condividere il planning con il team."
             }
           />
         </View>

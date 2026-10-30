@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 
 /**
- * Il professionista che non è ancora in nessun organico: cosa deve fare.
+ * Il dipendente che non è ancora in nessun team: cosa deve fare.
  *
  * L'aggancio lo fa da solo `link_member_invites` quando la sede scrive questa
  * email sulla scheda (e l'email è confermata): l'unica mossa della persona è

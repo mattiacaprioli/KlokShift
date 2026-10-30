@@ -25,11 +25,11 @@ import {
 } from "../ui/primitives";
 
 /**
- * L'organico dell'**azienda**: una riga per persona, non una per sua scheda di
+ * Il team dell'**azienda**: una riga per persona, non una per sua scheda di
  * sede.
  *
  * Fino al 14/09/2026 elencava le schede della sede attiva, e chi lavorava in tre
- * sedi ci compariva tre volte con un «anche a…» a rimediare. L'organico è del
+ * sedi ci compariva tre volte con un «anche a…» a rimediare. Il team è del
  * titolare — lo dice il database da quando esiste `staff_people` — e ora lo dice
  * anche questa pagina: le sedi sono le etichette della persona.
  */
@@ -67,8 +67,8 @@ export function StaffPage() {
   if (venues.length === 0) {
     return (
       <>
-        <PageHeader title="Staff" />
-        <NoVenues detail="Ti serve una sede prima di creare il tuo organico." />
+        <PageHeader title="Team" />
+        <NoVenues detail="Ti serve una sede prima di creare il tuo team." />
       </>
     );
   }
@@ -76,8 +76,8 @@ export function StaffPage() {
   if (isPending) {
     return (
       <>
-        <PageHeader title="Staff" />
-        <ListSkeleton avatar label="Caricamento organico…" />
+        <PageHeader title="Team" />
+        <ListSkeleton avatar label="Caricamento team…" />
       </>
     );
   }
@@ -94,9 +94,9 @@ export function StaffPage() {
     <>
       {openFromLink ? <RunOnMount run={consumeLink} /> : null}
       <PageHeader
-        title="Staff"
+        title="Team"
         subtitle={[
-          `${people.length} nel tuo organico`,
+          `${people.length} nel tuo team`,
           isMultiVenue ? `${venues.length} sedi` : null,
           pending > 0 ? `${pending} in attesa di risposta` : null,
         ]
@@ -154,7 +154,7 @@ export function StaffPage() {
 
       {people.length === 0 && !adding ? (
         <Placeholder
-          title="Nessuno nel tuo organico"
+          title="Nessuno nel tuo team"
           detail="Aggiungi le persone che lavorano per te: potrai assegnarle ai turni e tenere il conto delle ore."
         />
       ) : (

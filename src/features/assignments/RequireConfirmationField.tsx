@@ -33,8 +33,8 @@ export function RequireConfirmationField({
             Chiedi conferma a tutti
           </Text>
           <Text className="mt-0.5 text-[13px] text-t3">
-            Di norma confermano solo i collaboratori a chiamata: chi è assunto
-            fisso risulta già in turno.
+            Di solito conferma solo chi è a chiamata: chi è fisso risulta
+            già in turno.
           </Text>
         </View>
         <Switch

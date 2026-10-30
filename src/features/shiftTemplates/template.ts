@@ -5,7 +5,7 @@ export type TemplateRoleTarget = { role_id: string; count: number };
 
 /**
  * Ciò che un modello ricorda di un turno. Niente data e niente persone: cambiano
- * da un giorno all'altro, e una persona uscita dall'organico non deve rientrare
+ * da un giorno all'altro, e una persona uscita dal team non deve rientrare
  * in un turno perché era in un modello vecchio.
  */
 export type ShiftTemplateInput = {

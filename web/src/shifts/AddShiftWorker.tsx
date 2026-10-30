@@ -34,7 +34,7 @@ export function AddShiftWorker({
   const [picked, setPicked] = useState("");
   const { isOwner } = useOwnerVenues();
   const self = useSelfStaff();
-  // L'organico si legge solo quando serve: il pulsante è su ogni turno finito.
+  // Il team si legge solo quando serve: il pulsante è su ogni turno finito.
   const staffQuery = useVenueStaff(open ? venueId : undefined);
   const add = useAddShiftWorker(shiftId);
   const candidates = shiftWorkerCandidates(
@@ -68,11 +68,11 @@ export function AddShiftWorker({
     >
       <p className="text-xs leading-5 text-t3">{ADD_WORKER_HINT}</p>
       {staffQuery.isLoading ? (
-        <p className="mt-2 text-xs text-t4">Caricamento organico…</p>
+        <p className="mt-2 text-xs text-t4">Caricamento team…</p>
       ) : candidates.length === 0 ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <p className="text-xs text-t4">
-            In questa sede non c&apos;è nessun altro in organico da aggiungere.
+            In questa sede non c&apos;è nessun altro nel team da aggiungere.
           </p>
           <Button type="button" onClick={close} className="px-3 py-1.5 text-xs">
             Chiudi

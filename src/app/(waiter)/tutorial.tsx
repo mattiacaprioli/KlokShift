@@ -3,7 +3,7 @@ import { ABSENCE_WAITER_TUTORIAL } from "@/features/absences/tutorialContent";
 import { TutorialView } from "@/features/tutorial/TutorialView";
 
 /**
- * Il tutorial del professionista: ferie, permessi e malattia. Il testo sta in
+ * Il tutorial del dipendente: ferie, permessi e malattia. Il testo sta in
  * `features/absences/tutorialContent.ts`.
  */
 export default function WaiterTutorialScreen() {

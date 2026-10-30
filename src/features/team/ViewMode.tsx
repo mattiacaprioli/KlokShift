@@ -19,7 +19,7 @@ import { resolvedViewMode, signupIntent } from "./viewModeLogic";
  * Non è più scritto sul profilo (`profiles.role` non esiste): si ricava dalle
  * appartenenze. Chi gestisce e basta è in gestione, chi lavora e basta è nel
  * lavoro, e chi fa entrambe le cose — un titolare che è anche in turno, un
- * professionista promosso a collaboratore, un dipendente che possiede un'altra
+ * dipendente promosso a collaboratore, un dipendente che possiede un'altra
  * azienda — sceglie con l'interruttore.
  *
  * Un provider e non un hook per schermata: la vista decide **quale gruppo di
@@ -34,7 +34,7 @@ import { resolvedViewMode, signupIntent } from "./viewModeLogic";
  * detto di voler andare alla registrazione (`user_metadata.intent`): è un
  * suggerimento per la prima schermata, non un ruolo e non un permesso.
  *
- * ⚠️ Solo mobile: la dashboard web non ha un lato professionista.
+ * ⚠️ Solo mobile: la dashboard web non ha un lato dipendente.
  */
 type ViewModeState = {
   /** La vista attiva adesso. */
@@ -69,10 +69,10 @@ export function ViewModeProvider({ children }: PropsWithChildren) {
   /**
    * L'interruttore fra le due viste.
    *
-   * Serve a chi gestisce **e** ha un lato professionista da cui tornare. Quel
+   * Serve a chi gestisce **e** ha un lato dipendente da cui tornare. Quel
    * lato esiste se lavora da qualche parte, oppure se ha completato la propria
-   * scheda da professionista (`onboarding_complete`): è il caso di chi era un
-   * professionista e si è aperto un posto suo, e senza questa seconda
+   * scheda da dipendente (`onboarding_complete`): è il caso di chi era un
+   * dipendente e si è aperto un posto suo, e senza questa seconda
    * condizione resterebbe chiuso nella gestione, con il proprio profilo di
    * carriera irraggiungibile.
    *

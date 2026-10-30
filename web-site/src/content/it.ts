@@ -22,7 +22,7 @@ const annualSaving = (prices: { monthly: number; annual: number }) =>
  *
  * Pubblico: **qualunque azienda con personale a turni**, non solo
  * l'ospitalità. Per le persone si dice «team» / «dipendenti» (non
- * «professionista»); il luogo resta «sede».
+ * «professionista», «personale»); il luogo resta «sede».
  *
  * ⚠️ Cosa NON si può scrivere qui, e perché:
  *   - recensioni / reputazione / QR → rimossi il 2026-10-04
@@ -56,7 +56,7 @@ export const it: Content = {
   },
 
   hero: {
-    eyebrow: "Turni e ore del personale",
+    eyebrow: "Turni e ore del tuo team",
     title: "I turni della settimana in dieci minuti, non in una serata.",
     lead: "Tu pianifichi, il team conferma e timbra dal telefono, le ore si contano da sole.",
     ctaPrimary: "Prova gratis 30 giorni",
@@ -312,7 +312,7 @@ export const it: Content = {
 
   invite: {
     eyebrow: "Invito",
-    title: "Ti hanno aggiunto a un organico.",
+    title: "Ti hanno aggiunto a un team.",
     lead: "La sede che ti ha invitato usa KlokShift per organizzare i turni. Scarica l'app e trovi i tuoi.",
     steps: [
       {

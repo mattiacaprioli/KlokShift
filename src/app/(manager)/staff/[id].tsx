@@ -275,19 +275,19 @@ function WorkplaceCard({
   membership,
   /** Unica sede: la rimozione sta nel bottone globale in fondo alla pagina. */
   isOnly,
-  /** Può rimettere in organico un'appartenenza finita: vedi `StaffPersonView`. */
+  /** Può rimettere nel team un'appartenenza finita: vedi `StaffPersonView`. */
   canRestore,
   /**
    * Può togliere **questa** appartenenza.
    *
    * Falso solo in un caso: è la propria scheda e chi guarda è un collaboratore.
-   * `remove_staff_member` lo rifiuta (uscire dall'organico non si fa coi poteri
+   * `remove_staff_member` lo rifiuta (uscire dal team non si fa coi poteri
    * che si hanno per gestire gli altri) e senza questo il bottone chiederebbe
    * conferma per poi mostrare un errore. Il titolare invece può: la sua scheda
-   * altrimenti sarebbe inamovibile, perché `leave_venue` è del professionista.
+   * altrimenti sarebbe inamovibile, perché `leave_venue` è del dipendente.
    */
   canRemove = true,
-  /** Il metodo di timbratura usa il permesso Ore, non Organico. */
+  /** Il metodo di timbratura usa il permesso Ore, non Team. */
   canEditClock,
 }: {
   person: StaffPersonDetail;
@@ -432,7 +432,7 @@ function WorkplaceCard({
         employmentType: membership.employment_type,
       },
       {
-        onSuccess: () => toast.show(`Di nuovo in organico a ${venueName}`),
+        onSuccess: () => toast.show(`Di nuovo nel team di ${venueName}`),
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
@@ -451,7 +451,7 @@ function WorkplaceCard({
             <Text className="flex-1 text-base font-sans-semibold text-t2">
               {venueName}
             </Text>
-            <Pill label="Non più in organico" variant="closed" />
+            <Pill label="Non più nel team" variant="closed" />
           </View>
           <Text className="text-sm text-t3">
             {membership.left_at
@@ -461,7 +461,7 @@ function WorkplaceCard({
         </View>
         {canRestore && !membership.venue?.closed_at ? (
           <GhostButton
-            label={restore.isPending ? "Un momento…" : "Rimetti in organico"}
+            label={restore.isPending ? "Un momento…" : "Rimetti nel team"}
             disabled={restore.isPending}
             onPress={doRestore}
           />
@@ -613,7 +613,7 @@ function WorkplaceCard({
         // `link_status = 'left'`, quindi le ore già lavorate restano nel
         // rendiconto e nell'export. Spariscono solo i turni **futuri**, che
         // altrimenti resterebbero assegnati a chi non lavora più lì.
-        message={`${person.full_name} non sarà più in organico a ${venueName}. I turni futuri già assegnati vengono annullati e tornano da coprire; le ore dei turni passati restano nel rendiconto. Resta nel tuo organico nelle altre sedi.`}
+        message={`${person.full_name} non sarà più nel team di ${venueName}. I turni futuri già assegnati vengono annullati e tornano da coprire; le ore dei turni passati restano nel rendiconto. Resta nel tuo team nelle altre sedi.`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}
@@ -762,7 +762,7 @@ function PersonIdentitySection({ person }: { person: StaffPersonDetail }) {
   return (
     <View className="gap-4">
       <EditSectionHeader
-        title="Anagrafica"
+        title="Dati personali"
         onEdit={editing ? undefined : () => setEditing(true)}
       />
       {editing ? (
@@ -829,7 +829,7 @@ function PersonIdentityForm({
           note: note.trim() || null,
         },
       });
-      toast.show("Anagrafica aggiornata");
+      toast.show("Dati aggiornati");
       onDone();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
@@ -911,7 +911,7 @@ function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
         <Mono>Invito</Mono>
         <Text className="text-sm leading-5 text-t2">
           Questa email appartiene a un account già collegato a un&apos;altra
-          scheda del tuo organico. Controlla se sono la stessa persona: in tal
+          scheda del tuo team. Controlla se sono la stessa persona: in tal
           caso usa quella scheda ed elimina questa.
         </Text>
       </View>
@@ -970,7 +970,7 @@ function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
  * Il compleanno, in sola lettura e sotto al pulsante di salvataggio.
  *
  * Non è un campo del modulo perché **non è un dato del titolare**: lo mette il
- * professionista dal suo profilo, e arriva qui solo se ha scelto di metterlo.
+ * dipendente dal suo profilo, e arriva qui solo se ha scelto di metterlo.
  * Un `Input` disabilitato in mezzo agli altri avrebbe detto che c'è un permesso
  * da sbloccare; una riga separata dice che è roba sua.
  *
@@ -1001,7 +1001,7 @@ function PersonBirthdayRow({ person }: { person: StaffPersonDetail }) {
 
 /**
  * Le lingue parlate, in sola lettura come il compleanno qui sopra: le mette il
- * professionista dal suo profilo, e arrivano qui solo se ha scelto di metterle.
+ * dipendente dal suo profilo, e arrivano qui solo se ha scelto di metterle.
  * Sparisce quando non ce ne sono, per la stessa ragione — una riga «non
  * indicate» sarebbe un invito a chiederle.
  *
@@ -1200,9 +1200,9 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   /**
    * Questa scheda sono io.
    *
-   * Da quando chi gestisce la sede può mettersi in organico, la propria scheda
+   * Da quando chi gestisce la sede può mettersi nel team, la propria scheda
    * si apre da questa stessa schermata — e metà di ciò che c'è dentro è scritto
-   * per guardare qualcun altro: la chat, la scheda pubblica da professionista
+   * per guardare qualcun altro: la chat, la scheda pubblica da dipendente
    * (che un account gestore non ha), la promozione a collaboratore.
    */
   const isMe = !!waiterId && waiterId === managerId;
@@ -1225,11 +1225,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   // Riprendere qualcuno o dargli un'altra sede è del titolare: l'update su
   // `staff_members` la RLS lo concede solo a lui. Con un account, poi, solo se
   // lavora ancora per lui da qualche parte: chi ha lasciato tutte le sedi
-  // l'accordo l'ha chiuso, e rimetterlo in organico senza chiederglielo sarebbe
+  // l'accordo l'ha chiuso, e rimetterlo nel team senza chiederglielo sarebbe
   // decidere al posto suo. Stessa regola della scheda web.
   const canReassign = isOwner && (!waiterId || liveMemberships.length > 0);
   // Le sedi dove non c'è mai stata. Quelle lasciate hanno già la loro card, con
-  // il suo «Rimetti in organico».
+  // il suo «Rimetti nel team».
   const otherVenues = venues.filter(
     (v) => !person.memberships.some((m) => m.venue_id === v.id)
   );
@@ -1254,7 +1254,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
     try {
       await remove.mutateAsync({ memberId: person.id });
       setConfirmVisible(false);
-      toast.show("Rimosso dall'organico");
+      toast.show("Tolto dal team");
       leavingRef.current = true;
       router.back();
     } catch {
@@ -1304,7 +1304,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   const [pendingLeave, setPendingLeave] = useState<NavigationAction | null>(
     null
   );
-  // Dopo una rimozione dall'organico si esce comunque: la scheda non c'è più.
+  // Dopo una rimozione dal team si esce comunque: la scheda non c'è più.
   const leavingRef = useRef(false);
   usePreventRemove(dirtyKeys.size > 0, ({ data }) => {
     if (leavingRef.current) navigation.dispatch(data.action);
@@ -1328,7 +1328,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
           style={{ paddingTop: insets.top + 8 }}
         >
           <View className="px-5">
-            {/* "Dipendente" e non "Staff": la scheda non è più di una sede. */}
+            {/* "Dipendente" e non "Team": la scheda non è più di una sede. */}
             <ScreenHeader
               eyebrow={isMe ? "Tu" : "Dipendente"}
               title={person.full_name}
@@ -1402,7 +1402,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
               gli edit in stato locale, e cambiare tab non deve buttarli via. */}
           <TabPanel active={tab === "dati"}>
             {/* Questa scheda è l'unica che c'è: quella «pubblica» da
-                professionista portava il CV, ed è caduta col marketplace. Per
+                dipendente portava il CV, ed è caduta col marketplace. Per
                 chi ha un account resta il solo fatto che ce l'ha — è ciò che
                 distingue chi riceve i turni sul telefono da chi è solo una riga
                 nella rubrica del titolare. */}
@@ -1468,7 +1468,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                 className="items-center rounded-2xl border border-border-2 py-3.5"
               >
                 <Text className="text-sm font-sans-semibold text-error">
-                  Rimuovi dall&apos;organico
+                  Togli dal team
                 </Text>
               </Pressable>
             ) : null}
@@ -1516,7 +1516,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
 
       <ConfirmModal
         visible={confirmVisible}
-        title="Rimuovere dall'organico?"
+        title="Togliere dal team?"
         message={`${person.full_name} non lavorerà più in nessuna delle tue sedi. I turni futuri già assegnati vengono annullati; ore, presenze e documenti restano nella sua scheda e nell'export.`}
         confirmLabel="Rimuovi"
         destructive
@@ -1570,7 +1570,7 @@ export default function StaffPersonScreen() {
       <View className="flex-1 bg-bg-0">
         <EmptyState
           title="Scheda non trovata"
-          subtitle="Questa persona non fa più parte del tuo organico."
+          subtitle="Questa persona non fa più parte del tuo team."
         />
       </View>
     );

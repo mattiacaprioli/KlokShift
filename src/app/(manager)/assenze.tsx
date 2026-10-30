@@ -49,7 +49,7 @@ export default function ManagerAbsencesScreen() {
   const pull = usePullToRefresh(query.refetch);
   const [filters, setFilters] = useState<CompanyAbsenceFilters>(NO_ABSENCE_FILTERS);
   const [panelOpen, setPanelOpen] = useState(false);
-  // L'organico serve solo per il filtro per sede.
+  // Il team serve solo per il filtro per sede.
   const peopleQuery = useOwnerPeople(isMultiVenue && canStaff ? ownerId : undefined);
   const people = peopleQuery.data;
 
@@ -81,7 +81,7 @@ export default function ManagerAbsencesScreen() {
   return (
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Organico" title="Assenze" />
+        <ScreenHeader eyebrow="Team" title="Assenze" />
       </View>
 
       <ScrollView
@@ -101,8 +101,8 @@ export default function ManagerAbsencesScreen() {
       >
         {!canStaff ? (
           <EmptyState
-            title="Non gestisci l'organico"
-            subtitle="Le assenze le vede chi ha il permesso sull'organico. Nel planning trovi comunque chi non è disponibile."
+            title="Non gestisci il team"
+            subtitle="Le assenze le vede chi ha il permesso «Team». Nel planning trovi comunque chi non è disponibile."
           />
         ) : query.isLoading ? (
           <ListSkeleton variant="person" label="Caricamento assenze…" />
@@ -216,21 +216,21 @@ export default function ManagerAbsencesScreen() {
               ) : null}
             </View>
 
-            {/* Il filtro per sede passa dall'organico: finché non c'è, la
+            {/* Il filtro per sede passa dal team: finché non c'è, la
                 lista filtrata sarebbe vuota, e un errore la lascerebbe vuota
                 per sempre spacciandola per «nessuna assenza». */}
             {filters.venueId && peopleQuery.isError ? (
               <QueryError
                 title="Filtro per sede non disponibile"
-                subtitle="Non siamo riusciti a caricare l'organico. Riprova, oppure togli il filtro per sede."
+                subtitle="Non siamo riusciti a caricare il team. Riprova, oppure togli il filtro per sede."
                 onRetry={() => peopleQuery.refetch()}
               />
             ) : filters.venueId && peopleQuery.isPending ? (
-              <ListSkeleton variant="person" label="Caricamento organico…" />
+              <ListSkeleton variant="person" label="Caricamento team…" />
             ) : visible.length === 0 ? (
               <EmptyState
                 title="Nessuna assenza con questi filtri"
-                subtitle="Prova ad azzerarli. Lo storico completo di una persona è nella sua scheda, in Staff."
+                subtitle="Prova ad azzerarli. Lo storico completo di una persona è nella sua scheda, in Team."
               />
             ) : (
               <>
@@ -266,7 +266,7 @@ export default function ManagerAbsencesScreen() {
         {canStaff ? (
           <Text className="text-xs leading-4 text-t3">
             Qui trovi gli ultimi {COMPANY_ABSENCES_DAYS_BACK} giorni: lo storico
-            completo di ogni persona è nella sua scheda, in Staff.
+            completo di ogni persona è nella sua scheda, in Team.
           </Text>
         ) : null}
       </ScrollView>

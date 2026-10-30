@@ -86,7 +86,7 @@ export function RecordPastShiftForm({ initialDate, header }: Props) {
   const venue = hoursVenues.find((v) => v.id === venueId) ?? null;
 
   const staffQuery = useVenueStaff(venueId);
-  // Solo chi è attivo in organico (un invito in attesa il database lo rifiuta);
+  // Solo chi è attivo nel team (un invito in attesa il database lo rifiuta);
   // le proprie ore le registra solo il titolare («non decidi di te stesso»),
   // quindi per un collaboratore la propria riga sparisce.
   const staff = (staffQuery.data ?? []).filter(

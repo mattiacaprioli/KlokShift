@@ -18,7 +18,7 @@ import {
   type StaffPersonPatch,
 } from "./api";
 
-/** Waiter: le sedi in cui è in organico ("Le tue sedi"). */
+/** Waiter: le sedi in cui è nel team ("Le tue sedi"). */
 export function useMyEmployers(waiterId: string | undefined) {
   return useQuery({
     queryKey: qk.staff.employers(waiterId ?? ""),
@@ -74,7 +74,7 @@ export function useAddStaff() {
 }
 
 /**
- * Chi gestisce si mette da sé in organico. Vedi `addSelfToStaff`.
+ * Chi gestisce si mette da sé nel team. Vedi `addSelfToStaff`.
  *
  * Invalida anche i turni e il contesto: da adesso quella persona compare nel
  * picker «Chi chiami» e nelle griglie del planning, e nelle sue `works`.
@@ -140,7 +140,7 @@ export function useUpdateStaffMember() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.roles.all });
-      // `set_member_venue` può anche ripristinare una riga uscita dall'organico.
+      // `set_member_venue` può anche ripristinare una riga uscita dal team.
       qc.invalidateQueries({ queryKey: qk.workspaceAccess.all });
     },
   });
@@ -191,7 +191,7 @@ export function useLeaveVenue() {
       qc.invalidateQueries({ queryKey: qk.context.mine });
       qc.invalidateQueries({ queryKey: qk.workspaceAccess.all });
       // I turni futuri di quella sede sono stati tolti: l'agenda del
-      // professionista li mostrerebbe ancora, e il trigger dei coperti ha
+      // dipendente li mostrerebbe ancora, e il trigger dei coperti ha
       // aggiornato i turni dall'altra parte.
       qc.invalidateQueries({ queryKey: qk.assignments.all });
       qc.invalidateQueries({ queryKey: qk.shifts.all });

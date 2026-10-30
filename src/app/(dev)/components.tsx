@@ -36,17 +36,17 @@ export default function ComponentsScreen() {
       <Block title="Skeleton — riepilogo e prossimo turno">
         <View className="gap-3">
           <View className="flex-row gap-2.5">
-            <StatCard loading value="" label="Turni scoperti" hint="solo quelli da fare" />
-            <StatCard loading value="" label="Posti da coprire" hint="persone che mancano" />
+            <StatCard loading value="" label="Turni da coprire" hint="manca ancora qualcuno" />
+            <StatCard loading value="" label="Persone che mancano" hint="in tutti quei turni" />
           </View>
           <NextShiftSkeleton />
         </View>
       </Block>
 
-      <Block title="Skeleton — turni e organico">
+      <Block title="Skeleton — turni e team">
         <View className="gap-3">
           <ListSkeleton rows={2} label="Caricamento turni…" />
-          <ListSkeleton rows={2} variant="person" label="Caricamento organico…" />
+          <ListSkeleton rows={2} variant="person" label="Caricamento team…" />
         </View>
       </Block>
 

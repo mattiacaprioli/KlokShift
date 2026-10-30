@@ -28,12 +28,12 @@ export function ClockMethodCard({
           </h2>
           <p className="mt-1 text-sm leading-5 text-t3">
             {appEnabled
-              ? "Timbratura dall’app: i professionisti timbrano entrata e uscita dal telefono."
+              ? "Timbratura dall’app: i dipendenti timbrano entrata e uscita dal telefono."
               : "Nessuna timbratura: le ore del turno concluso si contano automaticamente e chi gestisce può correggerle."}
           </p>
           <p className="mt-1 text-xs leading-5 text-t4">
             Vale solo per {venue.name} e per chi usa «Come la sede». Le
-            impostazioni personali dello staff non cambiano.
+            scelte fatte per le singole persone non cambiano.
           </p>
         </div>
         <Button

@@ -17,7 +17,7 @@ import type { StaffPersonDetail } from "@/features/staff/api";
  * Il mese della persona in tre numeri, su **tutte** le sedi dell'azienda: sono
  * le ore della sua busta paga. Sta nei dati e non in una scheda sua: turni e ore
  * di sempre e una percentuale di «affidabilità» servivano a scegliere uno
- * sconosciuto sul marketplace, non a chi la persona ce l'ha già in organico.
+ * sconosciuto sul marketplace, non a chi la persona ce l'ha già nel team.
  *
  * Il confronto col contratto solo se è mensile: convertire una settimana o un
  * giorno in un mese in corso darebbe un numero che nessuno ha firmato. Gemello

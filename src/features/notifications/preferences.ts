@@ -19,8 +19,8 @@ export const NOTIFICATION_CATEGORIES: {
   },
   {
     id: "staff",
-    label: "Staff e inviti",
-    description: "Inviti e cambiamenti nel tuo staff.",
+    label: "Team e inviti",
+    description: "Inviti e cambiamenti nel tuo team.",
   },
   {
     // Spegnerla toglie anche la riga nella campanella: il promemoria non nasce

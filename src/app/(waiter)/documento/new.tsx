@@ -7,7 +7,7 @@ import { DocumentFormView } from "@/features/documents/DocumentFormView";
 import { useCreateStaffDocument } from "@/features/documents/hooks";
 
 /**
- * Aggiunta di un documento, lato professionista. `memberId` è l'appartenenza
+ * Aggiunta di un documento, lato dipendente. `memberId` è l'appartenenza
  * (`workspace_members.id`) che ha con quell'azienda: una per azienda, valida
  * per tutte le sue sedi. Non è una cartella personale unica — ogni azienda vede
  * solo la propria.

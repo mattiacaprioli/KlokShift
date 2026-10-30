@@ -341,7 +341,7 @@ function sourceLine(i: WorkHistoryItem, clock: string | null): SourceLine | null
         text: clock
           ? `${clock} · ore inserite da chi gestisce`
           : "Ore inserite da chi gestisce",
-        pill: { label: "Rettificate", variant: "tag" },
+        pill: { label: "Corrette", variant: "tag" },
       };
     case "pending":
       // Solo da un database non ancora migrato, che non dice se la riga conta.

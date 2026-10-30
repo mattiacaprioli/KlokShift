@@ -8,7 +8,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
  * È ciò che serve al filtro «I miei turni» e al badge «Tu»: chi gestisce può
  * mettersi in turno, e le assegnazioni puntano a `venue_member_id`. Le legge dal
  * contesto (`get_my_context().works`), che è già in cache: nessuna query in più
- * e nessun bisogno di caricare l'organico dell'azienda per sapere chi sono.
+ * e nessun bisogno di caricare il team dell'azienda per sapere chi sono.
  *
  * Nessun import di Expo o di React Native: la dashboard web lo riusa.
  * ⚠️ `reactCompiler: true` — nessun hook condizionale.

@@ -66,7 +66,7 @@ function employersOf(memberships: Membership[]): MyEmployer[] {
  * «Passa alla gestione», per chi è stato promosso dalla propria sede.
  *
  * Compare solo con un'appartenenza che gestisce (`useViewMode().canSwitch`),
- * quindi per la quasi totalità dei professionisti questa riga non esiste. Cambiare vista non
+ * quindi per la quasi totalità dei dipendenti questa riga non esiste. Cambiare vista non
  * concede niente: i permessi li decide la RLS sede per sede, e questo tocco
  * sceglie soltanto quale gruppo di rotte montare.
  */
@@ -156,7 +156,7 @@ function EmployerVenueRow({
         // Le due cose che cambiano davvero, dette prima: i turni futuri saltano
         // (e la sede se lo vede scritto nella notifica), il lavoro già fatto
         // resta dov'è. Vedi `leave_venue` in 20260914102811.
-        message={`Non farai più parte dello staff di ${venueName}. I turni che hai in programma lì vengono annullati e la sede viene avvisata; le ore che hai già lavorato restano nel tuo storico. Se lavori in altre sedi dello stesso datore di lavoro, quelle restano — e con loro i tuoi documenti.`}
+        message={`Non farai più parte del team di ${venueName}. I turni che hai in programma lì vengono annullati e la sede viene avvisata; le ore che hai già lavorato restano nel tuo storico. Se lavori in altre sedi della stessa azienda, quelle restano — e con loro i tuoi documenti.`}
         confirmLabel="Lascia"
         destructive
         pending={leave.isPending}
@@ -170,7 +170,7 @@ function EmployerVenueRow({
 /**
  * Un **datore di lavoro** e le sue sedi, non una card per sede.
  *
- * ⚠️ La chat è una sola per coppia professionista–titolare (indice unico
+ * ⚠️ La chat è una sola per coppia dipendente–titolare (indice unico
  * `conversations_waiter_manager_key`, e vedi 20260913100200: la decisione di
  * prodotto è un filo solo, non uno per edificio). Con due sedi dello stesso
  * titolare c'erano due "Scrivi alla sede" che aprivano **la stessa**
@@ -221,13 +221,13 @@ function EmployerGroupCard({ venues }: {
               {startConversation.isPending
                 ? "Apertura…"
                 : multi
-                  ? "Scrivi al datore di lavoro"
+                  ? "Scrivi al titolare"
                   : "Scrivi alla sede"}
             </Text>
           </Pressable>
           {multi ? (
             <Text className="mt-1 text-xs text-t3">
-              Una chat sola per tutte le sedi di questo datore di lavoro.
+              Una chat sola per tutte le sedi di questa azienda.
             </Text>
           ) : null}
         </View>

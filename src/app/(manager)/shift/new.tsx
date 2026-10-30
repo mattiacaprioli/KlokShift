@@ -28,7 +28,7 @@ export default function NewShiftScreen() {
         header={(actions) => (
           <View className="px-6 pb-4">
             <ScreenHeader
-              eyebrow="Il tuo staff"
+              eyebrow="Il tuo team"
               goldEyebrow
               title="Nuovo turno"
               icon="close"

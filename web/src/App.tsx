@@ -109,7 +109,7 @@ export function App() {
   return (
     // Sopra tutto il resto: `RealtimeSync` deve sapere quali sedi ascoltare,
     // `AppLayout` quante sono, e il gate qui sotto se questa persona gestisce
-    // un'azienda — l'unica cosa che la distingue da un professionista.
+    // un'azienda — l'unica cosa che la distingue da un dipendente.
     <OwnerVenuesProvider>
       <Dashboard userId={session.user.id} />
     </OwnerVenuesProvider>
@@ -119,7 +119,7 @@ export function App() {
 /**
  * La dashboard vera, dentro `OwnerVenuesProvider`.
  *
- * Il gate del professionista sta qui e non in `App` perché la risposta arriva
+ * Il gate del dipendente sta qui e non in `App` perché la risposta arriva
  * dal provider: chi gestisce non è un ruolo scritto sul profilo, è chi ha
  * un'appartenenza con `authority` in un'azienda (`get_my_context`).
  */
@@ -150,7 +150,7 @@ function Dashboard({ userId }: { userId: string }) {
   }
 
   // La dashboard è uno strumento da scrivania per chi gestisce una sede. Il
-  // professionista non ha nulla da farci: schermata esplicita, non un redirect
+  // dipendente non ha nulla da farci: schermata esplicita, non un redirect
   // silenzioso che lo lascerebbe a chiedersi cosa è andato storto.
   if (!canManage) return <NotForWaitersPage />;
 

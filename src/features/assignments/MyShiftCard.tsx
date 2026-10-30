@@ -44,7 +44,7 @@ const STATUS: Record<
 };
 
 /**
- * Un turno assegnato, visto dal professionista.
+ * Un turno assegnato, visto dal dipendente.
  *
  * La data non c'è: la porta l'intestazione del giorno in agenda. Ripeterla in
  * fondo a ogni card rendeva dieci turni dieci righe uguali, e spingeva l'ora —
@@ -52,7 +52,7 @@ const STATUS: Record<
  * l'elemento più forte, in cifre tabellari così che le righe si incolonnino.
  *
  * Niente compenso: sui turni interni `hourly_rate` non è un dato che la sede
- * espone al professionista, ed è per questo che anche il dettaglio turno
+ * espone al dipendente, ed è per questo che anche il dettaglio turno
  * (`(waiter)/shift/[id]`) non mostra la riga "Compenso".
  */
 export function MyShiftCard({

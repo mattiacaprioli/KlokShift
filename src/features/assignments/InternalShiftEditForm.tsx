@@ -54,9 +54,9 @@ import type { Shift } from "@/features/shifts/types";
 type SeededProps = {
   shift: Shift;
   initialTargets: Record<string, number>;
-  /** Stato dell'assegnazione già a sistema, per membro dell'organico. */
+  /** Stato dell'assegnazione già a sistema, per membro del team. */
   initialStatuses: Record<string, AssignmentStatus>;
-  /** Ruolo già scelto su questo turno, per membro dell'organico. */
+  /** Ruolo già scelto su questo turno, per membro del team. */
   initialRoles: Record<string, string | null>;
 };
 

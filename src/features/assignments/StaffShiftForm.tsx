@@ -75,7 +75,7 @@ type Props = {
 };
 
 /**
- * Crea un turno e lo assegna a zero, una o più persone dell'organico, anche su
+ * Crea un turno e lo assegna a zero, una o più persone del team, anche su
  * più giorni della settimana. Senza nessuno il turno nasce «da coprire», come
  * dalla dashboard: fino al 26/10/2026 qui serviva almeno una persona, e la
  * stessa cosa si faceva in un modo sul web e in un altro sul telefono.
@@ -224,7 +224,7 @@ export function StaffShiftForm({ initialDate, header }: Props) {
     setTemplate(null);
     choose(id);
     if (hadSelection) {
-      toast.show("Persone e fabbisogni azzerati: erano di un'altra sede.");
+      toast.show("Persone e posti per ruolo azzerati: erano di un'altra sede.");
     }
   }
 
@@ -328,7 +328,7 @@ export function StaffShiftForm({ initialDate, header }: Props) {
               ? `Creati ${plannedDates.length} turni`
               : selectedIds.length === 0
                 ? "Turno creato: è da coprire"
-                : "Turno assegnato allo staff"
+                : "Turno assegnato"
           );
           router.back();
         },

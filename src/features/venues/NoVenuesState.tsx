@@ -68,7 +68,7 @@ export function NoVenuesState({
   );
 }
 
-/** Un invito ricevuto: accettare è il consenso, senza non si entra in organico. */
+/** Un invito ricevuto: accettare è il consenso, senza non si entra nel team. */
 function InviteCard({ invite }: { invite: Membership }) {
   const toast = useToast();
   const respond = useRespondToInvite();
@@ -91,7 +91,7 @@ function InviteCard({ invite }: { invite: Membership }) {
         {invite.workspace_name} ti ha invitato
       </Text>
       <Text className="text-[13px] leading-5 text-t3">
-        Accettando entri nell&apos;organico e la sede vede i tuoi turni.
+        Accettando entri nel team e la sede vede i tuoi turni.
       </Text>
       <View className="flex-row gap-2.5">
         <GoldButton

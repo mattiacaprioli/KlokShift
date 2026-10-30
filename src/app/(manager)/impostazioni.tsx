@@ -85,7 +85,7 @@ export default function ManagerSettingsScreen() {
             </Pressable>
 
             {/* Il ritorno al proprio lato: chi è qui per una promozione
-                dall'organico è prima di tutto un professionista, e i suoi turni
+                dal team è prima di tutto un dipendente, e i suoi turni
                 stanno di là. La riga esiste solo per lui. */}
             {canSwitch ? (
               <Pressable
@@ -101,7 +101,7 @@ export default function ManagerSettingsScreen() {
                     Torna ai tuoi turni
                   </Text>
                   <Text className="mt-0.5 text-[13px] text-t3">
-                    La tua app da professionista
+                    I turni in cui lavori anche tu
                   </Text>
                 </View>
                 <Icon name="chevR" size={18} color="#6A6358" />
@@ -179,7 +179,7 @@ export default function ManagerSettingsScreen() {
 
         <View style={{ marginTop: "auto" }} className="gap-6">
           <GhostButton label="Esci" onPress={signOut} />
-          {/* Per un professionista promosso questo è l'account con cui lavora,
+          {/* Per un dipendente promosso questo è l'account con cui lavora,
               non un account da sede: cancellarlo da qui vorrebbe dire
               chiudere la propria carriera dalla porta di servizio. Lo trova
               nelle impostazioni del suo lato. */}

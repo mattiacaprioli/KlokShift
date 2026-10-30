@@ -5,7 +5,7 @@ import { SupportView, type SupportGuide } from "@/features/support/SupportView";
 /**
  * «Aiuto e supporto» di chi gestisce. Una guida compare solo a chi può fare
  * quello che spiega: i collaboratori sono del titolare, le assenze di chi
- * gestisce l'organico. Domande e contatto li vedono tutti.
+ * gestisce il team. Domande e contatto li vedono tutti.
  */
 export default function ManagerSupportScreen() {
   const router = useRouter();

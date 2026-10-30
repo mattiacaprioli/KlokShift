@@ -6,8 +6,8 @@ import { useCompleteOnboarding } from "./hooks";
 /**
  * «Torna ai tuoi turni» per chi gestisce e lavora.
  *
- * Il wizard del professionista chiede solo il nome: un titolare che si è messo
- * in organico ce l'ha già, e passando alla vista lavoro si sarebbe trovato
+ * Il wizard del dipendente chiede solo il nome: un titolare che si è messo
+ * nel team ce l'ha già, e passando alla vista lavoro si sarebbe trovato
  * davanti un «Come ti vedrà la tua sede» senza motivo. Se il nome c'è,
  * l'onboarding si chiude qui in silenzio; se manca (o il salvataggio fallisce)
  * il wizard resta la rete, com'era prima.

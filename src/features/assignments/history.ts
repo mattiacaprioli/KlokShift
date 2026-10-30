@@ -148,7 +148,7 @@ export function useMyWorkTotals(waiterId: string, from: string, to: string) {
 }
 
 /**
- * Storico dei turni svolti dal professionista, a pagine: le assegnazioni
+ * Storico dei turni svolti dal dipendente, a pagine: le assegnazioni
  * passate non rifiutate né segnate come assenza. Solo ore lavorate, nessun dato
  * economico.
  *

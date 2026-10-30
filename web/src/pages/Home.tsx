@@ -139,7 +139,7 @@ export function HomePage() {
       todayAssignments
         .map((a) => ({
           key: `asg-${a.id}`,
-          name: a.staff_member?.display_name ?? "Staff",
+          name: a.staff_member?.display_name ?? "Persona",
           personId: a.staff_member?.person_id ?? null,
           role: a.role?.name ?? null,
           date: a.shift?.date ?? "",
@@ -236,16 +236,16 @@ export function HomePage() {
         <Stat
           loading={periodQuery.isPending}
           value={statsReady ? stats.shortCount : "—"}
-          label="turni scoperti"
-          hint="solo quelli ancora da fare"
+          label="turni da coprire"
+          hint="manca ancora qualcuno"
           tone={stats.shortCount > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
         />
         <Stat
           loading={periodQuery.isPending}
           value={statsReady ? stats.missingSlots : "—"}
-          label="posti da coprire"
-          hint="persone che mancano"
+          label="persone che mancano"
+          hint="in tutti quei turni"
           tone={stats.missingSlots > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
         />

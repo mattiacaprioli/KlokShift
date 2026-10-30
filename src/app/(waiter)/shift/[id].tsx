@@ -519,7 +519,7 @@ export default function WaiterShiftDetailScreen() {
                       )
                     ) : (
                       <Text className="mt-2 text-sm text-error">
-                        La finestra di timbratura è terminata: contatta la sede per inserire l’uscita.
+                        Ormai è tardi per timbrare l’uscita dall’app: chiedi alla sede di inserirla.
                       </Text>
                     )}
                   </>

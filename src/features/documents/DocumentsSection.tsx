@@ -24,17 +24,17 @@ type Props = {
   memberId: string;
   /**
    * Dove si aggiunge un documento. Assente = sola lettura: la sede e il
-   * professionista collegato hanno gli stessi diritti sulla scheda, ma sul
-   * profilo pubblico di un professionista i documenti si guardano e basta.
+   * dipendente collegato hanno gli stessi diritti sulla scheda, ma sul
+   * profilo pubblico di un dipendente i documenti si guardano e basta.
    */
   onAdd?: () => void;
   title?: string;
 };
 
 /**
- * I documenti di una persona dell'organico, con le loro scadenze.
+ * I documenti di una persona del team, con le loro scadenze.
  *
- * Condivisa fra la scheda staff del gestore e il profilo del professionista:
+ * Condivisa fra la scheda staff del gestore e il profilo del dipendente:
  * sono le stesse righe viste dalle due parti. Chi può toccarle lo decide la RLS
  * (`staff_documents`), non questo componente.
  */

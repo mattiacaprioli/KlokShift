@@ -4,7 +4,7 @@
  * Non esiste un campo "ragione sociale": inventarlo adesso sarebbe una colonna, un
  * form e un passaggio di onboarding per riempire un'intestazione. La regola è
  * quindi **la stessa di `chat_counterpart`** (20260913100200), e deve restarlo: se
- * in chat il professionista legge "Giuseppe Buffa", il commercialista non può
+ * in chat il dipendente legge "Giuseppe Buffa", il commercialista non può
  * ricevere un file intestato "Trattoria Roma", o i due documenti non parlano della
  * stessa persona.
  *

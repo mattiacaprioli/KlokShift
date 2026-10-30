@@ -10,7 +10,7 @@ type Props = {
 };
 
 /**
- * I ruoli di una persona dell'organico: scelta multipla sui ruoli della sede.
+ * I ruoli di una persona del team: scelta multipla sui ruoli della sede.
  * Caselle e non `<select>`: le mansioni sono poche e tutte visibili, e un
  * multi-select nativo da tastiera è uno dei controlli peggiori del web.
  *

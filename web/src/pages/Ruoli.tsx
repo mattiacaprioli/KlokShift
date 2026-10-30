@@ -146,8 +146,8 @@ export function RuoliPage() {
       <>
         <PageHeader title="Ruoli" actions={back} />
         <Placeholder
-          title="Non puoi modificare le mansioni"
-          detail="Le mansioni fanno parte dei dati della sede: servono i permessi «Dati della sede»."
+          title="Non puoi modificare i ruoli"
+          detail="I ruoli fanno parte dei dati della sede: servono i permessi «Dati della sede»."
         />
       </>
     );
@@ -178,8 +178,8 @@ export function RuoliPage() {
         title="Ruoli"
         subtitle={
           editable.length > 1 && venue
-            ? `Le mansioni di ${venue.name}: ogni sede ha le sue.`
-            : "Le mansioni che assegni allo staff e che chiedi sui turni."
+            ? `I ruoli di ${venue.name}: ogni sede ha le sue.`
+            : "I ruoli che dai alle persone e chiedi sui turni."
         }
         actions={
           <>
@@ -239,7 +239,7 @@ export function RuoliPage() {
       {roles.length === 0 ? (
         <Placeholder
           title="Nessun ruolo"
-          detail="Aggiungi le mansioni della tua sede: potrai assegnarle allo staff e chiederle sui turni."
+          detail="Aggiungi i ruoli della tua sede (sala, bar, cucina…): potrai darli alle persone e chiederli sui turni."
         />
       ) : (
         <div className="flex flex-col gap-2">

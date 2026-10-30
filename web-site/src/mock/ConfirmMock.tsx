@@ -1,5 +1,5 @@
 /*
- * Il lato professionista: il turno assegnato che aspetta una risposta, e sotto
+ * Il lato dipendente: il turno assegnato che aspetta una risposta, e sotto
  * il monte ore. Le due sole cose che l'app gli chiede di fare — confermare e
  * guardare le proprie ore — nello stesso ordine in cui le trova nella home.
  */

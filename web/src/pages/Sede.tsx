@@ -23,9 +23,9 @@ export function SedePage() {
       <>
         <PageHeader
           title="Nessuna sede"
-          subtitle="Serve una sede per organizzare i turni e gestire il personale."
+          subtitle="Serve una sede per organizzare i turni del tuo team."
         />
-        <NoVenues detail="Serve per organizzare i turni e gestire il personale." />
+        <NoVenues detail="Serve per organizzare i turni del tuo team." />
         {/* Chi ha chiuso l'unica sede deve poterla riaprire da qui. */}
         {isOwner ? (
           <div className="mx-auto mt-6 max-w-2xl">
@@ -49,7 +49,7 @@ export function SedePage() {
           subtitle={
             editable || clockEditable
               ? "Come si presenta la sede e come ci si lavora."
-              : "Questi dati sono ciò che i professionisti vedono della sede."
+              : "Questi dati li vede il tuo team sui turni."
           }
           // Con una sede sola l'elenco ripeterebbe la scheda: resta l'azione.
           // Aprire una sede non si delega, quindi solo al titolare.

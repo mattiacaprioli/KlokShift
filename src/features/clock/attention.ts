@@ -39,7 +39,7 @@ export function clockAttentionForShift(
         shift,
         assignmentId: assignment.id,
         personName:
-          assignment.staff_member?.display_name || "Professionista",
+          assignment.staff_member?.display_name || "Persona",
       },
     ];
   });

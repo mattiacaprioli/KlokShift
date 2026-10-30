@@ -139,7 +139,7 @@ export function FirstStepsCard() {
           </Link>
           {steps.next.id === "people" && !steps.hasSelfCard ? (
             <Link to="/staff?aggiungi=me" className="focus-gold text-sm text-gold underline">
-              Lavori anche tu? Mettiti in organico
+              Lavori anche tu? Mettiti nel team
             </Link>
           ) : null}
         </div>

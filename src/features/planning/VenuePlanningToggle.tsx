@@ -8,7 +8,7 @@ import type { Venue } from "@/features/venues/api";
 import { useSetVenueSeesPlanning } from "./hooks";
 
 /**
- * «Planning visibile all'organico», sulla scheda della sede.
+ * «Planning visibile al team», sulla scheda della sede.
  *
  * Acceso di default: chi lavora in una sede
  * ha ragione di sapere chi c'è in turno con lui, e pretendere un'azione dal
@@ -35,8 +35,8 @@ export function VenuePlanningToggle({
         onSuccess: () =>
           toast.show(
             value
-              ? "L'organico vede il planning"
-              : "Planning non più visibile all'organico"
+              ? "Il team vede il planning"
+              : "Planning non più visibile al team"
           ),
         onError: (e) =>
           toast.show(userErrorMessage(e, "Impossibile salvare. Riprova."), "error"),
@@ -46,14 +46,14 @@ export function VenuePlanningToggle({
 
   return (
     <View className="gap-2">
-      <SectionHeader className="mb-0" title="Organico" />
+      <SectionHeader className="mb-0" title="Team" />
       <Card className="flex-row items-center justify-between gap-3 px-4 py-3.5">
         <View className="flex-1">
           <Text className="text-[15px] font-sans-semibold text-t1">
-            Planning visibile all&apos;organico
+            Planning visibile al team
           </Text>
           <Text className="mt-0.5 text-[13px] text-t3">
-            Chi è in organico vede i turni di questa sede e chi ci lavora.
+            Il team vede i turni di questa sede e chi ci lavora.
           </Text>
         </View>
         <Switch

@@ -28,7 +28,7 @@ import {
 } from "@/features/staff/api";
 
 /**
- * Una riga dell'organico: **una persona**, non una sua scheda di sede.
+ * Una riga del team: **una persona**, non una sua scheda di sede.
  *
  * Fino al 14/09/2026 questa lista mostrava le `staff_members` della sede attiva,
  * e chi lavorava in tre sedi ci compariva tre volte con un sottotitolo "anche
@@ -39,7 +39,7 @@ function PersonRow({
   person,
   /** Le sedi in cui lavora. Vuoto con una sede sola: sarebbe rumore. */
   venueNames,
-  /** È la mia scheda: da quando chi gestisce può mettersi in organico. */
+  /** È la mia scheda: da quando chi gestisce può mettersi nel team. */
   isMe,
   onPress,
 }: {
@@ -121,7 +121,7 @@ export default function ManagerStaffScreen() {
   const canHours = canAny("can_view_hours");
   const canVenue = canAny("can_manage_venue");
   const pendingAbsences = usePendingAbsenceCount(canStaff);
-  // L'organico è dell'**azienda**: una riga per persona, tutte le sedi insieme.
+  // Il team è dell'**azienda**: una riga per persona, tutte le sedi insieme.
   const peopleQuery = useOwnerPeople(venueQuery.ownerId);
   const people = peopleQuery.data ?? [];
   // Chi gestisce può lavorare: la propria scheda si riconosce nell'elenco, e
@@ -135,8 +135,8 @@ export default function ManagerStaffScreen() {
         className="shrink-0 px-5 pb-4"
         style={{ paddingTop: insets.top + 12 }}
       >
-        <Mono gold>Organico</Mono>
-        <Display className="mt-1 text-4xl leading-[46px]">Il mio staff</Display>
+        <Mono gold>Team</Mono>
+        <Display className="mt-1 text-4xl leading-[46px]">Il mio team</Display>
         {isMultiVenue && people.length > 0 ? (
           <Text className="mt-1 text-sm text-t3">
             {people.length === 1
@@ -163,20 +163,20 @@ export default function ManagerStaffScreen() {
         }
       >
         {venueQuery.isLoading ? (
-          <ListSkeleton variant="person" label="Caricamento organico…" />
+          <ListSkeleton variant="person" label="Caricamento team…" />
         ) : venueQuery.isError ? (
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
         ) : venues.length === 0 ? (
-          <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo organico." />
+          <NoVenuesState subtitle="Ti serve una sede prima di creare il tuo team." />
         ) : (
           <>
             {canStaff && canUseOperations ? (
               <GoldButton
-                label="Aggiungi allo staff"
+                label="Aggiungi al team"
                 onPress={() => router.push("/(manager)/staff/new")}
               />
             ) : canStaff ? (
-              <OperationsLockedCard title="Aggiungi allo staff" />
+              <OperationsLockedCard title="Aggiungi al team" />
             ) : null}
 
             {/* Anche chi organizza i turni li lavora. Finché la scheda non c'è le
@@ -193,7 +193,7 @@ export default function ManagerStaffScreen() {
                   </View>
                   <View className="flex-1">
                     <Text className="text-base font-sans-bold text-t1">
-                      Metti te stesso in organico
+                      Metti te stesso nel team
                     </Text>
                     <Text className="text-xs text-t3">
                       Per assegnarti i turni e contare le tue ore
@@ -241,7 +241,7 @@ export default function ManagerStaffScreen() {
                 <View className="flex-1">
                   <Text className="text-base font-sans-bold text-t1">Assenze</Text>
                   <Text className="text-xs text-t3">
-                    Ferie, permessi e malattia di tutto lo staff
+                    Ferie, permessi e malattia di tutto il team
                   </Text>
                 </View>
                 {pendingAbsences > 0 ? (
@@ -266,8 +266,8 @@ export default function ManagerStaffScreen() {
                   <Text className="text-base font-sans-bold text-t1">Ruoli</Text>
                   <Text className="text-xs text-t3">
                     {isMultiVenue
-                      ? "Le mansioni di ogni tua sede"
-                      : "Le mansioni che assegni allo staff e chiedi sui turni"}
+                      ? "I ruoli di ogni tua sede"
+                      : "I ruoli che dai alle persone e chiedi sui turni"}
                   </Text>
                 </View>
                 <Icon name="chevR" size={18} color="#8c857a" />
@@ -276,15 +276,15 @@ export default function ManagerStaffScreen() {
             ) : null}
 
             {peopleQuery.isLoading ? (
-              <ListSkeleton variant="person" label="Caricamento organico…" />
+              <ListSkeleton variant="person" label="Caricamento team…" />
             ) : peopleQuery.isError ? (
               <QueryError
                 onRetry={() => peopleQuery.refetch()}
-                subtitle="Non siamo riusciti a caricare l'organico. Riprova."
+                subtitle="Non siamo riusciti a caricare il team. Riprova."
               />
             ) : people.length === 0 ? (
               <EmptyState
-                title="Nessuno nello staff"
+                title="Nessuno nel team"
                 subtitle="Aggiungi le persone con la loro email: chi si registra con quella trova già la sua scheda e i suoi turni."
               />
             ) : (

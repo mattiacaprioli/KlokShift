@@ -10,7 +10,7 @@ import { usePersonAbsences } from "./hooks";
  * Ferie, permessi e malattie di una persona, nella sua scheda.
  *
  * L'assenza è della persona e non della sede: la sezione è la stessa da
- * qualunque sede la si apra. La RLS la mostra solo a chi gestisce l'organico.
+ * qualunque sede la si apra. La RLS la mostra solo a chi gestisce il team.
  */
 export function PersonAbsencesSection({
   personId,

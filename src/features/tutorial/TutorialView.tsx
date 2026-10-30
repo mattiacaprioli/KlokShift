@@ -42,7 +42,7 @@ function Section({ section }: { section: TutorialSection }) {
  * Una guida impaginata: intestazione, introduzione, sezioni e un bottone che
  * porta dove la guida si mette in pratica.
  *
- * Condivisa dai tutorial del titolare e del professionista. I testi stanno nei
+ * Condivisa dai tutorial del titolare e del dipendente. I testi stanno nei
  * `tutorialContent.ts` delle feature, che li condividono con la dashboard web.
  */
 export function TutorialView({

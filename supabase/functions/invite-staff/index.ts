@@ -149,14 +149,14 @@ function buildEmail(p: Payload) {
   const link = `${SITE_URL}/invito.html`;
   const firstName = p.display_name.trim().split(/\s+/)[0] || "ciao";
 
-  const subject = `${venue} ti ha aggiunto al suo organico su KlokShift`;
+  const subject = `${venue} ti ha aggiunto al suo team su KlokShift`;
 
   // Il testo semplice non è un di più: un'email solo-HTML, mandata a freddo a
   // qualcuno che non conosce il mittente, parte con un punteggio spam peggiore.
   const text = [
     `Ciao ${firstName},`,
     ``,
-    `${p.workspace_name} ti ha aggiunto all'organico di ${venue} su KlokShift,`,
+    `${p.workspace_name} ti ha aggiunto al team di ${venue} su KlokShift,`,
     `l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.`,
     ``,
     `Scarica l'app: ${link}`,
@@ -166,7 +166,7 @@ function buildEmail(p: Payload) {
     ``,
     `---`,
     `Ricevi questa email perché ${venue} ha inserito il tuo indirizzo nel proprio`,
-    `organico su KlokShift. Se non ti riguarda, ignorala: senza registrazione non`,
+    `team su KlokShift. Se non ti riguarda, ignorala: senza registrazione non`,
     `viene creato nessun account.`,
     `Privacy: ${SITE_URL}/privacy.html`,
   ].join("\n");
@@ -184,8 +184,8 @@ function buildEmail(p: Payload) {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;">
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
-  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno aggiunto a un organico</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto all'organico di <strong>${e.venue}</strong> su KlokShift — l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.</p>
+  <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno aggiunto a un team</h1>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Ciao ${e.name}, <strong>${e.owner}</strong> ti ha aggiunto al team di <strong>${e.venue}</strong> su KlokShift — l'app con cui la sede organizza i turni e tu tieni il conto delle tue ore.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Scarica l'app</a>
@@ -197,7 +197,7 @@ function buildEmail(p: Payload) {
     </td></tr>
   </table>
   <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #E6E0D6;font-size:12px;line-height:1.6;color:#8A8070;">
-    Ricevi questa email perché ${e.venue} ha inserito il tuo indirizzo nel proprio organico su KlokShift. Se non ti riguarda, ignorala: senza registrazione non viene creato nessun account.<br>
+    Ricevi questa email perché ${e.venue} ha inserito il tuo indirizzo nel proprio team su KlokShift. Se non ti riguarda, ignorala: senza registrazione non viene creato nessun account.<br>
     <a href="${SITE_URL}/privacy.html" style="color:#8A8070;">Privacy</a>
   </p>
 </td></tr></table>
@@ -225,7 +225,7 @@ function buildTeamEmail(p: Payload, link: string) {
     `Ciao,`,
     ``,
     `${p.workspace_name} ti ha dato accesso alla gestione su KlokShift: da lì`,
-    `organizzi i turni e segui l'organico.`,
+    `segui i turni e il team, con i permessi che ti ha dato.`,
     ``,
     `Apri questo link e scegli una password: l'account lo creiamo in quel`,
     `momento, a nome di questo indirizzo (${p.email}).`,
@@ -256,7 +256,7 @@ function buildTeamEmail(p: Payload, link: string) {
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
   <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso alla gestione</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione su KlokShift — da lì organizzi i turni e segui l'organico.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione su KlokShift — da lì segui i turni e il team, con i permessi che ti ha dato.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Attiva il tuo accesso</a>

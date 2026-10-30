@@ -10,7 +10,7 @@ export const labels: Record<string, string> = {
   setup: "Preparazione", operational: "Operativa", archive: "Archivio", expired: "Archivio scaduto",
   migration_pending: "Migrazione da verificare", unavailable: "Dati mancanti", deleted: "Eliminato",
   confirmed: "Confermato", unconfirmed: "Da confermare", anonymous: "Anonimo",
-  owner: "Titolare", collaborator: "Collaboratore", none: "Professionista",
+  owner: "Titolare", collaborator: "Collaboratore", none: "Dipendente",
   active: "Attivo", invited: "Invitato", left: "Uscito",
   base: "Base", team: "Team", trial: "Prova", complimentary_lifetime: "Gratuito a vita",
   complimentary_temporary: "Concessione temporanea", transition: "Transizione",

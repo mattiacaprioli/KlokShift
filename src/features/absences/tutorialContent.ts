@@ -1,6 +1,6 @@
 // ⚠️ MANUTENZIONE — LEGGERE PRIMA DI TOCCARE LA FEATURE ASSENZE
 // Sono i testi delle guide «Ferie, permessi e malattia» nelle impostazioni: del
-// titolare (app e dashboard) e del professionista (app). Descrivono il flusso
+// titolare (app e dashboard) e del dipendente (app). Descrivono il flusso
 // com'è oggi nel codice: se cambi le RPC (`request_absence`, `resolve_absence`,
 // `withdraw_absence`, `record_absence`), i conflitti con i turni
 // (`conflicts.ts`, «Togli dai turni»), il planning o l'export della pagina Ore,
@@ -13,12 +13,12 @@ import type { Tutorial } from "@/features/team/tutorialContent";
 export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
   title: "Ferie, permessi e malattia",
   intro:
-    "I tuoi professionisti chiedono ferie e permessi, e comunicano la malattia, direttamente dall'app. Tu decidi da una card in chat, vedi chi manca nel planning e a fine mese trovi tutto nell'export per il commercialista.",
+    "Le persone del tuo team chiedono ferie e permessi, e comunicano la malattia, direttamente dall'app. Tu decidi da una card in chat, vedi chi manca nel planning e a fine mese trovi tutto nell'export per il commercialista.",
   sections: [
     {
       title: "Quando arriva una richiesta",
       steps: [
-        "Ricevi una notifica e trovi la richiesta in chat con quella persona. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste», e in Staff › Assenze (nella dashboard, la voce «Assenze» del menu), con il numero sul badge.",
+        "Ricevi una notifica e trovi la richiesta in chat con quella persona. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste», e in Team › Assenze (nella dashboard, la voce «Assenze» del menu), con il numero sul badge.",
         "Apri la richiesta: vedi date, motivo e i turni in cui la persona è già assegnata in quei giorni.",
         "Scegli «Approva e togli dai turni» per liberare quei posti, oppure «Approva, i turni li sistemo io». Se non ci sono turni in conflitto c'è solo «Approva».",
         "Se non va bene, «Rifiuta» (in app «Rifiuta la richiesta»). La nota è facoltativa e la legge chi ha chiesto.",
@@ -27,16 +27,16 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
     {
       title: "La malattia",
       points: [
-        "Non si approva: il professionista la comunica e tu la vedi subito, in chat e nella Home.",
+        "Non si approva: il dipendente la comunica e tu la vedi subito, in chat e nella Home.",
         "Se in quei giorni la persona è in turno, sulla card trovi «Togli dai turni»: il turno resta, scoperto, e puoi cercare chi copre.",
         "Si salvano solo le date e, se c'è, il riferimento del certificato medico. Mai diagnosi o altre informazioni sulla salute.",
-        "Il riferimento del certificato arriva spesso dopo la visita: lo aggiunge il professionista o lo aggiungi tu dalla scheda della persona.",
+        "Il riferimento del certificato arriva spesso dopo la visita: lo aggiunge il dipendente o lo aggiungi tu dalla scheda della persona.",
       ],
     },
     {
       title: "Registrare un'assenza al posto suo",
       steps: [
-        "Apri Staff, poi la persona, e vai alla sezione «Assenze».",
+        "Apri Team, poi la persona, e vai alla sezione «Assenze».",
         "Premi «Registra assenza»: tipo, date e, per un permesso, anche l'orario.",
         "Nasce già approvata e senza messaggio in chat. Va bene per una malattia comunicata al telefono, per ferie concordate a voce, o per chi non ha l'app.",
       ],
@@ -54,7 +54,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       points: [
         "Nella pagina Ore trovi «Assenze del mese»: giorni di ferie, giorni e ore di permesso, giorni di malattia con i riferimenti dei certificati medici.",
         "Il PDF delle ore contiene anche la tabella delle assenze. Il CSV delle ore ha colonne a parte per le ore riconosciute di ferie, malattia e permessi; il CSV delle assenze, con i giorni e i certificati, è un file a parte.",
-        "Dalla scheda della persona puoi indicare le ore riconosciute di un'assenza («Ore riconosciute»): finiscono nel consuntivo, separate dalle ore lavorate. Le ore riconosciute in conflitto con ore lavorate risultano da verificare, non contate due volte.",
+        "Dalla scheda della persona puoi indicare le ore riconosciute di un'assenza («Ore riconosciute»): finiscono nel riepilogo ore, separate dalle ore lavorate. Le ore riconosciute in conflitto con ore lavorate risultano da verificare, non contate due volte.",
         "Si contano solo le assenze approvate, in giorni di calendario compresi i festivi: il conteggio dei giorni lavorativi lo fa il consulente del lavoro.",
       ],
     },
@@ -62,7 +62,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       title: "Da sapere",
       points: [
         "Chi lavora in più sedi della tua azienda chiede una volta sola, e l'assenza vale per tutte.",
-        "Un collaboratore vede e decide le assenze solo con il permesso sull'organico. Con i soli turni vede nel planning che una persona non è disponibile, ma non il motivo.",
+        "Un collaboratore vede e decide le assenze solo con il permesso «Team». Con i soli turni vede nel planning che una persona non è disponibile, ma non il motivo.",
         "Il saldo delle ferie maturate e residue non lo calcola l'app: resta al consulente del lavoro.",
       ],
     },

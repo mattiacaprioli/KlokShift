@@ -1,8 +1,8 @@
 // ⚠️ MANUTENZIONE — LEGGERE PRIMA DI TOCCARE LE FEATURE CITATE
-// Sono i testi di «Aiuto e supporto», in app (professionista e gestore) e sulla
+// Sono i testi di «Aiuto e supporto», in app (dipendente e gestore) e sulla
 // dashboard. Le risposte descrivono l'app com'è oggi nel codice: se cambi
 // l'aggancio degli inviti (`link_member_invites`), le notifiche push, la
-// richiesta di sostituzione, la timbratura, l'organico o l'export delle ore,
+// richiesta di sostituzione, la timbratura, il team o l'export delle ore,
 // AGGIORNA queste righe, altrimenti l'aiuto spiega un'app che non esiste più.
 //
 // ⚠️ Le voci per l'app nativa non nominano prezzi, acquisti o checkout: l'app
@@ -41,47 +41,47 @@ export type SupportFaq = {
 export const SUPPORT_FAQ: readonly SupportFaq[] = [
   {
     q: "Non vedo la mia sede o i miei turni",
-    a: "La sede ti collega alla tua scheda tramite l'indirizzo email che le hai dato. Registrati con quello stesso indirizzo e conferma l'email dal link che ti arriva: il collegamento parte da solo. Se hai usato un'altra email, chiedi alla sede di correggerla sulla tua scheda.",
+    a: "La sede ti trova grazie alla tua email. Registrati con la stessa email che le hai dato e conferma il link che ti arriva: sede e turni compaiono da soli. Hai usato un'altra email? Chiedi alla sede di correggerla sulla tua scheda.",
     audience: ["waiter"],
   },
   {
     q: "Non ricevo le notifiche",
-    a: "Controlla in Impostazioni › Notifiche che la categoria sia accesa, poi nelle impostazioni del telefono che KlokShift possa mandare notifiche. Le notifiche restano comunque nella campanella dell'app.",
+    a: "Controlla due cose: in Impostazioni › Notifiche che la voce sia accesa, e nelle impostazioni del telefono che KlokShift possa mandarti notifiche. Le trovi comunque tutte nella campanella dell'app.",
     audience: ["waiter", "manager"],
   },
   {
     q: "Non posso coprire un turno: cosa faccio?",
-    a: "Se il turno è ancora da confermare, rispondi «Non posso», oppure «Ci sono, ma a un altro orario» se puoi venire su un orario diverso. Se l'hai già confermato, aprilo e premi «Chiedi un cambio»: puoi chiedere una sostituzione o un orario diverso. La richiesta arriva al titolare in chat e la sua risposta arriva a te. Per ferie, permessi e malattia c'è la guida qui sopra.",
+    a: "Turno ancora da confermare: rispondi «Non posso», oppure «Ci sono, ma a un altro orario». Turno già confermato: aprilo e premi «Chiedi un cambio». La sede riceve la richiesta in chat e ti risponde lì. Per ferie, permessi e malattia c'è la guida qui sopra.",
     audience: ["waiter"],
   },
   {
     q: "Come timbro entrata e uscita?",
-    a: "Se la tua sede usa la timbratura dall'app, da un'ora prima dell'inizio del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se la sede ti ha abilitato, puoi timbrare anche senza un turno: all'uscita nasce un turno «Fuori turno» che chi gestisce le ore deve approvare. Se dimentichi l'entrata o l'uscita ti arriva un promemoria, che puoi spegnere in Impostazioni › Notifiche. Se non vedi niente, la sede registra le ore senza timbratura.",
+    a: "Da un'ora prima del turno trovi «Timbra entrata» nella Home; a fine turno lo stesso pulsante diventa «Timbra uscita». Se lo dimentichi ti arriva un promemoria. Se la sede te lo permette, puoi timbrare anche senza un turno: nasce un turno «Fuori turno» che la sede deve approvare. Non vedi nessun pulsante? La tua sede non usa la timbratura: le ore le segna lei.",
     audience: ["waiter"],
   },
   {
     q: "Perché non posso aggiungere persone o creare turni?",
-    a: "Finché la prova di 30 giorni non è avviata, l'azienda è solo preparata: puoi sistemare la sede, ma persone, ruoli e turni restano chiusi. La prova la avvia il titolare con «Avvia la prova» (in app dalla Home, sulla dashboard dalla checklist o dal banner in alto): è gratuita e non chiede una carta.",
+    a: "Prima bisogna avviare la prova gratuita di 30 giorni. Fino ad allora puoi sistemare la sede, ma persone, ruoli e turni restano chiusi. La avvia il titolare con «Avvia la prova», dalla Home (o sulla dashboard dalla checklist): non serve la carta.",
     audience: ["manager", "web"],
   },
   {
-    q: "Come aggiungo una persona all'organico?",
-    a: "Da Staff › «Aggiungi allo staff» (sulla dashboard: Staff › «+ Aggiungi»). Scrivi nome ed email: se ha già KlokShift riceve un invito nell'app, altrimenti un'email per registrarsi con quell'indirizzo, e la sua scheda si collega da sola.",
+    q: "Come aggiungo una persona al team?",
+    a: "Da Team › «Aggiungi al team» (sulla dashboard: Team › «+ Aggiungi»). Scrivi nome ed email. Se ha già KlokShift trova l'invito nell'app; altrimenti riceve un'email, si registra con quell'indirizzo e vede subito i suoi turni.",
     audience: ["manager", "web"],
   },
   {
     q: "Come sposto un turno o una persona?",
-    a: "Per spostare tutto il turno cambiane la data: si muove l'intera squadra. Per spostare una sola persona, sulla dashboard trascinala su un altro turno dal planning per persona. Prima di salvare vedi chi verrà avvisato e cosa cambia.",
+    a: "Tutto il turno: cambiane la data, e si spostano tutte le persone. Una persona sola: sulla dashboard, nel planning per persona, trascinala su un altro turno. Prima di salvare vedi chi verrà avvisato.",
     audience: ["manager", "web"],
   },
   {
     q: "Come preparo le ore per il consulente?",
-    a: "Dalla pagina Ore scegli il mese ed esporta il PDF o il CSV mensile; le assenze hanno un CSV separato. KlokShift prepara le quantità: importi e buste paga restano al consulente.",
+    a: "Nella pagina Ore scegli il mese e scarica il PDF o il CSV; le assenze hanno un CSV a parte. KlokShift conta le ore: importi e buste paga li fa il consulente.",
     audience: ["manager", "web"],
   },
   {
     q: "Dove gestisco il piano dell'azienda?",
-    a: "Il titolare trova stato, prova e capacità del piano in «Piano e accesso», nel menu della dashboard.",
+    a: "Il titolare trova stato, prova e limiti del piano in «Piano e accesso», nel menu della dashboard.",
     audience: ["web"],
     ownerOnly: true,
   },

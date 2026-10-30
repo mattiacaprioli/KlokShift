@@ -21,7 +21,7 @@ function atTime(hours: number): Date {
 
 type Props = {
   /**
-   * Professionista in più aziende: a chi mandare la richiesta. Con una sola
+   * Dipendente in più aziende: a chi mandare la richiesta. Con una sola
    * azienda (o dal lato titolare) non si mostra niente.
    */
   employers?: AbsenceEmployer[];

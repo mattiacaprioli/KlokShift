@@ -14,7 +14,7 @@ Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristorant
 >
 > Terza potatura il 2026-10-04 (`20261004000200`): le **recensioni** dei clienti (sospese dal 2026-09-12) — tabella `reviews`, `rating_*` su `waiter_profiles`, la carta pubblica `waiter_public_cards`, il sito `web-review/` e il QR. `anon` non legge e non esegue più nulla (`050_surface.sql`): non riaprirlo senza una decisione di prodotto.
 
-⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **sede** (non "locale"/"ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (rotte, tipi): non rinominarli. **Unica deroga** (2026-09-20, `20260920001900`): le colonne della chat sono `conversations.user_a` / `user_b`, perché lì non è cambiato il vocabolario ma il significato — vedi «La chat» qui sotto.
+⚠️ **Vocabolario** (glossario completo in [docs/GLOSSARIO.md](docs/GLOSSARIO.md), 2026-10-30): nelle stringhe utente le persone dell'azienda sono il **team** (non "organico"/"staff"), chi lavora nei turni è un **dipendente** (non "professionista"/"cameriere"), il luogo è la **sede** (non "locale"/"ristorante"), e niente parole da ufficio (operatività, capacità, mansioni, fabbisogno…). Lo verifica `tests/unit/glossary.test.ts`; le notifiche SQL le rilegge chi tocca un trigger. I nomi interni restano `waiter`/`manager`/`staff` (rotte, tipi, chiavi): non rinominarli. **Unica deroga** (2026-09-20, `20260920001900`): le colonne della chat sono `conversations.user_a` / `user_b`, perché lì non è cambiato il vocabolario ma il significato — vedi «La chat» qui sotto.
 
 ## Modello: chi è chi (2026-09-20)
 

@@ -21,7 +21,7 @@ export default function TutorialScreen() {
       <TutorialView
         tutorial={ABSENCE_MANAGER_TUTORIAL}
         cta={{
-          label: "Vai allo staff",
+          label: "Vai al team",
           onPress: () => router.push("/(manager)/(tabs)/staff"),
         }}
       />

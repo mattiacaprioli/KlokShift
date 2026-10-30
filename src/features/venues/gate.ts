@@ -14,11 +14,11 @@ export function canCreateVenue(args: {
   if (access.state === "setup" && access.usage?.venues === 0) return { allowed: true };
   if (!access.can_operate) return { allowed: false, reason: "L'azienda non ha accesso operativo. Puoi consultare lo storico." };
   if (access.usage === null || access.limits.venues === null) {
-    return { allowed: false, reason: "Capacità delle sedi non disponibile. Aggiorna lo stato dell'azienda." };
+    return { allowed: false, reason: "Non riusciamo a leggere quante sedi prevede il tuo piano. Riprova tra poco." };
   }
   return access.usage.venues < access.limits.venues
     ? { allowed: true }
-    : { allowed: false, reason: `La capacità dell'azienda è di ${access.limits.venues === 1 ? "1 sede aperta" : `${access.limits.venues} sedi aperte`}. Le sedi chiuse conservano lo storico.` };
+    : { allowed: false, reason: `Il tuo piano prevede ${access.limits.venues === 1 ? "1 sede aperta" : `${access.limits.venues} sedi aperte`}. Se chiudi una sede, il suo storico resta.` };
 }
 
 /**

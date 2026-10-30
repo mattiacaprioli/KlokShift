@@ -19,7 +19,7 @@ import {
 /**
  * Registrazione dalla dashboard. Il ruolo non si sceglie: questa interfaccia
  * esiste per chi gestisce una sede, quindi l'account nasce `manager` (un
- * professionista finirebbe su NotForWaitersPage al primo accesso).
+ * dipendente finirebbe su NotForWaitersPage al primo accesso).
  *
  * ⚠️ Il collaboratore invitato **non passa più di qui**: dal 16/09 il suo
  * account nasce su `Invito.tsx`, dal link ricevuto per email, con il ruolo già
@@ -101,7 +101,7 @@ export function RegistrazionePage() {
   return (
     <AuthShell
       title="Crea il tuo account"
-      subtitle="Prepara la prima sede, poi avvia la prova Team di 30 giorni senza carta."
+      subtitle="Prepara la prima sede, poi avvia la prova gratuita di 30 giorni, senza carta."
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -162,7 +162,7 @@ export function RegistrazionePage() {
             ti ha invitato a gestire la sua, non registrarti qui: apri il link
             dell&apos;email d&apos;invito, l&apos;account si crea da lì.
             <br />
-            Se lavori come professionista, la registrazione si fa
+            Se sei un dipendente, ti registri
             dall&apos;app KlokShift sul telefono.
           </p>
         </form>

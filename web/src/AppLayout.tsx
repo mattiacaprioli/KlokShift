@@ -19,7 +19,7 @@ type NavItem = {
   to: string;
   label: string;
   icon: SidebarIconName;
-  group: "Operatività" | "Persone" | "Gestione";
+  group: "Ogni giorno" | "Persone" | "Gestione";
   badge?: "chat" | "notifiche" | "assenze";
   /**
    * Il permesso che serve per arrivarci. Assente = per tutti (il titolare li ha
@@ -35,20 +35,20 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Home", icon: "home", group: "Operatività" },
-  { to: "/planning", label: "Planning", icon: "planning", group: "Operatività" },
-  { to: "/ore", label: "Ore", icon: "hours", group: "Operatività", perm: "can_view_hours" },
-  { to: "/staff", label: "Staff", icon: "staff", group: "Persone", perm: "can_manage_staff" },
+  { to: "/", label: "Home", icon: "home", group: "Ogni giorno" },
+  { to: "/planning", label: "Planning", icon: "planning", group: "Ogni giorno" },
+  { to: "/ore", label: "Ore", icon: "hours", group: "Ogni giorno", perm: "can_view_hours" },
+  { to: "/staff", label: "Team", icon: "staff", group: "Persone", perm: "can_manage_staff" },
   // «Ruoli» non è nel menu (scelta del 22/10): ci si arriva dal pulsante in
   // Staff, dai «Primi passi» e dal form del turno.
   // Stesso permesso di Staff: è quello che fa leggere e decidere le assenze.
   {
     to: "/assenze",
-    label: "Assenze", icon: "absence", group: "Operatività",
+    label: "Assenze", icon: "absence", group: "Ogni giorno",
     perm: "can_manage_staff",
     badge: "assenze",
   },
-  { to: "/storico", label: "Storico", icon: "history", group: "Operatività" },
+  { to: "/storico", label: "Storico", icon: "history", group: "Ogni giorno" },
   // Per tutti: dal 20/09 una conversazione è fra due persone qualsiasi della
   // stessa azienda, e la RLS fa leggere a ciascuno solo le proprie. Chi può
   // scrivere a chi lo decidono la rubrica e `open_conversation`.
@@ -132,7 +132,7 @@ export function AppLayout() {
         </div>
 
         <nav aria-label="Navigazione principale" className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-3 pb-6">
-          {(["Operatività", "Persone", "Gestione"] as const).map((group) => {
+          {(["Ogni giorno", "Persone", "Gestione"] as const).map((group) => {
             const items = NAV.filter(
               (item) => item.group === group &&
                 (!item.ownerOnly || isOwner) && (!item.perm || canAny(item.perm))

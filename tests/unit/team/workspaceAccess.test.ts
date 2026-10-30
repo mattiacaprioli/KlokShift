@@ -158,7 +158,7 @@ describe("accesso commerciale aziendale", () => {
 
   it.each([
     ["abbonamento", "subscription", "Abbonamento attivo."],
-    ["tolleranza di pagamento", "payment_grace", "Il rinnovo dell'abbonamento non è andato a buon fine. L'operatività continua per pochi giorni: il titolare può sistemarlo."],
+    ["tolleranza di pagamento", "payment_grace", "Il rinnovo dell'abbonamento non è andato a buon fine. Puoi continuare a lavorare ancora per pochi giorni: il titolare può sistemarlo."],
   ])("accetta l'origine %s, con scadenza e messaggio neutro", (_name, source, message) => {
     const access = parseWorkspaceAccess({ ...trial(), source, plan: "base", limits: { people: 30, venues: 2 } });
     expect(access.source).toBe(source);

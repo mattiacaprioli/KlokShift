@@ -3,7 +3,7 @@ import { qk } from "@/lib/queryKeys";
 import { getStaffPlanning, setVenueSeesPlanning } from "./api";
 
 /**
- * Il planning delle sedi del professionista, da `from` a `to` inclusi.
+ * Il planning delle sedi del dipendente, da `from` a `to` inclusi.
  *
  * `enabled` di proposito: la tab Turni lo carica solo quando si passa a «Il
  * sede». È una RPC in più su una schermata che si apre a ogni avvio, e la
@@ -18,10 +18,10 @@ export function useStaffPlanning(from: string, to: string, enabled = true) {
 }
 
 /**
- * Manager: condivide (o no) il planning della sede con l'organico.
+ * Manager: condivide (o no) il planning della sede con il team.
  *
  * Invalida `venues.mine` perché lo switch legge il valore da `useOwnerVenues()`,
- * che è quella query. Il planning dei professionisti sta su altri dispositivi:
+ * che è quella query. Il planning dei dipendenti sta su altri dispositivi:
  * lo rivedranno al prossimo caricamento, come il logo (`useUpdateVenueLogo`).
  */
 export function useSetVenueSeesPlanning() {

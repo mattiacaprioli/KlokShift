@@ -24,7 +24,7 @@ function canPreview(mime: string | null): boolean {
 }
 
 /**
- * I documenti di una persona dell'organico, dalla scrivania.
+ * I documenti di una persona del team, dalla scrivania.
  *
  * È qui che la feature paga: la programmazione e i controlli di conformità si
  * fanno da desktop, e un HACCP scaduto è più facile vederlo in una tabella che

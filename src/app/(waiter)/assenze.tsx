@@ -17,7 +17,7 @@ import {
 } from "@/features/absences/hooks";
 
 /**
- * Ferie, permessi e malattia del professionista, presso tutti i datori di
+ * Ferie, permessi e malattia del dipendente, presso tutti i datori di
  * lavoro. L'assenza è della persona e non della sede: una richiesta vale per
  * tutte le sedi dello stesso titolare.
  */
@@ -82,7 +82,7 @@ export default function WaiterAbsencesScreen() {
         ) : employers.length === 0 ? (
           <EmptyState
             title="Non fai ancora parte di una sede"
-            subtitle="Le assenze si chiedono al titolare che ti ha in organico: appena entri in una sede, le trovi qui."
+            subtitle="Ferie e permessi si chiedono alla tua sede: appena entri in un team, li trovi qui."
           />
         ) : (
           <>

@@ -24,12 +24,12 @@ import { useToast } from "@/providers/Toast";
  *
  * Sono due identità diverse e finivano per essere confuse: il Profilo del
  * gestore parla della sede (logo, città, scheda), mentre nome e foto personali
- * sono quelli che il professionista vede in chat e sotto i turni assegnati.
+ * sono quelli che il dipendente vede in chat e sotto i turni assegnati.
  * Fino al 14/09/2026 si potevano cambiare solo dalla dashboard web — chi usa
  * solo il telefono restava con il nome scritto in fase di registrazione.
  *
  * Gli stessi due campi della dashboard (`web/src/pages/Impostazioni.tsx`): il
- * resto è roba del professionista: la città in `profiles`, ruolo e lingue in
+ * resto è roba del dipendente: la città in `profiles`, ruolo e lingue in
  * `waiter_profiles`.
  */
 export default function ManagerAccountEditScreen() {
@@ -104,7 +104,7 @@ export default function ManagerAccountEditScreen() {
         >
           <AvatarPickerField
             uri={photo.uri}
-            name={watchedName || "Gestore"}
+            name={watchedName || "Titolare"}
             busy={photo.busy}
             onPick={photo.pick}
             onRemove={photo.remove}

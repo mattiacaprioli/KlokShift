@@ -51,7 +51,7 @@ export function RecordPastShiftDialog({
   date?: string;
   /**
    * Persone già scelte (id di persona), dalla casella vuota della vista per
-   * persona: la scheda giusta si risolve quando l'organico della sede arriva.
+   * persona: la scheda giusta si risolve quando il team della sede arriva.
    */
   initialPersonIds?: string[];
   /** La sede filtrata nel planning, se lì si registrano le ore. */
@@ -85,7 +85,7 @@ export function RecordPastShiftDialog({
   const [search, setSearch] = useState("");
 
   const staffQuery = useVenueStaff(venueId || undefined);
-  // Solo chi è attivo in organico; le proprie ore le registra solo il titolare.
+  // Solo chi è attivo nel team; le proprie ore le registra solo il titolare.
   const staff = (staffQuery.data ?? []).filter(
     (m) => m.link_status === "active" && (isOwner || !self.isSelf(m.waiter_id))
   );
@@ -276,10 +276,10 @@ export function RecordPastShiftDialog({
                   Chi ha lavorato ({people.length})
                 </span>
                 {staffQuery.isLoading ? (
-                  <p className="text-xs text-t4">Caricamento organico…</p>
+                  <p className="text-xs text-t4">Caricamento team…</p>
                 ) : staff.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
-                    Nessuno in organico in questa sede.
+                    Nessuno nel team di questa sede.
                   </p>
                 ) : (
                   <div className="flex flex-col gap-1">
@@ -289,7 +289,7 @@ export function RecordPastShiftDialog({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Cerca per nome o ruolo…"
-                        aria-label="Cerca nell'organico"
+                        aria-label="Cerca nel team"
                         className="mb-1"
                       />
                     ) : null}

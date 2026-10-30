@@ -191,7 +191,7 @@ export type AddTeamMemberResult =
  *
  * ⚠️ Scegliere l'ambito «solo alcune sedi» mette quelle sedi anche nel `p_venues`
  * della RPC (con `in_scope: true`): è l'unico modo con cui la RPC riceve
- * l'ambito, e per costruzione **mette anche il collaboratore in organico** su
+ * l'ambito, e per costruzione **mette anche il collaboratore nel team** su
  * quelle sedi (`venue_members`, `employment_type: 'a_chiamata'`). Authority e
  * organico restano ortogonali (vedi `supabase/README.md`): comparirà anche
  * nell'elenco dello staff di quelle sedi, non solo fra i collaboratori.
@@ -253,7 +253,7 @@ export async function setTeamAccess(args: {
 
 /**
  * Toglie l'accesso alla gestione: torna un dipendente senza poteri
- * (`authority: 'none'`). Resta nell'organico dov'era già — questo non lo tocca.
+ * (`authority: 'none'`). Resta nel team dov'era già — questo non lo tocca.
  */
 export async function revokeTeamAccess(memberId: string): Promise<void> {
   const { error } = await supabase.rpc("set_member_access", {

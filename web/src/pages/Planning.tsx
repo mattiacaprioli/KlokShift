@@ -1327,11 +1327,11 @@ function ShiftCell({
             >
               <PersonAvatar
                 personId={a.staff_member?.person_id}
-                name={a.staff_member?.display_name ?? "Professionista"}
+                name={a.staff_member?.display_name ?? "Persona"}
                 size={20}
               />
               <span className="truncate text-[11px] text-t2">
-                {a.staff_member?.display_name ?? "Professionista"}
+                {a.staff_member?.display_name ?? "Persona"}
               </span>
             </span>
           ))}

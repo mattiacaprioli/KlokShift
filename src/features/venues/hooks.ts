@@ -65,7 +65,7 @@ export function useSetVenueClosed(workspaceId: string) {
 }
 
 /**
- * Logo della sede. Il logo compare anche sulle card turno del professionista,
+ * Logo della sede. Il logo compare anche sulle card turno del dipendente,
  * ma quelle sono query sue, su un altro dispositivo: le rivedrà al prossimo
  * caricamento.
  */

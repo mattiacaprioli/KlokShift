@@ -46,7 +46,7 @@ function useTeamInvalidation() {
     qc.invalidateQueries({ queryKey: qk.context.mine });
     qc.invalidateQueries({ queryKey: qk.venues.mine });
     // L'ambito «selezionate» può aver messo (o tolto) il collaboratore
-    // dall'organico di una sede: vedi il commento su `addTeamMember`.
+    // dal team di una sede: vedi il commento su `addTeamMember`.
     qc.invalidateQueries({ queryKey: qk.staff.all });
   };
 }

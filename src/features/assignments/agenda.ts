@@ -54,7 +54,7 @@ export function groupByDay<T>(
   return sections;
 }
 
-/** I turni assegnati al professionista, per giorno. */
+/** I turni assegnati al dipendente, per giorno. */
 export function groupAssignmentsByDay(
   items: AgendaItem[],
   now: Date = new Date()

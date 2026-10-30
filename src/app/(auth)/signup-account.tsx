@@ -33,7 +33,7 @@ export default function SignupAccount() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ intent?: string }>();
   const intent: Intent = params.intent === "manager" ? "manager" : "waiter";
-  const intentLabel = intent === "manager" ? "Gestione sede" : "Professionista";
+  const intentLabel = intent === "manager" ? "Gestione sede" : "Dipendente";
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false);

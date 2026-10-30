@@ -12,7 +12,7 @@ export const ADD_WORKER_HINT =
   "Per chi ha lavorato a questo turno senza esserci segnato, per esempio un sostituto. Le ore del turno contano subito e non parte nessuna notifica. Se ha sostituito qualcuno, segna quella persona come assente.";
 
 /**
- * Chi si può aggiungere: in organico e attivo, non già sul turno (chi c'è,
+ * Chi si può aggiungere: nel team e attivo, non già sul turno (chi c'è,
  * anche segnato assente, si gestisce con Presente/Assente; chi aveva rifiutato
  * sì, torna presente) e — per un collaboratore — non sé stesso: le proprie ore
  * le segna solo il titolare.

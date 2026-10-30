@@ -20,7 +20,7 @@ export type MessageCursor = { created_at: string; id: string };
  * marchio. Lato gestione il `subtitle` porta il luogo — la sede se l'azienda ne
  * ha una sola, altrimenti l'azienda, perché il thread è uno per coppia e vale
  * per tutte le sedi: intestarlo a una delle tre sarebbe sbagliato due volte su
- * tre. Lato professionista è `null`: non c'è insegna da mostrare.
+ * tre. Lato dipendente è `null`: non c'è insegna da mostrare.
  */
 export type ChatCounterpart = {
   name: string;

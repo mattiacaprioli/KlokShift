@@ -6,12 +6,12 @@ import type { Tables } from "@/types/database";
  *
  * Passa **tutto** dalla RPC `get_staff_planning` e mai da una
  * select diretta: le policy di `shifts`, `shift_assignments` e `venue_members`
- * mostrano al professionista solo sé stesso, e allargarle esporrebbe anche
+ * mostrano al dipendente solo sé stesso, e allargarle esporrebbe anche
  * telefono e note dei colleghi. La funzione DEFINER decide le colonne, e ne
  * escono solo nome, foto e mansione del giorno.
  *
  * ⚠️ Non esiste una variante "per sede": la RPC restituisce da sé tutte le sedi
- * in cui chi chiama è in organico attivo, perché non c'è nessun parametro con
+ * in cui chi chiama è nel team attivo, perché non c'è nessun parametro con
  * cui farsi dare il planning di una sede altrui.
  */
 
@@ -56,7 +56,7 @@ export type PlanningShift = {
   endTime: string;
   /** Chi c'è. Vuoto = turno ancora scoperto, che è un'informazione anche quella. */
   people: PlanningPerson[];
-  /** Se il professionista è fra loro: la card lo segnala. */
+  /** Se il dipendente è fra loro: la card lo segnala. */
   includesMe: boolean;
 };
 
@@ -104,7 +104,7 @@ export function groupPlanningRows(rows: PlanningRow[]): PlanningShift[] {
 }
 
 /**
- * Il planning delle sedi del professionista, da `from` a `to` inclusi.
+ * Il planning delle sedi del dipendente, da `from` a `to` inclusi.
  *
  * Il database taglia comunque a 62 giorni: chiedere di più non è un errore,
  * restituisce meno.
@@ -135,7 +135,7 @@ export type VenuePlanningVisibility = Pick<
   "id" | "staff_sees_planning"
 >;
 
-/** Manager: accende o spegne la condivisione del planning con l'organico. */
+/** Manager: accende o spegne la condivisione del planning con il team. */
 export async function setVenueSeesPlanning(
   venueId: string,
   visible: boolean

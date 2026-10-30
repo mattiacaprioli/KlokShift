@@ -182,7 +182,7 @@ export function ShiftDetails({
               <section>
                 <div className="mb-2 flex items-baseline justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-t3">
-                    Fabbisogno per ruolo
+                    Persone che servono
                   </span>
                   <Pill tone={coverage.missing > 0 ? "warning" : "success"}>
                     {coverage.covered}/{coverage.required} coperti
@@ -248,7 +248,7 @@ export function ShiftDetails({
                         key={a.id}
                         className="flex items-center justify-between gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2"
                       >
-                        <PersonAvatar personId={personId} name={a.staff_member?.display_name ?? "Professionista"} />
+                        <PersonAvatar personId={personId} name={a.staff_member?.display_name ?? "Persona"} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm text-t1">
                             {a.staff_member?.display_name ?? "—"}
@@ -342,7 +342,7 @@ function Info({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * Annullare un turno non è una modifica come le altre: fa sparire il turno da
- * tutte le viste dei professionisti e manda una notifica a testa. Quindi si
+ * tutte le viste dei dipendenti e manda una notifica a testa. Quindi si
  * chiede conferma, e la conferma dice anche che il passo è reversibile — è la
  * prima cosa che serve sapere quando si clicca per sbaglio.
  */

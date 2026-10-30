@@ -157,7 +157,7 @@ export function useSetMemberClockMethod() {
   });
 }
 
-/** Dove posso timbrare senza turno: per la Home del professionista. */
+/** Dove posso timbrare senza turno: per la Home del dipendente. */
 export function useMyUnplannedClock(enabled = true) {
   return useQuery({
     queryKey: qk.clock.myUnplanned,

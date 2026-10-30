@@ -110,7 +110,7 @@ export const qk = {
     pastCountAll: ["shifts", "pastCount"] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
     /**
-     * Il turno **con la sua sede** (lato professionista). Chiave a parte da
+     * Il turno **con la sua sede** (lato dipendente). Chiave a parte da
      * `detail`: è lo stesso id ma un payload diverso, e finché le due query
      * condividevano la chiave vinceva quella che montava per prima — chi
      * arrivava dopo si ritrovava un turno senza `venue`, o con una `venue` che
@@ -146,7 +146,7 @@ export const qk = {
     byVenue: (venueId: string) => ["staff", "byVenue", venueId] as const,
     /**
      * Le persone del titolare, attraverso le sedi. Sotto il prefisso `staff.all`,
-     * quindi ogni invalidazione dell'organico già esistente la copre.
+     * quindi ogni invalidazione del team già esistente la copre.
      */
     people: (workspaceId: string) => ["staff", "people", workspaceId] as const,
     /** La scheda di una persona, con tutte le sue sedi. */
@@ -212,7 +212,7 @@ export const qk = {
       ["assignments", "mineForShift", shiftId, waiterId] as const,
   },
   /**
-   * Il planning che il professionista vede delle sedi in cui è in organico.
+   * Il planning che il dipendente vede delle sedi in cui è nel team.
    *
    * Nessun id utente nella chiave: la RPC parte da `auth.uid()`, e l'uscita
    * svuota la cache (`queryClient.clear()` su `SIGNED_OUT` in `auth.tsx`).

@@ -11,7 +11,7 @@ import {
 /**
  * «Chat fra colleghi», nelle impostazioni dell'azienda.
  *
- * Acceso di default, come il planning visibile all'organico: chi lavora insieme
+ * Acceso di default, come il planning visibile al team: chi lavora insieme
  * si parla comunque, e pretendere un'azione del titolare avrebbe reso la
  * funzione invisibile quasi ovunque. L'interruttore c'è per chi non vuole
  * messaggi fra dipendenti dentro l'app dell'azienda.
@@ -51,7 +51,7 @@ export function StaffChatToggle({ workspaceId }: { workspaceId: string }) {
           Chat fra colleghi
         </Text>
         <Text className="mt-0.5 text-[13px] text-t3">
-          Chi è in organico può scriversi. A te e ai collaboratori si scrive
+          Le persone del team possono scriversi. A te e ai collaboratori si scrive
           comunque.
         </Text>
       </View>

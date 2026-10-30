@@ -171,7 +171,7 @@ export function ShiftPanel({
             <p className="mt-1 text-xs text-t3">
               {shift && !editing
                 ? formatDate(shift.date)
-                : "Con il tuo staff interno"}
+                : "Con il tuo team"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -413,7 +413,7 @@ function InternalForm({
    * tradotta nella **scheda di quella persona nella sede scelta**: è quella che
    * si scrive in `shift_assignments`.
    *
-   * Sta in un effetto e non nello stato iniziale perché dipende dall'organico,
+   * Sta in un effetto e non nello stato iniziale perché dipende dal team,
    * che arriva una query dopo; e si applica una volta sola (`applied`), o
    * riselezionerebbe chi l'utente ha appena tolto. Chi non lavora in quella sede
    * semplicemente non entra: è la stessa regola del drag & drop.
@@ -965,7 +965,7 @@ function InternalForm({
               </span>
               {staff.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
-                  Nessuno nel tuo organico. Aggiungi il personale dalla sezione Staff.
+                  Nessuno nel tuo team. Aggiungi le persone dalla sezione Team.
                 </p>
               ) : (
                 <div className="flex flex-col gap-1">
@@ -980,7 +980,7 @@ function InternalForm({
                         if (e.key === "Enter") e.preventDefault();
                       }}
                       placeholder="Cerca per nome o ruolo…"
-                      aria-label="Cerca nell'organico"
+                      aria-label="Cerca nel team"
                       className="mb-1"
                     />
                   ) : null}
@@ -1119,8 +1119,8 @@ function InternalForm({
               <span>
                 <span className="block text-sm text-t1">Chiedi conferma a tutti</span>
                 <span className="mt-0.5 block text-xs leading-4 text-t4">
-                  Di norma confermano solo i collaboratori a chiamata: chi è assunto
-                  fisso risulta già in turno.
+                  Di solito conferma solo chi è a chiamata: chi è fisso risulta
+                  già in turno.
                 </span>
               </span>
             </label>

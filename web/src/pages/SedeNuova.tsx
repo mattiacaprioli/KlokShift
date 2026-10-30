@@ -10,7 +10,7 @@ import { Button, PageHeader, Placeholder } from "../ui/primitives";
  * Con `(manager)/venue/new.tsx` è uno dei **due soli** punti che chiamano
  * `canCreateVenue` (vedi `features/venues/gate.ts`). Non c'è niente da attivare
  * dopo il salvataggio: la sede nuova entra in `venues` e compare da sé nel
- * planning, nell'organico e nel picker del form turno.
+ * planning, nel team e nel picker del form turno.
  *
  * Il gate legge la capacità aziendale restituita dal server.
  */
@@ -55,8 +55,8 @@ export function SedeNuovaPage() {
         actions={back}
         subtitle={
           venues.length > 0
-            ? "Una sede in più: avrà un suo organico, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
-            : "Serve per pubblicare turni e gestire il personale."
+            ? "Una sede in più: avrà il suo team, i suoi ruoli e i suoi turni. Le persone che hai già le potrai aggiungere anche qui."
+            : "Serve per organizzare i turni del tuo team."
         }
       />
       <VenueFormCard venue={null} onSaved={() => navigate("/sede")} />

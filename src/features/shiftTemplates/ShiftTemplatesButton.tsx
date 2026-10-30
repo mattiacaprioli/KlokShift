@@ -83,7 +83,7 @@ export function ShiftTemplatesButton({
           Parti da un modello
         </Text>
         <Text className="mt-1.5 text-sm leading-5 text-t2">
-          Riempie orari, pausa, fabbisogno e note. Giorno e persone restano
+          Riempie orari, pausa, persone che servono e note. Giorno e persone restano
           quelli che hai scelto.
         </Text>
 

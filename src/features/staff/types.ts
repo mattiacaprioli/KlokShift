@@ -6,7 +6,7 @@ import type {
 } from "@/features/workspace/types";
 
 /**
- * I tipi di dominio dell'organico, gli stessi che le schermate già usano.
+ * I tipi di dominio del team, gli stessi che le schermate già usano.
  *
  * Dal 20/09/2026 sotto ci sono `workspace_members` (la **persona** nell'azienda)
  * e `venue_members` (la sua **riga di organico** in una sede), che sostituiscono
@@ -37,7 +37,7 @@ export function linkStatusOf(
   return memberStatus === "invited" ? "pending" : "active";
 }
 
-/** Una mansione della persona, come la carica l'embed dell'organico. */
+/** Una mansione della persona, come la carica l'embed del team. */
 export type StaffRoleRef = { id: string; name: string; sort_order: number };
 
 /**

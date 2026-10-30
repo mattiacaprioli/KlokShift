@@ -17,7 +17,7 @@ import { ErrorFallback } from "@/providers/ErrorFallback";
  * navigator (screens read both); OwnerVenues sits inside Auth because it reads
  * `useAuth()`, and outside the navigator so `RealtimeSync` (mounted in
  * `app/_layout.tsx`, not inside the `(manager)` group) veda anche lui le sedi;
- * ViewMode sta dentro OwnerVenues perché la doppia vista di un professionista
+ * ViewMode sta dentro OwnerVenues perché la doppia vista di un dipendente
  * promosso dipende dai suoi accessi delegati (F3), e fuori dal navigatore
  * perché è lui a decidere quale gruppo di rotte è montato;
  * Toast wraps so any screen can fire toasts; ErrorBoundary is innermost so its

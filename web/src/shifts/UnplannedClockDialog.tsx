@@ -20,7 +20,7 @@ import { RomeDateTimeField } from "./PresenceSection";
 
 /**
  * Una timbratura senza turno ancora aperta, per chi ha «Ore»: registrare
- * l'uscita (dimenticata, o oltre le 16 ore che il professionista non chiude più
+ * l'uscita (dimenticata, o oltre le 16 ore che il dipendente non chiude più
  * da sé) o annullare un'entrata fatta per errore. Gemello web di
  * `UnplannedClockModal`: stesse azioni, stesse frasi, orari nell'ora di Roma.
  *

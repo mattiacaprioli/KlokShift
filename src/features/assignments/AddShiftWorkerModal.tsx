@@ -74,7 +74,7 @@ export function AddShiftWorkerModal({
               <ActivityIndicator color="#EAB54C" />
             ) : candidates.length === 0 ? (
               <Text className="text-sm text-t3">
-                In questa sede non c&apos;è nessun altro in organico da aggiungere.
+                In questa sede non c&apos;è nessun altro nel team da aggiungere.
               </Text>
             ) : (
               <View className="gap-2">

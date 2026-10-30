@@ -25,7 +25,7 @@ type Mode = "close" | "void";
 
 /**
  * Una timbratura senza turno ancora aperta, per chi ha «Ore»: si registra
- * l'uscita (dimenticata, o oltre le 16 ore che il professionista non può più
+ * l'uscita (dimenticata, o oltre le 16 ore che il dipendente non può più
  * chiudere da sé) oppure si annulla un'entrata fatta per errore. In tutti e due
  * i casi serve un motivo, e il record originale resta nello storico.
  */

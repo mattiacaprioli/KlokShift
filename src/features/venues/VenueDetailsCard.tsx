@@ -28,7 +28,7 @@ export function VenueDetailsCard({
         : "Non impostata",
     ],
     [
-      "Planning per l’organico",
+      "Planning per il team",
       venue.staff_sees_planning
         ? "Tutti i turni della sede"
         : "Solo i propri turni",

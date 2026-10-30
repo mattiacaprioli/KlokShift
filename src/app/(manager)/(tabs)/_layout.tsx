@@ -45,7 +45,7 @@ export default function ManagerTabsLayout() {
       <Tabs.Screen name="messaggi" options={{ title: "Messaggi" }} />
       <Tabs.Screen
         name="staff"
-        options={{ title: "Staff", href: showStaff ? undefined : null }}
+        options={{ title: "Team", href: showStaff ? undefined : null }}
       />
       <Tabs.Screen name="profilo" options={{ title: "Profilo" }} />
     </Tabs>

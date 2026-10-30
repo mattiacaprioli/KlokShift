@@ -116,7 +116,7 @@ export function fullExportFiles(data: FullExport, missingDocuments: string[] = [
     data.venues.map((v) => [textCell(v.name), textCell(v.address), textCell(v.city), instant(v.created_at), instant(v.closed_at)]));
   files["persone.csv"] = csv(
     ["Nome", "Email", "Telefono", "Ruolo in azienda", "Stato", "Ingresso", "Uscita", "Sedi", "Contratto per sede",
-      "Mansioni", "Ore da contratto", "Periodo ore", "Nota HR"],
+      "Ruoli sui turni", "Ore da contratto", "Periodo ore", "Nota HR"],
     data.people.map((p) => [textCell(p.name), textCell(p.email), textCell(p.phone), label(p.authority), label(p.status),
       instant(p.joined_at), instant(p.left_at),
       textCell(p.venues.map((v) => v.venue + (v.left_at ? ` (fino al ${instant(v.left_at).slice(0, 10)})` : "")).join(", ")),
@@ -129,7 +129,7 @@ export function fullExportFiles(data: FullExport, missingDocuments: string[] = [
       numberCell(s.break_minutes), yesNo(s.break_paid), label(s.status), yesNo(s.unplanned), numberCell(s.positions_total),
       textCell(s.description)]));
   files["presenze.csv"] = csv(
-    ["Data", "Sede", "Turno", "Inizio previsto", "Fine prevista", "Persona", "Mansione", "Stato", "Confermato il",
+    ["Data", "Sede", "Turno", "Inizio previsto", "Fine prevista", "Persona", "Ruolo sul turno", "Stato", "Confermato il",
       "Timbratura", "Entrata", "Uscita", "Pausa timbrata (min)", "Corretta", "Motivo correzione", "Ore lavorate approvate",
       "Fonte delle ore", "Approvata il"],
     data.attendance.map((a) => [day(a.date), textCell(a.venue), textCell(a.shift), time(a.start_time), time(a.end_time),
@@ -152,12 +152,12 @@ export function fullExportFiles(data: FullExport, missingDocuments: string[] = [
     `Creato il ${instant(data.generated_at)} (ora italiana).`,
     "",
     "sedi.csv        le sedi, anche chiuse",
-    "persone.csv     le schede del personale, anche di chi è uscito, con sedi, contratto e nota HR",
+    "persone.csv     le schede del team, anche di chi è uscito, con sedi, contratto e nota HR",
     "turni.csv       tutti i turni, anche annullati",
     "presenze.csv    ogni persona su ogni turno: conferma, timbratura (corretta se c'è una correzione), ore lavorate approvate",
     "assenze.csv     ferie, permessi e malattie con le ore riconosciute",
     data.documents ? "documenti.csv   l'elenco dei documenti; i file sono nella cartella documenti/, divisi per persona"
-      : "Documenti non inclusi: servono i permessi sui documenti del personale.",
+      : "Documenti non inclusi: servono i permessi sui documenti del team.",
     "",
     "I CSV usano il punto e virgola e la virgola per i decimali: si aprono direttamente in Excel.",
     "Le ore lavorate sono quelle approvate; le assenze non sono ore lavorate. KlokShift non calcola importi né buste paga.",

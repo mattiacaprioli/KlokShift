@@ -40,7 +40,7 @@ export function routeForNotification(
     ) {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
-    // Il professionista non riceve mai questi tipi (sono per la sede), ma la
+    // Il dipendente non riceve mai questi tipi (sono per la sede), ma la
     // funzione è totale sui tipi: meglio dirlo che lasciarlo al ramo finale.
     if (
       type === "shift_change_request" ||
@@ -85,7 +85,7 @@ export function routeForNotification(
   // Le assenze hanno **due** destinatari con due atterraggi diversi
   // (`absence_response` qui è l'annullamento di un'assenza già approvata).
   // Con la conversazione è il titolare: la card sta nel suo thread. Senza, è un
-  // collaboratore con «Organico» — quel thread è la coppia (professionista,
+  // collaboratore con «Organico» — quel thread è la coppia (dipendente,
   // titolare) e la RLS non glielo apre, quindi la sua copia arriva senza
   // `related_id` e lo porta alla pagina Assenze, dove quelle assenze si
   // decidono.

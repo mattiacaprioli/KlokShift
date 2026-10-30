@@ -27,7 +27,7 @@ export function weekOf(date: string): string[] {
 /** La riga sotto i giorni da ripetere. */
 export function repeatHint(extraCount: number): string {
   return extraCount === 0
-    ? "Stessi orari, staff e fabbisogno su più giorni della settimana."
+    ? "Stessi orari, persone e posti per ruolo su più giorni della settimana."
     : `Verranno creati ${extraCount + 1} turni identici, uno per giorno.`;
 }
 

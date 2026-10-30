@@ -99,7 +99,7 @@ export class RemoveFromShiftsError extends UserFacingError {
 export type AbsenceCursor = { start_date: string; id: string };
 
 /**
- * Un'assenza con il nome della persona: le liste di chi gestisce l'organico.
+ * Un'assenza con il nome della persona: le liste di chi gestisce il team.
  * `person.id` è il member id (`workspace_members.id`), come `Absence.member_id`.
  */
 export type AbsenceWithPerson = Absence & {
@@ -107,8 +107,8 @@ export type AbsenceWithPerson = Absence & {
 };
 
 /**
- * Un datore di lavoro a cui il professionista può mandare una richiesta: una
- * sua appartenenza attiva con almeno una sede in cui è in organico.
+ * Un datore di lavoro a cui il dipendente può mandare una richiesta: una
+ * sua appartenenza attiva con almeno una sede in cui è nel team.
  */
 export type AbsenceEmployer = {
   /** La mia appartenenza (`workspace_members.id`): è a cui si riferisce l'assenza. */
@@ -190,7 +190,7 @@ function absenceArgs(input: AbsenceInput) {
   };
 }
 
-/** Professionista: chiede ferie o un permesso, o comunica una malattia. */
+/** Dipendente: chiede ferie o un permesso, o comunica una malattia. */
 export async function requestAbsence(
   input: AbsenceInput & { workspaceId: string }
 ): Promise<string> {
@@ -202,7 +202,7 @@ export async function requestAbsence(
   return data as string;
 }
 
-/** Titolare o delegato con l'organico: registra un'assenza già approvata. */
+/** Titolare o delegato con il team: registra un'assenza già approvata. */
 export async function recordAbsence(
   input: AbsenceInput & { memberId: string }
 ): Promise<string> {
@@ -257,7 +257,7 @@ export async function getAbsence(absenceId: string): Promise<Absence | null> {
 }
 
 /**
- * Professionista: le sue assenze presso tutte le aziende. La RLS restituisce
+ * Dipendente: le sue assenze presso tutte le aziende. La RLS restituisce
  * già solo quelle delle sue appartenenze; il filtro rende esplicita la richiesta.
  */
 export async function getMyAbsencesPage(
@@ -281,7 +281,7 @@ export async function getMyAbsencesPage(
   return (data ?? []).map(({ member: _member, ...absence }) => absence);
 }
 
-/** Chi gestisce l'organico: le assenze di una persona, dalla più recente. */
+/** Chi gestisce il team: le assenze di una persona, dalla più recente. */
 export async function getPersonAbsencesPage(
   memberId: string,
   cursor: AbsenceCursor | null
@@ -304,7 +304,7 @@ export async function getPersonAbsencesPage(
 }
 
 /**
- * Assenze approvate ancora rilevanti per l'agenda del professionista.
+ * Assenze approvate ancora rilevanti per l'agenda del dipendente.
  * È volutamente una query diversa dallo storico paginato: la schermata Turni
  * non deve scaricare anni di richieste per mostrare «Sei in ferie».
  */
@@ -326,7 +326,7 @@ export async function getMyCurrentAbsences(
 const RECENT_SICK_DAYS = 7;
 
 /**
- * Chi gestisce l'organico: le richieste da decidere e le malattie comunicate di
+ * Chi gestisce il team: le richieste da decidere e le malattie comunicate di
  * recente (che non si decidono, ma vanno viste per trovare chi copre).
  *
  * Una malattia già finita non c'entra più: non c'è nessuno da sostituire, e
@@ -359,7 +359,7 @@ export async function getAbsencesToHandle(
 export const COMPANY_ABSENCES_DAYS_BACK = 60;
 
 /**
- * Chi gestisce l'organico: le assenze di tutta l'azienda per la pagina
+ * Chi gestisce il team: le assenze di tutta l'azienda per la pagina
  * Assenze. Le richieste ancora da decidere tutte, qualunque data abbiano; le
  * altre solo se non sono finite da più di `COMPANY_ABSENCES_DAYS_BACK` giorni.
  *

@@ -15,7 +15,7 @@ import * as SecureStore from "expo-secure-store";
  * Chiave per account: su un telefono condiviso due persone non si scambiano la
  * vista.
  *
- * ⚠️ Solo mobile. La dashboard web non ha un lato professionista: chi ha un
+ * ⚠️ Solo mobile. La dashboard web non ha un lato dipendente: chi ha un
  * accesso delegato entra e basta (`web/src/App.tsx`), quindi nessun alias Vite
  * da tenere allineato — a differenza di `lastVenueStorage`.
  */
@@ -29,7 +29,7 @@ export async function loadViewMode(userId: string): Promise<ViewMode | null> {
     const raw = await SecureStore.getItemAsync(key(userId));
     return raw === "manager" || raw === "waiter" ? raw : null;
   } catch {
-    // Illeggibile: si riparte dal lato professionista, che è la sua identità.
+    // Illeggibile: si riparte dal lato dipendente, che è la sua identità.
     return null;
   }
 }

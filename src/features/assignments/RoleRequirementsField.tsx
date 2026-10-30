@@ -17,7 +17,7 @@ type Props = {
 };
 
 /**
- * "Fabbisogno per ruolo" del turno interno, condiviso da creazione e modifica.
+ * "Persone che servono" del turno interno, condiviso da creazione e modifica.
  *
  * È **additivo**: mostra solo i ruoli già richiesti, più un pulsante che rivela
  * i restanti. Prima disegnava una riga con +/− per OGNI ruolo esistente, il che

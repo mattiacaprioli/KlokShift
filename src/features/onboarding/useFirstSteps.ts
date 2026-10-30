@@ -50,7 +50,7 @@ export function useFirstSteps(enabled: boolean) {
     ...state,
     userId: myId,
     workspaceId,
-    /** Il titolare ha già la sua scheda: il «mettiti in organico» non serve. */
+    /** Il titolare ha già la sua scheda: il «mettiti nel team» non serve. */
     hasSelfCard: !!myId && (people.data ?? []).some((p) => p.waiter_id === myId),
   };
 }

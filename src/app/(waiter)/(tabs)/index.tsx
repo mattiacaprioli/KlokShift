@@ -51,7 +51,7 @@ export default function WaiterHomeScreen() {
   const unplannedQuery = useMyUnplannedClock();
   const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
   const context = useOwnerVenues();
-  // Nessun organico e nessun invito da accettare: al posto del «nessun turno»
+  // Nessun team e nessun invito da accettare: al posto del «nessun turno»
   // la Home dice come farsi aggiungere. Solo a contesto caricato, senza errori.
   const notInAnyWorkspace =
     !context.isPending &&

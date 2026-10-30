@@ -6,7 +6,7 @@ import { Card } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
 /**
- * «Planning visibile all'organico» — gemella di `VenuePlanningToggle` nell'app.
+ * «Planning visibile al team» — gemella di `VenuePlanningToggle` nell'app.
  *
  * Dentro «Modifica» della sede, salva al clic come timbrature e pausa.
  */
@@ -29,8 +29,8 @@ export function PlanningVisibilityCard({
         onSuccess: () =>
           toast.show(
             on
-              ? "Planning non più visibile all'organico"
-              : "L'organico vede il planning"
+              ? "Planning non più visibile al team"
+              : "Il team vede il planning"
           ),
         onError: (error) => toast.show(userErrorMessage(error), "error"),
       }
@@ -42,15 +42,15 @@ export function PlanningVisibilityCard({
       <div className="flex items-start justify-between gap-4">
         <div className="max-w-xl">
           <span className="text-xs font-semibold uppercase tracking-wider text-gold">
-            Organico
+            Team
           </span>
           <h2 className="mt-1 font-serif text-lg text-t1">
-            Planning visibile all&apos;organico
+            Planning visibile al team
           </h2>
           <p className="mt-1 text-sm leading-5 text-t3">
             {on
-              ? "Chi è in organico vede i turni di questa sede e chi ci lavora."
-              : "Chi è in organico vede solo i propri turni."}
+              ? "Il team vede i turni di questa sede e chi ci lavora."
+              : "Ognuno vede solo i propri turni."}
           </p>
           <p className="mt-1 text-xs leading-5 text-t4">
             Restano privati numeri di telefono, note, documenti e ore. Non
@@ -61,7 +61,7 @@ export function PlanningVisibilityCard({
           type="button"
           role="switch"
           aria-checked={on}
-          aria-label="Planning visibile all'organico"
+          aria-label="Planning visibile al team"
           disabled={save.isPending}
           onClick={toggle}
           className={cn(

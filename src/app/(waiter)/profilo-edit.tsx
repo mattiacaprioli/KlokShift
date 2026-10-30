@@ -138,7 +138,7 @@ export default function WaiterProfileEditScreen() {
           >
             <AvatarPickerField
               uri={photo.uri}
-              name={watchedName || "Professionista"}
+              name={watchedName || "Persona"}
               busy={photo.busy}
               onPick={photo.pick}
               onRemove={photo.remove}

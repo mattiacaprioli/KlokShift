@@ -417,6 +417,18 @@ Un turno tipo («Cena», «Pranzo sala») si salva come modello e si riusa senza
 - `BreakField` ora segue una pausa impostata da fuori (20 minuti aprono «Altro»); `timeToDate` spostata in `src/lib/format.ts`.
 - → **Prova a mano** in app e dashboard: spostata in «🔜 In sospeso › Prove a mano».
 
+### Sessione 2026-10-30 — Glossario unico, testi più semplici ✅ (1 migration da applicare via CI)
+
+Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre i ruoli. Piano in `~/.claude/plans/per-quanto-riguarda-la-lovely-forest.md`; qui le Fasi 0-1.
+
+- **Glossario** [docs/GLOSSARIO.md](docs/GLOSSARIO.md) (parole scelte dall'utente): **team** al posto di organico/staff/personale, **dipendente** al posto di professionista, **ruolo** al posto di mansione, «persone che servono» al posto di fabbisogno; via operatività, capacità, rettifiche pregresse, consuntivo, anagrafica, datore di lavoro. Tab e menu «Staff» → «Team», permesso «Organico» → «Team», gruppo del menu web «Operatività» → «Ogni giorno», KPI della Home «Turni da coprire» / «Persone che mancano».
+- **Test** `tests/unit/glossary.test.ts` + `tests/helpers/userStrings.ts`: legge stringhe e JSX (non i commenti) di app, dashboard, sito e `shared/` e fallisce su una parola vietata.
+- **DB** `20261030000000_glossary_copy.sql`: riscrive per contenuto le frasi delle notifiche e degli errori (come il rename locale→sede); fallisce se ne resta una.
+- **Edge Function** `invite-staff` (v8) e `archive-reminders` (v2): oggetto e testo delle email, ✅ pubblicate il 30/10 (senza credenziali rispondono 401).
+- **Pagine legali** (termini, privacy, elimina account, `invito.html`): stesso glossario, solo forma, nessun diritto o obbligo cambiato; data «Ultimo aggiornamento» portata al 30/10 come chiede l'art. 17 dei termini.
+- **Errori** da sviluppatore riscritti («Stato non valido…», «Esiste già un elemento…»); FAQ di Aiuto e guida dei collaboratori accorciate.
+- → **Prova visuale** dei tre percorsi in app e dashboard: in «Prove a mano».
+
 ## 🔜 In sospeso — verificato il 27/10
 
 > Elenco ricontrollato voce per voce sul codice e sul database remoto il
@@ -445,8 +457,15 @@ Un turno tipo («Cena», «Pranzo sala») si salva come modello e si riusa senza
 - [ ] **Multi-sede a due account**: seconda sede, documento condiviso, export per sede, chiusura sede.
 - [ ] **Revisioni UX del 26/10 (chi gestisce) e del 27/10 (dipendente)**: prova visuale su simulatore/telefono e dashboard.
 - [ ] **Modelli di turno** in app e dashboard.
+- [ ] **Glossario del 30/10**: rileggere a schermo signup, Home, Team, turno e notifiche nei tre ruoli (app e dashboard).
 - [ ] **Monetizzazione M04** secondo [TEST-MONETIZATION-M04.md](docs/TEST-MONETIZATION-M04.md).
 - [ ] **Push su iPhone**: mai provate (serve l'account Apple Developer).
+
+### Chiarezza d'uso — Fasi 2-5 (piano del 30/10)
+- [ ] **Dipendente: un bisogno, un posto.** «Non posso» resta sulla card anche dopo la conferma (apre la richiesta di cambio con «Non posso venire» già scelto); «Chiedi ferie o permesso» raggiungibile dalla Home; togliere la contraddizione fra `JoinWorkspaceCard` («niente da accettare») e gli inviti in `inviti.tsx`; spiegare il «+» dei Messaggi; nascondere «Passa alla gestione» a chi non gestisce.
+- [ ] **Collaboratore: sapere cosa posso fare.** Card «I tuoi permessi» riapribile in app e web (riusa `collaboratorSummary.ts`); `permissionGate` accanto a `operationsGate` per dire «il titolare non ti ha dato il permesso X» invece di nascondere; dopo «Accetta» su un invito da collaboratore passare alla gestione; interruttore gestione/lavoro nello stesso posto sui due lati; permessi e sedi nell'email d'invito e nell'invito in app; FAQ «Perché non vedo Team/Ore?».
+- [ ] **Titolare: meno strada al primo turno.** «+ Nuovo turno» con testo in Turni e azione rapida in Home; «?» per l'Aiuto in un tocco; guida «Il tuo primo turno in 2 minuti»; email «consigliata» in `staff/new`; titolo del turno facoltativo anche sul web; spiegazione di «Fisso / A chiamata»; un solo nome fra «Planning» (web) e «Turni» (app).
+- [ ] **Misurare.** Metriche di attivazione per azienda nell'area del fondatore (registrazione → prova → primo turno, % persone con email, % dipendenti agganciati) e scheda per il «test del ragazzo» (5 compiti cronometrati con 2-3 persone vere).
 
 ### Pubblicazione sugli store (M8)
 - [ ] Account Google Play (25 $ una tantum) e Apple Developer (99 $/anno).

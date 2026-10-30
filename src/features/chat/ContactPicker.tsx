@@ -130,7 +130,7 @@ export function ContactPicker({
               {item.name}
             </Text>
             <Text className="mt-0.5 text-[13px] text-t3" numberOfLines={1}>
-              {item.isManager ? "Gestione" : (item.venues ?? "Organico")}
+              {item.isManager ? "Gestione" : (item.venues ?? "Team")}
             </Text>
           </View>
           {openingId === item.memberId ? (

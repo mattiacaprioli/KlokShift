@@ -16,7 +16,7 @@ import { useRespondToInvite } from "@/features/workspace/hooks";
 import type { Membership } from "@/features/workspace/types";
 
 /**
- * Un invito ricevuto: entrare nell'organico di un'azienda, o collaborare alla
+ * Un invito ricevuto: entrare nel team di un'azienda, o collaborare alla
  * sua gestione.
  *
  * ⚠️ **Accettare è il consenso.** Finché non lo si fa, l'azienda ha una scheda
@@ -41,7 +41,7 @@ function InviteCard({ invite }: { invite: Membership }) {
             accept
               ? isCollaborator
                 ? `Ora gestisci ${invite.workspace_name}`
-                : `Ora fai parte dell'organico di ${invite.workspace_name}`
+                : `Ora fai parte del team di ${invite.workspace_name}`
               : "Invito rifiutato"
           ),
         onError: (e) => toast.show(userErrorMessage(e), "error"),
@@ -65,7 +65,7 @@ function InviteCard({ invite }: { invite: Membership }) {
       <Text className="mt-3 text-sm text-t2">
         {isCollaborator
           ? "Ti ha invitato a collaborare alla gestione."
-          : `Ti ha invitato nel suo organico${
+          : `Ti ha invitato nel suo team${
               invite.works.some((w) => w.employment_type === "fisso")
                 ? " come dipendente fisso"
                 : " a chiamata"
@@ -120,7 +120,7 @@ export default function WaiterInvitesScreen() {
           <View className="mt-16">
             <EmptyState
               title="Nessuna richiesta"
-              subtitle="Quando un'azienda ti invita nel suo organico lo vedrai qui."
+              subtitle="Quando una sede ti invita nel suo team lo vedrai qui."
             />
           </View>
         ) : (

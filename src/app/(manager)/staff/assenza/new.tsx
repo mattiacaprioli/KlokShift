@@ -8,7 +8,7 @@ import { AbsenceFormView } from "@/features/absences/AbsenceFormView";
 import { useRecordAbsence } from "@/features/absences/hooks";
 
 /**
- * Registrare un'assenza per conto di una persona dell'organico: la malattia
+ * Registrare un'assenza per conto di una persona del team: la malattia
  * comunicata al telefono, le ferie concordate a voce, o chi l'app non ce l'ha.
  * Nasce già approvata, senza card in chat.
  */

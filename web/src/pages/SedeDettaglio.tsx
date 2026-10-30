@@ -60,7 +60,7 @@ export function SedeDettaglioPage() {
         subtitle={
           editable || clockEditable
             ? "Come si presenta la sede e come ci si lavora."
-            : "Questi dati sono ciò che i professionisti vedono della sede."
+            : "Questi dati li vede il tuo team sui turni."
         }
         actions={back}
       />

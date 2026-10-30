@@ -22,8 +22,8 @@ export function AccessBanner() {
       : "Il lavoro non è ancora attivo per questa azienda: il titolare può avviare la prova o attivare un abbonamento."
     : access.state === "archive"
       ? isOwner
-        ? "L’operatività è terminata: puoi consultare ed esportare lo storico. Per tornare a creare turni attiva un abbonamento."
-        : "L’operatività dell’azienda è terminata: puoi consultare lo storico. Il titolare può riattivarla."
+        ? "L’azienda non è più attiva: puoi consultare ed esportare lo storico. Per tornare a creare turni attiva un abbonamento."
+        : "L’azienda non è più attiva: puoi consultare lo storico. Il titolare può riattivarla."
       : access.source === "payment_grace"
         ? isOwner
           ? "Il rinnovo dell’abbonamento non è andato a buon fine: per qualche giorno si lavora ancora, poi resta la sola consultazione."

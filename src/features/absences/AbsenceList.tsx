@@ -35,8 +35,8 @@ import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
 type Props = {
   absences: Absence[];
   /**
-   * `mine`: il professionista (ritira, aggiunge il riferimento del certificato).
-   * `manager`: chi gestisce l'organico (decide, aggiunge il riferimento).
+   * `mine`: il dipendente (ritira, aggiunge il riferimento del certificato).
+   * `manager`: chi gestisce il team (decide, aggiunge il riferimento).
    */
   mode: "mine" | "manager";
   /** Riga secondaria per assenza, es. l'azienda per chi lavora in più posti. */

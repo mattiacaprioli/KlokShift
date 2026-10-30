@@ -18,7 +18,7 @@ import {
 } from "@/features/onboarding/schema";
 
 /**
- * Setup del profilo professionista: **un passo solo**, e corto.
+ * Setup del profilo dipendente: **un passo solo**, e corto.
  *
  * Chiede solo come la sede ti vedrà: il nome (di solito già scritto alla
  * registrazione) e una foto facoltativa. Città e ruolo principale sono stati
@@ -76,7 +76,7 @@ export default function OnboardingScreen() {
         >
           <AvatarPickerField
             uri={profile?.avatar_url}
-            name={name || "Professionista"}
+            name={name || "Persona"}
             busy={photo.busy}
             onPick={photo.pick}
             onRemove={photo.remove}

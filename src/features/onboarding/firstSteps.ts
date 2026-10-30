@@ -26,7 +26,7 @@ export type FirstStepsInput = {
   access: WorkspaceAccess | undefined;
   /** Almeno una sede aperta. */
   hasVenue: boolean;
-  /** Chi sta guardando: la sua scheda in organico non conta come «persone». */
+  /** Chi sta guardando: la sua scheda nel team non conta come «persone». */
   myUserId: string | undefined;
   /** `undefined` = non ancora caricato. */
   activeRoleCount: number | undefined;
@@ -66,7 +66,7 @@ const COPY: Record<FirstStepId, Omit<FirstStep, "id" | "status">> = {
   },
   people: {
     title: "Aggiungi le persone",
-    detail: "Nome ed email di chi lavora con te. Se lavori anche tu, mettiti in organico.",
+    detail: "Nome ed email di chi lavora con te. Se lavori anche tu, mettiti nel team.",
     cta: "Aggiungi una persona",
   },
   shift: {
@@ -77,7 +77,7 @@ const COPY: Record<FirstStepId, Omit<FirstStep, "id" | "status">> = {
   team: {
     title: "Fai entrare il team",
     detail: "Chi si registra all'app con l'email della sua scheda trova subito i suoi turni.",
-    cta: "Vai allo staff",
+    cta: "Vai al team",
   },
 };
 
@@ -140,7 +140,7 @@ export function computeFirstSteps(input: FirstStepsInput): FirstStepsState {
 
 /**
  * Cosa ricorda la card, per persona e azienda: chiusa a mano, oppure finita
- * (e allora non torna nemmeno se un giorno l'organico si svuota).
+ * (e allora non torna nemmeno se un giorno il team si svuota).
  */
 export type FirstStepsMemory = "dismissed" | "completed";
 

@@ -112,7 +112,7 @@ export function VenueFormCard({
             <Avatar url={venue.logo_url} name={venue.name} size={72} />
             <div className="flex min-w-0 flex-col items-start gap-2">
               <p className="text-xs text-t3">
-                Il logo compare ai professionisti sui turni di questa sede.
+                Il logo lo vede il tuo team sui turni di questa sede.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button

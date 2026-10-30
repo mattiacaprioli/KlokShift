@@ -79,7 +79,7 @@ type TodayWorker = {
   end: string;
   /** Dove lavora oggi. Assente con una sede sola. */
   venue?: { name: string; accent: string };
-  /** È chi guarda: da quando chi gestisce può stare in organico. */
+  /** È chi guarda: da quando chi gestisce può stare nel team. */
   isMe?: boolean;
   /** La timbratura dal vivo; `null` se non timbra o non la si può vedere. */
   live: LiveClockStatus | null;
@@ -162,7 +162,7 @@ export default function ManagerHome() {
    * Le proprie timbrature da fare, con la stessa card della vista «lavoro»:
    * chi gestisce e si mette in turno non deve cambiare cappello per timbrare.
    * Solo i turni di quest'azienda (`mine`): quelli di un'altra si timbrano
-   * dalla vista lavoro. Le stesse regole della Home del professionista
+   * dalla vista lavoro. Le stesse regole della Home del dipendente
    * (`homeClockState`, `blocksPlannedClockIn`).
    */
   const inRoster = mine.size > 0;
@@ -204,12 +204,12 @@ export default function ManagerHome() {
       const sm = a.staff_member;
       const isMe = self.isSelf(sm?.waiter_id);
       // Si apre la scheda di organico, anche la propria: da quando il CV non
-      // c'è più non esiste una «scheda pubblica» da professionista che per un
+      // c'è più non esiste una «scheda pubblica» da dipendente che per un
       // gestore sarebbe vuota, e `staff/[id]` sa già dire «questo sei tu».
       const personId = sm?.person_id ?? null;
       return {
         key: `asg-${a.id}`,
-        name: sm?.display_name ?? "Staff",
+        name: sm?.display_name ?? "Persona",
         avatarUri: sm?.waiter?.avatar_url ?? undefined,
         role: a.role?.name ?? null,
         date: a.shift?.date ?? "",
@@ -377,16 +377,16 @@ export default function ManagerHome() {
                 <StatCard
                   loading={periodQuery.isPending}
                   value={statsReady ? String(stats.shortCount) : "—"}
-                  label="Turni scoperti"
-                  hint="solo quelli da fare"
+                  label="Turni da coprire"
+                  hint="manca ancora qualcuno"
                   tone={stats.shortCount > 0 ? "warning" : "normal"}
                   onPress={() => router.push("/(manager)/(tabs)/turni")}
                 />
                 <StatCard
                   loading={periodQuery.isPending}
                   value={statsReady ? String(stats.missingSlots) : "—"}
-                  label="Posti da coprire"
-                  hint="persone che mancano"
+                  label="Persone che mancano"
+                  hint="in tutti quei turni"
                   tone={stats.missingSlots > 0 ? "warning" : "normal"}
                   onPress={() => router.push("/(manager)/(tabs)/turni")}
                 />

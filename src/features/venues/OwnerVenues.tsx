@@ -69,7 +69,7 @@ export type OwnerVenuesState = {
   pendingInvites: Membership[];
   /** Gestisco almeno un'azienda. */
   canManage: boolean;
-  /** Lavoro almeno in una: sono dipendente, o sono in organico di una sede. */
+  /** Lavoro almeno in una: sono dipendente, o sono nel team di una sede. */
   canWork: boolean;
   /** Le sedi aperte che gestisco, la più vecchia prima. */
   venues: Venue[];
