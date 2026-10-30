@@ -10,6 +10,7 @@ import {
   formatHours,
   formatHoursVariance,
   formatMonthKey,
+  formatPastDayLabel,
   formatRelativeStart,
   formatShiftRange,
   formatShiftSummary,
@@ -55,6 +56,18 @@ describe("date in formato colonna", () => {
     expect(startOfWeek("2026-09-24")).toBe("2026-09-21"); // giovedì
     expect(startOfWeek("2026-09-27")).toBe("2026-09-21"); // domenica
     expect(startOfWeek("2026-11-01")).toBe("2026-10-26"); // domenica dopo il cambio d'ora
+  });
+
+  it("lo storico dice oggi, ieri, e l'anno solo se non è quello in corso", () => {
+    const now = at("2027-01-01T10:00:00");
+    expect(formatPastDayLabel("2027-01-01", now)).toBe("Oggi");
+    expect(formatPastDayLabel("2026-12-31", now)).toBe("Ieri");
+    expect(formatPastDayLabel("2026-12-30", now)).toBe(
+      `${formatDayLabel("2026-12-30", now)} 2026`
+    );
+    expect(formatPastDayLabel("2026-10-12", at("2026-10-30T10:00:00"))).toBe(
+      formatDayLabel("2026-10-12", at("2026-10-30T10:00:00"))
+    );
   });
 
   it("toDateString usa i campi locali", () => {

@@ -222,6 +222,19 @@ export function formatDayLabel(date: string, now: Date = new Date()): string {
   return formatDate(date);
 }
 
+// L'intestazione di un giorno nello storico: guardando indietro c'è «Ieri» al
+// posto di «Domani», e l'anno compare quando non è quello in corso, perché lo
+// storico arriva fino al primo turno.
+export function formatPastDayLabel(date: string, now: Date = new Date()): string {
+  const today = todayString(now);
+  if (date === today) return "Oggi";
+  if (date === addDaysToDate(today, -1)) return "Ieri";
+  const label = formatDate(date);
+  return date.slice(0, 4) === today.slice(0, 4)
+    ? label
+    : `${label} ${date.slice(0, 4)}`;
+}
+
 const monthFmt = new Intl.DateTimeFormat("it-IT", {
   month: "long",
   year: "numeric",

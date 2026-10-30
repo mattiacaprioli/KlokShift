@@ -34,6 +34,7 @@ import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { cn } from "@/lib/cn";
+import { formatPastDayLabel } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 
 /** Quanto si aspetta prima di interrogare il server mentre si digita. */
@@ -286,18 +287,28 @@ export default function ManagerHistoryScreen() {
               onRefresh={pull.onRefresh}
             />
           }
-          renderItem={({ item }) => (
-            <ManagerShiftCard
-              shift={item}
-              venue={venueBadge(item.venue_id)}
-              onPress={() => router.push(`/(manager)/shift/${item.id}`)}
-              // Ore e timbrature sono dati del permesso Ore, come nel planning.
-              footer={
-                can(item.venue_id, "can_view_hours") ? (
-                  <ShiftClockSummary shift={item} />
-                ) : null
-              }
-            />
+          // La card è quella dell'agenda, che non porta la data: il giorno lo
+          // dice l'intestazione sopra il primo turno di quel giorno (le pagine
+          // arrivano già ordinate, più recenti prima).
+          renderItem={({ item, index }) => (
+            <View className="gap-2">
+              {index === 0 || shifts[index - 1].date !== item.date ? (
+                <Mono className={index > 0 ? "pt-3" : undefined}>
+                  {formatPastDayLabel(item.date)}
+                </Mono>
+              ) : null}
+              <ManagerShiftCard
+                shift={item}
+                venue={venueBadge(item.venue_id)}
+                onPress={() => router.push(`/(manager)/shift/${item.id}`)}
+                // Ore e timbrature sono dati del permesso Ore, come nel planning.
+                footer={
+                  can(item.venue_id, "can_view_hours") ? (
+                    <ShiftClockSummary shift={item} />
+                  ) : null
+                }
+              />
+            </View>
           )}
           onEndReachedThreshold={0.5}
           onEndReached={() => {
