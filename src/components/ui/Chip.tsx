@@ -9,6 +9,8 @@ type Props = {
   onPress?: () => void;
   onLongPress?: () => void;
   className?: string;
+  /** Per le chip di una lettera (L, M, M…): cosa legge lo screen reader. */
+  accessibilityLabel?: string;
 };
 
 /** Small uppercase mono chip — skills, filters, role tags (prototype's Pill). */
@@ -19,12 +21,15 @@ export function Chip({
   onPress,
   onLongPress,
   className,
+  accessibilityLabel,
 }: Props) {
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={!onPress && !onLongPress}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={onPress ? { selected: !!active } : undefined}
       className={cn(
         "self-start rounded-full border px-2.5 py-1.5",
         active

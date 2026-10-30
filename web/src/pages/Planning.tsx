@@ -6,6 +6,8 @@ import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceWarning } from "@/features/absences/labels";
 import {
+  missingPeople,
+  missingPeopleLabel,
   shiftCounts,
   shiftCoverage,
   shiftTone,
@@ -50,6 +52,7 @@ import {
   formatShiftRange,
   formatTime,
   isOvernightShift,
+  isShiftOver,
   todayString,
 } from "@/lib/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -106,7 +109,7 @@ import {
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
 import { RunOnMount } from "../ui/RunOnMount";
-import { useVenueClosures } from "@/features/venues/hooks";
+import { useVenueCalendar } from "@/features/venues/hooks";
 import { dayClosureText } from "@/features/venues/closures";
 import { CLOSED_DAY_STYLE } from "../venues/closedDay";
 
@@ -185,15 +188,15 @@ export function PlanningPage() {
     [activeVenueId, venueIds],
   );
   // I giorni di chiusura delle sedi mostrate, detti sul giorno della griglia.
-  const closuresQuery = useVenueClosures(venueIds);
+  const { calendar: venueCalendar } = useVenueCalendar(venueIds);
   const closureOf = useCallback(
     (day: string) =>
       dayClosureText(
-        closuresQuery.data ?? [],
+        venueCalendar,
         venues.filter((v) => scopedIds.includes(v.id)),
         day
       ),
-    [closuresQuery.data, venues, scopedIds]
+    [venueCalendar, venues, scopedIds]
   );
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -281,14 +284,10 @@ export function PlanningPage() {
   // una pagina "Copertura" a parte, che però ripeteva questa stessa griglia: il
   // numero vale di più qui, sopra i turni a cui si riferisce. I dati sono già
   // caricati — `getOwnerShiftsRange` porta con sé fabbisogni e assegnazioni.
+  // Solo i turni non ancora finiti, come nell'app: un posto vuoto in un turno
+  // passato non si copre più, e l'avviso sarebbe rimasto lì per sempre.
   const missing = useMemo(
-    () =>
-      (data ?? [])
-        .filter((s) => s.status !== "cancelled")
-        .reduce((sum, s) => {
-          const { filled, total } = shiftCounts(s);
-          return sum + Math.max(0, total - filled);
-        }, 0),
+    () => missingPeople((data ?? []).filter((s) => !isShiftOver(s))),
     [data],
   );
 
@@ -554,16 +553,17 @@ export function PlanningPage() {
             {/* Anche sul foglio: i comandi non si stampano, quindi senza questo
                 un turnario filtrato sembrerebbe l'agenda di tutta l'azienda. */}
             {activeVenueName ? ` · ${activeVenueName}` : null}
-            {missing > 0 ? (
-              <span className="text-warning">
-                {" · "}
-                {missing === 1
-                  ? "Manca 1 persona"
-                  : `Mancano ${missing} persone`}
-                {isWeekly ? " questa settimana" : " questo mese"}
-              </span>
-            ) : null}
           </>
+        }
+        badge={
+          missing > 0 ? (
+            <span
+              className="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 text-xs font-semibold text-warning"
+              title={isWeekly ? "In questa settimana" : "In questo mese"}
+            >
+              {missingPeopleLabel(missing)}
+            </span>
+          ) : null
         }
         actions={
           <>

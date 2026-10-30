@@ -94,7 +94,7 @@ import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
 import { ShiftTemplatesMenu } from "./ShiftTemplatesMenu";
-import { useVenueClosures } from "@/features/venues/hooks";
+import { useVenueCalendar } from "@/features/venues/hooks";
 import { closureWarning } from "@/features/venues/closures";
 
 type RoleTarget = { role_id: string; count: number };
@@ -342,12 +342,12 @@ function InternalForm({
   const mainEnded = ended.includes(formDate);
   // Sede chiusa in uno dei giorni: avviso, non blocco (apertura eccezionale).
   // In modifica conta solo se la data cambia.
-  const closuresQuery = useVenueClosures(formVenueId ? [formVenueId] : []);
+  const { calendar: venueCalendar } = useVenueCalendar(formVenueId ? [formVenueId] : []);
   const closedMessage =
     shift && formDate === shift.date
       ? null
       : closureWarning(
-          closuresQuery.data ?? [],
+          venueCalendar,
           formVenueId,
           shift ? [formDate] : plannedDates,
           shift ? "spostare" : "creare"

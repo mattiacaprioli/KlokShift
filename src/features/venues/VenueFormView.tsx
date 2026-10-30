@@ -222,7 +222,7 @@ export function VenueFormView({
             // La colonna resta `cuisine_type` per non migrare il DB: l'etichetta
             // è neutra perché un hotel o un'agenzia eventi non ha una "cucina".
             label="Tipo di attività"
-            placeholder="Ristorante, hotel, catering, discoteca…"
+            placeholder="Negozio, hotel, ristorante, palestra…"
           />
           <ControlledInput
             control={control}

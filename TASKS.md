@@ -476,7 +476,7 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 - [x] Pagina Team (app e dashboard), da 8 persone in su: ricerca per nome o ruolo, ruolo, sede (solo con più sedi) e «Non ancora nell'app» (senza account o con l'invito da accettare). Logica unica in `src/features/staff/teamFilters.ts`, testata.
 
 ### Giorni di chiusura della sede (30/10) ✅ nel codice
-- [x] Tabella `venue_closures` + RPC (migration `20261030000300`, test SQL 044); gestione nella scheda sede (app) e nelle pagine Sede (dashboard); giorni barrati e detti nei Turni di chi gestisce e del dipendente, e sulla griglia settimana/mese della dashboard; avviso (non blocco) nei form del turno, nuovo e modifica.
+- [x] Tabella `venue_closures` + RPC (migration `20261030000300`, test SQL 044), con chiusure **ogni anno** e **riposo settimanale** (`venues.rest_days`), come Deputy e Skello; gestione nella scheda sede (app) e nelle pagine Sede (dashboard); giorni barrati e detti nei Turni di chi gestisce e del dipendente, e sulla griglia settimana/mese della dashboard; avviso (non blocco) nei form del turno, nuovo e modifica.
 - [ ] Prova a mano su telefono e dashboard.
 
 ### Pubblicazione sugli store (M8)

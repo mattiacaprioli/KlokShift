@@ -3,8 +3,9 @@ import { qk } from "@/lib/queryKeys";
 import {
   createVenue,
   deleteVenueClosure,
-  getVenueClosures,
+  getVenueCalendar,
   saveVenueClosure,
+  setVenueRestDays,
   getMyClosedVenues,
   getMyVenues,
   setVenueClosed,
@@ -12,6 +13,7 @@ import {
   updateVenueLogo,
   type VenueInput,
 } from "./api";
+import { EMPTY_CALENDAR } from "./closures";
 
 /**
  * Le sedi che si gestiscono. `enabled: false` tiene la query spenta (è così che
@@ -101,13 +103,28 @@ export function useSaveVenue(workspaceId: string) {
   });
 }
 
-/** I giorni di chiusura delle sedi indicate: li legge chi vede la sede. */
-export function useVenueClosures(venueIds: readonly string[], enabled = true) {
+/**
+ * Il calendario delle sedi indicate — chiusure e riposo settimanale —: lo
+ * legge chi vede la sede. Vuoto finché non arriva.
+ */
+export function useVenueCalendar(venueIds: readonly string[], enabled = true) {
   const scope = [...new Set(venueIds)].sort();
-  return useQuery({
+  const query = useQuery({
     queryKey: qk.venues.closures(scope),
-    queryFn: () => getVenueClosures(scope),
+    queryFn: () => getVenueCalendar(scope),
     enabled: enabled && scope.length > 0,
+  });
+  return { ...query, calendar: query.data ?? EMPTY_CALENDAR };
+}
+
+export function useSetVenueRestDays() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { venueId: string; days: number[] }) => setVenueRestDays(vars.venueId, vars.days),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["venues", "closures"] });
+      qc.invalidateQueries({ queryKey: qk.venues.mine });
+    },
   });
 }
 

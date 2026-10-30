@@ -210,7 +210,7 @@ export function RuoliPage() {
           onKeyDown={(e) => {
             if (e.key === "Enter") add(draft);
           }}
-          placeholder="Es. Pizzaiolo"
+          placeholder="Es. Cassa"
           className="max-w-xs"
         />
         <Button
@@ -240,7 +240,7 @@ export function RuoliPage() {
       {roles.length === 0 ? (
         <Placeholder
           title="Nessun ruolo"
-          detail="Aggiungi i ruoli della tua sede (sala, bar, cucina…): potrai darli alle persone e chiederli sui turni."
+          detail="Aggiungi i ruoli della tua sede (reception, cassa, magazzino…): potrai darli alle persone e chiederli sui turni."
         />
       ) : (
         <div className="flex flex-col gap-2">

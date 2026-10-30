@@ -17,7 +17,7 @@ import { monthGridStart, WeekCalendar } from "@/components/ui/WeekCalendar";
 import { type DaySection, groupByDay, withClosedDays } from "@/features/assignments/agenda";
 import { ClosedDayBadge } from "@/features/venues/ClosedDayBadge";
 import { PeopleWeekList } from "@/features/assignments/PeopleWeekList";
-import { shiftCounts } from "@/features/assignments/coverage";
+import { missingPeople, missingPeopleLabel, shiftCounts } from "@/features/assignments/coverage";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import type { ShiftWithCount } from "@/features/shifts/types";
 import { cn } from "@/lib/cn";
@@ -38,8 +38,8 @@ import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
 import { clockAttentionItems } from "@/features/clock/attention";
-import { useVenueClosures } from "@/features/venues/hooks";
-import { closedDates, dayClosureText } from "@/features/venues/closures";
+import { useVenueCalendar } from "@/features/venues/hooks";
+import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -159,13 +159,20 @@ export default function ManagerShiftsScreen() {
 
   // I giorni di chiusura delle sedi accese: barrati sul calendario, detti sul
   // giorno scelto e nell'intestazione del giorno.
-  const closuresQuery = useVenueClosures(venues.map((v) => v.id));
-  const closures = useMemo(() => closuresQuery.data ?? [], [closuresQuery.data]);
+  const { calendar: closures } = useVenueCalendar(venues.map((v) => v.id));
   const shownVenues = useMemo(
     () => venues.filter((v) => !hiddenVenues.has(v.id)),
     [venues, hiddenVenues]
   );
-  const closed = useMemo(() => closedDates(closures, scope), [closures, scope]);
+  const closed = useMemo(() => {
+    const { from, to } = calendarWindow(visibleDay);
+    return closedDates(closures, scope, from, to);
+  }, [closures, scope, visibleDay]);
+  // Nella lista entrano come giorni vuoti solo le chiusure vere, non il riposo.
+  const closedForList = useMemo(() => {
+    const { from, to } = calendarWindow(visibleDay);
+    return closedDates(closures, scope, from, to, false);
+  }, [closures, scope, visibleDay]);
   const selectedClosure = dayClosureText(closures, shownVenues, visibleDay);
 
   /**
@@ -291,10 +298,10 @@ export default function ManagerShiftsScreen() {
     // Ferragosto senza turni non compariva affatto.
     return withClosedDays(
       groupByDay(agenda, (s) => s.date).filter((g) => (g.date ?? "") >= anchorDay),
-      closed,
+      closedForList,
       anchorDay
     );
-  }, [agenda, upcoming, anchorDay, filtering, filteringMine, isMine, closed]);
+  }, [agenda, upcoming, anchorDay, filtering, filteringMine, isMine, closedForList]);
 
   // Il quadro della settimana di cui si sta guardando un giorno: quanti turni
   // in tutto, e quanti di quelli ancora in programma restano da coprire.
@@ -305,7 +312,9 @@ export default function ManagerShiftsScreen() {
       s.date >= from && s.date < to && s.status !== "cancelled";
     return {
       total: agenda.filter(inWeek).length,
-      short: upcoming.filter((s) => inWeek(s) && shiftCounts(s).short).length,
+      // Persone, non turni: lo stesso numero della dashboard (`missingPeople`).
+      // Solo sui turni ancora da fare: quelli passati non si coprono più.
+      missing: missingPeople(upcoming.filter(inWeek)),
     };
   }, [agenda, upcoming, visibleDay]);
 
@@ -501,12 +510,12 @@ export default function ManagerShiftsScreen() {
           // Il quadro della settimana, accanto al mese a cui si riferisce:
           // quando c'è un buco lo dice, altrimenti si limita a contare.
           right={
-            week.short > 0 ? (
+            week.missing > 0 ? (
               <Text
                 className="font-mono text-[10.5px] uppercase text-warning"
                 style={{ letterSpacing: 1.4 }}
               >
-                {week.short === 1 ? "1 scoperto" : `${week.short} scoperti`}
+                {missingPeopleLabel(week.missing)}
               </Text>
             ) : week.total > 0 ? (
               <Mono>{week.total === 1 ? "1 turno" : `${week.total} turni`}</Mono>

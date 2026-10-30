@@ -6,7 +6,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 
 # KlokShift
 
-Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. Le **sedi** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore. Pagamenti automatici dal web e dashboard personale del fondatore devono essere pronti prima dei primi clienti paganti; **Paddle** è il provider scelto, approvazione account e integrazione da completare.
+Gestione dei turni per **qualunque attività con personale a turni** (mercato italiano): ospitalità — ristoranti, hotel, catering, locali, eventi — ma anche negozi, magazzini, palestre, servizi. Esempi e testi misti, mai solo da ristorante (decisione del 30/10). Le **sedi** organizzano i turni con il proprio team; i **dipendenti** confermano i turni assegnati, tengono il conto delle ore. Pagamenti automatici dal web e dashboard personale del fondatore devono essere pronti prima dei primi clienti paganti; **Paddle** è il provider scelto, approvazione account e integrazione da completare.
 
 > Il marketplace (professionisti che cercano turni e si candidano ad annunci) è stato rimosso dal codice il 2026-09-12 e dal DB il 2026-09-20 (`applications`, `shift_kind`, i `notification_type` `application_*` e i campi da annuncio dei turni non esistono più): non va riesumato senza una decisione di prodotto.
 >
@@ -171,8 +171,10 @@ presente sulla sua riga.
 
 ## Giorni di chiusura della sede (2026-10-30)
 
-`venue_closures` (per sede, intervalli di date): Ferragosto, chiusura per ferie,
-lavori. Li vede chi vede la sede (gestione e dipendenti) nei Turni, giorno
+`venue_closures` (per sede, intervalli di date, anche **ogni anno** con
+`repeat_yearly`) e `venues.rest_days` (riposo settimanale, ISO 1–7): Ferragosto,
+chiusura per ferie, lavori, «chiuso il lunedì». ⚠️ `closureCovers` è gemello
+manuale del confronto annuale in SQL. Li vede chi vede la sede (gestione e dipendenti) nei Turni, giorno
 barrato sul calendario ed etichetta sul giorno; li scrive chi ha «Turni» o
 «Dati della sede», solo da `save_venue_closure` / `delete_venue_closure`. Un
 turno in un giorno di chiusura **non** è vietato: il form avvisa

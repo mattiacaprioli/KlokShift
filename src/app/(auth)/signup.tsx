@@ -21,14 +21,14 @@ const ROLES: {
     value: "waiter",
     icon: "user",
     title: "Sono un dipendente",
-    sub: "Sala, bar, cucina, reception. Vedi i tuoi turni, li confermi e timbri le ore.",
+    sub: "Lavori a turni? Vedi i tuoi turni, li confermi e timbri le ore.",
     chips: ["TURNI", "ORE", "CHAT"],
   },
   {
     value: "manager",
     icon: "users",
     title: "Gestisco una sede",
-    sub: "Ristorante, hotel, catering, eventi. Organizza i turni del tuo team.",
+    sub: "Negozio, hotel, ristorante, magazzino, eventi… Organizza i turni del tuo team.",
     chips: ["TURNI", "TEAM", "ORE"],
   },
 ];

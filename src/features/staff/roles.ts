@@ -10,14 +10,14 @@
  * Ora i ruoli li scrive il gestore (tabella `venue_roles`, un elenco per
  * sede): un hotel non ha un sommelier, una discoteca ha il PR. Qui resta solo
  * la spinta iniziale — cinque esempi tappabili nell'empty state, scelti per
- * coprire sala, bar, cucina e accoglienza e far capire di che granularità si
- * parla. Non hanno alcun significato per il DB: creano righe come qualunque
+ * coprire attività diverse (dal 30/10 non solo ristorazione: aree, non mestieri
+ * al maschile) e far capire di che granularità si parla. Non hanno alcun significato per il DB: creano righe come qualunque
  * nome scritto a mano, e possono essere rinominate o archiviate subito dopo.
  */
 export const SUGGESTED_ROLES = [
-  "Cameriere",
-  "Barman",
-  "Cuoco",
-  "Lavapiatti",
-  "Receptionist",
+  "Reception",
+  "Cassa",
+  "Magazzino",
+  "Sala",
+  "Pulizie",
 ] as const;

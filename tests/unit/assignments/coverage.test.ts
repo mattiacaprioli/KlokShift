@@ -73,3 +73,21 @@ describe("numeri e colore di un turno", () => {
     expect(shiftTone({ ...shift({ positions_filled: 2, positions_total: 2 }), status: "open" })).toBe("covered");
   });
 });
+
+describe("persone che mancano", () => {
+  const shift = (filled: number, total: number, status: "open" | "cancelled" = "open") =>
+    ({
+      positions_filled: filled,
+      positions_total: total,
+      shift_role_requirements: [],
+      shift_assignments: [],
+      status,
+    }) as unknown as CountableShift & { status: "open" | "cancelled" };
+
+  it("somma i posti vuoti, non i turni scoperti, e salta gli annullati", async () => {
+    const { missingPeople, missingPeopleLabel } = await import("@/features/assignments/coverage");
+    expect(missingPeople([shift(0, 3), shift(1, 2), shift(2, 2), shift(0, 5, "cancelled")])).toBe(4);
+    expect(missingPeopleLabel(1)).toBe("Manca 1 persona");
+    expect(missingPeopleLabel(4)).toBe("Mancano 4 persone");
+  });
+});

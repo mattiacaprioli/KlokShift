@@ -38,6 +38,24 @@ begin
   perform tests.login('Co');
   perform public.delete_venue_closure(c);
   perform tests.ok(not exists (select 1 from public.venue_closures where id = c), 'tolta');
+
+  -- Ogni anno: al massimo un anno di periodo.
+  perform tests.ok(public.save_venue_closure(tests.id('V1'), '2026-12-24', '2027-01-06', 'Natale', true) is not null,
+    'chiusura annuale a cavallo d''anno');
+  perform tests.raises(format('select public.save_venue_closure(%L, %L, %L, null, true)', tests.id('V1'), '2026-01-01', '2026-12-31'),
+    'closure_invalid', 'un anno intero non si ripete');
+
+  -- Riposo settimanale: giorni ISO, senza doppioni, scritto da chi ha Turni.
+  perform tests.eq((public.set_venue_rest_days(tests.id('V1'), array[1,1,7]::smallint[])).rest_days,
+    array[1,7]::smallint[], 'lunedì e domenica, senza doppioni');
+  perform tests.raises(format('select public.set_venue_rest_days(%L, %L::smallint[])', tests.id('V1'), '{8}'),
+    'closure_invalid', 'nessun ottavo giorno');
+  perform tests.login('Co2');
+  perform tests.raises(format('select public.set_venue_rest_days(%L, %L::smallint[])', tests.id('V1'), '{1}'),
+    'not_allowed', 'le sole Ore non bastano per il riposo');
+  perform tests.login('Emp');
+  perform tests.eq((select rest_days from public.venues where id = tests.id('V1')), array[1,7]::smallint[],
+    'il dipendente lo vede');
 end $$;
 
 select tests.anon();

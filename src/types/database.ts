@@ -1264,6 +1264,7 @@ export type Database = {
           end_date: string
           id: string
           reason: string | null
+          repeat_yearly: boolean
           start_date: string
           venue_id: string
         }
@@ -1273,6 +1274,7 @@ export type Database = {
           end_date: string
           id?: string
           reason?: string | null
+          repeat_yearly?: boolean
           start_date: string
           venue_id: string
         }
@@ -1282,6 +1284,7 @@ export type Database = {
           end_date?: string
           id?: string
           reason?: string | null
+          repeat_yearly?: boolean
           start_date?: string
           venue_id?: string
         }
@@ -1444,6 +1447,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
         }
@@ -1463,6 +1467,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          rest_days?: number[]
           staff_sees_planning?: boolean
           workspace_id: string
         }
@@ -1482,6 +1487,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          rest_days?: number[]
           staff_sees_planning?: boolean
           workspace_id?: string
         }
@@ -2722,6 +2728,7 @@ export type Database = {
         Args: {
           p_end: string
           p_reason?: string
+          p_repeat_yearly?: boolean
           p_start: string
           p_venue: string
         }
@@ -2853,6 +2860,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
         }
@@ -2886,6 +2894,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
         }
@@ -2914,6 +2923,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
         }
@@ -2945,6 +2955,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
         }
@@ -2958,6 +2969,35 @@ export type Database = {
       set_venue_closed: {
         Args: { p_closed: boolean; p_venue: string }
         Returns: undefined
+      }
+      set_venue_rest_days: {
+        Args: { p_days: number[]; p_venue: string }
+        Returns: {
+          address: string | null
+          break_clocked: boolean
+          break_paid: boolean
+          break_rule_after_minutes: number | null
+          break_rule_minutes: number | null
+          city: string | null
+          clock_auto_approve: boolean
+          clock_method: Database["public"]["Enums"]["clock_method"]
+          closed_at: string | null
+          created_at: string
+          cuisine_type: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          rest_days: number[]
+          staff_sees_planning: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "venues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       shift_counted_hours: {
         Args: {

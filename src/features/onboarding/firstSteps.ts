@@ -61,7 +61,7 @@ const COPY: Record<FirstStepId, Omit<FirstStep, "id" | "status">> = {
   },
   roles: {
     title: "Scegli i ruoli",
-    detail: "Sala, bar, cucina…: li chiedi sui turni e li dai alle persone.",
+    detail: "Reception, cassa, magazzino…: li chiedi sui turni e li dai alle persone.",
     cta: "Aggiungi i ruoli",
   },
   people: {

@@ -195,7 +195,7 @@ export default function VenueRolesScreen() {
                   label="Aggiungi un ruolo"
                   value={draft}
                   onChangeText={setDraft}
-                  placeholder="Es. Pizzaiolo"
+                  placeholder="Es. Cassa"
                   returnKeyType="done"
                   onSubmitEditing={() => add(draft)}
                 />
@@ -220,7 +220,7 @@ export default function VenueRolesScreen() {
               {roles.length === 0 ? (
                 <EmptyState
                   title="Nessun ruolo"
-                  subtitle="Aggiungi i ruoli della tua sede (sala, bar, cucina…): potrai darli alle persone e chiederli sui turni."
+                  subtitle="Aggiungi i ruoli della tua sede (reception, cassa, magazzino…): potrai darli alle persone e chiederli sui turni."
                 />
               ) : (
                 <View className="gap-1 rounded-3xl border border-border-2 bg-bg-card px-4 py-2">

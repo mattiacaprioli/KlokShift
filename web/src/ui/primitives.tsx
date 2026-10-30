@@ -446,17 +446,26 @@ export function Card({
 export function PageHeader({
   title,
   subtitle,
+  badge,
   actions,
 }: {
   title: string;
-  /** Testo, o un frammento: il Planning ci appende l'avviso sui turni scoperti. */
   subtitle?: ReactNode;
+  /**
+   * Un'etichetta corta accanto al titolo (i Turni ci mettono «Mancano 2
+   * persone»). Stava nel sottotitolo, e allungandolo mandava i comandi a capo:
+   * la pagina saltava passando da una vista all'altra.
+   */
+  badge?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4 print:mb-3">
       <div>
-        <h1 className="font-serif text-2xl text-t1">{title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-serif text-2xl text-t1">{title}</h1>
+          {badge}
+        </div>
         {subtitle ? (
           <p className="mt-1 text-sm text-t3">{subtitle}</p>
         ) : null}

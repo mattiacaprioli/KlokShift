@@ -17,7 +17,7 @@ chiavi di query, id dei tab) **non cambiano**: cambia solo il testo.
 | Il luogo | **sede** | locale, ristorante, ristoratore |
 | L'insieme delle sedi | **azienda** (solo quando conta che le sedi sono più d'una) | workspace |
 | Chi decide, visto dal dipendente | **la sede** («la sede verifica»); **il titolare** se è proprio lui | datore di lavoro |
-| Cosa fa una persona in turno | **ruolo** (Sala, Bar, Cucina…) | mansione |
+| Cosa fa una persona in turno | **ruolo** (Reception, Cassa, Magazzino, Sala…) | mansione |
 | Quante persone servono in un turno | **persone che servono** / **posti** | fabbisogno |
 | Il permesso del collaboratore sulle persone | **Team** | Organico |
 | Il calendario dei turni (app e dashboard) | **Turni** | Planning |

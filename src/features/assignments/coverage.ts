@@ -87,7 +87,7 @@ export type CoverageEmbeds = {
  */
 export const ROLE_TARGETS_LABEL = "Quante persone servono";
 export const ROLE_TARGETS_HINT =
-  "Es. 2 in sala e 1 al bar: finché ne manca qualcuno, il turno resta da coprire. Se non lo indichi, conta chi scegli.";
+  "Es. 2 alla cassa e 1 in magazzino: finché ne manca qualcuno, il turno resta da coprire. Se non lo indichi, conta chi scegli.";
 
 /** Un fabbisogno come arriva dal DB → come lo vogliono i conteggi. */
 export function toRoleRequirement(r: RoleRequirementEmbed): RoleRequirement {
@@ -164,4 +164,25 @@ export function shiftCounts(shift: CountableShift): {
   const filled = byRole ? coverage.covered : shift.positions_filled;
   const total = byRole ? coverage.required : shift.positions_total;
   return { filled, total, short: filled < total };
+}
+
+/**
+ * Quante persone mancano in un insieme di turni: la somma dei posti vuoti, non
+ * il numero di turni scoperti (un turno a cui ne mancano tre pesa tre). Lo
+ * stesso numero sulla dashboard («Mancano 2 persone») e nell'app; i turni
+ * annullati non contano.
+ */
+export function missingPeople(
+  shifts: readonly (CountableShift & { status: Enums<"shift_status"> })[]
+): number {
+  return shifts
+    .filter((s) => s.status !== "cancelled")
+    .reduce((sum, s) => {
+      const { filled, total } = shiftCounts(s);
+      return sum + Math.max(0, total - filled);
+    }, 0);
+}
+
+export function missingPeopleLabel(n: number): string {
+  return n === 1 ? "Manca 1 persona" : `Mancano ${n} persone`;
 }

@@ -24,7 +24,7 @@ export type WaiterProfileInput = {
  * fisso potrebbe descrivere tutti. È come la persona si presenta, non un dato
  * che deve combaciare con i ruoli che le assegna una sede.
  */
-export const PRIMARY_ROLE_EXAMPLES = "Es. Cameriere, Barman, Chef de rang…";
+export const PRIMARY_ROLE_EXAMPLES = "Es. Addetto vendite, Receptionist, Magazziniere…";
 
 /**
  * Lingue parlate (scelta multipla). Lista curata perché è l'unico campo del

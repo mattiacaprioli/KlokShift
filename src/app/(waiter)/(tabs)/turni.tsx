@@ -59,8 +59,8 @@ import {
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
-import { useVenueClosures } from "@/features/venues/hooks";
-import { closedDates, dayClosureText } from "@/features/venues/closures";
+import { useVenueCalendar } from "@/features/venues/hooks";
+import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
 import { withClosedDays } from "@/features/assignments/agenda";
 import { ClosedDayBadge } from "@/features/venues/ClosedDayBadge";
 
@@ -264,21 +264,25 @@ export default function WaiterShiftsScreen() {
         .flatMap((m) => m.works.map((w) => ({ id: w.venue_id, name: w.venue_name }))),
     [memberships]
   );
-  const closuresQuery = useVenueClosures(workVenues.map((v) => v.id));
-  const closures = useMemo(() => closuresQuery.data ?? [], [closuresQuery.data]);
-  const closed = useMemo(
-    () => closedDates(closures, workVenues.map((v) => v.id)),
-    [closures, workVenues]
-  );
+  const { calendar: closures } = useVenueCalendar(workVenues.map((v) => v.id));
+  const closed = useMemo(() => {
+    const { from, to } = calendarWindow(visibleDay);
+    return closedDates(closures, workVenues.map((v) => v.id), from, to);
+  }, [closures, workVenues, visibleDay]);
+  // Nella lista entrano come giorni vuoti solo le chiusure vere, non il riposo.
+  const closedForList = useMemo(() => {
+    const { from, to } = calendarWindow(visibleDay);
+    return closedDates(closures, workVenues.map((v) => v.id), from, to, false);
+  }, [closures, workVenues, visibleDay]);
   const sections = useMemo(
     () =>
       // I giorni di chiusura senza turni entrano come giorni vuoti.
       withClosedDays(
         groupAssignmentsByDay(agendaItems).filter((s) => (s.date ?? "") >= anchorDay),
-        closed,
+        closedForList,
         anchorDay
       ),
-    [agendaItems, anchorDay, closed]
+    [agendaItems, anchorDay, closedForList]
   );
 
   // La griglia: le tre settimane del pager più la domenica prima, che può

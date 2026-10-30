@@ -99,21 +99,30 @@ export async function updateVenue(
 }
 
 /**
- * I giorni di chiusura delle sedi indicate (`venue_closures`). Pochi per sede
- * e per anno: si leggono tutti, e i calendari filtrano per giorno.
+ * Il calendario delle sedi indicate: le chiusure (`venue_closures`) e il
+ * riposo settimanale (`venues.rest_days`). Poche righe per sede e per anno: si
+ * leggono tutte, e i calendari filtrano per giorno.
  */
-export async function getVenueClosures(
-  venueIds: readonly string[]
-): Promise<Tables<"venue_closures">[]> {
-  if (venueIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from("venue_closures")
-    .select("*")
-    .in("venue_id", [...venueIds])
-    .order("start_date")
-    .limit(500);
+export async function getVenueCalendar(venueIds: readonly string[]): Promise<{
+  closures: Tables<"venue_closures">[];
+  restDays: Record<string, number[]>;
+}> {
+  if (venueIds.length === 0) return { closures: [], restDays: {} };
+  const [closures, venues] = await Promise.all([
+    supabase.from("venue_closures").select("*").in("venue_id", [...venueIds]).order("start_date").limit(500),
+    supabase.from("venues").select("id, rest_days").in("id", [...venueIds]),
+  ]);
+  if (closures.error) throw new Error(closures.error.message);
+  if (venues.error) throw new Error(venues.error.message);
+  return {
+    closures: closures.data ?? [],
+    restDays: Object.fromEntries((venues.data ?? []).map((v) => [v.id, v.rest_days ?? []])),
+  };
+}
+
+export async function setVenueRestDays(venueId: string, days: number[]): Promise<void> {
+  const { error } = await supabase.rpc("set_venue_rest_days", { p_venue: venueId, p_days: days });
   if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 export async function saveVenueClosure(input: {
@@ -121,12 +130,14 @@ export async function saveVenueClosure(input: {
   start: string;
   end: string;
   reason?: string | null;
+  repeatYearly?: boolean;
 }): Promise<string> {
   const { data, error } = await supabase.rpc("save_venue_closure", {
     p_venue: input.venueId,
     p_start: input.start,
     p_end: input.end,
     p_reason: input.reason ?? undefined,
+    p_repeat_yearly: input.repeatYearly ?? false,
   });
   if (error) throw new Error(error.message);
   return data;

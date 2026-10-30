@@ -16,7 +16,7 @@ export const FIRST_SHIFT_TUTORIAL: Tutorial = {
     {
       title: "I passi",
       steps: [
-        "Ruoli: scegli cosa fa la gente da te (Sala, Bar, Cucina…). Bastano quelli che usi davvero.",
+        "Ruoli: scegli cosa fanno le persone da te (reception, cassa, magazzino, sala…). Bastano quelli che usi davvero.",
         "Team: aggiungi le persone con nome ed email. Lavori anche tu? Mettiti nel team.",
         "Turno: premi «Nuovo turno» in Home (o il «+» in Turni), scegli giorno, orario e chi lavora.",
         "Fatto: le persone ricevono la notifica e confermano dall'app con un tocco.",

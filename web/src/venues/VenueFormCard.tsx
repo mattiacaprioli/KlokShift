@@ -175,7 +175,7 @@ export function VenueFormCard({
 
           <Field
             label="Tipo di sede"
-            hint="Ristorante, hotel, catering, pub, discoteca…"
+            hint="Negozio, hotel, ristorante, palestra…"
             error={errors.cuisine_type?.message}
           >
             <Input {...register("cuisine_type")} />
