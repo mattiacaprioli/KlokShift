@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import type { AddStaffResult } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
+import { EMPLOYMENT_HINT } from "@/features/staff/employment";
 
 function TypeChips({
   value,
@@ -305,7 +306,7 @@ export default function StaffNewScreen() {
             {isSelf ? null : (
               <View className="gap-2">
                 <Input
-                  label="Email (facoltativa)"
+                  label="Email (consigliata)"
                   value={email}
                   onChangeText={(t) => {
                     setEmail(t);
@@ -317,9 +318,9 @@ export default function StaffNewScreen() {
                   placeholder="nome@email.com"
                 />
                 <Text className="text-xs leading-4 text-t3">
-                  Se ha già un account, gli arriva la richiesta nell&apos;app.
-                  Altrimenti gli mandiamo un invito e, quando si registra con
-                  questa email, lo colleghiamo a questa scheda.
+                  Serve per farlo entrare nell&apos;app: si registra con questa
+                  email e trova subito i suoi turni. Se ha già un account, gli
+                  arriva l&apos;invito nell&apos;app.
                 </Text>
               </View>
             )}
@@ -365,6 +366,9 @@ export default function StaffNewScreen() {
             <View className="gap-2">
               <Mono>Tipo</Mono>
               <TypeChips value={empType} onChange={setEmpType} />
+              <Text className="text-xs leading-4 text-t3">
+                {EMPLOYMENT_HINT[empType]}
+              </Text>
             </View>
 
             <Input

@@ -23,6 +23,7 @@ import {
   Select,
 } from "../ui/primitives";
 import { NoVenues } from "../venues/NoVenues";
+import { missingPermission } from "@/features/workspace/permissions";
 
 /** Una riga: nome modificabile in linea + elimina (archivia). */
 function RoleRow({ role }: { role: VenueRole }) {
@@ -146,8 +147,8 @@ export function RuoliPage() {
       <>
         <PageHeader title="Ruoli" actions={back} />
         <Placeholder
-          title="Non puoi modificare i ruoli"
-          detail="I ruoli fanno parte dei dati della sede: servono i permessi «Dati della sede»."
+          title={missingPermission("can_manage_venue").title}
+          detail={missingPermission("can_manage_venue").detail}
         />
       </>
     );

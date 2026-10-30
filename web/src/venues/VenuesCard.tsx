@@ -106,7 +106,7 @@ export function VenuesCard() {
                 <span className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-3 text-xs">
                   <span className="flex items-center gap-2 text-t3">
                     <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: venueAccent(i) }} />
-                    Colore nel planning
+                    Colore nei turni
                   </span>
                   <span className="font-semibold text-gold transition group-hover:translate-x-0.5">Apri la scheda ›</span>
                 </span>

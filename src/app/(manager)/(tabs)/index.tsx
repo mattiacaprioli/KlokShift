@@ -48,6 +48,7 @@ import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { useSelfStaff } from "@/features/staff/self";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { FirstStepsCard } from "@/features/onboarding/FirstStepsCard";
+import { CollaboratorPermissionsCard } from "@/features/team/CollaboratorPermissionsCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
@@ -65,6 +66,9 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GoldButton } from "@/components/ui/GoldButton";
+import { GhostButton } from "@/components/ui/GhostButton";
+import { HelpButton } from "@/components/ui/HelpButton";
 
 const PREVIEW_COUNT = 3;
 
@@ -319,10 +323,13 @@ export default function ManagerHome() {
             <Text className="mt-1 text-sm text-t3">{venues[0].name}</Text>
           )}
         </View>
-        <NotificationBell
-          count={unread}
-          onPress={() => router.push("/(manager)/notifiche")}
-        />
+        <View className="flex-row gap-2">
+          <HelpButton onPress={() => router.push("/(manager)/aiuto")} />
+          <NotificationBell
+            count={unread}
+            onPress={() => router.push("/(manager)/notifiche")}
+          />
+        </View>
       </View>
 
       <ScrollView
@@ -355,6 +362,9 @@ export default function ManagerHome() {
 
             {/* Cosa manca perché l'azienda giri: solo il titolare, finché serve. */}
             <FirstStepsCard />
+
+            {/* Il collaboratore: cosa può fare e su quali sedi, finché lo chiude. */}
+            <CollaboratorPermissionsCard variant="welcome" />
 
             {/* A colpo d'occhio. Il periodo sta **sopra i numeri che qualifica**:
                 senza, "31 turni" non dice su quanto tempo. */}
@@ -395,6 +405,30 @@ export default function ManagerHome() {
 
             {periodQuery.isError ? (
               <QueryError onRetry={() => periodQuery.refetch()} />
+            ) : null}
+
+            {/* Le due cose che si fanno più spesso, sempre a un tocco: prima
+                «crea un turno» c'era solo con la lista vuota, e le ore stavano
+                dentro la tab Team (che chi ha solo «Ore» non vede). */}
+            {canCreateShift || canAny("can_view_hours") ? (
+              <View className="flex-row gap-2.5">
+                {canCreateShift ? (
+                  <GoldButton
+                    className="flex-1"
+                    size="sm"
+                    label="Nuovo turno"
+                    onPress={() => router.push("/(manager)/shift/new")}
+                  />
+                ) : null}
+                {canAny("can_view_hours") ? (
+                  <GhostButton
+                    className="flex-1"
+                    size="sm"
+                    label="Ore del mese"
+                    onPress={() => router.push("/(manager)/ore")}
+                  />
+                ) : null}
+              </View>
             ) : null}
 
             {/* Ferie e permessi da decidere, malattie appena comunicate. */}

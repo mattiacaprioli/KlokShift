@@ -46,7 +46,7 @@ export default function WaiterAbsencesScreen() {
   return (
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-2" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Turni · Assenze" title="Ferie e permessi" />
+        <ScreenHeader eyebrow="Assenze" title="Ferie e permessi" />
       </View>
 
       <ScrollView
@@ -65,9 +65,9 @@ export default function WaiterAbsencesScreen() {
         }
       >
         <Text className="text-[13px] leading-5 text-t3">
-          Chiedi ferie o un permesso, o comunica una malattia: il titolare riceve
-          la richiesta in chat. I turni già assegnati non spariscono da soli, li
-          sistema lui.
+          Chiedi ferie o un permesso, o comunica una malattia: la sede riceve la
+          richiesta in chat. I turni già assegnati non spariscono da soli: li
+          sistema la sede.
         </Text>
 
         {loading ? (
@@ -93,7 +93,7 @@ export default function WaiterAbsencesScreen() {
             {absences.length === 0 ? (
               <EmptyState
                 title="Nessuna assenza"
-                subtitle="Qui trovi le richieste inviate e la risposta del titolare."
+                subtitle="Qui trovi le richieste inviate e la risposta della sede."
               />
             ) : (
               <>

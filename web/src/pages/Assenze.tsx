@@ -28,6 +28,7 @@ import {
   QueryError,
   Select,
 } from "../ui/primitives";
+import { missingPermission } from "@/features/workspace/permissions";
 
 /**
  * Ferie, permessi e malattie di tutta l'azienda: da decidere, in corso e
@@ -70,8 +71,8 @@ export function AssenzePage() {
       <>
         <PageHeader title="Assenze" />
         <Placeholder
-          title="Non gestisci il team"
-          detail="Le assenze le vede chi ha il permesso «Team». Nel planning trovi comunque chi non è disponibile."
+          title={missingPermission("can_manage_staff").title}
+          detail={`${missingPermission("can_manage_staff").detail} Nei turni vedi comunque chi non è disponibile.`}
         />
       </>
     );

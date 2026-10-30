@@ -643,6 +643,7 @@ export type Database = {
       }
       shift_assignments: {
         Row: {
+          attendance_auto_approved: boolean
           attendance_reviewed_at: string | null
           attendance_reviewed_by: string | null
           confirmed_at: string | null
@@ -658,6 +659,7 @@ export type Database = {
           worked_hours: number | null
         }
         Insert: {
+          attendance_auto_approved?: boolean
           attendance_reviewed_at?: string | null
           attendance_reviewed_by?: string | null
           confirmed_at?: string | null
@@ -673,6 +675,7 @@ export type Database = {
           worked_hours?: number | null
         }
         Update: {
+          attendance_auto_approved?: boolean
           attendance_reviewed_at?: string | null
           attendance_reviewed_by?: string | null
           confirmed_at?: string | null
@@ -1387,6 +1390,7 @@ export type Database = {
           break_rule_after_minutes: number | null
           break_rule_minutes: number | null
           city: string | null
+          clock_auto_approve: boolean
           clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
           created_at: string
@@ -1405,6 +1409,7 @@ export type Database = {
           break_rule_after_minutes?: number | null
           break_rule_minutes?: number | null
           city?: string | null
+          clock_auto_approve?: boolean
           clock_method?: Database["public"]["Enums"]["clock_method"]
           closed_at?: string | null
           created_at?: string
@@ -1423,6 +1428,7 @@ export type Database = {
           break_rule_after_minutes?: number | null
           break_rule_minutes?: number | null
           city?: string | null
+          clock_auto_approve?: boolean
           clock_method?: Database["public"]["Enums"]["clock_method"]
           closed_at?: string | null
           created_at?: string
@@ -1742,6 +1748,7 @@ export type Database = {
       add_shift_worker: {
         Args: { p_role?: string; p_shift: string; p_venue_member: string }
         Returns: {
+          attendance_auto_approved: boolean
           attendance_reviewed_at: string | null
           attendance_reviewed_by: string | null
           confirmed_at: string | null
@@ -1821,6 +1828,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_activation: { Args: { p_offset?: number }; Returns: Json }
       admin_list_billing_adjustments: {
         Args: { p_offset?: number; p_open_only?: boolean; p_workspace?: string }
         Returns: Json
@@ -1869,6 +1877,7 @@ export type Database = {
       approve_clock_record: {
         Args: { p_assignment: string }
         Returns: {
+          attendance_auto_approved: boolean
           attendance_reviewed_at: string | null
           attendance_reviewed_by: string | null
           confirmed_at: string | null
@@ -1889,6 +1898,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      approve_regular_clock_records: {
+        Args: {
+          p_dry_run?: boolean
+          p_from: string
+          p_to: string
+          p_workspace: string
+        }
+        Returns: number
       }
       assign: {
         Args: { p_role?: string; p_shift: string; p_venue_member: string }
@@ -2127,6 +2145,7 @@ export type Database = {
           p_reason: string
         }
         Returns: {
+          attendance_auto_approved: boolean
           attendance_reviewed_at: string | null
           attendance_reviewed_by: string | null
           confirmed_at: string | null
@@ -2536,6 +2555,7 @@ export type Database = {
       record_attendance: {
         Args: { p_assignment: string; p_patch: Json }
         Returns: {
+          attendance_auto_approved: boolean
           attendance_reviewed_at: string | null
           attendance_reviewed_by: string | null
           confirmed_at: string | null
@@ -2622,6 +2642,7 @@ export type Database = {
           p_status: Database["public"]["Enums"]["assignment_status"]
         }
         Returns: {
+          attendance_auto_approved: boolean
           attendance_reviewed_at: string | null
           attendance_reviewed_by: string | null
           confirmed_at: string | null
@@ -2768,6 +2789,7 @@ export type Database = {
           break_rule_after_minutes: number | null
           break_rule_minutes: number | null
           city: string | null
+          clock_auto_approve: boolean
           clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
           created_at: string
@@ -2800,6 +2822,35 @@ export type Database = {
           break_rule_after_minutes: number | null
           break_rule_minutes: number | null
           city: string | null
+          clock_auto_approve: boolean
+          clock_method: Database["public"]["Enums"]["clock_method"]
+          closed_at: string | null
+          created_at: string
+          cuisine_type: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          staff_sees_planning: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "venues"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_venue_clock_auto_approve: {
+        Args: { p_on: boolean; p_venue: string }
+        Returns: {
+          address: string | null
+          break_clocked: boolean
+          break_paid: boolean
+          break_rule_after_minutes: number | null
+          break_rule_minutes: number | null
+          city: string | null
+          clock_auto_approve: boolean
           clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
           created_at: string
@@ -2830,6 +2881,7 @@ export type Database = {
           break_rule_after_minutes: number | null
           break_rule_minutes: number | null
           city: string | null
+          clock_auto_approve: boolean
           clock_method: Database["public"]["Enums"]["clock_method"]
           closed_at: string | null
           created_at: string

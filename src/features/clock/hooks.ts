@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { invalidateWorkViews } from "@/features/shifts/invalidation";
+import { periodDays, type ReportPeriod } from "@/features/assignments/reportPeriod";
 import {
   approveClockRecord,
   clockBreak,
@@ -21,6 +22,8 @@ import {
   setMemberClockMethod,
   voidClockRecord,
   voidUnplannedClock,
+  approveRegularClockRecords,
+  setVenueClockAutoApprove,
 } from "./api";
 
 // Planning e storico incorporano lo stato minimo delle timbrature per segnalare
@@ -132,6 +135,40 @@ export function useSetVenueClockMethod() {
       qc.invalidateQueries({ queryKey: qk.venues.mine });
       invalidateWorkViews(qc);
     },
+  });
+}
+
+export function useSetVenueClockAutoApprove() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { venueId: string; on: boolean }) =>
+      setVenueClockAutoApprove(vars.venueId, vars.on),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.venues.mine }),
+  });
+}
+
+/** Quante timbrature in orario aspettano nel periodo: il numero sul pulsante. */
+export function useRegularClockCount(
+  workspaceId: string | null | undefined,
+  period: ReportPeriod,
+  enabled = true
+) {
+  const { from, to } = periodDays(period);
+  return useQuery({
+    queryKey: qk.staff.regularClocks(workspaceId ?? "", from, to),
+    queryFn: () =>
+      approveRegularClockRecords({ workspaceId: workspaceId!, from, to, dryRun: true }),
+    enabled: enabled && !!workspaceId,
+  });
+}
+
+/** Le approva tutte, poi rilegge le viste delle ore come un'approvazione singola. */
+export function useApproveRegularClockRecords() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { workspaceId: string; period: ReportPeriod }) =>
+      approveRegularClockRecords({ workspaceId: vars.workspaceId, ...periodDays(vars.period) }),
+    onSettled: () => invalidateClockViews(qc),
   });
 }
 

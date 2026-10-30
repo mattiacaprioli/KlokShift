@@ -115,7 +115,7 @@ export function VenuePlanningList({
             subtitle={
               away
                 ? `Dal ${formatDayLabel(anchorDay).toLowerCase()} la sede non ha ancora programmato turni.`
-                : "Qui vedi i turni della sede e chi ci lavora. Se non compare nulla, la sede non ha ancora programmato niente — oppure ha scelto di non condividere il planning con il team."
+                : "Qui vedi i turni della sede e chi ci lavora. Se non compare nulla, la sede non ha ancora programmato niente — oppure ha scelto di non mostrare i turni di tutti con il team."
             }
           />
         </View>

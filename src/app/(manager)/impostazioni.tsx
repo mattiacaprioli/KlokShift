@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth";
 import { StaffChatToggle } from "@/features/chat/StaffChatToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useViewMode } from "@/features/team/ViewMode";
+import { CollaboratorPermissionsCard } from "@/features/team/CollaboratorPermissionsCard";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -98,7 +99,7 @@ export default function ManagerSettingsScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-[15px] font-sans-semibold text-t1">
-                    Torna ai tuoi turni
+                    Passa ai tuoi turni
                   </Text>
                   <Text className="mt-0.5 text-[13px] text-t3">
                     I turni in cui lavori anche tu
@@ -133,6 +134,9 @@ export default function ManagerSettingsScreen() {
             ) : null}
           </Card>
         </View>
+
+        {/* Il benvenuto della Home, da ritrovare dopo averlo chiuso. */}
+        <CollaboratorPermissionsCard variant="settings" />
 
         <View className="gap-2">
           <SectionHeader title="Preferenze" />

@@ -121,10 +121,10 @@ export function PlanningSkeleton({
   days = 35,
 }: { view?: "settimana" | "persone" | "mese"; days?: number }) {
   if (view === "persone") {
-    return <TableSkeleton columns={8} label="Caricamento planning per persona…" />;
+    return <TableSkeleton columns={8} label="Caricamento turni per persona…" />;
   }
   return (
-    <LoadingRegion label="Caricamento planning…">
+    <LoadingRegion label="Caricamento turni…">
       <div className="grid grid-cols-7 overflow-hidden rounded-2xl border border-border-2 bg-bg-card">
         {Array.from({ length: view === "mese" ? days : 7 }, (_, i) => (
           <div

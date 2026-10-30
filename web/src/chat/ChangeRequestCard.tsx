@@ -192,7 +192,7 @@ export function ChangeRequestCard({
           {isHours ? (
             <p className="mt-2 text-xs text-t4">
               L&apos;accordo resta scritto qui. L&apos;orario del turno lo
-              aggiorni tu dal Planning: non cambia nulla da solo.
+              aggiorni tu da Turni: non cambia nulla da solo.
             </p>
           ) : null}
         </>

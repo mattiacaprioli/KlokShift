@@ -110,7 +110,7 @@ export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
         <View className="flex-1 justify-center">
           <EmptyState
             title="Nessun messaggio"
-            subtitle="Le conversazioni con i tuoi contatti appariranno qui."
+            subtitle="Tocca «+» in alto per scrivere a qualcuno del tuo team."
           />
         </View>
       }

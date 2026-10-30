@@ -54,6 +54,10 @@ import {
 import { FullExportCard } from "../export/FullExportCard";
 import { RecordPastShiftDialog } from "../shifts/RecordPastShiftDialog";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
+import { useApproveRegularClockRecords, useRegularClockCount } from "@/features/clock/hooks";
+import { approveRegularLabel, approvedRegularToast } from "@/features/clock/autoApprove";
+import { userErrorMessage } from "@/lib/errors";
+import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
 
 /**
@@ -118,6 +122,21 @@ export function OrePage() {
   // I turni del periodo le cui ore non contano ancora, con il perché: anche chi
   // doveva timbrare e non l'ha fatto, che il riepilogo non nomina.
   const toFix = useHoursToFix(workspaceId, period).data ?? [];
+  // Le timbrature in orario del periodo, approvate in un clic invece di aprire
+  // i turni uno per uno (decisione del 30/10, come l'«Approve All» dei concorrenti).
+  const regularCount = useRegularClockCount(workspaceId, period, toFix.length > 0).data ?? 0;
+  const approveRegular = useApproveRegularClockRecords();
+  const toast = useToast();
+  function onApproveRegular() {
+    if (!workspaceId) return;
+    approveRegular.mutate(
+      { workspaceId, period },
+      {
+        onSuccess: (n) => toast.show(approvedRegularToast(n)),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
+      }
+    );
+  }
   const [showAllToFix, setShowAllToFix] = useState(false);
   const toFixShown = showAllToFix ? toFix : toFix.slice(0, TO_FIX_PREVIEW);
   const label = periodLabel(period);
@@ -350,6 +369,16 @@ export function OrePage() {
             <p className="text-xs font-semibold text-warning">{hoursToFixSummary(toFix)}</p>
           </div>
           <p className="mt-1 text-xs text-t3">{HOURS_TO_FIX_HINT}</p>
+          {regularCount > 0 ? (
+            <Button
+              variant="gold"
+              className="mt-3"
+              disabled={approveRegular.isPending}
+              onClick={onApproveRegular}
+            >
+              {approveRegular.isPending ? "Approvo…" : approveRegularLabel(regularCount)}
+            </Button>
+          ) : null}
           <ul className="mt-3 flex flex-col gap-1">
             {toFixShown.map((item) => (
               <li key={item.assignment_id}>

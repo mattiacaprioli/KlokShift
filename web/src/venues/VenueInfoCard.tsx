@@ -125,7 +125,7 @@ export function VenueInfoCard({
             </div>
           </RuleTile>
           <RuleTile
-            label="Planning per il team"
+            label="Turni visibili al team"
             value={
               venue.staff_sees_planning
                 ? "Tutti i turni della sede"

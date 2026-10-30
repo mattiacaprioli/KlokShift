@@ -45,6 +45,8 @@ export type ShiftWithAssignees = Shift & {
     hours_source: string | null;
     /** Null finché le ore timbrate non sono state approvate esplicitamente. */
     attendance_reviewed_at: string | null;
+    /** Approvata da sola all'uscita (`venues.clock_auto_approve`), senza revisore. */
+    attendance_auto_approved?: boolean;
     /** Sola timbratura attiva: gli annullamenti restano nello storico DB. */
     clock: ClockRecordWithCorrections | null;
     /** Il ruolo ricoperto **su questo turno**, non quello dell'anagrafica. */

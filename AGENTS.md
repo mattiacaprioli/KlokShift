@@ -157,6 +157,13 @@ conclusi le cui ore non contano ancora, ciascuno con il motivo (non ha timbrato,
 uscita mancante, da approvare), e ogni riga porta al turno. ⚠️ È il complemento
 esatto di `shifts_count` in `get_workspace_hours_summary`: se cambia la regola
 di cosa conta, cambiano insieme (test SQL 037).
+**Approvare senza aprire i turni** (2026-10-30, `20261030000200`). Le timbrature
+«in orario» (app, senza correzioni, ore uguali a quelle del turno al quarto
+d'ora) si approvano in blocco dalla pagina Ore (`approve_regular_clock_records`)
+o da sole all'uscita se la sede accende `venues.clock_auto_approve` (spento di
+default; mai per i collaboratori). L'automatica ha `attendance_auto_approved` e
+nessun revisore, e l'export lo dice. ⚠️ `isRegularPendingClock` è gemello
+**manuale** di `private.clock_record_is_regular`: cambiano insieme.
 Su un turno finito chi ha «Ore» può aggiungere **chi ha lavorato** senza esserci
 segnato, cioè il sostituto (`add_shift_worker`): risulta presente con le ore del
 turno (`manual_auto`) e non parte nessuna notifica. Chi aveva rifiutato torna

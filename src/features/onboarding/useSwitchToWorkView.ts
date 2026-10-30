@@ -4,7 +4,7 @@ import { useViewMode } from "@/features/team/ViewMode";
 import { useCompleteOnboarding } from "./hooks";
 
 /**
- * «Torna ai tuoi turni» per chi gestisce e lavora.
+ * «Passa ai tuoi turni» per chi gestisce e lavora.
  *
  * Il wizard del dipendente chiede solo il nome: un titolare che si è messo
  * nel team ce l'ha già, e passando alla vista lavoro si sarebbe trovato

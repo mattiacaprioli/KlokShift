@@ -20,6 +20,7 @@ chiavi di query, id dei tab) **non cambiano**: cambia solo il testo.
 | Cosa fa una persona in turno | **ruolo** (Sala, Bar, Cucina…) | mansione |
 | Quante persone servono in un turno | **persone che servono** / **posti** | fabbisogno |
 | Il permesso del collaboratore sulle persone | **Team** | Organico |
+| Il calendario dei turni (app e dashboard) | **Turni** | Planning |
 
 ## Parole da ufficio → frasi normali
 

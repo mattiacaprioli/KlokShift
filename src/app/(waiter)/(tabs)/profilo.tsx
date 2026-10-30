@@ -308,9 +308,6 @@ export default function WaiterProfiloScreen() {
               <Display className="shrink text-2xl">
                 {name ?? "Il tuo profilo"}
               </Display>
-              <View className="shrink-0">
-                <Icon name="verified" size={18} color="#EAB54C" />
-              </View>
             </View>
             {subtitle ? (
               <Text className="text-sm text-t2">{subtitle}</Text>
@@ -349,7 +346,7 @@ export default function WaiterProfiloScreen() {
         <NavRow
           icon="calendar"
           title="Ferie, permessi e malattia"
-          subtitle="Chiedi un'assenza o comunicala al titolare"
+          subtitle="Chiedi un'assenza o comunica una malattia"
           onPress={() => router.push("/(waiter)/assenze")}
         />
 

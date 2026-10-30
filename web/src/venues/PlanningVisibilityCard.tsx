@@ -6,7 +6,7 @@ import { Card } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
 /**
- * «Planning visibile al team» — gemella di `VenuePlanningToggle` nell'app.
+ * «Turni di tutti visibili al team» — gemella di `VenuePlanningToggle` nell'app.
  *
  * Dentro «Modifica» della sede, salva al clic come timbrature e pausa.
  */
@@ -29,8 +29,8 @@ export function PlanningVisibilityCard({
         onSuccess: () =>
           toast.show(
             on
-              ? "Planning non più visibile al team"
-              : "Il team vede il planning"
+              ? "Ognuno vede solo i propri turni"
+              : "Il team vede i turni di tutti"
           ),
         onError: (error) => toast.show(userErrorMessage(error), "error"),
       }
@@ -45,7 +45,7 @@ export function PlanningVisibilityCard({
             Team
           </span>
           <h2 className="mt-1 font-serif text-lg text-t1">
-            Planning visibile al team
+            Turni di tutti visibili al team
           </h2>
           <p className="mt-1 text-sm leading-5 text-t3">
             {on
@@ -61,7 +61,7 @@ export function PlanningVisibilityCard({
           type="button"
           role="switch"
           aria-checked={on}
-          aria-label="Planning visibile al team"
+          aria-label="Turni di tutti visibili al team"
           disabled={save.isPending}
           onClick={toggle}
           className={cn(

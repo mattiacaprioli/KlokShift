@@ -27,6 +27,7 @@ import {
 } from "@/features/absences/filters";
 import { useCompanyAbsences } from "@/features/absences/hooks";
 import { ABSENCE_KINDS, groupCompanyAbsences } from "@/features/absences/labels";
+import { missingPermission } from "@/features/workspace/permissions";
 
 /**
  * Ferie, permessi e malattie di tutta l'azienda: da decidere, in corso e
@@ -101,8 +102,8 @@ export default function ManagerAbsencesScreen() {
       >
         {!canStaff ? (
           <EmptyState
-            title="Non gestisci il team"
-            subtitle="Le assenze le vede chi ha il permesso «Team». Nel planning trovi comunque chi non è disponibile."
+            title={missingPermission("can_manage_staff").title}
+            subtitle={`${missingPermission("can_manage_staff").detail} Nei turni vedi comunque chi non è disponibile.`}
           />
         ) : query.isLoading ? (
           <ListSkeleton variant="person" label="Caricamento assenze…" />

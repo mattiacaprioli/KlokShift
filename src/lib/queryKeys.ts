@@ -168,6 +168,10 @@ export const qk = {
     // timbratura o presenza toccata.
     hoursToFix: (workspaceId: string, period: string) =>
       ["staff", "hoursToFix", workspaceId, period] as const,
+    /** Timbrature in orario da approvare nel periodo: sotto `staff` come le ore,
+     *  così ogni approvazione (singola, in blocco, realtime) lo rilegge. */
+    regularClocks: (workspaceId: string, from: string, to: string) =>
+      ["staff", "regularClocks", workspaceId, from, to] as const,
   },
   assignments: {
     all: ["assignments"] as const,

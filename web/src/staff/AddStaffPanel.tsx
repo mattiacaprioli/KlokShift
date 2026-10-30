@@ -10,6 +10,7 @@ import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, Select } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
+import { EMPLOYMENT_HINT } from "@/features/staff/employment";
 
 /**
  * In quali sedi lavora. Almeno una; con una sede sola non compare, perché la
@@ -215,8 +216,8 @@ export function AddStaffPanel({
             mandare e nessun account da agganciare — è già il mio. */}
         {self ? null : (
           <Field
-            label="Email"
-            hint="Facoltativa. Serve a collegarle il suo account."
+            label="Email (consigliata)"
+            hint="Serve per farla entrare nell'app: si registra con questa email e trova subito i suoi turni."
           >
             <Input
               type="email"
@@ -229,7 +230,7 @@ export function AddStaffPanel({
             />
           </Field>
         )}
-        <Field label="Impiego">
+        <Field label="Impiego" hint={EMPLOYMENT_HINT[empType]}>
           <Select
             value={empType}
             onChange={(e) =>

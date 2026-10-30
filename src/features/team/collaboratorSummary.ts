@@ -10,12 +10,17 @@ import type { Membership } from "@/features/workspace/types";
 /**
  * Il benvenuto del collaboratore, in parole: cosa può fare, su quali sedi, cosa
  * resta al titolare e da dove cominciare. Tutto da `get_my_context` (permessi e
- * ambito stanno sul membro), nessuna query in più. Solo dati: la dashboard lo
- * mostra, l'app può riusarlo.
+ * ambito stanno sul membro), nessuna query in più. Solo dati: lo mostrano la
+ * dashboard e l'app (`CollaboratorPermissionsCard`).
  */
 export type CollaboratorSummary = {
   workspaceName: string;
   can: { perm: TeamPermission; label: string; hint: string }[];
+  /**
+   * Quello che non può fare, per nome. Senza, un menu filtrato sembra un'app
+   * rotta: chi non ha «Ore» non sa che le ore esistono, né a chi chiederle.
+   */
+  cannot: string[];
   venues: string;
   ownerKeeps: string;
   /** La prima pagina utile sulla dashboard; `null` senza nessun permesso. */
@@ -24,7 +29,7 @@ export type CollaboratorSummary = {
 
 /** Dove porta ciascun permesso, nell'ordine in cui conviene cominciare. */
 const START: Record<TeamPermission, { path: string; label: string }> = {
-  can_manage_shifts: { path: "/planning", label: "Apri il planning" },
+  can_manage_shifts: { path: "/planning", label: "Apri i turni" },
   can_manage_staff: { path: "/staff", label: "Apri il team" },
   can_view_hours: { path: "/ore", label: "Apri le ore" },
   can_manage_documents: { path: "/staff", label: "Apri il team" },
@@ -53,8 +58,24 @@ export function collaboratorSummary(m: Membership): CollaboratorSummary {
       label: TEAM_PERMISSION_LABEL[perm],
       hint: TEAM_PERMISSION_HINT[perm],
     })),
+    cannot: TEAM_PERMISSIONS.filter((p) => !perms[p]).map(
+      (p) => TEAM_PERMISSION_LABEL[p]
+    ),
     venues,
     ownerKeeps: OWNER_KEEPS,
     start: granted.length > 0 ? START[granted[0]] : null,
   };
+}
+
+/**
+ * L'invito a collaborare, prima di accettare: cosa potrà fare e dove. Prima
+ * diceva solo «ti ha invitato a collaborare alla gestione», e il sì era al buio.
+ */
+export function collaboratorInviteText(m: Membership): string {
+  const s = collaboratorSummary(m);
+  const can =
+    s.can.length > 0
+      ? `Potrai gestire: ${s.can.map((c) => c.label).join(", ")}.`
+      : "Per ora potrai solo consultare.";
+  return `Ti ha invitato a collaborare alla gestione. ${can} ${s.venues}`;
 }

@@ -100,7 +100,7 @@ export const it: Content = {
         body: "Vedi subito i buchi e chi è in ferie.",
       },
       {
-        title: "Planning da scrivania",
+        title: "Turni da scrivania",
         body: "Trascini i turni, duplichi la settimana, stampi.",
       },
       {
@@ -116,7 +116,7 @@ export const it: Content = {
         body: "Ore, pause e assenze in PDF o CSV.",
       },
     ],
-    shotPlanningAlt: "Il planning settimanale con i turni per persona",
+    shotPlanningAlt: "La settimana dei turni, persona per persona",
     shotHoursAlt: "Il riepilogo mensile delle ore per persona",
   },
 
@@ -228,7 +228,7 @@ export const it: Content = {
     includedTitle: "Incluso in entrambi",
     included: [
       "App per il team, gratuita",
-      "Planning, conferme e copertura",
+      "Turni, conferme e copertura",
       "Presenze, ore ed export PDF e CSV",
       "Documenti e scadenze",
       "Messaggi e notifiche",

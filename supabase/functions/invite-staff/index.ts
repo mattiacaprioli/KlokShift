@@ -44,7 +44,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
-import { oneLine, errorForLog } from "./logic.ts";
+import { errorForLog, oneLine, teamAccessLines, type TeamAccess } from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -129,6 +129,41 @@ function joinIt(names: string[]): string {
   if (names.length === 0) return "una sede";
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
+/**
+ * Permessi e ambito del collaboratore, per dirli nell'email. Con il service
+ * role: la riga è appena stata autorizzata da `claim_invite_send`. Se la
+ * lettura fallisce l'invito parte lo stesso, con la frase generica.
+ */
+async function readTeamAccess(
+  admin: ReturnType<typeof createClient>,
+  memberId: string
+): Promise<TeamAccess | null> {
+  try {
+    const { data, error } = await admin
+      .from("workspace_members")
+      .select("can_shifts, can_staff, can_hours, can_documents, can_venue, scope, member_scope(venues(name, closed_at))")
+      .eq("id", memberId)
+      .maybeSingle();
+    if (error || !data) return null;
+    const venues = ((data.member_scope ?? []) as { venues: { name: string; closed_at: string | null } | null }[])
+      .map((row) => row.venues)
+      .filter((v): v is { name: string; closed_at: string | null } => !!v && v.closed_at === null)
+      .map((v) => v.name)
+      .sort((a, b) => a.localeCompare(b, "it"));
+    return {
+      can_shifts: !!data.can_shifts,
+      can_staff: !!data.can_staff,
+      can_hours: !!data.can_hours,
+      can_documents: !!data.can_documents,
+      can_venue: !!data.can_venue,
+      scope: data.scope === "all" ? "all" : "selected",
+      venues,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** Il risultato di `claim_invite_send`. */
@@ -218,14 +253,16 @@ function buildEmail(p: Payload) {
  * invocazione: metterlo qui dentro vorrebbe dire ricostruirlo, e un token
  * ricostruito a mano non è più un segreto.
  */
-function buildTeamEmail(p: Payload, link: string) {
+function buildTeamEmail(p: Payload, link: string, access: TeamAccess | null) {
   const subject = `${p.workspace_name} ti ha dato accesso alla gestione su KlokShift`;
+  // Permessi e sedi quando li sappiamo; altrimenti la frase generica di prima.
+  const lines = access ? teamAccessLines(access) : null;
 
   const text = [
     `Ciao,`,
     ``,
-    `${p.workspace_name} ti ha dato accesso alla gestione su KlokShift: da lì`,
-    `segui i turni e il team, con i permessi che ti ha dato.`,
+    `${p.workspace_name} ti ha dato accesso alla gestione su KlokShift.`,
+    ...(lines ? [lines.can, lines.where] : [`Avrai i permessi che ha scelto per te.`]),
     ``,
     `Apri questo link e scegli una password: l'account lo creiamo in quel`,
     `momento, a nome di questo indirizzo (${p.email}).`,
@@ -247,6 +284,9 @@ function buildTeamEmail(p: Payload, link: string) {
   const e = {
     owner: escapeHtml(p.workspace_name),
     email: escapeHtml(p.email),
+    access: lines
+      ? `${escapeHtml(lines.can)}<br>${escapeHtml(lines.where)}`
+      : "Avrai i permessi che ha scelto per te.",
   };
 
   const html = `<!doctype html>
@@ -256,7 +296,8 @@ function buildTeamEmail(p: Payload, link: string) {
 <tr><td style="padding:32px 28px;">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A8070;">KlokShift</p>
   <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;font-weight:700;">Ti hanno dato accesso alla gestione</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione su KlokShift — da lì segui i turni e il team, con i permessi che ti ha dato.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><strong>${e.owner}</strong> ti ha dato accesso alla gestione su KlokShift.</p>
+  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">${e.access}</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
     <tr><td style="border-radius:999px;background:#23201B;">
       <a href="${link}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Attiva il tuo accesso</a>
@@ -334,7 +375,11 @@ Deno.serve(async (req) => {
   // legge i log della function entrerebbe nell'account di un collaboratore.
   const mail =
     payload.channel === "token"
-      ? buildTeamEmail(payload, `${DASHBOARD_URL}/#/invito?t=${token}`)
+      ? buildTeamEmail(
+        payload,
+        `${DASHBOARD_URL}/#/invito?t=${token}`,
+        await readTeamAccess(admin, body.memberId)
+      )
       : buildEmail(payload);
   const client = new SMTPClient({
     connection: {

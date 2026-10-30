@@ -53,12 +53,19 @@ export function NextShiftCard({
   onPress,
   onConfirm,
   onDecline,
+  pendingRequestText,
   pending,
 }: {
   item: AgendaItem;
   onPress: () => void;
   onConfirm: () => void;
   onDecline: () => void;
+  /**
+   * La propria richiesta di cambio in attesa, già detta a parole. Il cambio si
+   * chiede solo dal dettaglio («Chiedi un cambio»): un secondo pulsante qui con
+   * un altro nome apriva la stessa finestra e confondeva (30/10).
+   */
+  pendingRequestText?: string | null;
   pending?: boolean;
 }) {
   const { shift } = item;
@@ -115,6 +122,12 @@ export function NextShiftCard({
             variant="accepted"
           />
         </View>
+      ) : null}
+
+      {pendingRequestText ? (
+        <Text className="mt-3 text-[13px] leading-5 text-gold">
+          {pendingRequestText}
+        </Text>
       ) : null}
 
       {canRespond ? (

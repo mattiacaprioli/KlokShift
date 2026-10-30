@@ -24,6 +24,7 @@ const FORBIDDEN: { word: RegExp; use: string }[] = [
   { word: /\bcollaborator[ei] a chiamata\b/i, use: "chi è a chiamata" },
   { word: /\bfinestra di timbratura\b/i, use: "è tardi per timbrare" },
   { word: /\bprova Team\b/, use: "la prova gratuita (il piano si scrive «piano Team»)" },
+  { word: /\bplanning\b/i, use: "turni" },
 ];
 
 /** Eccezioni motivate: file + frammento del testo. */
@@ -33,7 +34,11 @@ const ALLOWED: { file: string; text: string; why: string }[] = [
   { file: "src/lib/errors.ts", text: "Scegli capacità valide", why: "area del fondatore" },
 ];
 
-const isKey = (text: string) => !/\s/.test(text.trim()) && text === text.toLowerCase();
+/** Chiavi, rotte (anche con parametri) e liste di colonne per le select. */
+const isKey = (text: string) =>
+  text.trimStart().startsWith("/") ||
+  /^[a-z_]+:[a-z_]+!/.test(text.trim()) ||
+  (!/\s/.test(text.trim()) && text === text.toLowerCase());
 
 describe("glossario", () => {
   const strings = collectUserStrings(resolve(process.cwd()), [

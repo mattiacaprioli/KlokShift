@@ -882,7 +882,7 @@ function ContractForm({
 
       <p className="text-xs text-t4">
         Quante ore deve fare. Servono solo a confrontarle con i turni che
-        programmi, nella vista <b>persone</b> del planning: non bloccano niente.
+        programmi, nella vista <b>persone</b> dei turni: non bloccano niente.
         Lascia vuoto se non vuoi il confronto.
       </p>
 

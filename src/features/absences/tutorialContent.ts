@@ -13,7 +13,7 @@ import type { Tutorial } from "@/features/team/tutorialContent";
 export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
   title: "Ferie, permessi e malattia",
   intro:
-    "Le persone del tuo team chiedono ferie e permessi, e comunicano la malattia, direttamente dall'app. Tu decidi da una card in chat, vedi chi manca nel planning e a fine mese trovi tutto nell'export per il commercialista.",
+    "Le persone del tuo team chiedono ferie e permessi, e comunicano la malattia, direttamente dall'app. Tu decidi da una card in chat, vedi chi manca nei turni e a fine mese trovi tutto nell'export per il commercialista.",
   sections: [
     {
       title: "Quando arriva una richiesta",
@@ -42,7 +42,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       ],
     },
     {
-      title: "Nel planning",
+      title: "Nei turni",
       points: [
         "Nella vista per persona della dashboard i giorni di assenza sono tratteggiati, più chiari se la richiesta è ancora da decidere, e un turno che cade in un'assenza approvata ha il bordo arancione. In app il pallino del giorno è tratteggiato e sotto il nome c'è l'assenza.",
         "Se assegni o passi un turno a chi è assente vedi un avviso, ma puoi procedere: magari le ferie sono state spostate a voce.",
@@ -62,7 +62,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       title: "Da sapere",
       points: [
         "Chi lavora in più sedi della tua azienda chiede una volta sola, e l'assenza vale per tutte.",
-        "Un collaboratore vede e decide le assenze solo con il permesso «Team». Con i soli turni vede nel planning che una persona non è disponibile, ma non il motivo.",
+        "Un collaboratore vede e decide le assenze solo con il permesso «Team». Con i soli turni vede nei turni che una persona non è disponibile, ma non il motivo.",
         "Il saldo delle ferie maturate e residue non lo calcola l'app: resta al consulente del lavoro.",
       ],
     },
@@ -72,7 +72,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
 export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
   title: "Ferie, permessi e malattia",
   intro:
-    "Chiedi ferie e permessi, e comunica la malattia, senza messaggi o telefonate: la richiesta arriva al titolare in chat e la sua risposta arriva a te.",
+    "Chiedi ferie e permessi, e comunica la malattia, senza messaggi o telefonate: la richiesta arriva alla sede in chat e la risposta arriva a te.",
   sections: [
     {
       title: "Chiedere ferie o un permesso",
@@ -80,7 +80,7 @@ export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
         "Vai su Profilo → «Ferie, permessi e malattia».",
         "Premi «Nuova richiesta». Se lavori per più aziende, scegli prima a quale mandarla: ognuna decide per sé.",
         "Scegli Ferie o Permesso, poi le date. Per un permesso di poche ore scegli «A ore» e indica l'orario.",
-        "Aggiungi un motivo se vuoi e premi «Invia al titolare».",
+        "Aggiungi un motivo se vuoi e premi «Invia alla sede».",
       ],
     },
     {
@@ -88,21 +88,21 @@ export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
       steps: [
         "Nuova richiesta, poi Malattia, e le date. Puoi indicare anche giorni già passati.",
         "Se ce l'hai, scrivi il riferimento del certificato medico. Puoi aggiungerlo anche dopo, dalla lista delle tue assenze.",
-        "Invia: il titolare la vede subito, non c'è niente da approvare.",
+        "Invia: la sede la vede subito, non c'è niente da approvare.",
       ],
     },
     {
       title: "Dopo l'invio",
       points: [
-        "Quando il titolare risponde ti arriva una notifica, e la risposta compare nella chat con lui.",
-        "Finché la richiesta è in attesa puoi ritirarla. Un'assenza già approvata puoi annullarla solo se non è ancora cominciata, e il titolare viene avvisato.",
-        "I turni che hai già in quei giorni non spariscono da soli: li sistema il titolare. Nell'agenda li vedi segnati con «Sei in ferie» o simile.",
+        "Quando la sede risponde ti arriva una notifica, e la risposta compare in chat.",
+        "Finché la richiesta è in attesa puoi ritirarla. Un'assenza già approvata puoi annullarla solo se non è ancora cominciata, e la sede viene avvisata.",
+        "I turni che hai già in quei giorni non spariscono da soli: li sistema la sede. Nell'agenda li vedi segnati con «Sei in ferie» o simile.",
       ],
     },
     {
       title: "Da sapere",
       points: [
-        "Per la malattia non scrivere mai diagnosi o informazioni sulla tua salute: al titolare servono solo le date.",
+        "Per la malattia non scrivere mai diagnosi o informazioni sulla tua salute: alla sede servono solo le date.",
         "I tuoi colleghi non vedono le tue assenze né il loro motivo.",
       ],
     },

@@ -65,13 +65,23 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
     audience: ["manager", "web"],
   },
   {
+    q: "Perché non vedo Team, Ore o altre pagine?",
+    a: "Se sei un collaboratore, vedi solo quello che il titolare ti ha permesso. I tuoi permessi li trovi in Impostazioni › «I tuoi permessi» (sulla dashboard: Impostazioni › I tuoi permessi). Se te ne serve un altro, chiedilo al titolare.",
+    audience: ["manager", "web"],
+  },
+  {
+    q: "Come passo dalla gestione ai miei turni?",
+    a: "Se gestisci e lavori anche nei turni, nel Profilo trovi «Passa ai tuoi turni»; dall'altra parte, sempre nel Profilo, «Passa alla gestione». L'app si ricorda l'ultima scelta.",
+    audience: ["manager", "waiter"],
+  },
+  {
     q: "Come aggiungo una persona al team?",
     a: "Da Team › «Aggiungi al team» (sulla dashboard: Team › «+ Aggiungi»). Scrivi nome ed email. Se ha già KlokShift trova l'invito nell'app; altrimenti riceve un'email, si registra con quell'indirizzo e vede subito i suoi turni.",
     audience: ["manager", "web"],
   },
   {
     q: "Come sposto un turno o una persona?",
-    a: "Tutto il turno: cambiane la data, e si spostano tutte le persone. Una persona sola: sulla dashboard, nel planning per persona, trascinala su un altro turno. Prima di salvare vedi chi verrà avvisato.",
+    a: "Tutto il turno: cambiane la data, e si spostano tutte le persone. Una persona sola: sulla dashboard, nei turni, vista per persona, trascinala su un altro turno. Prima di salvare vedi chi verrà avvisato.",
     audience: ["manager", "web"],
   },
   {

@@ -159,6 +159,40 @@ export async function setVenueClockMethod(
   return data;
 }
 
+/** Le timbrature in orario si approvano da sole all'uscita (spento di default). */
+export async function setVenueClockAutoApprove(
+  venueId: string,
+  on: boolean
+): Promise<Tables<"venues">> {
+  const { data, error } = await supabase.rpc("set_venue_clock_auto_approve", {
+    p_venue: venueId,
+    p_on: on,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * «Approva tutte quelle in orario» per un periodo (date dei turni, estremi
+ * compresi). Con `dryRun` conta e basta. Il server sceglie quali: le stesse di
+ * `isRegularPendingClock`, nelle sedi in cui chi chiama ha «Ore».
+ */
+export async function approveRegularClockRecords(input: {
+  workspaceId: string;
+  from: string;
+  to: string;
+  dryRun?: boolean;
+}): Promise<number> {
+  const { data, error } = await supabase.rpc("approve_regular_clock_records", {
+    p_workspace: input.workspaceId,
+    p_from: input.from,
+    p_to: input.to,
+    p_dry_run: input.dryRun ?? false,
+  });
+  if (error) throw new Error(error.message);
+  return data ?? 0;
+}
+
 /** Una sede in cui posso timbrare senza turno, con l'eventuale entrata aperta. */
 export type MyUnplannedClock = {
   venueMemberId: string;

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminApp } from "../../web/src/admin/AdminApp";
 const { status, globalRead } = vi.hoisted(() => ({ status: vi.fn(), globalRead: vi.fn() }));
+vi.mock('@/lib/supabase', () => ({ supabase: {} }));
 vi.mock('@/features/admin/hooks', () => ({ useAdminAccess: status, useAdminRead: globalRead }));
 vi.mock('@/lib/auth', () => ({ useAuth: () => ({ session: { user: { id: 'founder' }, access_token: 'fixture' }, signOut: vi.fn() }) }));
 vi.mock('@/features/admin/api', () => ({ getAdminOverview: vi.fn(), listAdminWorkspaces: vi.fn(), getAdminWorkspace: vi.fn(), listAdminAccounts: vi.fn(), getAdminAccount: vi.fn(), listAdminMfaFactors: vi.fn(), enrollAdminMfa: vi.fn(), cancelAdminMfaEnrollment: vi.fn(), verifyAdminMfa: vi.fn() }));

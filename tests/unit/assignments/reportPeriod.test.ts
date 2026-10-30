@@ -4,6 +4,7 @@ import {
   monthAsRange,
   peopleInReport,
   periodBounds,
+  periodDays,
   periodKey,
   periodLabel,
   pruneSelection,
@@ -95,5 +96,19 @@ describe("scelta delle persone", () => {
     expect(selectionLabel([])).toBe("Tutte");
     expect(selectionLabel(["Anna"])).toBe("Anna");
     expect(selectionLabel(["Anna", "Carla"])).toBe("2 persone");
+  });
+});
+
+describe("giorni del periodo, estremi compresi", () => {
+  it("il mese finisce l'ultimo giorno, non il primo del mese dopo", () => {
+    expect(periodDays({ kind: "month", month: "2026-02" })).toEqual({ from: "2026-02-01", to: "2026-02-28" });
+    expect(periodDays({ kind: "month", month: "2026-12" })).toEqual({ from: "2026-12-01", to: "2026-12-31" });
+  });
+
+  it("il periodo libero resta quello scelto", () => {
+    expect(periodDays({ kind: "range", from: "2026-10-05", to: "2026-10-11" })).toEqual({
+      from: "2026-10-05",
+      to: "2026-10-11",
+    });
   });
 });

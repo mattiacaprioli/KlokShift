@@ -17,6 +17,8 @@ import {
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
 import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
+import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
+import { myPendingRequestText } from "@/features/changeRequests/labels";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { HomeClockCard } from "@/features/clock/HomeClockCard";
@@ -36,6 +38,7 @@ import { useToast } from "@/providers/Toast";
 import { isShiftOver } from "@/lib/format";
 import { JoinWorkspaceCard } from "@/features/onboarding/JoinWorkspaceCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { HelpButton } from "@/components/ui/HelpButton";
 
 /** Quanti turni seguono il primo, prima di mandare all'agenda. */
 const PREVIEW_COUNT = 3;
@@ -112,6 +115,11 @@ export default function WaiterHomeScreen() {
   const next = laterItems[0];
   // Il primo sta già nella card grande: la lista sotto riprende da lì.
   const following = laterItems.slice(1, 1 + PREVIEW_COUNT);
+  // Solo per il turno confermato della card grande: una lettura, non una per
+  // turno. La RLS restituisce soltanto la propria richiesta.
+  const nextPendingRequest =
+    usePendingRequestsForShift(next?.shift.id ?? "", next?.status === "confirmed")
+      .data?.[0] ?? null;
 
   function onConfirm(id: string) {
     respond.mutate(
@@ -138,10 +146,13 @@ export default function WaiterHomeScreen() {
             {firstName ? `Ciao, ${firstName}` : "Ciao"}
           </Display>
         </View>
-        <NotificationBell
-          count={unread}
-          onPress={() => router.push("/(waiter)/notifiche")}
-        />
+        <View className="flex-row gap-2">
+          <HelpButton onPress={() => router.push("/(waiter)/aiuto")} />
+          <NotificationBell
+            count={unread}
+            onPress={() => router.push("/(waiter)/notifiche")}
+          />
+        </View>
       </View>
 
       <ScrollView
@@ -248,6 +259,9 @@ export default function WaiterHomeScreen() {
                 onPress={() => router.push(`/(waiter)/shift/${next.shift.id}`)}
                 onConfirm={() => onConfirm(next.id)}
                 onDecline={() => setDeclining(next.id)}
+                pendingRequestText={
+                  nextPendingRequest ? myPendingRequestText(nextPendingRequest) : null
+                }
                 pending={
                   respond.isPending && respond.variables?.id === next.id
                 }

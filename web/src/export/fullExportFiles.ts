@@ -31,6 +31,8 @@ export const fullExportSchema = z.object({
     person: z.string(), role: text, status: z.string(), confirmed_at: text, clock_method: text,
     clock_in_at: text, clock_out_at: text, clock_break_minutes: num, corrected: z.boolean(),
     correction_reason: text, worked_hours: num, hours_source: text, reviewed_at: text,
+    // Dal 30/10: le righe esportate prima non lo portano.
+    auto_approved: z.boolean().optional(),
   })),
   absences: z.array(z.object({
     person: z.string(), kind: z.string(), start_date: z.string(), end_date: z.string(),
@@ -131,11 +133,12 @@ export function fullExportFiles(data: FullExport, missingDocuments: string[] = [
   files["presenze.csv"] = csv(
     ["Data", "Sede", "Turno", "Inizio previsto", "Fine prevista", "Persona", "Ruolo sul turno", "Stato", "Confermato il",
       "Timbratura", "Entrata", "Uscita", "Pausa timbrata (min)", "Corretta", "Motivo correzione", "Ore lavorate approvate",
-      "Fonte delle ore", "Approvata il"],
+      "Fonte delle ore", "Approvata il", "Approvata in automatico"],
     data.attendance.map((a) => [day(a.date), textCell(a.venue), textCell(a.shift), time(a.start_time), time(a.end_time),
       textCell(a.person), textCell(a.role), label(a.status), instant(a.confirmed_at), label(a.clock_method),
       instant(a.clock_in_at), instant(a.clock_out_at), numberCell(a.clock_break_minutes), a.corrected ? "Sì" : "No",
-      textCell(a.correction_reason), numberCell(a.worked_hours), label(a.hours_source), instant(a.reviewed_at)]));
+      textCell(a.correction_reason), numberCell(a.worked_hours), label(a.hours_source), instant(a.reviewed_at),
+      a.reviewed_at ? (a.auto_approved ? "Sì" : "No") : ""]));
   files["assenze.csv"] = csv(
     ["Persona", "Tipo", "Dal", "Al", "Dalle", "Alle", "Stato", "Ore riconosciute", "Protocollo INPS", "Nota", "Nota della risposta", "Registrata il"],
     data.absences.map((a) => [textCell(a.person), label(a.kind), day(a.start_date), day(a.end_date), time(a.start_time),

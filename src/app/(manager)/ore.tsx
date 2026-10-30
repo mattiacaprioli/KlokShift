@@ -61,6 +61,9 @@ import {
   ABSENCE_SUMMARY_NOTE,
   formatSummaryDays,
 } from "@/features/absences/summary";
+import { useApproveRegularClockRecords, useRegularClockCount } from "@/features/clock/hooks";
+import { approveRegularLabel, approvedRegularToast } from "@/features/clock/autoApprove";
+import { userErrorMessage } from "@/lib/errors";
 
 const PERIOD_MODES = [
   { id: "month", label: "Mese" },
@@ -118,6 +121,21 @@ export default function VenueHoursScreen() {
   // I turni del periodo le cui ore non contano ancora, con il perché: anche chi
   // doveva timbrare e non l'ha fatto, che il riepilogo non nomina.
   const toFix = useHoursToFix(workspaceId, period).data ?? [];
+  // Le timbrature in orario del periodo si approvano in un tocco, senza aprire
+  // i turni uno per uno (decisione del 30/10).
+  const regularCount = useRegularClockCount(workspaceId, period, toFix.length > 0).data ?? 0;
+  const approveRegular = useApproveRegularClockRecords();
+  function onApproveRegular() {
+    if (!workspaceId) return;
+    approveRegular.mutate(
+      { workspaceId, period },
+      {
+        onSuccess: (n) => toast.show(approvedRegularToast(n)),
+        onError: (e) =>
+          toast.show(userErrorMessage(e, "Approvazione non riuscita. Riprova."), "error"),
+      }
+    );
+  }
   const [showAllToFix, setShowAllToFix] = useState(false);
   const toFixShown = showAllToFix ? toFix : toFix.slice(0, TO_FIX_PREVIEW);
   const allRows = query.data ?? [];
@@ -292,6 +310,15 @@ export default function VenueHoursScreen() {
               {hoursToFixSummary(toFix)}
             </Text>
             <Text className="mt-1 text-xs leading-4 text-t3">{HOURS_TO_FIX_HINT}</Text>
+            {regularCount > 0 ? (
+              <GoldButton
+                className="mt-3"
+                size="sm"
+                label={approveRegular.isPending ? "Approvo…" : approveRegularLabel(regularCount)}
+                disabled={approveRegular.isPending}
+                onPress={onApproveRegular}
+              />
+            ) : null}
             <View className="mt-3 gap-2">
               {toFixShown.map((item) => (
                 <Pressable

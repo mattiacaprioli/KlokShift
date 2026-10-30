@@ -12,6 +12,15 @@ export default function ManagerSupportScreen() {
   const { isOwner, canAny, workspaceId, workspaceName } = useOwnerVenues();
 
   const guides: SupportGuide[] = [];
+  if (canAny("can_manage_shifts")) {
+    guides.push({
+      icon: "calendar",
+      title: "Il tuo primo turno in 2 minuti",
+      subtitle: "Ruoli, team, turno: i passi in ordine",
+      onPress: () =>
+        router.push({ pathname: "/(manager)/tutorial", params: { id: "turno" } }),
+    });
+  }
   if (isOwner) {
     guides.push({
       icon: "users",

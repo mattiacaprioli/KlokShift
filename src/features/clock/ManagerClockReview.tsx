@@ -32,6 +32,7 @@ import {
   formatClockTime,
 } from "./hours";
 import { UNPLANNED_VOID_NOTICE } from "./unplanned";
+import { AUTO_APPROVED_LABEL } from "./autoApprove";
 
 type EditMode = "correct" | "void" | null;
 
@@ -295,7 +296,13 @@ export function ManagerClockReview({
             </View>
           </View>
           <Pill
-            label={reviewed ? "Approvato" : "Da verificare"}
+            label={
+              reviewed
+                ? assignment.attendance_auto_approved
+                  ? AUTO_APPROVED_LABEL
+                  : "Approvato"
+                : "Da verificare"
+            }
             variant={reviewed ? "accepted" : "pending"}
           />
         </View>

@@ -23,6 +23,7 @@ import { cn } from "@/lib/cn";
 import { addDaysToDate, startOfWeek, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { OperationsLockedCard } from "@/features/workspace/OperationsLockedCard";
+import { missingPermission } from "@/features/workspace/permissions";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
@@ -405,7 +406,9 @@ export default function ManagerShiftsScreen() {
             ) : null}
             {/* Tondo e non a tutta larghezza: il bottone grande si prendeva lo
                 spazio che ora serve al calendario. Porta con sé il giorno
-                selezionato, così il form si apre già sulla data giusta. */}
+                selezionato, così il form si apre già sulla data giusta. Il «+»
+                resta senza scritta (scelta del 30/10): «Nuovo turno» era troppo;
+                la Home ha il pulsante con il nome. */}
             {canAdd ? (
               <Pressable
                 onPress={addShift}
@@ -743,9 +746,11 @@ export default function ManagerShiftsScreen() {
                   <OperationsLockedCard title="Crea il primo turno" />
                 </View>
               ) : (
+                // Un collaboratore senza «Turni»: non una lista vuota muta, ma
+                // il perché e a chi chiederlo.
                 <EmptyState
-                  title="Nessun turno in programma"
-                  subtitle="Qui compaiono i turni delle sedi su cui lavori."
+                  title={missingPermission("can_manage_shifts").title}
+                  subtitle={missingPermission("can_manage_shifts").detail}
                 />
               )}
             </View>

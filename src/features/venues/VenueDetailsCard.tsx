@@ -28,7 +28,7 @@ export function VenueDetailsCard({
         : "Non impostata",
     ],
     [
-      "Planning per il team",
+      "Turni visibili al team",
       venue.staff_sees_planning
         ? "Tutti i turni della sede"
         : "Solo i propri turni",

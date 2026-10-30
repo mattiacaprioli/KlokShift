@@ -5,6 +5,7 @@ import {
   type Tutorial,
 } from "@/features/team/tutorialContent";
 import { ABSENCE_MANAGER_TUTORIAL } from "@/features/absences/tutorialContent";
+import { FIRST_SHIFT_TUTORIAL } from "@/features/shifts/tutorialContent";
 import {
   SUPPORT_EMAIL,
   SUPPORT_RESPONSE_NOTE,
@@ -26,6 +27,7 @@ export function AiutoPage() {
   // contatto li vedono tutti.
   const { isOwner, canAny, workspaceId, workspaceName } = useOwnerVenues();
   const canStaff = canAny("can_manage_staff");
+  const canShifts = canAny("can_manage_shifts");
   const faq = faqFor("web", { isOwner });
   // Le pagine di cui parlano guide e domande, solo per chi può aprirle: gli
   // stessi controlli della barra laterale.
@@ -92,10 +94,17 @@ export function AiutoPage() {
           </>
         }
       >
-        {isOwner || canStaff ? (
+        {isOwner || canStaff || canShifts ? (
           <section>
             <SectionTitle>Guide</SectionTitle>
             <div className="flex flex-col gap-2">
+              {canShifts ? (
+                <TutorialSection
+                  tutorial={FIRST_SHIFT_TUTORIAL}
+                  subtitle="Ruoli, team, turno: i passi in ordine"
+                  link={{ to: "/planning", label: "Vai ai turni" }}
+                />
+              ) : null}
               {isOwner ? (
                 <TutorialSection
                   tutorial={COLLABORATOR_TUTORIAL}

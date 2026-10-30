@@ -13,7 +13,9 @@ import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useRespondToInvite } from "@/features/workspace/hooks";
+import { useViewMode } from "@/features/team/ViewMode";
 import type { Membership } from "@/features/workspace/types";
+import { collaboratorInviteText } from "@/features/team/collaboratorSummary";
 
 /**
  * Un invito ricevuto: entrare nel team di un'azienda, o collaborare alla
@@ -27,6 +29,7 @@ import type { Membership } from "@/features/workspace/types";
 function InviteCard({ invite }: { invite: Membership }) {
   const toast = useToast();
   const respond = useRespondToInvite();
+  const { setMode } = useViewMode();
 
   const isCollaborator = invite.authority !== "none";
   const venueNames = [...new Set(invite.works.map((w) => w.venue_name))];
@@ -36,14 +39,19 @@ function InviteCard({ invite }: { invite: Membership }) {
     respond.mutate(
       { memberId: invite.member_id, accept },
       {
-        onSuccess: () =>
+        onSuccess: () => {
           toast.show(
             accept
               ? isCollaborator
-                ? `Ora gestisci ${invite.workspace_name}`
+                ? `Ora gestisci ${invite.workspace_name}: i tuoi turni restano nel Profilo`
                 : `Ora fai parte del team di ${invite.workspace_name}`
               : "Invito rifiutato"
-          ),
+          );
+          // Ha appena accettato di gestire: lo si porta dove gestisce. Prima
+          // restava nella vista lavoro con un «Ora gestisci» e nessuna strada
+          // visibile per arrivarci. Il ritorno è «Passa ai tuoi turni» nel Profilo.
+          if (accept && isCollaborator) setMode("manager");
+        },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
@@ -64,7 +72,7 @@ function InviteCard({ invite }: { invite: Membership }) {
       </View>
       <Text className="mt-3 text-sm text-t2">
         {isCollaborator
-          ? "Ti ha invitato a collaborare alla gestione."
+          ? collaboratorInviteText(invite)
           : `Ti ha invitato nel suo team${
               invite.works.some((w) => w.employment_type === "fisso")
                 ? " come dipendente fisso"

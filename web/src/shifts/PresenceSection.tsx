@@ -46,6 +46,7 @@ import {
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import { UNPLANNED_VOID_NOTICE } from "@/features/clock/unplanned";
 import { AddShiftWorker } from "./AddShiftWorker";
+import { AUTO_APPROVED_LABEL } from "@/features/clock/autoApprove";
 
 /**
  * Un campo data+ora della correzione, sempre nell'ora di Roma. Nell'ora che a
@@ -294,7 +295,7 @@ function ClockReview({
         ) : null}
         {assignment.attendance_reviewed_at ? (
           <span className="rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">
-            Approvato
+            {assignment.attendance_auto_approved ? AUTO_APPROVED_LABEL : "Approvato"}
           </span>
         ) : (
           <span className="rounded-full bg-gold/10 px-2 py-0.5 font-semibold text-gold">

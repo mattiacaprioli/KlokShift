@@ -8,6 +8,7 @@ import {
   useRespondToInvite,
 } from "@/features/workspace/hooks";
 import { signupIntent } from "@/features/team/viewModeLogic";
+import { collaboratorInviteText } from "@/features/team/collaboratorSummary";
 import { Button, Field, Input } from "../ui/primitives";
 import { SupportLine } from "../ui/SupportLine";
 
@@ -228,7 +229,7 @@ function PendingInvites() {
           <p className="mt-1 text-xs leading-5 text-t3">
             {invite.authority === "none"
               ? "Ti ha invitato nel suo team."
-              : "Ti ha invitato a collaborare alla gestione."}
+              : collaboratorInviteText(invite)}
           </p>
           <div className="mt-4 flex gap-2">
             <Button

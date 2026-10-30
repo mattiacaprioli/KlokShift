@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePage, WorkspacesPage, AccountsPage } from "../../web/src/admin/pages";
 
 const { read, mutate } = vi.hoisted(() => ({ read: vi.fn(), mutate: vi.fn() }));
+vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 vi.mock("@/features/admin/hooks", () => ({
   useAdminRead: read, useAdminWrite: () => ({ isPending: false, mutateAsync: mutate }),
 }));

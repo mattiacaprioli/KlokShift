@@ -32,6 +32,7 @@ import { ImpostazioniPage } from "./pages/Impostazioni";
 import { AiutoPage } from "./pages/Aiuto";
 import { PianoPage } from "./pages/Piano";
 import { ProvaPage } from "./pages/Prova";
+import { RequirePermission } from "./ui/RequirePermission";
 const AdminApp = lazy(() => import("./admin/AdminApp").then((module) => ({ default: module.AdminApp })));
 
 export function App() {
@@ -169,8 +170,8 @@ function Dashboard({ userId }: { userId: string }) {
           <Route path="/" element={<HomePage />} />
           <Route path="/planning" element={<PlanningPage />} />
           <Route path="/storico" element={<StoricoPage />} />
-          <Route path="/ore" element={<OrePage />} />
-          <Route path="/staff" element={<StaffPage />} />
+          <Route path="/ore" element={<RequirePermission title="Ore" perms={["can_view_hours"]}><OrePage /></RequirePermission>} />
+          <Route path="/staff" element={<RequirePermission title="Team" perms={["can_manage_staff", "can_manage_documents"]}><StaffPage /></RequirePermission>} />
           <Route path="/assenze" element={<AssenzePage />} />
           <Route path="/ruoli" element={<RuoliPage />} />
           <Route path="/notifiche" element={<NotifichePage />} />

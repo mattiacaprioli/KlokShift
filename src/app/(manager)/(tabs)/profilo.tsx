@@ -18,6 +18,9 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { VenueDetailsCard } from "@/features/venues/VenueDetailsCard";
 import type { Venue } from "@/features/venues/api";
+import { useViewMode } from "@/features/team/ViewMode";
+import { useSwitchToWorkView } from "@/features/onboarding/useSwitchToWorkView";
+import { NavRow } from "@/components/ui/NavRow";
 
 /**
  * Le sedi del titolare: l'elenco da cui si aprono, si modificano, se ne
@@ -168,6 +171,20 @@ function AccountCard({ onPress }: { onPress: () => void }) {
   );
 }
 
+function WorkSwitchRow() {
+  const { canSwitch } = useViewMode();
+  const workView = useSwitchToWorkView();
+  if (!canSwitch) return null;
+  return (
+    <NavRow
+      icon="user"
+      title="Passa ai tuoi turni"
+      subtitle="I turni in cui lavori anche tu"
+      onPress={() => void workView.switchToWork()}
+    />
+  );
+}
+
 export default function ManagerProfiloScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -213,6 +230,10 @@ export default function ManagerProfiloScreen() {
         {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
             di chi sta guardando, e non dipende da quante sedi ha. */}
         <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
+
+        {/* L'altro cappello nello stesso posto dell'altro lato: il Profilo del
+            dipendente ha «Passa alla gestione», qui c'è il ritorno. */}
+        <WorkSwitchRow />
 
         {venueQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" className="mt-16" />

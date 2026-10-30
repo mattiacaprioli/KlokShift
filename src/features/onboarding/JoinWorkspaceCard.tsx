@@ -10,9 +10,11 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 /**
  * Il dipendente che non è ancora in nessun team: cosa deve fare.
  *
- * L'aggancio lo fa da solo `link_member_invites` quando la sede scrive questa
- * email sulla scheda (e l'email è confermata): l'unica mossa della persona è
- * dirgliela giusta. Prima lo spiegava solo una FAQ in Aiuto, e la Home diceva
+ * Chi vede questa card ha già un account: quando la sede scrive questa email
+ * sulla scheda, `add_member` gli manda un invito da accettare in app (l'aggancio
+ * automatico di `link_member_invites` vale per chi si registra dopo). L'unica
+ * mossa della persona è dirgliela giusta; fino al 30/10 la card diceva «non c'è
+ * niente da accettare», e gli inviti in Home la smentivano. Prima lo spiegava solo una FAQ in Aiuto, e la Home diceva
  * «quando una sede ti assegna un turno lo trovi qui» — vero, ma senza dire come.
  *
  * Niente `expo-clipboard` (servirebbe una nuova build nativa): l'email è
@@ -56,9 +58,9 @@ export function JoinWorkspaceCard() {
         </Text>
       </View>
       <Text className="text-[13px] leading-5 text-t3">
-        Appena ti aggiunge trovi qui la sede e i tuoi turni: non c&apos;è niente da
-        accettare. Se ha usato un&apos;altra email, chiedile di correggerla sulla
-        tua scheda.
+        Appena ti aggiunge ti arriva una notifica e un invito qui in Home:
+        accettalo e vedi la sede e i tuoi turni. Se ha usato un&apos;altra email,
+        chiedile di correggerla sulla tua scheda.
       </Text>
       <View className="gap-2">
         <GoldButton label="Condividi la mia email" onPress={share} />

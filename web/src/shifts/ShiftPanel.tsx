@@ -628,7 +628,7 @@ function InternalForm({
 
   function save(values: InternalShiftForm) {
     const payload = {
-      title: values.title,
+      title: values.title.trim() || shiftSlotLabel(values.start_time),
       date: values.date,
       start_time: values.start_time,
       end_time: values.end_time,
@@ -789,7 +789,11 @@ function InternalForm({
               </Field>
             ) : null}
 
-            <Field label="Titolo" error={errors.title?.message}>
+            <Field
+              label="Titolo (facoltativo)"
+              hint="Se lo lasci vuoto, prende il nome dalla fascia oraria (es. «Sera»)."
+              error={errors.title?.message}
+            >
               <Input {...register("title")} placeholder="Servizio serale" />
             </Field>
 

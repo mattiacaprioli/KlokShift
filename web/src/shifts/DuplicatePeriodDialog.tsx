@@ -252,7 +252,7 @@ export function DuplicatePeriodDialog({
                 {skippedNoSlot === 1 ? "1 turno resta" : `${skippedNoSlot} turni restano`}{" "}
                 fuori: cade in una posizione che{" "}
                 <span className="capitalize">{targetLabel}</span> non ha — un 5°
-                venerdì, per esempio. Aggiungilo a mano dal planning.
+                venerdì, per esempio. Aggiungilo a mano dai turni.
               </p>
             ) : null}
 

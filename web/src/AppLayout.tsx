@@ -36,7 +36,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { to: "/", label: "Home", icon: "home", group: "Ogni giorno" },
-  { to: "/planning", label: "Planning", icon: "planning", group: "Ogni giorno" },
+  { to: "/planning", label: "Turni", icon: "planning", group: "Ogni giorno" },
   { to: "/ore", label: "Ore", icon: "hours", group: "Ogni giorno", perm: "can_view_hours" },
   { to: "/staff", label: "Team", icon: "staff", group: "Persone", perm: "can_manage_staff" },
   // «Ruoli» non è nel menu (scelta del 22/10): ci si arriva dal pulsante in

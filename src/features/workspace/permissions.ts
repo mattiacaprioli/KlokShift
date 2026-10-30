@@ -46,6 +46,24 @@ export const TEAM_PERMISSION_HINT: Record<TeamPermission, string> = {
   can_manage_venue: "Modifica i dati della sede e l'elenco dei ruoli",
 };
 
+/**
+ * Perché una pagina è chiusa a un collaboratore, detto a lui: quale permesso
+ * manca, cosa permette, a chi chiederlo. Prima la pagina spariva dal menu o
+ * restava vuota, e un menu corto sembrava un'app rotta. Solo UX: il rifiuto
+ * vero resta quello delle RLS e delle RPC.
+ */
+export function missingPermission(perm: TeamPermission): {
+  title: string;
+  detail: string;
+} {
+  const label = TEAM_PERMISSION_LABEL[perm];
+  const hint = TEAM_PERMISSION_HINT[perm];
+  return {
+    title: `Ti manca il permesso «${label}»`,
+    detail: `Chi ha «${label}» ${hint.charAt(0).toLowerCase()}${hint.slice(1)}. Se ti serve, chiedilo al titolare.`,
+  };
+}
+
 export type TeamPermissions = Record<TeamPermission, boolean>;
 
 /** Nessun permesso: il punto di partenza di un collaboratore appena invitato. */

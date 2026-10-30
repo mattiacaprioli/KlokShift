@@ -50,7 +50,7 @@ export function PlanningMock() {
   return (
     <div className="text-[0.72rem] leading-tight sm:text-[0.8rem]">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="font-serif text-[1.3em] font-semibold">Planning</span>
+        <span className="font-serif text-[1.3em] font-semibold">Turni</span>
         <div className="flex gap-1.5">
           <span className="rounded-full bg-gold px-2.5 py-1 text-[0.85em] font-medium text-gold-ink">
             Settimana

@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { edgeRuntime, post } from "./runtime";
+import { TEAM_ACCESS_LABELS, teamAccessLines } from "../../../supabase/functions/invite-staff/logic";
+import { TEAM_PERMISSION_LABEL } from "@/features/workspace/permissions";
 
-function fixture(channel: "email" | "token" = "email", venues = ["Sede\r\nBcc: estraneo@example.test"]) {
+function fixture(
+  channel: "email" | "token" = "email",
+  venues = ["Sede\r\nBcc: estraneo@example.test"],
+  adminExtra: Record<string, unknown> = {}
+) {
   const payload = {
     channel, email: "persona@example.test", display_name: "Ada\tRossi",
     workspace_name: '\r\nAzienda\x01 <R&D "Soci">\r\nX-Header: falso\x7f',
@@ -10,7 +16,7 @@ function fixture(channel: "email" | "token" = "email", venues = ["Sede\r\nBcc: e
   const rpc = vi.fn().mockResolvedValue({ data: [payload], error: null });
   const send = vi.fn().mockResolvedValue(undefined);
   const close = vi.fn().mockResolvedValue(undefined);
-  const admin = { rpc };
+  const admin = { rpc, ...adminExtra };
   const asUser = { auth: { getUser: async () => ({ data: { user: { id: "owner" } }, error: null }) } };
   class SMTPClient {
     send = send;
@@ -71,5 +77,59 @@ describe("invite-staff: email e risposte", () => {
     const response = await f.request();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ sent: true });
+  });
+
+  it("all'invito del collaboratore dice permessi e sedi", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        can_shifts: true, can_staff: false, can_hours: true, can_documents: false, can_venue: false,
+        scope: "selected",
+        member_scope: [
+          { venues: { name: "Roma", closed_at: null } },
+          { venues: { name: "Milano", closed_at: null } },
+          { venues: { name: "Chiusa", closed_at: "2026-01-01" } },
+        ],
+      },
+      error: null,
+    });
+    const chain: Record<string, unknown> = { maybeSingle };
+    chain.select = () => chain;
+    chain.eq = () => chain;
+    const f = fixture("token", ["Roma"], { from: () => chain });
+    await f.request();
+    const mail = f.send.mock.calls[0][0];
+    expect(mail.content).toContain("Puoi gestire: Turni e Ore ed export.");
+    expect(mail.content).toContain("Sedi: Milano e Roma.");
+    expect(mail.html).toContain("Puoi gestire: Turni e Ore ed export.");
+  });
+
+  it("se i permessi non si leggono l'invito parte con la frase generica", async () => {
+    const f = fixture("token");
+    const response = await f.request();
+    expect(response.status).toBe(200);
+    expect(f.send.mock.calls[0][0].content).toContain("Avrai i permessi che ha scelto per te.");
+  });
+});
+
+describe("invite-staff: testo dei permessi", () => {
+  it("usa gli stessi nomi dei permessi dell'app", () => {
+    expect(Object.values(TEAM_ACCESS_LABELS)).toEqual([
+      TEAM_PERMISSION_LABEL.can_manage_shifts,
+      TEAM_PERMISSION_LABEL.can_manage_staff,
+      TEAM_PERMISSION_LABEL.can_view_hours,
+      TEAM_PERMISSION_LABEL.can_manage_documents,
+      TEAM_PERMISSION_LABEL.can_manage_venue,
+    ]);
+  });
+
+  it("senza permessi né sedi dice cosa aspettarsi", () => {
+    const none = { can_shifts: false, can_staff: false, can_hours: false, can_documents: false, can_venue: false };
+    expect(teamAccessLines({ ...none, scope: "selected", venues: [] })).toEqual({
+      can: "Per ora puoi solo consultare: i permessi te li dà il titolare.",
+      where: "Sedi: nessuna sede per ora: te le assegna il titolare.",
+    });
+    expect(teamAccessLines({ ...none, can_venue: true, scope: "all", venues: [] }).where).toBe(
+      "Sedi: tutte le sedi, anche quelle che apriranno."
+    );
   });
 });

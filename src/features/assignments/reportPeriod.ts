@@ -39,6 +39,12 @@ export function periodBounds(p: ReportPeriod): { start: string; end: string } {
   return { start: p.from, end: addDaysToDate(p.to, 1) };
 }
 
+/** Primo e ultimo giorno del periodo, **compresi** (le RPC che vogliono date). */
+export function periodDays(p: ReportPeriod): { from: string; to: string } {
+  const { start, end } = periodBounds(p);
+  return { from: start, to: addDaysToDate(end, -1) };
+}
+
 /** La parte della chiave di cache che distingue un periodo dall'altro. */
 export function periodKey(p: ReportPeriod): string {
   const { start, end } = periodBounds(p);

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { collaboratorSummary } from "@/features/team/collaboratorSummary";
+import {
+  collaboratorInviteText,
+  collaboratorSummary,
+} from "@/features/team/collaboratorSummary";
 import type { Membership } from "@/features/workspace/types";
 
 const venue = (name: string, closed = false) => ({
@@ -23,7 +26,11 @@ describe("benvenuto del collaboratore", () => {
     const s = collaboratorSummary(member());
     expect(s.workspaceName).toBe("Da Mario");
     expect(s.can.map((c) => c.label)).toEqual(["Turni", "Ore ed export"]);
-    expect(s.start).toEqual({ path: "/planning", label: "Apri il planning" });
+    expect(s.start).toEqual({ path: "/planning", label: "Apri i turni" });
+  });
+
+  it("dice anche cosa non può fare, così un menu corto non sembra un errore", () => {
+    expect(collaboratorSummary(member()).cannot).toEqual(["Team", "Documenti", "Dati della sede"]);
   });
 
   it("dice le sedi aperte dell'ambito, non quelle chiuse", () => {
@@ -38,7 +45,14 @@ describe("benvenuto del collaboratore", () => {
       perms: { shifts: false, staff: false, hours: false, documents: false, venue: false },
     }));
     expect(s.can).toEqual([]);
+    expect(s.cannot).toHaveLength(5);
     expect(s.start).toBeNull();
     expect(s.ownerKeeps).toMatch(/titolare/);
+  });
+
+  it("all'invito dice cosa potrà fare e dove, prima del sì", () => {
+    expect(collaboratorInviteText(member())).toBe(
+      "Ti ha invitato a collaborare alla gestione. Potrai gestire: Turni, Ore ed export. Le sedi Milano e Roma."
+    );
   });
 });

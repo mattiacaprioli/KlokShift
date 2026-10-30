@@ -34,7 +34,7 @@ export default function NewWaiterAbsenceScreen() {
       ) : (
         <AbsenceFormView
           employers={employersQuery.data ?? []}
-          submitLabel="Invia al titolare"
+          submitLabel="Invia alla sede"
           pending={request.isPending}
           onSubmit={({ workspaceId, ...input }) => {
             if (!workspaceId) return;

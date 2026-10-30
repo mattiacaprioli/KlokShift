@@ -34,10 +34,11 @@ import {
 import { Avatar } from "../ui/Avatar";
 import { SidebarIcon, type SidebarIconName } from "../ui/SidebarIcon";
 import { PasswordChecklist } from "../ui/PasswordChecklist";
+import { CollaboratorPermissionsSection } from "../onboarding/CollaboratorWelcome";
 import { useToast } from "../ui/Toast";
 import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
 
-type SectionId = "profilo" | "sicurezza" | "notifiche" | "azienda" | "documenti" | "elimina";
+type SectionId = "profilo" | "permessi" | "sicurezza" | "notifiche" | "azienda" | "documenti" | "elimina";
 
 /**
  * Impostazioni come quelle di Mac o GitHub: a sinistra l'elenco delle sezioni,
@@ -46,11 +47,12 @@ type SectionId = "profilo" | "sicurezza" | "notifiche" | "azienda" | "documenti"
  * precedente. L'eliminazione dell'account è in fondo, separata e in rosso.
  */
 export function ImpostazioniPage() {
-  const { isOwner, workspaceId } = useOwnerVenues();
+  const { isOwner, authority, workspaceId } = useOwnerVenues();
   const [params, setParams] = useSearchParams();
 
   const sections: { id: SectionId; label: string; icon: SidebarIconName; danger?: boolean }[] = [
     { id: "profilo", label: "Profilo", icon: "user" },
+    ...(authority === "collaborator" ? [{ id: "permessi" as const, label: "I tuoi permessi", icon: "team" as const }] : []),
     { id: "sicurezza", label: "Sicurezza", icon: "shield" },
     { id: "notifiche", label: "Notifiche", icon: "notifications" },
     ...(isOwner && workspaceId ? [{ id: "azienda" as const, label: "Azienda", icon: "venue" as const }] : []),
@@ -102,6 +104,7 @@ export function ImpostazioniPage() {
 
         <div className="min-w-0">
           {current === "profilo" ? <AccountSection /> : null}
+          {current === "permessi" ? <CollaboratorPermissionsSection /> : null}
           {current === "sicurezza" ? <PasswordSection /> : null}
           {current === "notifiche" ? <NotificationPrefsSection /> : null}
           {current === "azienda" && workspaceId ? <CompanySection workspaceId={workspaceId} /> : null}

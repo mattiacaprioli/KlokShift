@@ -524,7 +524,7 @@ export function PlanningPage() {
   if (venues.length === 0) {
     return (
       <>
-        <PageHeader title="Planning" />
+        <PageHeader title="Turni" />
         <NoVenues detail="Ti serve una sede prima di programmare i turni." />
       </>
     );
@@ -533,7 +533,7 @@ export function PlanningPage() {
   return (
     <>
       <PageHeader
-        title="Planning"
+        title="Turni"
         subtitle={
           <>
             {isWeekly ? weekLabel(monday) : monthTitle(month)}

@@ -23,7 +23,11 @@ export const internalShiftSchema = z
      * turni, si crea un turno e si dice dove.
      */
     venue_id: z.string().uuid("Scegli una sede."),
-    title: z.string().trim().min(1, "Inserisci un titolo per il turno."),
+    /**
+     * Facoltativo come nell'app (30/10): vuoto, il turno prende il nome della
+     * fascia oraria (`shiftSlotLabel`, «Pranzo», «Cena»…) al salvataggio.
+     */
+    title: z.string().trim(),
     date: z.string().min(1, "Scegli la data."),
     start_time: z.string().min(1, "Scegli l'orario di inizio."),
     end_time: z.string().min(1, "Scegli l'orario di fine."),

@@ -13,6 +13,7 @@ import { WorkspaceActions, AccountClassification, OperationHistory } from "./Wor
 import { BillingAdjustments } from "./BillingAdjustments";
 import { RejectedEvents } from "./RejectedEvents";
 import { CustomerDeletion, ExpiredArchives } from "./ExpiredArchives";
+import { Activation } from "./Activation";
 import { FinanceOverview, WorkspaceFinancePanel } from "./Finance";
 import { bytes, date, day, flagLabels, labels, relative, severityTone, stateTone } from "./format";
 import type { Tone } from "./format";
@@ -119,6 +120,11 @@ export function OverviewPage({ userId }: {
               <BillingAdjustments userId={userId} />
               <RejectedEvents userId={userId} />
               <ExpiredArchives userId={userId} />
+            </section>
+
+            <section aria-label="Attivazione" className="space-y-3">
+              <GroupTitle icon="activity" title="Attivazione" detail="Dove si fermano le aziende, dalla sede alla prima conferma." />
+              <Activation userId={userId} />
             </section>
           </div>
 

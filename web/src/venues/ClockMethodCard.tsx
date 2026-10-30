@@ -1,6 +1,8 @@
 import type { Venue } from "@/features/venues/api";
-import { useSetVenueClockMethod } from "@/features/clock/hooks";
+import { useSetVenueClockAutoApprove, useSetVenueClockMethod } from "@/features/clock/hooks";
+import { AUTO_APPROVE_TITLE, autoApproveHint } from "@/features/clock/autoApprove";
 import { userErrorMessage } from "@/lib/errors";
+import { cn } from "@/lib/cn";
 import { Button, Card } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
@@ -13,8 +15,10 @@ export function ClockMethodCard({
   embedded?: boolean;
 }) {
   const save = useSetVenueClockMethod();
+  const saveAuto = useSetVenueClockAutoApprove();
   const toast = useToast();
   const appEnabled = venue.clock_method === "app";
+  const autoOn = venue.clock_auto_approve;
 
   const content = (
     <section>
@@ -66,6 +70,48 @@ export function ClockMethodCard({
               : "Attiva la timbratura dall’app"}
         </Button>
       </div>
+
+      {/* Solo per chi timbra dall'app: senza timbratura le ore valgono già. */}
+      {appEnabled ? (
+        <div className="mt-5 flex flex-wrap items-start justify-between gap-4 border-t border-border-2 pt-5">
+          <div className="max-w-2xl">
+            <h3 className="font-semibold text-t1">{AUTO_APPROVE_TITLE}</h3>
+            <p className="mt-1 text-sm leading-5 text-t3">{autoApproveHint(autoOn)}</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoOn}
+            aria-label={`${AUTO_APPROVE_TITLE} a ${venue.name}`}
+            disabled={saveAuto.isPending}
+            onClick={() =>
+              saveAuto.mutate(
+                { venueId: venue.id, on: !autoOn },
+                {
+                  onSuccess: () =>
+                    toast.show(
+                      autoOn
+                        ? "Ogni timbratura va approvata"
+                        : "Le timbrature in orario si approvano da sole"
+                    ),
+                  onError: (error) => toast.show(userErrorMessage(error), "error"),
+                }
+              )
+            }
+            className={cn(
+              "focus-gold relative mt-1 h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50",
+              autoOn ? "bg-gold" : "bg-bg-3"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-5 w-5 rounded-full bg-t1 transition-all",
+                autoOn ? "left-[1.375rem]" : "left-0.5"
+              )}
+            />
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 
