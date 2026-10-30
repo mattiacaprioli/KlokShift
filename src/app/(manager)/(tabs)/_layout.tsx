@@ -11,7 +11,7 @@ const ICONS: Record<string, IconName> = {
   turni: "calendar",
   messaggi: "message",
   staff: "users",
-  profilo: "user",
+  menu: "list",
 };
 
 export default function ManagerTabsLayout() {
@@ -20,8 +20,8 @@ export default function ManagerTabsLayout() {
   const unread = useChatUnreadCount(session?.user.id).data ?? 0;
 
   const showStaff = canAny("can_manage_staff");
-  // Le assenze non hanno una tab: stanno in Staff, e il badge dice da qualunque
-  // schermata che c'è una richiesta che aspetta.
+  // Le assenze non hanno una tab: stanno nel Menu, e il badge dice
+  // da qualunque schermata che c'è una richiesta che aspetta.
   const pendingAbsences = usePendingAbsenceCount(showStaff);
 
   return (
@@ -30,7 +30,7 @@ export default function ManagerTabsLayout() {
         <FloatingTabBar
           {...props}
           icons={ICONS}
-          badges={{ messaggi: unread, staff: pendingAbsences }}
+          badges={{ messaggi: unread, menu: pendingAbsences }}
         />
       )}
       screenOptions={{ headerShown: false }}
@@ -47,7 +47,7 @@ export default function ManagerTabsLayout() {
         name="staff"
         options={{ title: "Team", href: showStaff ? undefined : null }}
       />
-      <Tabs.Screen name="profilo" options={{ title: "Profilo" }} />
+      <Tabs.Screen name="menu" options={{ title: "Menu" }} />
     </Tabs>
   );
 }

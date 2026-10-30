@@ -45,7 +45,7 @@ export default function ManagerSettingsScreen() {
           <SectionHeader title="Account" />
           <Card className="p-0">
             {/* Il proprio nome e la propria foto, non quelli della sede: il
-                Profilo parla della sede, e questa era l'unica cosa che dal
+                Profilo parlava della sede, e questa era l'unica cosa che dal
                 telefono non si poteva più sistemare. */}
             <Pressable
               onPress={() => router.push("/(manager)/profilo-edit")}

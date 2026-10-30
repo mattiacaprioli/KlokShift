@@ -9,18 +9,14 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
-import { useAuth } from "@/lib/auth";
-import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { ClosedVenuesCard } from "@/features/venues/ClosedVenuesCard";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { VenueDetailsCard } from "@/features/venues/VenueDetailsCard";
 import type { Venue } from "@/features/venues/api";
-import { useViewMode } from "@/features/team/ViewMode";
-import { useSwitchToWorkView } from "@/features/onboarding/useSwitchToWorkView";
-import { NavRow } from "@/components/ui/NavRow";
 
 /**
  * Le sedi del titolare: l'elenco da cui si aprono, si modificano, se ne
@@ -136,66 +132,17 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
   );
 }
 
-/**
- * Il proprio account, in mezzo a una pagina che parla della sede.
- *
- * Sta qui perché è qui che lo si cerca: questa schermata si chiama "Profilo", e
- * chi voleva cambiare il **proprio** nome o la propria foto non trovava che il
- * logo della sede. Il gesto vero sta in `(manager)/profilo-edit`.
- */
-function AccountCard({ onPress }: { onPress: () => void }) {
-  const { session, profile } = useAuth();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Modifica il tuo profilo"
-      className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card p-5"
-    >
-      <Avatar
-        uri={profile?.avatar_url ?? undefined}
-        name={profile?.full_name ?? session?.user.email ?? "?"}
-        size={44}
-      />
-      <View className="flex-1">
-        <Mono>Il tuo account</Mono>
-        <Text className="mt-1 text-[15px] font-sans-semibold text-t1">
-          {profile?.full_name?.trim() || "Aggiungi il tuo nome"}
-        </Text>
-        <Text className="mt-0.5 text-xs text-t3">
-          Nome e foto con cui ti vede il tuo team
-        </Text>
-      </View>
-      <Icon name="chevR" size={18} color="#8C8579" />
-    </Pressable>
-  );
-}
-
-function WorkSwitchRow() {
-  const { canSwitch } = useViewMode();
-  const workView = useSwitchToWorkView();
-  if (!canSwitch) return null;
-  return (
-    <NavRow
-      icon="user"
-      title="Passa ai tuoi turni"
-      subtitle="I turni in cui lavori anche tu"
-      onPress={() => void workView.switchToWork()}
-    />
-  );
-}
-
-export default function ManagerProfiloScreen() {
+export default function ManagerVenuesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const venueQuery = useOwnerVenues();
   const { venues, isOwner, workspaceId } = venueQuery;
   /**
-   * Con **una** sede sola il Profilo resta quello di prima: la sua identità in
-   * grande, la scheda da completare, i suoi dati. Con più sedi quella pagina
-   * non si può scrivere — non c'è "il" sede — e il Profilo diventa l'elenco,
-   * da cui si entra nella scheda della singola sede.
+   * Con **una** sede sola la pagina è la sua: l'identità in grande, la scheda
+   * da completare, i suoi dati. Con più sedi quella pagina non si può scrivere
+   * — non c'è "la" sede — e diventa l'elenco, da cui si entra nella scheda
+   * della singola sede.
    */
   const venue = venues.length === 1 ? venues[0] : null;
   // I dati della sede sono un permesso a sé: un collaboratore che organizza i
@@ -206,36 +153,21 @@ export default function ManagerProfiloScreen() {
 
   return (
     <View className="flex-1 bg-bg-0">
-      <View
-        className="shrink-0 flex-row items-center justify-between px-5 pb-6"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <Mono>Profilo · Sede</Mono>
-        <Pressable
-          onPress={() => router.push("/(manager)/impostazioni")}
-          hitSlop={8}
-          className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
-        >
-          <Icon name="settings" size={19} color="#F8F4ED" />
-        </Pressable>
+      <View className="px-5 pb-4" style={{ paddingTop: insets.top + 8 }}>
+        <ScreenHeader
+          eyebrow="Gestione"
+          title={venues.length > 1 ? "Le tue sedi" : "La tua sede"}
+        />
       </View>
 
       <ScrollView
         className="flex-1 bg-bg-0"
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 96,
+          paddingBottom: insets.bottom + 24,
           gap: 24,
         }}
       >
-        {/* Prima della sede, e senza aspettare la query delle sedi: è l'identità
-            di chi sta guardando, e non dipende da quante sedi ha. */}
-        <AccountCard onPress={() => router.push("/(manager)/profilo-edit")} />
-
-        {/* L'altro cappello nello stesso posto dell'altro lato: il Profilo del
-            dipendente ha «Passa alla gestione», qui c'è il ritorno. */}
-        <WorkSwitchRow />
-
         {venueQuery.isLoading ? (
           <ActivityIndicator color="#EAB54C" className="mt-16" />
         ) : venueQuery.isError ? (
@@ -324,8 +256,6 @@ export default function ManagerProfiloScreen() {
         {isOwner && workspaceId && !venueQuery.isLoading ? (
           <ClosedVenuesCard workspaceId={workspaceId} />
         ) : null}
-
-        {isOwner ? <WorkspaceAccessCard /> : null}
       </ScrollView>
     </View>
   );

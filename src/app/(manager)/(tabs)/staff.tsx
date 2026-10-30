@@ -15,7 +15,6 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
-import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -127,11 +126,9 @@ export default function ManagerStaffScreen() {
   // Un collaboratore vede questa scheda solo per ciò che il titolare gli ha
   // dato. Nascondere i pulsanti non è la difesa — quella è la RLS
   // (`my_venue_ids('staff')`) — ma un bottone che porta a una schermata vuota è
-  // peggio di un bottone che non c'è.
+  // peggio di un bottone che non c'è. Ore, Assenze e Ruoli stanno nel Menu dal
+  // 30/10: qui restano solo le persone.
   const canStaff = canAny("can_manage_staff");
-  const canHours = canAny("can_view_hours");
-  const canVenue = canAny("can_manage_venue");
-  const pendingAbsences = usePendingAbsenceCount(canStaff);
   // Il team è dell'**azienda**: una riga per persona, tutte le sedi insieme.
   const peopleQuery = useOwnerPeople(venueQuery.ownerId);
   const people = peopleQuery.data ?? [];
@@ -220,77 +217,6 @@ export default function ManagerStaffScreen() {
                   <Icon name="chevR" size={18} color="#8c857a" />
                 </View>
               </Card>
-            ) : null}
-
-            {canHours ? (
-            <Card
-              className="rounded-3xl border-border-2 p-4"
-              onPress={() => router.push("/(manager)/ore")}
-            >
-              <View className="flex-row items-center gap-3">
-                <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                  <Icon name="clock" size={18} color="#EAB54C" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-base font-sans-bold text-t1">
-                    Ore del mese
-                  </Text>
-                  <Text className="text-xs text-t3">
-                    {isMultiVenue
-                      ? "Ore di tutte le tue sedi, per persona"
-                      : "Riepilogo ore e export per il commercialista"}
-                  </Text>
-                </View>
-                <Icon name="chevR" size={18} color="#8c857a" />
-              </View>
-            </Card>
-            ) : null}
-
-            {/* Una pagina e non una tab: vedi `(manager)/assenze.tsx`. */}
-            {canStaff ? (
-            <Card
-              className="rounded-3xl border-border-2 p-4"
-              onPress={() => router.push("/(manager)/assenze")}
-            >
-              <View className="flex-row items-center gap-3">
-                <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                  <Icon name="calendar" size={18} color="#EAB54C" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-base font-sans-bold text-t1">Assenze</Text>
-                  <Text className="text-xs text-t3">
-                    Ferie, permessi e malattia di tutto il team
-                  </Text>
-                </View>
-                {pendingAbsences > 0 ? (
-                  <Pill label={`${pendingAbsences} da decidere`} variant="pending" />
-                ) : null}
-                <Icon name="chevR" size={18} color="#8c857a" />
-              </View>
-            </Card>
-            ) : null}
-
-            {/* Le mansioni da chiedere sui turni e da dare alle persone. */}
-            {canVenue ? (
-            <Card
-              className="rounded-3xl border-border-2 p-4"
-              onPress={() => router.push("/(manager)/ruoli")}
-            >
-              <View className="flex-row items-center gap-3">
-                <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                  <Icon name="clipboard" size={18} color="#EAB54C" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-base font-sans-bold text-t1">Ruoli</Text>
-                  <Text className="text-xs text-t3">
-                    {isMultiVenue
-                      ? "I ruoli di ogni tua sede"
-                      : "I ruoli che dai alle persone e chiedi sui turni"}
-                  </Text>
-                </View>
-                <Icon name="chevR" size={18} color="#8c857a" />
-              </View>
-            </Card>
             ) : null}
 
             {peopleQuery.isLoading ? (

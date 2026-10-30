@@ -4,13 +4,13 @@ import { clockMethodLabel } from "@/features/clock/methods";
 import { formatBreakMinutes } from "@/lib/format";
 import type { Venue } from "./api";
 
-/** Dati e impostazioni in sola lettura, nel Profilo e nel dettaglio sede. */
+/** Dati e impostazioni in sola lettura, nella pagina delle sedi e nel dettaglio sede. */
 export function VenueDetailsCard({
   venue,
   showCity = true,
 }: {
   venue: Venue;
-  /** Nel Profilo la città è già sotto il nome della sede. */
+  /** Nella pagina delle sedi la città è già sotto il nome della sede. */
   showCity?: boolean;
 }) {
   const details: [string, string | null][] = [

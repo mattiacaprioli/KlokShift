@@ -15,7 +15,7 @@ const APP_START: Record<TeamPermission, { href: Href; label: string }> = {
   can_manage_staff: { href: "/(manager)/(tabs)/staff", label: "Apri il team" },
   can_view_hours: { href: "/(manager)/ore", label: "Apri le ore" },
   can_manage_documents: { href: "/(manager)/(tabs)/staff", label: "Apri il team" },
-  can_manage_venue: { href: "/(manager)/(tabs)/profilo", label: "Apri la sede" },
+  can_manage_venue: { href: "/(manager)/sedi", label: "Apri la sede" },
 };
 
 const welcomeKey = (memberId: string) => `collab-welcome.${memberId}`;

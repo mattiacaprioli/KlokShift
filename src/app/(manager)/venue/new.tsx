@@ -17,7 +17,7 @@ import { canCreateVenue, venueNewMode } from "@/features/venues/gate";
  * Dopo la **prima** sede si passa a `prova` (l'azienda nasce in `setup`).
  * Per le successive non c'è niente da "attivare": la sede appena aperta
  * entra in `venues`, e da lì compare da sé nell'agenda, nel picker del form
- * turno e nell'elenco del Profilo. Chi ha aperto Milano trova Milano ovunque
+ * turno e nell'elenco delle sedi. Chi ha aperto Milano trova Milano ovunque
  * senza doverci entrare.
  *
  * ⚠️ «Prima azienda» solo con il contesto caricato e vuoto (`venueNewMode`):
@@ -59,7 +59,7 @@ export default function VenueNewScreen() {
           title="Nuova sede"
           onBack={() => {
             if (router.canGoBack()) router.back();
-            else router.replace("/(manager)/(tabs)/profilo");
+            else router.replace("/(manager)/sedi");
           }}
         />
         <View className={mode === "loading" ? "mt-6" : "flex-1 justify-center"}>

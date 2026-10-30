@@ -307,10 +307,10 @@ export default function ManagerHome() {
           </Display>
           {/* Non più uno switcher: non c'è più una sede da scegliere. Con un
               sede sola è il suo nome, come è sempre stato; con più sedi è il
-              conteggio, e porta dove si gestiscono — il Profilo. */}
+              conteggio, e porta dove si gestiscono — la pagina delle sedi. */}
           {venues.length === 0 ? null : isMultiVenue ? (
             <Pressable
-              onPress={() => router.push("/(manager)/(tabs)/profilo")}
+              onPress={() => router.push("/(manager)/sedi")}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={`${venues.length} sedi. Tocca per gestirle.`}

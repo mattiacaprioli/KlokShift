@@ -129,8 +129,8 @@ export default function ManagerAccountEditScreen() {
             <Icon name="shield" size={20} color="#4FC97D" />
             <Text className="flex-1 text-sm leading-5 text-t3">
               Nome e foto sono i tuoi, non della sede: è così che ti vede chi
-              lavora con te, in chat e sui turni. La sede si modifica dal
-              Profilo.
+              lavora con te, in chat e sui turni. La sede si modifica da
+              Menu › Sede.
             </Text>
           </View>
         </ScrollView>

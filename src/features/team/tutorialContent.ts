@@ -65,7 +65,7 @@ export const COLLABORATOR_TUTORIAL: Tutorial = {
       title: "Da sapere",
       points: [
         "Restano solo a te: aprire e chiudere sedi, invitare collaboratori e il piano dell'azienda.",
-        "Le richieste dei dipendenti (assenze, cambi turno) arrivano nella tua chat con loro. Un collaboratore con il permesso «Team» vede e decide le assenze da Team.",
+        "Le richieste dei dipendenti (assenze, cambi turno) arrivano nella tua chat con loro. Un collaboratore con il permesso «Team» vede e decide le assenze dalla voce «Assenze» del menu.",
       ],
     },
   ],

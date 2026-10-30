@@ -71,7 +71,7 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
   },
   {
     q: "Come passo dalla gestione ai miei turni?",
-    a: "Se gestisci e lavori anche nei turni, nel Profilo trovi «Passa ai tuoi turni»; dall'altra parte, sempre nel Profilo, «Passa alla gestione». L'app si ricorda l'ultima scelta.",
+    a: "Se gestisci e lavori anche nei turni, nel Menu trovi «Passa ai tuoi turni»; dall'altra parte, nel Profilo, «Passa alla gestione». L'app si ricorda l'ultima scelta.",
     audience: ["manager", "waiter"],
   },
   {

@@ -53,7 +53,7 @@ export default function VenueEditScreen() {
     );
   }
 
-  // Il permesso è per sede, quindi la domanda si fa qui: da `Profilo` ci si
+  // Il permesso è per sede, quindi la domanda si fa qui: da `sedi` ci si
   // arriva toccando la riga dell'elenco, che non sa cosa ci sia dietro. Senza
   // questo, un collaboratore invitato sui soli turni apriva il modulo di
   // modifica — e il pulsante «Chiudi questa sede».
@@ -126,7 +126,7 @@ export default function VenueEditScreen() {
         // cancellare la riga cascaterebbe su turni, organico, assegnazioni e
         // ruoli, distruggendo ore già lavorate da altre persone. Chiudere lo
         // toglie dalla circolazione e lascia tutto consultabile.
-        message="Sparisce dalla programmazione e non potrai più crearci turni. Lo storico di turni e ore resta consultabile, e puoi riaprirla quando vuoi dal Profilo, in «Sedi chiuse»."
+        message="Sparisce dalla programmazione e non potrai più crearci turni. Lo storico di turni e ore resta consultabile, e puoi riaprirla quando vuoi da Menu › Sede, in «Sedi chiuse»."
         confirmLabel="Chiudi sede"
         destructive
         pending={close.isPending}

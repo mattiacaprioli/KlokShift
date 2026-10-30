@@ -1,3 +1,4 @@
+import { CountBadge } from "./CountBadge";
 import { Icon, type IconName } from "./Icon";
 import { cn } from "@/lib/cn";
 import { Pressable, Text, View } from "@/tw";
@@ -11,13 +12,16 @@ export function CardRow({
   title,
   subtitle,
   divider,
+  badge = 0,
   onPress,
 }: {
   icon: IconName;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   /** Linea sopra: la riga non è la prima della card. */
   divider?: boolean;
+  /** Quante cose aspettano lì dentro (es. assenze da decidere). */
+  badge?: number;
   onPress: () => void;
 }) {
   return (
@@ -34,8 +38,11 @@ export function CardRow({
       </View>
       <View className="flex-1">
         <Text className="text-[15px] font-sans-semibold text-t1">{title}</Text>
-        <Text className="mt-0.5 text-[13px] text-t3">{subtitle}</Text>
+        {subtitle ? (
+          <Text className="mt-0.5 text-[13px] text-t3">{subtitle}</Text>
+        ) : null}
       </View>
+      <CountBadge count={badge} />
       <Icon name="chevR" size={18} color="#6A6358" />
     </Pressable>
   );
