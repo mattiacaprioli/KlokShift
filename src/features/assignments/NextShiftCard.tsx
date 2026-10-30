@@ -114,11 +114,13 @@ export function NextShiftCard({
           stato delle altre e senza di essa un turno già confermato è identico a
           uno che aspetta ancora una risposta. «Presenza confermata» solo se
           l'ha confermata davvero: il fisso nasce confermato senza aver detto
-          niente (`confirmed_at` nullo), e per lui il turno è semplicemente suo. */}
+          niente (`confirmed_at` nullo), e per lui il turno è semplicemente
+          confermato. Mai «In turno»: su un turno futuro si legge «sei in
+          servizio adesso». */}
       {item.status === "confirmed" ? (
         <View className="mt-4 flex-row">
           <Pill
-            label={item.confirmed_at ? "Presenza confermata" : "In turno"}
+            label={item.confirmed_at ? "Presenza confermata" : "Confermato"}
             variant="accepted"
           />
         </View>

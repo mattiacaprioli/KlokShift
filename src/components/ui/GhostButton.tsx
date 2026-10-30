@@ -24,7 +24,7 @@ export function GhostButton({
       onPress={onPress}
       disabled={disabled}
       className={cn(
-        "items-center rounded-full border border-border-2",
+        "items-center justify-center rounded-full border border-border-2",
         sm ? "px-4 py-2" : "px-5 py-3.5",
         disabled && "opacity-50",
         className
@@ -32,7 +32,7 @@ export function GhostButton({
     >
       <Text
         className={cn(
-          "font-sans-medium text-t1",
+          "text-center font-sans-medium text-t1",
           sm ? "text-sm" : "text-base"
         )}
       >

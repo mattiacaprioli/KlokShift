@@ -59,7 +59,10 @@ export function GoldButton({
           }}
         >
           <Text
-            className={cn("text-gold-ink", size === "sm" ? "text-sm" : "text-base")}
+            className={cn(
+              "text-center text-gold-ink",
+              size === "sm" ? "text-sm" : "text-base"
+            )}
             style={{ fontFamily: FontFamily.sansSemibold }}
           >
             {label}

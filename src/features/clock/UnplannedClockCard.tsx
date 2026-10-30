@@ -192,25 +192,29 @@ export function UnplannedClockCard({
               </View>
             ) : null}
             <Input
-              label="Cosa stai facendo (facoltativo)"
-              placeholder="Es. inventario, evento, sostituzione"
+              label="Cosa stai facendo"
+              placeholder="Facoltativo · es. inventario"
               value={note}
               onChangeText={setNote}
               maxLength={500}
             />
-            <View className="flex-row gap-3">
-              <GhostButton
-                className="flex-1"
-                label="Annulla"
-                disabled={punch.isPending}
-                onPress={() => setPreparing(false)}
-              />
+            {/* Uno sotto l'altro: affiancati, con il testo grande del
+                telefono «Timbra entrata» va a capo. */}
+            <View className="gap-1">
               <GoldButton
-                className="flex-1"
                 label={punch.isPending ? "Registrazione…" : "Timbra entrata"}
                 disabled={punch.isPending}
                 onPress={() => setConfirming("in")}
               />
+              <Pressable
+                onPress={() => setPreparing(false)}
+                disabled={punch.isPending}
+                accessibilityRole="button"
+                hitSlop={6}
+                className="items-center py-2.5"
+              >
+                <Text className="text-sm font-sans-medium text-t3">Annulla</Text>
+              </Pressable>
             </View>
           </View>
         ) : (
