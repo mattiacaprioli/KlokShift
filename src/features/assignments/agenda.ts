@@ -66,3 +66,32 @@ export function groupAssignmentsByDay(
 export function daysWithShifts(items: AgendaItem[]): Set<string> {
   return new Set(items.map((a) => a.shift.date));
 }
+
+/**
+ * Aggiunge all'agenda i giorni di chiusura della sede che non hanno turni, come
+ * sezioni vuote: senza, un Ferragosto senza turni semplicemente non compariva.
+ * Solo da `from` (il giorno da cui parte la lista) fino all'ultimo giorno già
+ * in lista, o a `from` + `horizon` giorni se la lista è corta: non allunga
+ * l'agenda oltre quello che mostra.
+ */
+export function withClosedDays<T>(
+  sections: readonly DaySection<T>[],
+  closed: ReadonlySet<string>,
+  from: string,
+  horizon = 30,
+  now: Date = new Date()
+): DaySection<T>[] {
+  if (closed.size === 0) return [...sections];
+  const dates = sections.map((s) => s.date).filter((d): d is string => !!d);
+  const fromDate = new Date(`${from}T00:00:00`);
+  fromDate.setDate(fromDate.getDate() + horizon);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const horizonDay = `${fromDate.getFullYear()}-${pad(fromDate.getMonth() + 1)}-${pad(fromDate.getDate())}`;
+  const last = dates.length > 0 && dates[dates.length - 1] > horizonDay ? dates[dates.length - 1] : horizonDay;
+  const present = new Set(dates);
+  const extra: DaySection<T>[] = [...closed]
+    .filter((d) => d >= from && d <= last && !present.has(d))
+    .map((d) => ({ date: d, title: formatDayLabel(d, now), data: [] }));
+  if (extra.length === 0) return [...sections];
+  return [...sections, ...extra].sort((a, b) => (a.date ?? "￿").localeCompare(b.date ?? "￿"));
+}

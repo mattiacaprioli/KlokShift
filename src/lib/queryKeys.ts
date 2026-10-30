@@ -52,6 +52,9 @@ export const qk = {
       ] as const,
     /** Le sedi archiviate. Solo il titolare le vede: le sue, per definizione. */
     closed: (ownerId: string) => ["venues", "closed", ownerId] as const,
+    /** I giorni di chiusura delle sedi indicate. */
+    closures: (venueIds: readonly string[]) =>
+      ["venues", "closures", [...new Set(venueIds)].sort().join(",")] as const,
   },
   /**
    * I collaboratori dell'azienda: sono i `workspace_members` con

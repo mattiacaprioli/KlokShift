@@ -58,12 +58,15 @@ function DayCell({
   marked,
   muted,
   alert,
+  closed,
   onPress,
 }: {
   date: string;
   selected: boolean;
   today: boolean;
   marked: boolean;
+  /** Sede chiusa quel giorno: il numero si barra. */
+  closed?: boolean;
   /** Giorno di un altro mese, mostrato solo per riempire la griglia. */
   muted: boolean;
   /** Quel giorno ha qualcosa che non va: il pallino passa all'arancio. */
@@ -76,6 +79,7 @@ function DayCell({
       className="flex-1 items-center"
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      accessibilityHint={closed ? "Sede chiusa" : undefined}
     >
       {/* Il giorno scelto che ha un problema si tinge di arancio tutto: un
           pallino arancio su fondo oro non si distingue, e il segnale andava
@@ -89,7 +93,9 @@ function DayCell({
               : "border-gold bg-gold"
             : today
               ? "border-gold bg-transparent"
-              : "border-transparent bg-transparent"
+              : "border-transparent bg-transparent",
+          // Sede chiusa: la cella si spegne, a colpo d'occhio (decisione del 30/10).
+          closed && !selected && "bg-bg-3"
         )}
         style={{ width: CELL, height: CELL, borderCurve: "continuous" }}
       >
@@ -100,7 +106,8 @@ function DayCell({
               ? "font-sans-bold text-gold-ink"
               : muted
                 ? "font-sans text-t4"
-                : "font-sans-semibold text-t1"
+                : "font-sans-semibold text-t1",
+            closed && !selected && "text-t4 line-through"
           )}
           style={{ fontVariant: ["tabular-nums"] }}
         >
@@ -143,6 +150,7 @@ export function WeekCalendar({
   onSelect,
   marked,
   alerts,
+  closed,
   expanded,
   onToggleExpand,
   right,
@@ -165,6 +173,8 @@ export function WeekCalendar({
    * *dove ci sono turni* per dire *dove c'è un problema*.
    */
   alerts?: Set<string>;
+  /** I giorni di chiusura della sede: il numero barrato. */
+  closed?: Set<string>;
   expanded: boolean;
   onToggleExpand: () => void;
   /**
@@ -297,6 +307,7 @@ export function WeekCalendar({
                           today={date === today}
                           marked={marked.has(date)}
                           alert={alerts?.has(date) ?? false}
+                          closed={closed?.has(date) ?? false}
                           muted={
                             expanded &&
                             date.slice(0, 7) !== page.anchor.slice(0, 7)

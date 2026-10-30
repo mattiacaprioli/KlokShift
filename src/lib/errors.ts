@@ -249,6 +249,10 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Durata della pausa non valida.",
   },
   {
+    match: ["closure_invalid"],
+    message: "Controlla le date: la fine non può venire prima dell'inizio, e al massimo un anno.",
+  },
+  {
     match: ["template_limit"],
     message: "Questa sede ha già 30 modelli. Eliminane uno per salvarne un altro.",
   },

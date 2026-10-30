@@ -169,6 +169,16 @@ segnato, cioè il sostituto (`add_shift_worker`): risulta presente con le ore de
 turno (`manual_auto`) e non parte nessuna notifica. Chi aveva rifiutato torna
 presente sulla sua riga.
 
+## Giorni di chiusura della sede (2026-10-30)
+
+`venue_closures` (per sede, intervalli di date): Ferragosto, chiusura per ferie,
+lavori. Li vede chi vede la sede (gestione e dipendenti) nei Turni, giorno
+barrato sul calendario ed etichetta sul giorno; li scrive chi ha «Turni» o
+«Dati della sede», solo da `save_venue_closure` / `delete_venue_closure`. Un
+turno in un giorno di chiusura **non** è vietato: il form avvisa
+(`closureWarning`, `src/features/venues/closures.ts`) e lascia fare, per le
+aperture eccezionali. Niente «giorni senza ferie» né saldo ferie: scelta del 30/10.
+
 ## Pausa (2026-10-16)
 
 La sede (chi ha «Ore») decide se la pausa è retribuita: retribuita resta nelle

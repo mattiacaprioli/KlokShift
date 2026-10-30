@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import {
   createVenue,
+  deleteVenueClosure,
+  getVenueClosures,
+  saveVenueClosure,
   getMyClosedVenues,
   getMyVenues,
   setVenueClosed,
@@ -95,5 +98,31 @@ export function useSaveVenue(workspaceId: string) {
       return { id };
     },
     onSuccess: invalidate,
+  });
+}
+
+/** I giorni di chiusura delle sedi indicate: li legge chi vede la sede. */
+export function useVenueClosures(venueIds: readonly string[], enabled = true) {
+  const scope = [...new Set(venueIds)].sort();
+  return useQuery({
+    queryKey: qk.venues.closures(scope),
+    queryFn: () => getVenueClosures(scope),
+    enabled: enabled && scope.length > 0,
+  });
+}
+
+export function useSaveVenueClosure() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: saveVenueClosure,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["venues", "closures"] }),
+  });
+}
+
+export function useDeleteVenueClosure() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteVenueClosure,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["venues", "closures"] }),
   });
 }

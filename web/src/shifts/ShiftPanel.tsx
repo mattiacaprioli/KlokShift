@@ -94,6 +94,8 @@ import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
 import { ShiftTemplatesMenu } from "./ShiftTemplatesMenu";
+import { useVenueClosures } from "@/features/venues/hooks";
+import { closureWarning } from "@/features/venues/closures";
 
 type RoleTarget = { role_id: string; count: number };
 
@@ -338,6 +340,18 @@ function InternalForm({
   const ended =
     !shift && rangeValid ? endedDates(plannedDates, formStart, formEnd) : [];
   const mainEnded = ended.includes(formDate);
+  // Sede chiusa in uno dei giorni: avviso, non blocco (apertura eccezionale).
+  // In modifica conta solo se la data cambia.
+  const closuresQuery = useVenueClosures(formVenueId ? [formVenueId] : []);
+  const closedMessage =
+    shift && formDate === shift.date
+      ? null
+      : closureWarning(
+          closuresQuery.data ?? [],
+          formVenueId,
+          shift ? [formDate] : plannedDates,
+          shift ? "spostare" : "creare"
+        );
   const endedMessage = mainEnded
     ? PLAN_ENDED
     : ended.length > 0
@@ -834,6 +848,10 @@ function InternalForm({
                 className="w-28"
               />
             </Field>
+
+            {closedMessage ? (
+              <p className="-mt-2 text-xs font-semibold text-warning">{closedMessage}</p>
+            ) : null}
 
             {endedMessage ? (
               <div className="-mt-2 flex flex-col items-start gap-1">

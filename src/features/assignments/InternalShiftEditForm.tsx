@@ -50,6 +50,8 @@ import {
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
 import type { Shift } from "@/features/shifts/types";
+import { useVenueClosures } from "@/features/venues/hooks";
+import { closureWarning } from "@/features/venues/closures";
 
 type SeededProps = {
   shift: Shift;
@@ -153,6 +155,12 @@ function EditForm({
   });
   const absencesQuery = checks.absences;
   const targetDayQuery = checks.dayShifts;
+  // Spostato in un giorno di chiusura: lo si dice, non si blocca.
+  const closuresQuery = useVenueClosures([shift.venue_id]);
+  const closedMessage =
+    toDateString(date) === shift.date
+      ? null
+      : closureWarning(closuresQuery.data ?? [], shift.venue_id, [toDateString(date)], "spostare");
 
   // Togliere tutti è permesso, come dalla dashboard: il turno resta da coprire.
   function onSubmit() {
@@ -301,6 +309,11 @@ function EditForm({
         <View className="gap-3">
           <Mono>Giorno</Mono>
           <DayPicker value={date} onChange={setDate} />
+          {closedMessage ? (
+            <Text className="mt-2 text-xs font-sans-semibold text-warning">
+              {closedMessage}
+            </Text>
+          ) : null}
         </View>
 
         <ShiftTimeFields

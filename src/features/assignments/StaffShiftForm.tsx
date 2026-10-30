@@ -56,6 +56,8 @@ import {
   applicableRoleTargets,
   type ShiftTemplateInput,
 } from "@/features/shiftTemplates/template";
+import { useVenueClosures } from "@/features/venues/hooks";
+import { closureWarning } from "@/features/venues/closures";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -151,6 +153,9 @@ export function StaffShiftForm({ initialDate, header }: Props) {
 
   const selectedIds = Object.keys(selected);
   const plannedDates = plannedDatesOf(toDateString(date), extraDates);
+  // Sede chiusa in uno dei giorni: si dice, non si blocca (apertura eccezionale).
+  const closuresQuery = useVenueClosures(venueId ? [venueId] : []);
+  const closedMessage = closureWarning(closuresQuery.data ?? [], venueId, plannedDates);
   const checks = usePlanChecks({
     dates: plannedDates,
     start_time: toTimeString(start),
@@ -382,6 +387,11 @@ export function StaffShiftForm({ initialDate, header }: Props) {
           {endedMessage ? (
             <Text className="text-xs font-sans-semibold text-error">
               {endedMessage}
+            </Text>
+          ) : null}
+          {closedMessage ? (
+            <Text className="text-xs font-sans-semibold text-warning">
+              {closedMessage}
             </Text>
           ) : null}
           {mainEnded && canRecord ? (

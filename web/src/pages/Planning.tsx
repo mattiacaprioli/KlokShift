@@ -106,6 +106,9 @@ import {
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
 import { RunOnMount } from "../ui/RunOnMount";
+import { useVenueClosures } from "@/features/venues/hooks";
+import { dayClosureText } from "@/features/venues/closures";
+import { CLOSED_DAY_STYLE } from "../venues/closedDay";
 
 const VIEWS = ["settimana", "mese", "persone"] as const;
 type View = (typeof VIEWS)[number];
@@ -180,6 +183,17 @@ export function PlanningPage() {
   const scopedIds = useMemo(
     () => (activeVenueId ? [activeVenueId] : venueIds),
     [activeVenueId, venueIds],
+  );
+  // I giorni di chiusura delle sedi mostrate, detti sul giorno della griglia.
+  const closuresQuery = useVenueClosures(venueIds);
+  const closureOf = useCallback(
+    (day: string) =>
+      dayClosureText(
+        closuresQuery.data ?? [],
+        venues.filter((v) => scopedIds.includes(v.id)),
+        day
+      ),
+    [closuresQuery.data, venues, scopedIds]
   );
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -662,6 +676,7 @@ export function PlanningPage() {
           {view === "settimana" ? (
             <WeekGrid
               days={days}
+              closureOf={closureOf}
               byDay={byDay}
               clockKindsByShift={clockKindsByShift}
               venueOf={venueOf}
@@ -672,6 +687,7 @@ export function PlanningPage() {
           ) : view === "persone" ? (
             <PeopleWeek
               days={days}
+              closureOf={closureOf}
               shifts={data ?? []}
               clockKindByAssignment={clockKindByAssignment}
               venueIds={scopedIds}
@@ -685,6 +701,7 @@ export function PlanningPage() {
           ) : (
             <MonthGrid
               days={days}
+              closureOf={closureOf}
               month={month}
               byDay={byDay}
               clockKindsByShift={clockKindsByShift}
@@ -903,6 +920,7 @@ function reassignMessage(
  */
 function WeekGrid({
   days,
+  closureOf,
   byDay,
   clockKindsByShift,
   onCreate,
@@ -911,6 +929,8 @@ function WeekGrid({
   venueOf,
 }: {
   days: string[];
+  /** «Chiusa · Ferragosto» se la sede è chiusa quel giorno. */
+  closureOf: (day: string) => string | null;
   byDay: Map<string, ShiftWithAssignees[]>;
   clockKindsByShift: Map<string, ClockAttentionKind[]>;
   onCreate: (day: string) => void;
@@ -940,13 +960,16 @@ function WeekGrid({
             },
           });
 
+          const closedText = closureOf(day);
           return (
             <section
               key={day}
               {...dropHandlers}
-              title={reason ?? undefined}
+              title={reason ?? closedText ?? undefined}
+              style={closedText ? CLOSED_DAY_STYLE : undefined}
               className={cn(
-                "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
+                "flex min-h-56 flex-col rounded-2xl border p-2 print:min-h-40 print:break-inside-avoid",
+                closedText ? "bg-bg-1" : "bg-bg-card",
                 isToday(day) ? "border-border-gold" : "border-border-2",
                 dropClass(state),
               )}
@@ -962,6 +985,11 @@ function WeekGrid({
                 </span>
                 <span className="font-mono text-sm text-t2">{num}</span>
               </header>
+              {closedText ? (
+                <p className="mb-2 rounded-lg border border-border-2 bg-bg-3 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-t1">
+                  {closedText}
+                </p>
+              ) : null}
 
               <div className="flex flex-1 flex-col gap-1.5">
                 {shifts.map((shift) => (
@@ -997,6 +1025,7 @@ function WeekGrid({
 
 function MonthGrid({
   days,
+  closureOf,
   month,
   byDay,
   clockKindsByShift,
@@ -1007,6 +1036,7 @@ function MonthGrid({
   venueOf,
 }: {
   days: string[];
+  closureOf: (day: string) => string | null;
   month: Date;
   byDay: Map<string, ShiftWithAssignees[]>;
   clockKindsByShift: Map<string, ClockAttentionKind[]>;
@@ -1056,16 +1086,17 @@ function MonthGrid({
             },
           });
 
+          const closedText = closureOf(day);
           return (
             <section
               key={day}
               {...dropHandlers}
-              title={reason ?? undefined}
+              title={reason ?? closedText ?? undefined}
+              style={closedText ? CLOSED_DAY_STYLE : undefined}
               className={cn(
                 "group flex min-h-28 flex-col rounded-xl border p-1.5 print:break-inside-avoid",
-                today
-                  ? "border-border-gold bg-bg-card"
-                  : "border-border-2 bg-bg-card",
+                today ? "border-border-gold" : "border-border-2",
+                closedText ? "bg-bg-1" : "bg-bg-card",
                 // I giorni fuori mese restano visibili ma arretrano: servono a
                 // completare le settimane, non a essere letti.
                 !inMonth && "opacity-40",
@@ -1099,6 +1130,11 @@ function MonthGrid({
                   +
                 </button>
               </header>
+              {closedText ? (
+                <p className="mb-1 truncate rounded bg-bg-3 px-1 text-[10px] font-semibold uppercase tracking-wide text-t1">
+                  {closedText}
+                </p>
+              ) : null}
 
               <div className="flex flex-1 flex-col gap-1">
                 {visible.map((shift) => {

@@ -44,6 +44,7 @@ import {
   type PersonDragPayload,
   type ReassignTarget,
 } from "./dragContext";
+import { CLOSED_DAY_STYLE } from "../venues/closedDay";
 
 /** Altra riga *e* altro giorno: sono due gesti in uno, e non si indovina quale. */
 const DIAGONAL_REASON =
@@ -58,6 +59,7 @@ const DIAGONAL_REASON =
  */
 export function PeopleWeek({
   days,
+  closureOf,
   shifts,
   clockKindByAssignment,
   venueIds,
@@ -69,6 +71,8 @@ export function PeopleWeek({
   legendTarget,
 }: {
   days: string[];
+  /** «Chiusa · Ferragosto» se la sede (le sedi mostrate) è chiusa quel giorno. */
+  closureOf: (day: string) => string | null;
   shifts: ShiftWithAssignees[];
   /** Eccezioni già filtrate per il permesso Ore nel Planning. */
   clockKindByAssignment: Map<string, ClockAttentionKind>;
@@ -238,12 +242,18 @@ export function PeopleWeek({
               return (
                 <span
                   key={day}
+                  title={closureOf(day) ?? undefined}
                   className={cn(
                     "px-1 text-xs font-semibold uppercase tracking-wider",
                     isToday(day) ? "text-gold" : "text-t4"
                   )}
                 >
                   {name} <span className="font-mono">{num}</span>
+                  {closureOf(day) ? (
+                    <span className="mt-0.5 block truncate rounded bg-bg-3 px-1 text-[10px] text-t1">
+                      {closureOf(day)}
+                    </span>
+                  ) : null}
                 </span>
               );
             })}
@@ -361,16 +371,24 @@ export function PeopleWeek({
                           (absence ? absenceCellLabel(absence) : undefined)
                         }
                         {...dropHandlers}
-                        style={absence ? absenceCellStyle(absence) : undefined}
+                        style={
+                          absence
+                            ? absenceCellStyle(absence)
+                            : closureOf(day)
+                              ? CLOSED_DAY_STYLE
+                              : undefined
+                        }
                         className={cn(
                           "focus-gold flex min-h-14 items-center justify-center rounded-xl border border-dashed text-sm transition hover:border-border-gold",
                           absence
                             ? "border-warning/50 px-1 text-center text-[10px] leading-tight text-warning hover:text-gold"
-                            : "border-border text-transparent hover:text-gold",
+                            : closureOf(day)
+                              ? "border-border bg-bg-1 text-[10px] font-semibold uppercase tracking-wide text-t4 hover:text-gold"
+                              : "border-border text-transparent hover:text-gold",
                           dropClass(state)
                         )}
                       >
-                        {absence ? absenceCellLabel(absence) : "+"}
+                        {absence ? absenceCellLabel(absence) : closureOf(day) ? "Chiusa" : "+"}
                       </button>
                     );
                   }

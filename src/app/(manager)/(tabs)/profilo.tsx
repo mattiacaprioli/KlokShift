@@ -202,6 +202,7 @@ export default function ManagerProfiloScreen() {
   // turni non deve poter cambiare indirizzo e logo della sede.
   const canEditVenue = !!venue && venueQuery.can(venue.id, "can_manage_venue");
   const canEditClock = !!venue && venueQuery.can(venue.id, "can_view_hours");
+  const canEditClosures = !!venue && venueQuery.can(venue.id, "can_manage_shifts");
 
   return (
     <View className="flex-1 bg-bg-0">
@@ -279,9 +280,17 @@ export default function ManagerProfiloScreen() {
               </View>
             </View>
 
-            {!isOwner && (canEditVenue || canEditClock) ? (
+            {/* Chi organizza i turni gestisce anche i giorni di chiusura: senza
+                questo, con una sede sola, non ci arrivava. */}
+            {!isOwner && (canEditVenue || canEditClock || canEditClosures) ? (
               <GoldButton
-                label={canEditVenue ? "Gestisci sede" : "Gestisci timbrature"}
+                label={
+                  canEditVenue
+                    ? "Gestisci sede"
+                    : canEditClock
+                      ? "Timbrature e chiusure"
+                      : "Giorni di chiusura"
+                }
                 onPress={() => router.push(`/(manager)/venue/${venue.id}`)}
               />
             ) : null}

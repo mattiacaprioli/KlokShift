@@ -9,6 +9,7 @@ import { useToast } from "@/providers/Toast";
 import { VenuePlanningToggle } from "@/features/planning/VenuePlanningToggle";
 import { VenueBreakCard } from "@/features/clock/VenueBreakCard";
 import { VenueClockMethodCard } from "@/features/clock/VenueClockMethodCard";
+import { VenueClosuresCard } from "@/features/venues/VenueClosuresCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useSetVenueClosed } from "@/features/venues/hooks";
 import { VenueFormView } from "@/features/venues/VenueFormView";
@@ -58,18 +59,19 @@ export default function VenueEditScreen() {
   // modifica — e il pulsante «Chiudi questa sede».
   const canEditVenue = can(venue.id, "can_manage_venue");
   const canEditClock = can(venue.id, "can_view_hours");
+  // Le chiusure le scrive chi organizza i turni o i dati della sede.
+  const canEditClosures = can(venue.id, "can_manage_shifts") || canEditVenue;
 
   if (!canEditVenue) {
     return (
       <VenueInfoView
         venue={venue}
         footer={
-          canEditClock ? (
-            <View className="gap-6">
-              <VenueClockMethodCard venue={venue} />
-              <VenueBreakCard venue={venue} />
-            </View>
-          ) : undefined
+          <View className="gap-6">
+            <VenueClosuresCard venue={venue} canEdit={canEditClosures} />
+            {canEditClock ? <VenueClockMethodCard venue={venue} /> : null}
+            {canEditClock ? <VenueBreakCard venue={venue} /> : null}
+          </View>
         }
       />
     );
@@ -100,6 +102,7 @@ export default function VenueEditScreen() {
         onSaved={() => router.back()}
         footer={
           <View className="gap-6">
+            <VenueClosuresCard venue={venue} canEdit={canEditClosures} />
             {canEditClock ? <VenueClockMethodCard venue={venue} /> : null}
             {canEditClock ? <VenueBreakCard venue={venue} /> : null}
             <VenuePlanningToggle venue={venue} ownerId={workspaceId ?? ""} />

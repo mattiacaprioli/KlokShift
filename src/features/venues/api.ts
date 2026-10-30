@@ -97,3 +97,42 @@ export async function updateVenue(
   if (!data) throw new Error("Non puoi modificare i dati di questa sede.");
   return data;
 }
+
+/**
+ * I giorni di chiusura delle sedi indicate (`venue_closures`). Pochi per sede
+ * e per anno: si leggono tutti, e i calendari filtrano per giorno.
+ */
+export async function getVenueClosures(
+  venueIds: readonly string[]
+): Promise<Tables<"venue_closures">[]> {
+  if (venueIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("venue_closures")
+    .select("*")
+    .in("venue_id", [...venueIds])
+    .order("start_date")
+    .limit(500);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function saveVenueClosure(input: {
+  venueId: string;
+  start: string;
+  end: string;
+  reason?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc("save_venue_closure", {
+    p_venue: input.venueId,
+    p_start: input.start,
+    p_end: input.end,
+    p_reason: input.reason ?? undefined,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteVenueClosure(closureId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_venue_closure", { p_closure: closureId });
+  if (error) throw new Error(error.message);
+}

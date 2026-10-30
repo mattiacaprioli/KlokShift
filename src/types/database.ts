@@ -1257,6 +1257,51 @@ export type Database = {
           },
         ]
       }
+      venue_closures: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string
+          id: string
+          reason: string | null
+          start_date: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          id?: string
+          reason?: string | null
+          start_date: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          reason?: string | null
+          start_date?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_closures_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_closures_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venue_member_roles: {
         Row: {
           created_at: string
@@ -2137,6 +2182,7 @@ export type Database = {
         Args: { p_template: string }
         Returns: undefined
       }
+      delete_venue_closure: { Args: { p_closure: string }; Returns: undefined }
       enter_clock_record: {
         Args: {
           p_assignment: string
@@ -2670,6 +2716,15 @@ export type Database = {
       }
       save_shift_template: {
         Args: { p_template: Json; p_venue: string }
+        Returns: string
+      }
+      save_venue_closure: {
+        Args: {
+          p_end: string
+          p_reason?: string
+          p_start: string
+          p_venue: string
+        }
         Returns: string
       }
       set_absence_hour_credit: {

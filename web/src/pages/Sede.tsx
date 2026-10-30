@@ -5,6 +5,7 @@ import { VenueCard } from "../venues/VenueCard";
 import { VenuesCard } from "../venues/VenuesCard";
 import { CloseVenueSection } from "../venues/CloseVenueSection";
 import { Button, PageHeader } from "../ui/primitives";
+import { ClosuresCard } from "../venues/ClosuresCard";
 
 /**
  * Le sedi del titolare.
@@ -65,6 +66,10 @@ export function SedePage() {
           venue={venues[0]}
           editable={editable}
           clockEditable={clockEditable}
+        />
+        <ClosuresCard
+          venue={venues[0]}
+          canEdit={can(venues[0].id, "can_manage_shifts") || can(venues[0].id, "can_manage_venue")}
         />
         <CloseVenueSection venue={venues[0]} />
         {/* Le sedi chiuse da riaprire, se ce ne sono. */}

@@ -51,6 +51,7 @@ import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import {
   addDaysToDate,
+  formatDate,
   formatDayLabel,
   formatHours,
   startOfWeek,
@@ -58,6 +59,10 @@ import {
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
+import { useVenueClosures } from "@/features/venues/hooks";
+import { closedDates, dayClosureText } from "@/features/venues/closures";
+import { withClosedDays } from "@/features/assignments/agenda";
+import { ClosedDayBadge } from "@/features/venues/ClosedDayBadge";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -249,12 +254,31 @@ export default function WaiterShiftsScreen() {
           ),
     [ended, items, declined]
   );
+  const { memberships } = useOwnerVenues();
+  // Le sedi in cui lavoro, e i loro giorni di chiusura: barrati sul calendario
+  // e detti sul giorno, così Ferragosto non è una sorpresa.
+  const workVenues = useMemo(
+    () =>
+      memberships
+        .filter((m) => m.status === "active")
+        .flatMap((m) => m.works.map((w) => ({ id: w.venue_id, name: w.venue_name }))),
+    [memberships]
+  );
+  const closuresQuery = useVenueClosures(workVenues.map((v) => v.id));
+  const closures = useMemo(() => closuresQuery.data ?? [], [closuresQuery.data]);
+  const closed = useMemo(
+    () => closedDates(closures, workVenues.map((v) => v.id)),
+    [closures, workVenues]
+  );
   const sections = useMemo(
     () =>
-      groupAssignmentsByDay(agendaItems).filter(
-        (s) => (s.date ?? "") >= anchorDay
+      // I giorni di chiusura senza turni entrano come giorni vuoti.
+      withClosedDays(
+        groupAssignmentsByDay(agendaItems).filter((s) => (s.date ?? "") >= anchorDay),
+        closed,
+        anchorDay
       ),
-    [agendaItems, anchorDay]
+    [agendaItems, anchorDay, closed]
   );
 
   // La griglia: le tre settimane del pager più la domenica prima, che può
@@ -305,7 +329,6 @@ export default function WaiterShiftsScreen() {
   );
   // Le assenze stanno sulla **persona** (`member_id`) e la persona è una per
   // azienda: la mia in quell'azienda si ricava dalle appartenenze del contesto.
-  const { memberships } = useOwnerVenues();
   function absenceNoteFor(shift: ShiftWithVenue): string | null {
     const workspaceId = shift.venue?.workspace_id;
     const memberId = memberships.find(
@@ -457,10 +480,17 @@ export default function WaiterShiftsScreen() {
             selected={visibleDay}
             onSelect={goToDay}
             marked={marked}
+            closed={closed}
             expanded={expanded}
             onToggleExpand={() => setExpanded((v) => !v)}
             gutter={layout === "week" ? HOUR_GUTTER : 0}
           />
+          {dayClosureText(closures, workVenues, visibleDay) ? (
+            <ClosedDayBadge
+              className="mt-3"
+              text={`${formatDate(visibleDay)} · ${dayClosureText(closures, workVenues, visibleDay)}`}
+            />
+          ) : null}
         </View>
 
         {mode === "venue" ? (
@@ -570,6 +600,9 @@ export default function WaiterShiftsScreen() {
             renderSectionHeader={({ section }) => (
               <View className="bg-bg-0 pb-2 pt-3">
                 <Mono gold={section.date === today}>{section.title}</Mono>
+                {section.date && dayClosureText(closures, workVenues, section.date) ? (
+                  <ClosedDayBadge text={dayClosureText(closures, workVenues, section.date)!} />
+                ) : null}
               </View>
             )}
             renderItem={({ item }) => (

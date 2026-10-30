@@ -9,6 +9,7 @@ import {
   Placeholder,
   QueryError,
 } from "../ui/primitives";
+import { ClosuresCard } from "../venues/ClosuresCard";
 
 /**
  * La scheda di **una** sede.
@@ -69,6 +70,10 @@ export function SedeDettaglioPage() {
         venue={venue}
         editable={editable}
         clockEditable={clockEditable}
+      />
+      <ClosuresCard
+        venue={venue}
+        canEdit={can(venue.id, "can_manage_shifts") || can(venue.id, "can_manage_venue")}
       />
       <CloseVenueSection venue={venue} onClosed={() => navigate("/sede")} />
     </>

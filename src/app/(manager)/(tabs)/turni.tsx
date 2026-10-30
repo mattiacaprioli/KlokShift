@@ -14,13 +14,14 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { monthGridStart, WeekCalendar } from "@/components/ui/WeekCalendar";
-import { type DaySection, groupByDay } from "@/features/assignments/agenda";
+import { type DaySection, groupByDay, withClosedDays } from "@/features/assignments/agenda";
+import { ClosedDayBadge } from "@/features/venues/ClosedDayBadge";
 import { PeopleWeekList } from "@/features/assignments/PeopleWeekList";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import type { ShiftWithCount } from "@/features/shifts/types";
 import { cn } from "@/lib/cn";
-import { addDaysToDate, startOfWeek, todayString } from "@/lib/format";
+import { addDaysToDate, formatDate, startOfWeek, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { OperationsLockedCard } from "@/features/workspace/OperationsLockedCard";
 import { missingPermission } from "@/features/workspace/permissions";
@@ -37,6 +38,8 @@ import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
 import { clockAttentionItems } from "@/features/clock/attention";
+import { useVenueClosures } from "@/features/venues/hooks";
+import { closedDates, dayClosureText } from "@/features/venues/closures";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -153,6 +156,17 @@ export default function ManagerShiftsScreen() {
     () => venues.filter((v) => !hiddenVenues.has(v.id)).map((v) => v.id),
     [venues, hiddenVenues]
   );
+
+  // I giorni di chiusura delle sedi accese: barrati sul calendario, detti sul
+  // giorno scelto e nell'intestazione del giorno.
+  const closuresQuery = useVenueClosures(venues.map((v) => v.id));
+  const closures = useMemo(() => closuresQuery.data ?? [], [closuresQuery.data]);
+  const shownVenues = useMemo(
+    () => venues.filter((v) => !hiddenVenues.has(v.id)),
+    [venues, hiddenVenues]
+  );
+  const closed = useMemo(() => closedDates(closures, scope), [closures, scope]);
+  const selectedClosure = dayClosureText(closures, shownVenues, visibleDay);
 
   /**
    * Le anomalie guardano l'intera settimana selezionata, passato compreso:
@@ -273,10 +287,14 @@ export default function ManagerShiftsScreen() {
     // devono passare dal server: qui i chip di sede filtrano le righe già
     // scaricate — va bene per un intervallo di giorni, che è tutto in cache, ma
     // su una lista paginata accorcia le pagine e tronca la lista.
-    return groupByDay(agenda, (s) => s.date).filter(
-      (g) => (g.date ?? "") >= anchorDay
+    // I giorni di chiusura senza turni entrano come giorni vuoti: senza, un
+    // Ferragosto senza turni non compariva affatto.
+    return withClosedDays(
+      groupByDay(agenda, (s) => s.date).filter((g) => (g.date ?? "") >= anchorDay),
+      closed,
+      anchorDay
     );
-  }, [agenda, upcoming, anchorDay, filtering, filteringMine, isMine]);
+  }, [agenda, upcoming, anchorDay, filtering, filteringMine, isMine, closed]);
 
   // Il quadro della settimana di cui si sta guardando un giorno: quanti turni
   // in tutto, e quanti di quelli ancora in programma restano da coprire.
@@ -477,6 +495,7 @@ export default function ManagerShiftsScreen() {
           onSelect={goToDay}
           marked={marked}
           alerts={alerts}
+          closed={closed}
           expanded={expanded}
           onToggleExpand={() => setExpanded((v) => !v)}
           // Il quadro della settimana, accanto al mese a cui si riferisce:
@@ -550,6 +569,10 @@ export default function ManagerShiftsScreen() {
               );
             })}
           </ScrollView>
+        ) : null}
+
+        {selectedClosure ? (
+          <ClosedDayBadge className="mt-3" text={`${formatDate(visibleDay)} · ${selectedClosure}`} />
         ) : null}
 
         {clockRangeQuery.isError && clockScope.length > 0 ? (
@@ -692,6 +715,9 @@ export default function ManagerShiftsScreen() {
           renderSectionHeader={({ section }) => (
             <View className="bg-bg-0 pb-2 pt-3">
               <Mono gold={section.date === today}>{section.title}</Mono>
+              {section.date && dayClosureText(closures, shownVenues, section.date) ? (
+                <ClosedDayBadge text={dayClosureText(closures, shownVenues, section.date)!} />
+              ) : null}
             </View>
           )}
           renderItem={({ item }) => (
