@@ -547,12 +547,16 @@ export function PlanningPage() {
     <>
       <PageHeader
         title="Turni"
+        singleRow
         subtitle={
           <>
             {isWeekly ? weekLabel(monday) : monthTitle(month)}
-            {/* Anche sul foglio: i comandi non si stampano, quindi senza questo
-                un turnario filtrato sembrerebbe l'agenda di tutta l'azienda. */}
-            {activeVenueName ? ` · ${activeVenueName}` : null}
+            {/* Solo sul foglio: a schermo la sede la dice già il filtro, ma i
+                comandi non si stampano, e senza questo un turnario filtrato
+                sembrerebbe l'agenda di tutta l'azienda. */}
+            {activeVenueName ? (
+              <span className="hidden print:inline"> · {activeVenueName}</span>
+            ) : null}
           </>
         }
         badge={
@@ -573,7 +577,7 @@ export function PlanningPage() {
                 aria-label="Filtra per sede"
                 value={activeVenueId ?? ""}
                 onChange={(e) => setVenueFilter(e.target.value || null)}
-                className="mr-2 w-auto"
+                className="w-auto max-w-44 truncate"
               >
                 <option value="">Tutte le sedi</option>
                 {venues.map((v) => (
@@ -588,16 +592,20 @@ export function PlanningPage() {
                 turni e quante notifiche prima di procedere — che su un mese non
                 è una formalità. */}
             {canCreateShift ? (
-              <Button onClick={() => setDuplicating(true)}>
-                {isWeekly ? "Duplica settimana" : "Duplica mese"}
+              <Button
+                onClick={() => setDuplicating(true)}
+                title={isWeekly ? "Duplica la settimana" : "Duplica il mese"}
+                aria-label={isWeekly ? "Duplica la settimana" : "Duplica il mese"}
+              >
+                Duplica
               </Button>
             ) : null}
             {/* Il turnario finisce in bacheca: la stampa la fa il browser sulla
                 vista che hai davanti, con i token ribaltati su bianco. */}
-            <Button className="mr-2" onClick={() => window.print()}>
+            <Button onClick={() => window.print()}>
               Stampa
             </Button>
-            <div className="mr-2 flex overflow-hidden rounded-xl border border-border-2">
+            <div className="flex overflow-hidden rounded-xl border border-border-2">
               {VIEWS.map((v) => (
                 <button
                   key={v}
@@ -639,7 +647,6 @@ export function PlanningPage() {
             {canAny("can_manage_shifts") ? (
               <Button
                 variant="gold"
-                className="ml-2"
                 onClick={() => openCreate(createDay)}
               >
                 Nuovo turno

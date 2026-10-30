@@ -802,6 +802,9 @@ function bySchedule(a: AssignmentWithShift, b: AssignmentWithShift): number {
  * concluso se ha ancora un'entrata aperta: deve restare raggiungibile dalla
  * Home finché il dipendente non timbra l'uscita.
  */
+/** Quanto avanti arriva l'agenda del dipendente. */
+export const MY_AGENDA_DAYS = 183;
+
 export async function getMyAssignedUpcoming(
   waiterId: string
 ): Promise<AssignmentWithShift[]> {
@@ -812,7 +815,11 @@ export async function getMyAssignedUpcoming(
     .neq("status", "declined")
     // Da ieri: il turno che il dipendente sta lavorando adesso non deve
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
-    .gte("shift.date", addDaysToDate(todayString(), -1));
+    .gte("shift.date", addDaysToDate(todayString(), -1))
+    // Fino a sei mesi avanti (dal 30/10/2026): senza un tetto, un anno di
+    // turni ripetuti si scaricava a ogni apertura. Un tetto di **data** e non
+    // di righe, perché l'ordine lo fa `bySchedule` qui sotto.
+    .lte("shift.date", addDaysToDate(todayString(), MY_AGENDA_DAYS));
   if (error) throw new Error(error.message);
   return (data ?? [])
     .map(toMyAssignment)

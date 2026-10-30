@@ -479,6 +479,10 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 - [x] Tabella `venue_closures` + RPC (migration `20261030000300`, test SQL 044), con chiusure **ogni anno** e **riposo settimanale** (`venues.rest_days`), come Deputy e Skello; gestione nella scheda sede (app) e nelle pagine Sede (dashboard); giorni barrati e detti nei Turni di chi gestisce e del dipendente, e sulla griglia settimana/mese della dashboard; avviso (non blocco) nei form del turno, nuovo e modifica.
 - [ ] Prova a mano su telefono e dashboard.
 
+### Agenda a pagine (30/10) ✅
+- [x] L'agenda di chi gestisce non scarica più tutti i turni futuri: pagine di 4 settimane (`getOwnerShiftsPage`, `useOwnerAgenda`), la prossima scorrendo verso il fondo o saltando avanti col calendario; una pagina che arriva al tetto di righe si ferma al giorno intero prima (test `agendaPagesApi`). Almeno due settimane di passato sempre caricate. Home e Primi passi chiedono solo i prossimi 50 / 1 turni; l'agenda del dipendente arriva a 6 mesi.
+- [ ] Il filtro «Solo i turni da coprire» e il suo numero contano i turni già caricati (le settimane scorse), non tutto il futuro.
+
 ### Pubblicazione sugli store (M8)
 - [ ] Account Google Play (25 $ una tantum) e Apple Developer (99 $/anno).
 - [ ] Scheda store (descrizione, screenshot, categoria, classificazione) e modulo «Data safety» (email, nome, foto, messaggi, token push).

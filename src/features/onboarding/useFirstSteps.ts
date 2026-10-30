@@ -24,7 +24,8 @@ export function useFirstSteps(enabled: boolean) {
 
   const roles = useOwnerVenueRoles({ enabled: on && unlocked });
   const people = useOwnerPeople(on && unlocked ? workspaceId : undefined);
-  const upcoming = useOwnerShifts();
+  // Basta sapere se ce n'è almeno uno.
+  const upcoming = useOwnerShifts(1);
   const upcomingCount = upcoming.data?.length;
   const past = useOwnerPastShiftsCount(NO_PAST_FILTERS, {
     enabled: on && unlocked && upcomingCount === 0,

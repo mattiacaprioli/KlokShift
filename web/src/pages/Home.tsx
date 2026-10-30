@@ -118,9 +118,9 @@ export function HomePage() {
   // "0 turni scoperti" quando la query non è mai tornata.
   const statsReady = periodQuery.isSuccess;
 
-  // `getOwnerShifts` è la lista dei prossimi turni **senza** limite superiore, e
-  // resta tale: "Prossimi turni" deve mostrare cosa viene dopo anche di domenica
-  // sera, quando il periodo scelto è ormai finito.
+  // I prossimi turni senza limite di **data** ("Prossimi turni" deve mostrare
+  // cosa viene dopo anche di domenica sera), ma al massimo 50: ne servono
+  // pochi, e scaricarli tutti costava a ogni apertura.
   const shiftsQuery = useOwnerShifts();
   const shifts = shiftsQuery.data ?? [];
   const todayQuery = useOwnerTodayAssignments();

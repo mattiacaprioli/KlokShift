@@ -448,6 +448,7 @@ export function PageHeader({
   subtitle,
   badge,
   actions,
+  singleRow = false,
 }: {
   title: string;
   subtitle?: ReactNode;
@@ -458,22 +459,35 @@ export function PageHeader({
    */
   badge?: ReactNode;
   actions?: ReactNode;
+  /**
+   * Titolo e comandi sempre sulla stessa riga, mai a capo: i comandi tengono la
+   * loro larghezza e, se lo spazio non basta, si accorcia il sottotitolo. Per
+   * i Turni, dove andavano a capo o no a seconda della vista e della sede.
+   */
+  singleRow?: boolean;
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4 print:mb-3">
-      <div>
+    <header
+      className={cn(
+        "mb-6 flex items-end justify-between gap-4 print:mb-3",
+        singleRow ? "flex-nowrap" : "flex-wrap"
+      )}
+    >
+      <div className={cn(singleRow && "min-w-0")}>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-serif text-2xl text-t1">{title}</h1>
           {badge}
         </div>
         {subtitle ? (
-          <p className="mt-1 text-sm text-t3">{subtitle}</p>
+          <p className={cn("mt-1 text-sm text-t3", singleRow && "truncate")}>{subtitle}</p>
         ) : null}
       </div>
       {/* Titolo e sottotitolo (settimana, mese) servono anche sul foglio; i
           comandi no: su carta non si clicca niente. */}
       {actions ? (
-        <div className="flex gap-2 print:hidden">{actions}</div>
+        <div className={cn("flex gap-2 print:hidden", singleRow && "shrink-0 items-center")}>
+          {actions}
+        </div>
       ) : null}
     </header>
   );

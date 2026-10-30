@@ -1,7 +1,8 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import {
+  ActivityIndicator,
   RefreshControl,
   SectionList,
   type ViewToken,
@@ -21,7 +22,7 @@ import { missingPeople, missingPeopleLabel, shiftCounts } from "@/features/assig
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import type { ShiftWithCount } from "@/features/shifts/types";
 import { cn } from "@/lib/cn";
-import { addDaysToDate, formatDate, startOfWeek, todayString } from "@/lib/format";
+import { addDaysToDate, formatDate, isShiftOver, startOfWeek, todayString } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { OperationsLockedCard } from "@/features/workspace/OperationsLockedCard";
 import { missingPermission } from "@/features/workspace/permissions";
@@ -30,7 +31,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import {
   useOwnerEndedShifts,
-  useOwnerShifts,
+  useOwnerAgenda,
   useOwnerShiftsRange,
 } from "@/features/shifts/hooks";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
@@ -106,7 +107,17 @@ export default function ManagerShiftsScreen() {
   // Un giorno passato non si pianifica: ci si registra un turno già fatto, e
   // quello è un lavoro di chi ha «Ore» (`record_past_shift`).
   const canRecordShift = venueQuery.canUseOperations && venueQuery.canAny("can_view_hours");
-  const upcomingQuery = useOwnerShifts();
+  // L'agenda a pagine di quattro settimane da ieri (i notturni di ieri sera
+  // possono essere ancora in corso): la prossima si carica scorrendo verso il
+  // fondo o saltando avanti col calendario. Fino al 30/10/2026 scaricava
+  // tutti i turni futuri, e oltre le 1000 righe i più lontani sparivano.
+  const upcomingQuery = useOwnerAgenda(addDaysToDate(todayString(), -1));
+  const loadedUntil = upcomingQuery.data?.pages.at(-1)?.next ?? todayString();
+  const loadMore = useCallback(() => {
+    if (upcomingQuery.hasNextPage && !upcomingQuery.isFetchingNextPage) {
+      void upcomingQuery.fetchNextPage();
+    }
+  }, [upcomingQuery]);
 
   const today = todayString();
   /** Da dove parte l'agenda: lo sposta solo una scelta sul calendario. */
@@ -120,10 +131,18 @@ export default function ManagerShiftsScreen() {
    * Sfogliando in avanti resta il mese corrente, così i giorni passati di
    * questo mese hanno il pallino e i turni finiti oggi stanno nella giornata.
    */
+  // Saltando avanti col calendario oltre le settimane già scaricate, si carica
+  // la pagina dopo (una alla volta, finché il giorno scelto è coperto).
+  const furthest = anchorDay > visibleDay ? anchorDay : visibleDay;
+  useEffect(() => {
+    if (addDaysToDate(furthest, 14) >= loadedUntil) loadMore();
+  }, [furthest, loadedUntil, loadMore]);
   const pastAnchor = anchorDay < today;
-  const endedQuery = useOwnerEndedShifts(
-    monthGridStart(pastAnchor ? anchorDay : today)
-  );
+  // Almeno due settimane indietro anche a inizio mese: quello che è successo
+  // da poco si vede subito, senza aspettare.
+  const pastFrom = monthGridStart(pastAnchor ? anchorDay : today);
+  const twoWeeksAgo = addDaysToDate(today, -14);
+  const endedQuery = useOwnerEndedShifts(pastFrom < twoWeeksAgo ? pastFrom : twoWeeksAgo);
   const [expanded, setExpanded] = useState(false);
   /** L'agenda ridotta a ciò che manca da coprire. */
   const [onlyShort, setOnlyShort] = useState(false);
@@ -215,7 +234,10 @@ export default function ManagerShiftsScreen() {
   );
 
   const upcoming = useMemo(
-    () => (upcomingQuery.data ?? []).filter(visible),
+    () =>
+      (upcomingQuery.data?.pages ?? [])
+        .flatMap((page) => page.shifts)
+        .filter((s) => !isShiftOver(s) && visible(s)),
     [upcomingQuery.data, visible]
   );
 
@@ -654,6 +676,14 @@ export default function ManagerShiftsScreen() {
           }
           viewabilityConfig={VIEWABILITY}
           onViewableItemsChanged={onViewableItemsChanged}
+          // Le quattro settimane dopo, quando ci si avvicina al fondo.
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.6}
+          ListFooterComponent={
+            upcomingQuery.isFetchingNextPage ? (
+              <ActivityIndicator color="#EAB54C" style={{ paddingVertical: 24 }} />
+            ) : null
+          }
           ListHeaderComponent={
             <View className="mb-4 flex-row flex-wrap items-center gap-2">
             {/* Compare solo quando c'è davvero qualcosa da coprire: su un'agenda

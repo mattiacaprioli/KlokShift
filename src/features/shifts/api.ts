@@ -48,8 +48,18 @@ export const SHIFTS_PAGE_SIZE = 20;
  * indietro è il massimo scavalcamento possibile; a scartare quelli davvero finiti
  * ci pensa `isShiftOver`, che conosce l'istante di fine vero.
  */
+/**
+ * I prossimi turni non ancora conclusi, tutte le sedi, **al massimo `limit`**.
+ *
+ * Fino al 30/10/2026 era senza limite: con mille turni in programma si
+ * scaricavano tutti a ogni apertura, e oltre le 1000 righe (il tetto di
+ * PostgREST) i più lontani sparivano senza errore. La Home ne mostra pochi, i
+ * «Primi passi» chiedono solo se ce n'è uno; l'agenda usa le pagine
+ * (`getOwnerShiftsPage`).
+ */
 export async function getOwnerShifts(
-  venueIds: string[]
+  venueIds: string[],
+  limit = 50
 ): Promise<ShiftWithCount[]> {
   if (venueIds.length === 0) return [];
   const { data, error } = await supabase
@@ -62,11 +72,57 @@ export async function getOwnerShifts(
     // Terza chiave: con più sedi due turni possono avere stesso giorno e stessa
     // ora, e senza un tiebreak deterministico il loro ordine cambia fra un
     // refetch e l'altro — la lista balla sotto il dito.
-    .order("venue_id", { ascending: true });
+    .order("venue_id", { ascending: true })
+    // Il giorno di ieri serve solo ai notturni ancora in corso: qualche riga in
+    // più del necessario, poi il filtro sotto.
+    .limit(limit + 20);
   if (error) throw new Error(error.message);
   return ((data as unknown as AgendaRow[] | null) ?? [])
     .map(toAgendaShift)
-    .filter((s) => !isShiftOver(s));
+    .filter((s) => !isShiftOver(s))
+    .slice(0, limit);
+}
+
+/** Quanti giorni copre una pagina dell'agenda. */
+export const AGENDA_PAGE_DAYS = 28;
+/** Righe per pagina: sotto il tetto di PostgREST (1000), per accorgersene. */
+const AGENDA_PAGE_ROWS = 800;
+
+/**
+ * Una pagina dell'agenda: i turni da `from` (compreso) per
+ * `AGENDA_PAGE_DAYS` giorni. Se le righe arrivano al tetto, l'ultimo giorno
+ * potrebbe essere a metà: si tiene fino al giorno prima e la pagina dopo
+ * riparte da lì (`next`). Così nessun turno sparisce in silenzio.
+ */
+export async function getOwnerShiftsPage(
+  venueIds: string[],
+  from: string
+): Promise<{ shifts: ShiftWithCount[]; next: string }> {
+  const to = addDaysToDate(from, AGENDA_PAGE_DAYS);
+  if (venueIds.length === 0) return { shifts: [], next: to };
+  const { data, error } = await supabase
+    .from("shifts")
+    .select(AGENDA_SELECT)
+    .in("venue_id", venueIds)
+    .gte("date", from)
+    .lt("date", to)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true })
+    .order("venue_id", { ascending: true })
+    .limit(AGENDA_PAGE_ROWS);
+  if (error) throw new Error(error.message);
+  let rows = (data as unknown as AgendaRow[] | null) ?? [];
+  let next = to;
+  if (rows.length >= AGENDA_PAGE_ROWS) {
+    const lastDay = rows[rows.length - 1].date;
+    // Un giorno solo con più righe del tetto: non si può spezzare, si tiene
+    // com'è (non succede con turni veri, ma la pagina deve avanzare).
+    if (lastDay !== from) {
+      rows = rows.filter((r) => r.date !== lastDay);
+      next = lastDay;
+    }
+  }
+  return { shifts: rows.map(toAgendaShift), next };
 }
 
 /**

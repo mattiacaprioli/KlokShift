@@ -87,6 +87,12 @@ export const qk = {
     all: ["shifts"] as const,
     byOwner: (scope: string) => ["shifts", "byOwner", scope] as const,
     byOwnerAll: ["shifts", "byOwner"] as const,
+    /** I prossimi N turni (Home, Primi passi): sotto `byOwner`, come l'agenda. */
+    byOwnerNext: (scope: string, limit: number) =>
+      ["shifts", "byOwner", scope, "next", limit] as const,
+    /** L'agenda a pagine di quattro settimane. */
+    byOwnerAgenda: (scope: string, from: string) =>
+      ["shifts", "byOwner", scope, "agenda", from] as const,
     /**
      * I turni conclusi dell'agenda. Sta sotto `byOwner` apposta: è l'altra metà
      * della stessa lista, e chi invalida `byOwnerAll` (realtime, mutation) deve

@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { todayString } from "@/lib/format";
+import { addDaysToDate, todayString } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import { useOwnerVenues, venuesKeyOf } from "@/features/venues/OwnerVenues";
@@ -15,6 +15,7 @@ import {
   getOwnerPastShiftsCount,
   getOwnerPastShiftsPage,
   getOwnerShifts,
+  getOwnerShiftsPage,
   getOwnerShiftsRange,
   getShift,
   getShiftWithVenue,
@@ -41,12 +42,32 @@ import { invalidateShiftViews } from "./invalidation";
  * `useLastVenue()`.
  */
 
-/** Turni non ancora conclusi, tutte le sedi. */
-export function useOwnerShifts() {
+/**
+ * I prossimi turni non ancora conclusi, tutte le sedi, al massimo `limit`
+ * (Home e Primi passi). L'agenda usa `useOwnerAgenda`, a pagine.
+ */
+export function useOwnerShifts(limit = 50) {
   const { venueIds, venuesKey } = useOwnerVenues();
   return useQuery({
-    queryKey: qk.shifts.byOwner(venuesKey),
-    queryFn: () => getOwnerShifts(venueIds),
+    queryKey: qk.shifts.byOwnerNext(venuesKey, limit),
+    queryFn: () => getOwnerShifts(venueIds, limit),
+    enabled: venueIds.length > 0,
+  });
+}
+
+/**
+ * L'agenda di chi gestisce, a pagine di quattro settimane da `from`: si
+ * carica la prossima scorrendo verso il fondo o saltando avanti col
+ * calendario (`fetchNextPage`). Si ferma due anni avanti.
+ */
+export function useOwnerAgenda(from: string) {
+  const { venueIds, venuesKey } = useOwnerVenues();
+  const stop = addDaysToDate(todayString(), 730);
+  return useInfiniteQuery({
+    queryKey: qk.shifts.byOwnerAgenda(venuesKey, from),
+    queryFn: ({ pageParam }) => getOwnerShiftsPage(venueIds, pageParam),
+    initialPageParam: from,
+    getNextPageParam: (last) => (last.next > stop ? undefined : last.next),
     enabled: venueIds.length > 0,
   });
 }
