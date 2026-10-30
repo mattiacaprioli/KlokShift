@@ -15,6 +15,15 @@ import { NoVenues } from "../venues/NoVenues";
 import { RunOnMount } from "../ui/RunOnMount";
 import { AddStaffPanel } from "../staff/AddStaffPanel";
 import { StaffDetail } from "../staff/StaffDetail";
+import { TeamFiltersBar } from "../staff/TeamFiltersBar";
+import {
+  NO_TEAM_FILTERS,
+  TEAM_FILTERS_FROM,
+  isNotInApp,
+  matchesTeamFilters,
+  teamRoleOptions,
+  type TeamFilters,
+} from "@/features/staff/teamFilters";
 import {
   Button,
   Card,
@@ -63,6 +72,7 @@ export function StaffPage() {
   };
   const locked = operationsGate(access, { isOwner });
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<TeamFilters>(NO_TEAM_FILTERS);
 
   if (venues.length === 0) {
     return (
@@ -89,6 +99,9 @@ export function StaffPage() {
   const pending = people.filter((p) =>
     p.memberships.some((m) => m.link_status === "pending")
   ).length;
+  // Filtri solo da un team abbastanza grande: sotto si legge a colpo d'occhio.
+  const showFilters = people.length >= TEAM_FILTERS_FROM;
+  const shown = showFilters ? people.filter((p) => matchesTeamFilters(p, filters)) : people;
 
   return (
     <>
@@ -158,8 +171,24 @@ export function StaffPage() {
           detail="Aggiungi le persone che lavorano per te: potrai assegnarle ai turni e tenere il conto delle ore."
         />
       ) : (
+        <>
+        {showFilters ? (
+          <TeamFiltersBar
+            value={filters}
+            onChange={setFilters}
+            venues={venues.filter((v) => !v.closed_at)}
+            roles={teamRoleOptions(people)}
+            notInAppCount={people.filter(isNotInApp).length}
+          />
+        ) : null}
+        {shown.length === 0 && people.length > 0 ? (
+          <Placeholder
+            title="Nessuno corrisponde ai filtri"
+            detail="Cambia la ricerca o togli un filtro."
+          />
+        ) : null}
         <div className="flex flex-col gap-2">
-          {people.map((person) => {
+          {shown.map((person) => {
             const at = isMultiVenue ? personVenueNames(person) : [];
             const employment = personEmploymentType(person);
             const isPending = person.memberships.some(
@@ -224,6 +253,7 @@ export function StaffPage() {
             );
           })}
         </div>
+        </>
       )}
 
       {selectedPersonId ? (

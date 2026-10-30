@@ -472,6 +472,9 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 - [x] «Approva N timbrature in orario» nella pagina Ore (app e dashboard), per tutto il periodo; interruttore della sede «Approva da sole le timbrature in orario» (spento di default) accanto al metodo di timbratura; «Approvato in automatico» nelle presenze e colonna nell'export completo. Migration `20261030000200`, test SQL 043. Scelta fatta guardando 7shifts/Deputy (automatico con tolleranza) e Homebase/Planday (approvazione in blocco).
 - [ ] Prova a mano: una sede con l'automatico acceso, un'uscita in orario e una no.
 
+### Filtri del team (30/10) ✅
+- [x] Pagina Team (app e dashboard), da 8 persone in su: ricerca per nome o ruolo, ruolo, sede (solo con più sedi) e «Non ancora nell'app» (senza account o con l'invito da accettare). Logica unica in `src/features/staff/teamFilters.ts`, testata.
+
 ### Pubblicazione sugli store (M8)
 - [ ] Account Google Play (25 $ una tantum) e Apple Developer (99 $/anno).
 - [ ] Scheda store (descrizione, screenshot, categoria, classificazione) e modulo «Data safety» (email, nome, foto, messaggi, token push).

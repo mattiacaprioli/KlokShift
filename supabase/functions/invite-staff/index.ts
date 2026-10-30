@@ -42,7 +42,7 @@
 // fra i "Redirect URLs" di Supabase Auth: quel link non passa più da GoTrue, è
 // una rotta nostra con un token nostro.
 
-import { createClient } from "npm:@supabase/supabase-js@2.117.0";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.117.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { errorForLog, oneLine, teamAccessLines, type TeamAccess } from "./logic.ts";
 
@@ -137,7 +137,7 @@ function joinIt(names: string[]): string {
  * lettura fallisce l'invito parte lo stesso, con la frase generica.
  */
 async function readTeamAccess(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient,
   memberId: string
 ): Promise<TeamAccess | null> {
   try {
@@ -147,11 +147,16 @@ async function readTeamAccess(
       .eq("id", memberId)
       .maybeSingle();
     if (error || !data) return null;
-    const venues = ((data.member_scope ?? []) as { venues: { name: string; closed_at: string | null } | null }[])
-      .map((row) => row.venues)
-      .filter((v): v is { name: string; closed_at: string | null } => !!v && v.closed_at === null)
-      .map((v) => v.name)
-      .sort((a, b) => a.localeCompare(b, "it"));
+    // `venues` è un'unica sede per riga; i tipi dedotti da PostgREST la danno
+    // come lista, quindi si accettano tutte e due le forme.
+    type ScopeVenue = { name: string; closed_at: string | null };
+    const venues = (data.member_scope ?? [])
+      .flatMap((row: { venues: ScopeVenue | ScopeVenue[] | null }) =>
+        Array.isArray(row.venues) ? row.venues : row.venues ? [row.venues] : []
+      )
+      .filter((v: ScopeVenue) => v.closed_at === null)
+      .map((v: ScopeVenue) => v.name)
+      .sort((a: string, b: string) => a.localeCompare(b, "it"));
     return {
       can_shifts: !!data.can_shifts,
       can_staff: !!data.can_staff,

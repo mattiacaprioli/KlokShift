@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/Input";
+import { useState } from "react";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useRouter } from "expo-router";
 import { RefreshControl } from "react-native";
@@ -26,6 +28,15 @@ import {
   personVenueNames,
   type OwnerPerson,
 } from "@/features/staff/api";
+import {
+  NO_TEAM_FILTERS,
+  TEAM_FILTERS_FROM,
+  isNotInApp,
+  matchesTeamFilters,
+  notInAppLabel,
+  teamRoleOptions,
+  type TeamFilters,
+} from "@/features/staff/teamFilters";
 
 /**
  * Una riga del team: **una persona**, non una sua scheda di sede.
@@ -124,6 +135,13 @@ export default function ManagerStaffScreen() {
   // Il team è dell'**azienda**: una riga per persona, tutte le sedi insieme.
   const peopleQuery = useOwnerPeople(venueQuery.ownerId);
   const people = peopleQuery.data ?? [];
+  // Filtri solo da un team abbastanza grande: sotto si legge a colpo d'occhio.
+  const [filters, setFilters] = useState<TeamFilters>(NO_TEAM_FILTERS);
+  const showFilters = people.length >= TEAM_FILTERS_FROM;
+  const shown = showFilters ? people.filter((p) => matchesTeamFilters(p, filters)) : people;
+  const notInAppCount = people.filter(isNotInApp).length;
+  const roleOptions = teamRoleOptions(people);
+  const openVenues = venues.filter((v) => !v.closed_at);
   // Chi gestisce può lavorare: la propria scheda si riconosce nell'elenco, e
   // finché non c'è si offre di crearla. Legge la stessa query, non una in più.
   const self = useSelfStaff();
@@ -289,7 +307,61 @@ export default function ManagerStaffScreen() {
               />
             ) : (
               <View className="gap-3">
-                {people.map((person) => (
+                {showFilters ? (
+                  <View className="gap-2.5">
+                    <Input
+                      value={filters.query}
+                      onChangeText={(query) => setFilters((f) => ({ ...f, query }))}
+                      placeholder="Cerca per nome o ruolo…"
+                      returnKeyType="search"
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                    />
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                      {notInAppCount > 0 ? (
+                        <Chip
+                          label={notInAppLabel(notInAppCount)}
+                          active={filters.notInApp}
+                          onPress={() => setFilters((f) => ({ ...f, notInApp: !f.notInApp }))}
+                        />
+                      ) : null}
+                      {roleOptions.map((r) => (
+                        <Chip
+                          key={r.key}
+                          label={r.label}
+                          active={filters.role === r.key}
+                          onPress={() =>
+                            setFilters((f) => ({ ...f, role: f.role === r.key ? null : r.key }))
+                          }
+                        />
+                      ))}
+                    </ScrollView>
+                    {isMultiVenue && openVenues.length > 1 ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                        {openVenues.map((v) => (
+                          <Chip
+                            key={v.id}
+                            label={v.name}
+                            active={filters.venueId === v.id}
+                            gold={filters.venueId === v.id}
+                            onPress={() =>
+                              setFilters((f) => ({ ...f, venueId: f.venueId === v.id ? null : v.id }))
+                            }
+                          />
+                        ))}
+                      </ScrollView>
+                    ) : null}
+                  </View>
+                ) : null}
+                {shown.length === 0 ? (
+                  <EmptyState
+                    title="Nessuno corrisponde ai filtri"
+                    subtitle="Cambia la ricerca o togli un filtro."
+                    actionLabel="Azzera i filtri"
+                    onAction={() => setFilters(NO_TEAM_FILTERS)}
+                  />
+                ) : null}
+                {shown.map((person) => (
                   <PersonRow
                     key={person.id}
                     person={person}
