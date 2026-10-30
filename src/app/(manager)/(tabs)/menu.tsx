@@ -8,11 +8,9 @@ import { Mono } from "@/components/ui/Mono";
 import { NavRow } from "@/components/ui/NavRow";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
-import { useUnreadCount } from "@/features/notifications/hooks";
 import { useSwitchToWorkView } from "@/features/onboarding/useSwitchToWorkView";
 import { useViewMode } from "@/features/team/ViewMode";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 
@@ -28,12 +26,12 @@ type Row = {
 };
 
 /** Un gruppo del menu: titolo e righe in una card, come le Impostazioni. */
-function MenuGroup({ title, rows }: { title: string; rows: Row[] }) {
+function MenuGroup({ title, rows }: { title?: string; rows: Row[] }) {
   const visible = rows.filter((row) => row.show !== false);
   if (visible.length === 0) return null;
   return (
     <View className="gap-2">
-      <SectionHeader title={title} />
+      {title ? <SectionHeader title={title} /> : null}
       <Card className="p-0">
         {visible.map(({ key, show: _show, ...row }, i) => (
           <CardRow key={key} {...row} divider={i > 0} />
@@ -44,9 +42,11 @@ function MenuGroup({ title, rows }: { title: string; rows: Row[] }) {
 }
 
 /**
- * Tutto quello che non sta nella barra in basso, a gruppi: gli stessi della
- * sidebar della dashboard («Ogni giorno», «Persone», «Gestione»), così chi
- * passa dal telefono al computer ritrova le cose dove le ha lasciate.
+ * Tutto quello che non sta nella barra in basso: **l'azienda che gestisci**,
+ * cioè dove vai per lavorare. Tu e le regole dell'azienda (profilo, password,
+ * notifiche push, stato, chat fra colleghi) stanno in Impostazioni, che si
+ * apre dalla card in alto, come le sezioni di Impostazioni sul web. Ogni voce
+ * sta in un posto solo: le notifiche ricevute sono la campanella della Home.
  *
  * Prima del 30/10 questa tab era «Profilo» e parlava della sede; Ore, Assenze
  * e Ruoli stavano dentro Team, Collaboratori dentro Impostazioni. Le sedi ora
@@ -63,7 +63,6 @@ export default function ManagerMenuScreen() {
 
   const canStaff = canAny("can_manage_staff");
   const pendingAbsences = usePendingAbsenceCount(canStaff);
-  const unread = useUnreadCount(session?.user.id).data ?? 0;
 
   const name = profile?.full_name?.trim() || session?.user.email || "";
   const roleLabel =
@@ -90,11 +89,11 @@ export default function ManagerMenuScreen() {
           gap: 24,
         }}
       >
-        {/* Chi sei e per quale azienda: tocca per nome e foto. */}
+        {/* Chi sei e per quale azienda: tocca per profilo e impostazioni. */}
         <Pressable
-          onPress={() => router.push("/(manager)/profilo-edit")}
+          onPress={() => router.push("/(manager)/impostazioni")}
           accessibilityRole="button"
-          accessibilityLabel="Modifica il tuo profilo"
+          accessibilityLabel="Apri profilo e impostazioni"
           className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card p-4"
         >
           <Avatar
@@ -111,6 +110,9 @@ export default function ManagerMenuScreen() {
             </Text>
             <Text className="mt-0.5 text-[13px] text-t3" numberOfLines={1}>
               {[workspaceName, roleLabel].filter(Boolean).join(" · ")}
+            </Text>
+            <Text className="mt-0.5 text-[13px] text-gold" numberOfLines={1}>
+              Profilo e impostazioni
             </Text>
           </View>
           <Icon name="chevR" size={18} color="#8C8579" />
@@ -158,28 +160,7 @@ export default function ManagerMenuScreen() {
         />
 
         <MenuGroup
-          title="Persone"
-          rows={[
-            {
-              key: "ruoli",
-              icon: "clipboard",
-              title: "Ruoli",
-              subtitle: "Quelli che dai alle persone e chiedi sui turni",
-              onPress: () => router.push("/(manager)/ruoli"),
-              show: canAny("can_manage_venue"),
-            },
-            {
-              key: "notifiche",
-              icon: "bell",
-              title: "Notifiche",
-              badge: unread,
-              onPress: () => router.push("/(manager)/notifiche"),
-            },
-          ]}
-        />
-
-        <MenuGroup
-          title="Gestione"
+          title="Azienda"
           rows={[
             {
               key: "sedi",
@@ -192,6 +173,14 @@ export default function ManagerMenuScreen() {
               onPress: () => router.push("/(manager)/sedi"),
             },
             {
+              key: "ruoli",
+              icon: "clipboard",
+              title: "Ruoli",
+              subtitle: "Quelli che dai alle persone e chiedi sui turni",
+              onPress: () => router.push("/(manager)/ruoli"),
+              show: canAny("can_manage_venue"),
+            },
+            {
               key: "collaboratori",
               icon: "users",
               title: "Collaboratori",
@@ -199,23 +188,20 @@ export default function ManagerMenuScreen() {
               onPress: () => router.push("/(manager)/team"),
               show: isOwner,
             },
-            {
-              key: "impostazioni",
-              icon: "settings",
-              title: "Impostazioni",
-              subtitle: "Account, password e notifiche push",
-              onPress: () => router.push("/(manager)/impostazioni"),
-            },
+          ]}
+        />
+
+        <MenuGroup
+          rows={[
             {
               key: "aiuto",
               icon: "help",
               title: "Aiuto e supporto",
+              subtitle: "Guide, domande frequenti e contatti",
               onPress: () => router.push("/(manager)/aiuto"),
             },
           ]}
         />
-
-        {isOwner ? <WorkspaceAccessCard /> : null}
       </ScrollView>
     </View>
   );

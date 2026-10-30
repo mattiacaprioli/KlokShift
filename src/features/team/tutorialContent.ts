@@ -36,7 +36,7 @@ export const COLLABORATOR_TUTORIAL: Tutorial = {
     {
       title: "Cosa devi fare",
       steps: [
-        "Apri Impostazioni → Collaboratori e premi «Invita un collaboratore» (sulla dashboard: Collaboratori, nel menu).",
+        "Apri Menu › Collaboratori e premi «Invita un collaboratore» (sulla dashboard: Collaboratori, nel menu).",
         "Scrivi nome, cognome ed email della persona.",
         "Se hai più sedi, scegli dove può lavorare («Dove»). Se non ne scegli nessuna, vale per tutte, anche quelle future.",
         `Scegli cosa può fare: ${permissionList}. Partono tutti spenti: accendine almeno uno.`,

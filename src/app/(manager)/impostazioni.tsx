@@ -8,23 +8,30 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
 import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
-import { useSwitchToWorkView } from "@/features/onboarding/useSwitchToWorkView";
 import { useAuth } from "@/lib/auth";
 import { StaffChatToggle } from "@/features/chat/StaffChatToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useViewMode } from "@/features/team/ViewMode";
 import { CollaboratorPermissionsCard } from "@/features/team/CollaboratorPermissionsCard";
+import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+/**
+ * Tu e le regole dell'azienda, nelle stesse sezioni di Impostazioni sul web
+ * (Profilo · I tuoi permessi · Sicurezza · Notifiche · Azienda · Legale).
+ *
+ * Dove si va per lavorare (Collaboratori, Aiuto, «Passa ai tuoi turni») sta
+ * nel Menu, da cui si arriva qui: fino al 30/10 erano in tutte e due le
+ * schermate, e non si capiva quale fosse quella giusta.
+ */
 export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
   const { isOwner, workspaceId } = useOwnerVenues();
   const { canSwitch } = useViewMode();
-  const workView = useSwitchToWorkView();
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -42,13 +49,12 @@ export default function ManagerSettingsScreen() {
         }}
       >
         <View className="gap-2">
-          <SectionHeader title="Account" />
+          <SectionHeader title="Profilo" />
           <Card className="p-0">
-            {/* Il proprio nome e la propria foto, non quelli della sede: il
-                Profilo parlava della sede, e questa era l'unica cosa che dal
-                telefono non si poteva più sistemare. */}
+            {/* Il proprio nome e la propria foto, non quelli della sede. */}
             <Pressable
               onPress={() => router.push("/(manager)/profilo-edit")}
+              accessibilityRole="button"
               className="flex-row items-center gap-3 px-4 py-3.5"
             >
               <Avatar
@@ -66,116 +72,48 @@ export default function ManagerSettingsScreen() {
               </View>
               <Icon name="chevR" size={18} color="#6A6358" />
             </Pressable>
-
-            <Pressable
-              onPress={() => router.push("/(manager)/cambia-password")}
-              className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
-            >
-              <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                <Icon name="lock" size={18} color="#EAB54C" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-[15px] font-sans-semibold text-t1">
-                  Cambia password
-                </Text>
-                <Text className="mt-0.5 text-[13px] text-t3">
-                  Vale anche per la dashboard web
-                </Text>
-              </View>
-              <Icon name="chevR" size={18} color="#6A6358" />
-            </Pressable>
-
-            {/* Il ritorno al proprio lato: chi è qui per una promozione
-                dal team è prima di tutto un dipendente, e i suoi turni
-                stanno di là. La riga esiste solo per lui. */}
-            {canSwitch ? (
-              <Pressable
-                onPress={() => void workView.switchToWork()}
-                disabled={workView.busy}
-                className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
-              >
-                <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                  <Icon name="user" size={18} color="#EAB54C" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[15px] font-sans-semibold text-t1">
-                    Passa ai tuoi turni
-                  </Text>
-                  <Text className="mt-0.5 text-[13px] text-t3">
-                    I turni in cui lavori anche tu
-                  </Text>
-                </View>
-                <Icon name="chevR" size={18} color="#6A6358" />
-              </Pressable>
-            ) : null}
-
-            {/* Solo il titolare fa entrare qualcuno nel proprio account: un
-                collaboratore che potesse invitarne altri sarebbe una catena di
-                deleghe senza un modello di ruoli sotto. Nascondere la riga non
-                è la difesa — quella sono le RPC `add_member` e `set_member_access`. */}
-            {isOwner ? (
-              <Pressable
-                onPress={() => router.push("/(manager)/team")}
-                className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
-              >
-                <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                  <Icon name="users" size={18} color="#EAB54C" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[15px] font-sans-semibold text-t1">
-                    Collaboratori
-                  </Text>
-                  <Text className="mt-0.5 text-[13px] text-t3">
-                    Chi altro gestisce le tue sedi, e cosa può fare
-                  </Text>
-                </View>
-                <Icon name="chevR" size={18} color="#6A6358" />
-              </Pressable>
-            ) : null}
           </Card>
         </View>
 
-        {/* Il benvenuto della Home, da ritrovare dopo averlo chiuso. */}
+        {/* Il benvenuto della Home, da ritrovare dopo averlo chiuso. Solo per
+            il collaboratore: per gli altri non c'è. */}
         <CollaboratorPermissionsCard variant="settings" />
 
         <View className="gap-2">
-          <SectionHeader title="Preferenze" />
-          <Card className="p-0">
-            <Pressable
-              onPress={() => router.push("/(manager)/impostazioni-notifiche")}
-              className="flex-row items-center gap-3 px-4 py-3.5"
-            >
-              <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                <Icon name="bell" size={18} color="#EAB54C" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-[15px] font-sans-semibold text-t1">
-                  Notifiche
-                </Text>
-                <Text className="mt-0.5 text-[13px] text-t3">
-                  Scegli quali notifiche push ricevere
-                </Text>
-              </View>
-              <Icon name="chevR" size={18} color="#6A6358" />
-            </Pressable>
-          </Card>
-          {/* L'interruttore è dell'azienda, quindi lo vede solo chi la guida. */}
-          {isOwner && workspaceId ? (
-            <StaffChatToggle workspaceId={workspaceId} />
-          ) : null}
-        </View>
-
-        <View className="gap-2">
-          <SectionHeader title="Aiuto" />
+          <SectionHeader title="Sicurezza" />
           <Card className="p-0">
             <CardRow
-              icon="help"
-              title="Aiuto e supporto"
-              subtitle="Guide, domande frequenti e contatti"
-              onPress={() => router.push("/(manager)/aiuto")}
+              icon="lock"
+              title="Cambia password"
+              subtitle="Vale anche per la dashboard web"
+              onPress={() => router.push("/(manager)/cambia-password")}
             />
           </Card>
         </View>
+
+        <View className="gap-2">
+          <SectionHeader title="Notifiche" />
+          <Card className="p-0">
+            <CardRow
+              icon="bell"
+              title="Notifiche push"
+              subtitle="Scegli quali ricevere sul telefono"
+              onPress={() => router.push("/(manager)/impostazioni-notifiche")}
+            />
+          </Card>
+        </View>
+
+        {/* Le regole dell'azienda sono di chi la guida: stato e chat fra
+            colleghi, come la sezione Azienda sul web. */}
+        {isOwner && workspaceId ? (
+          <View className="gap-2">
+            <SectionHeader title="Azienda" />
+            <View className="gap-3">
+              <WorkspaceAccessCard />
+              <StaffChatToggle workspaceId={workspaceId} />
+            </View>
+          </View>
+        ) : null}
 
         <LegalLinks />
 
