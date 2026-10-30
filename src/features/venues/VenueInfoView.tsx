@@ -1,10 +1,14 @@
-import type { ReactNode } from "react";
+import { useRef, useState } from "react";
+import { ScrollView as RNScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, Text, View } from "@/tw";
+import { Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Display } from "@/components/ui/Display";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { TabPanel, TabPills } from "@/components/ui/TabPills";
+import { cn } from "@/lib/cn";
 import { VenueDetailsCard } from "./VenueDetailsCard";
+import type { VenueTab } from "./VenueFormView";
 import type { Venue } from "./api";
 
 /**
@@ -23,39 +27,68 @@ import type { Venue } from "./api";
  */
 export function VenueInfoView({
   venue,
-  footer,
+  tabs: extraTabs = [],
 }: {
   venue: Venue;
-  footer?: ReactNode;
+  /** Le altre sezioni, dopo «Dati sede»: gli stessi tab di `VenueFormView`. */
+  tabs?: VenueTab[];
 }) {
   const insets = useSafeAreaInsets();
+  const [selectedTab, setSelectedTab] = useState("dati");
+  const scrollRef = useRef<RNScrollView>(null);
+  const tabs =
+    extraTabs.length > 0 ? [{ id: "dati", label: "Dati sede" }, ...extraTabs] : [];
+  const tab = tabs.some((t) => t.id === selectedTab) ? selectedTab : "dati";
+
+  function onTabChange(id: string) {
+    setSelectedTab(id);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }
 
   return (
     <View className="flex-1 bg-bg-0">
-      <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Sede" title={venue.name} />
+      <View
+        className={cn(
+          "shrink-0 gap-4",
+          tabs.length > 0 ? "border-b border-border pb-3" : "pb-6"
+        )}
+        style={{ paddingTop: insets.top + 8 }}
+      >
+        <View className="px-5">
+          <ScreenHeader eyebrow="Sede" title={venue.name} />
+        </View>
+        {tabs.length > 0 ? (
+          <TabPills tabs={tabs} active={tab} onChange={onTabChange} />
+        ) : null}
       </View>
 
-      <ScrollView
-        className="flex-1 bg-bg-0"
+      <RNScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
         contentContainerStyle={{
+          paddingTop: tabs.length > 0 ? 20 : 0,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 48,
-          gap: 24,
         }}
       >
-        <View className="items-center gap-3">
-          <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={96} />
-          <Display className="text-3xl">{venue.name}</Display>
-          <Text className="text-xs text-t3">
-            I dati della sede li cambia il titolare.
-          </Text>
-        </View>
+        <TabPanel active={tab === "dati"}>
+          <View className="items-center gap-3">
+            <Avatar uri={venue.logo_url ?? undefined} name={venue.name} size={96} />
+            <Display className="text-3xl">{venue.name}</Display>
+            <Text className="text-xs text-t3">
+              I dati della sede li cambia il titolare.
+            </Text>
+          </View>
 
-        <VenueDetailsCard venue={venue} />
+          <VenueDetailsCard venue={venue} />
+        </TabPanel>
 
-        {footer}
-      </ScrollView>
+        {extraTabs.map((t) => (
+          <TabPanel key={t.id} active={tab === t.id}>
+            {t.content}
+          </TabPanel>
+        ))}
+      </RNScrollView>
     </View>
   );
 }

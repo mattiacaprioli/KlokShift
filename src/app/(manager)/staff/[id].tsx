@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   useNavigation,
@@ -31,6 +31,7 @@ import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { TabPanel, TabPills } from "@/components/ui/TabPills";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
@@ -1150,24 +1151,6 @@ type PersonTab =
   | "gestione";
 
 /**
- * Una sezione della scheda. Nascosta e non smontata: vedi `StaffPersonView`.
- * `display` in `style` perché dipende dal tab scelto.
- */
-function TabPanel({
-  active,
-  children,
-}: {
-  active: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <View className="gap-5" style={{ display: active ? "flex" : "none" }}>
-      {children}
-    </View>
-  );
-}
-
-/**
  * La scheda di un dipendente: **una per persona**, non una per sede.
  *
  * Prima Marco, che lavora a Roma e a Milano, aveva due URL e due schede, e ognuna
@@ -1356,36 +1339,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
             />
           </View>
 
-          <RNScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-          >
-            {tabs.map((t) => {
-              const active = t.id === tab;
-              return (
-                <Pressable
-                  key={t.id}
-                  onPress={() => onTabChange(t.id)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  className={cn(
-                    "rounded-full border px-4 py-2",
-                    active ? "border-gold bg-gold" : "border-border-2 bg-bg-2"
-                  )}
-                >
-                  <Text
-                    className={cn(
-                      "text-sm",
-                      active ? "font-sans-semibold text-gold-ink" : "text-t2"
-                    )}
-                  >
-                    {t.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </RNScrollView>
+          <TabPills tabs={tabs} active={tab} onChange={onTabChange} />
         </View>
 
         <RNScrollView

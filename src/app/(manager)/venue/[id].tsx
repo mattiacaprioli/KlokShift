@@ -12,7 +12,7 @@ import { VenueClockMethodCard } from "@/features/clock/VenueClockMethodCard";
 import { VenueClosuresCard } from "@/features/venues/VenueClosuresCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useSetVenueClosed } from "@/features/venues/hooks";
-import { VenueFormView } from "@/features/venues/VenueFormView";
+import { VenueFormView, type VenueTab } from "@/features/venues/VenueFormView";
 import { VenueInfoView } from "@/features/venues/VenueInfoView";
 
 /**
@@ -62,19 +62,34 @@ export default function VenueEditScreen() {
   // Le chiusure le scrive chi organizza i turni o i dati della sede.
   const canEditClosures = can(venue.id, "can_manage_shifts") || canEditVenue;
 
+  // Una sezione per tab: impilata, la scheda era una colonna lunghissima.
+  // Gli stessi permessi di prima decidono quali tab ci sono.
+  const sectionTabs: VenueTab[] = [
+    {
+      id: "chiusure",
+      label: "Chiusure",
+      content: <VenueClosuresCard venue={venue} canEdit={canEditClosures} />,
+    },
+    // Gli stessi tab di «Modifica» sulla dashboard (`VenueEditDialog`):
+    // Timbrature e Pausa separati, col permesso Ore.
+    ...(canEditClock
+      ? [
+          {
+            id: "timbrature",
+            label: "Timbrature",
+            content: <VenueClockMethodCard venue={venue} />,
+          },
+          {
+            id: "pausa",
+            label: "Pausa",
+            content: <VenueBreakCard venue={venue} />,
+          },
+        ]
+      : []),
+  ];
+
   if (!canEditVenue) {
-    return (
-      <VenueInfoView
-        venue={venue}
-        footer={
-          <View className="gap-6">
-            <VenueClosuresCard venue={venue} canEdit={canEditClosures} />
-            {canEditClock ? <VenueClockMethodCard venue={venue} /> : null}
-            {canEditClock ? <VenueBreakCard venue={venue} /> : null}
-          </View>
-        }
-      />
-    );
+    return <VenueInfoView venue={venue} tabs={sectionTabs} />;
   }
 
   function doClose() {
@@ -99,24 +114,29 @@ export default function VenueEditScreen() {
       <VenueFormView
         venue={venue}
         workspaceId={workspaceId}
-        onSaved={() => router.back()}
+        // Si resta sulla scheda: dagli altri tab c'è ancora da fare.
+        onSaved={() => {}}
+        tabs={[
+          ...sectionTabs,
+          {
+            id: "team",
+            label: "Team",
+            content: (
+              <VenuePlanningToggle venue={venue} ownerId={workspaceId ?? ""} />
+            ),
+          },
+        ]}
         footer={
-          <View className="gap-6">
-            <VenueClosuresCard venue={venue} canEdit={canEditClosures} />
-            {canEditClock ? <VenueClockMethodCard venue={venue} /> : null}
-            {canEditClock ? <VenueBreakCard venue={venue} /> : null}
-            <VenuePlanningToggle venue={venue} ownerId={workspaceId ?? ""} />
-            {/* Solo il titolare: `set_venue_closed` accetta lui e basta, e a
-                un collaboratore con «Dati della sede» il pulsante finiva in
-                «Impossibile chiudere la sede». */}
-            {isOwner ? (
-              <GhostButton
-                label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}
-                disabled={close.isPending}
-                onPress={() => setConfirmVisible(true)}
-              />
-            ) : null}
-          </View>
+          // Solo il titolare: `set_venue_closed` accetta lui e basta, e a un
+          // collaboratore con «Dati della sede» il pulsante finiva in
+          // «Impossibile chiudere la sede».
+          isOwner ? (
+            <GhostButton
+              label={close.isPending ? "Chiusura…" : "Chiudi questa sede"}
+              disabled={close.isPending}
+              onPress={() => setConfirmVisible(true)}
+            />
+          ) : null
         }
       />
       <ConfirmModal
