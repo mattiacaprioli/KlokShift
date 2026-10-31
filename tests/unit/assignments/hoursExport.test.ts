@@ -22,7 +22,7 @@ function absence(extra: Partial<AbsenceSummaryRow> = {}): AbsenceSummaryRow {
   return {
     person_id: "a", person_name: "Marco", ferie_days: 1, permesso_days: 0,
     permesso_hours: 0, malattia_days: 0, ferie_hours: 8, malattia_hours: 0,
-    permesso_recognized_hours: 0, conflict_hours: 0, inps_protocols: null, ...extra,
+    permesso_recognized_hours: 0, conflict_hours: 0, inps_protocols: null, missing_certificates: 0, ...extra,
   };
 }
 

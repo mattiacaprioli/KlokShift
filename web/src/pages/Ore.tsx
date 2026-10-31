@@ -20,7 +20,10 @@ import {
   monthlyReportRows,
 } from "@/features/assignments/monthlyReport";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
-import { ABSENCE_SUMMARY_NOTE } from "@/features/absences/summary";
+import {
+  ABSENCE_SUMMARY_NOTE,
+  missingCertificatesWarning,
+} from "@/features/absences/summary";
 import {
   absencesFileName,
   buildAbsencesCsv,
@@ -144,6 +147,7 @@ export function OrePage() {
   // Ferie, permessi e malattia del periodo: ore nel consuntivo, giorni nel dettaglio.
   const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
+  const certificatesWarning = missingCertificatesWarning(absences);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
   const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
   const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
@@ -342,6 +346,14 @@ export function OrePage() {
           </div>
         </div>
       </StickyHeader>
+
+      {/* Prima di esportare: le malattie del periodo senza certificato.
+          Avvisa e basta, l'export resta libero. */}
+      {certificatesWarning ? (
+        <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
+          {certificatesWarning}
+        </p>
+      ) : null}
 
       {isError ? <QueryError error={error} /> : null}
       {absenceQuery.isError ? <QueryError error={absenceQuery.error} /> : null}

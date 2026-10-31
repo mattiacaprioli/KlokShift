@@ -15,7 +15,7 @@ const worker: PersonHours = {
 const sick: AbsenceSummaryRow = {
   person_id: "sick", person_name: "Marco", ferie_days: 0, permesso_days: 0,
   permesso_hours: 0, malattia_days: 1, ferie_hours: 0, malattia_hours: 8,
-  permesso_recognized_hours: 0, conflict_hours: 0, inps_protocols: null,
+  permesso_recognized_hours: 0, conflict_hours: 0, inps_protocols: null, missing_certificates: 0,
 };
 
 describe("consuntivo mensile", () => {

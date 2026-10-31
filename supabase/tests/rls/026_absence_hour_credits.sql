@@ -25,6 +25,17 @@ begin
   perform tests.eq((select malattia_hours from public.get_workspace_absence_summary(
     tests.id('W1'), current_date + 10, current_date + 12) where member_id = tests.id('M_Emp2')),
     8::numeric, 'la malattia ha la sua colonna in ore');
+  perform tests.eq((select missing_certificates from public.get_workspace_absence_summary(
+    tests.id('W1'), current_date + 10, current_date + 12) where member_id = tests.id('M_Emp2')),
+    1, 'la malattia senza riferimento del certificato si conta, per l''avviso della pagina Ore');
+  perform public.set_absence_inps_protocol(sick, '  ');
+  perform tests.eq((select missing_certificates from public.get_workspace_absence_summary(
+    tests.id('W1'), current_date + 10, current_date + 12) where member_id = tests.id('M_Emp2')),
+    1, 'un riferimento vuoto resta un certificato mancante');
+  perform public.set_absence_inps_protocol(sick, '123456789');
+  perform tests.eq((select missing_certificates from public.get_workspace_absence_summary(
+    tests.id('W1'), current_date + 10, current_date + 12) where member_id = tests.id('M_Emp2')),
+    0, 'con il riferimento non manca più niente');
   -- Una presenza timbrata e approvata nello stesso giorno sospende il credito.
   conflict_absence := public.record_absence(tests.id('M_Emp'), 'ferie', current_date - 3, current_date - 3);
   select id into venue_member_id from public.venue_members

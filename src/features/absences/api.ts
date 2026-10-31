@@ -528,5 +528,7 @@ export async function getOwnerAbsenceSummary(
     conflict_hours: Number(r.conflict_hours),
     // Il generatore lo dà `not null`, ma è null se non ci sono malattie.
     inps_protocols: (r.inps_protocols as string | null) ?? null,
+    // Assente finché 20261031000000 non è applicata: niente avviso, non «NaN».
+    missing_certificates: Number(r.missing_certificates ?? 0),
   }));
 }

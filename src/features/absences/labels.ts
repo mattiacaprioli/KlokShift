@@ -110,10 +110,11 @@ export function groupCompanyAbsences<
  * Il riepilogo a lato della pagina Assenze (web), sulle righe già filtrate.
  * Conta solo le approvate: una richiesta in sospeso non è ancora un'assenza.
  * Ferie e malattia in giorni di calendario, i permessi in numero (spesso sono
- * poche ore). «Senza certificato» sono le malattie approvate senza riferimento.
+ * poche ore). Le malattie senza certificato non si contano qui: l'avviso sta
+ * nella pagina Ore, prima dell'export (`missingCertificatesWarning`).
  */
 export function summarizeCompanyAbsences<
-  T extends Pick<Absence, "kind" | "status" | "start_date" | "end_date" | "inps_protocol">,
+  T extends Pick<Absence, "kind" | "status" | "start_date" | "end_date">,
 >(
   absences: readonly T[],
   today: string = todayString()
@@ -122,24 +123,19 @@ export function summarizeCompanyAbsences<
   permessi: number;
   malattiaDays: number;
   absentToday: T[];
-  missingCertificates: number;
 } {
   let ferieDays = 0;
   let permessi = 0;
   let malattiaDays = 0;
-  let missingCertificates = 0;
   const absentToday: T[] = [];
   for (const a of absences) {
     if (a.status !== "approved") continue;
     if (a.kind === "ferie") ferieDays += absenceDays(a);
     else if (a.kind === "permesso") permessi += 1;
-    else {
-      malattiaDays += absenceDays(a);
-      if (!a.inps_protocol?.trim()) missingCertificates += 1;
-    }
+    else malattiaDays += absenceDays(a);
     if (a.start_date <= today && a.end_date >= today) absentToday.push(a);
   }
-  return { ferieDays, permessi, malattiaDays, absentToday, missingCertificates };
+  return { ferieDays, permessi, malattiaDays, absentToday };
 }
 
 /** Il tono della pillola di stato, condiviso da app e web. */

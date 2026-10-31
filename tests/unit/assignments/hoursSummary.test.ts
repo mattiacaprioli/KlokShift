@@ -88,7 +88,7 @@ describe("groupHoursByPerson", () => {
     const credit: AbsenceSummaryRow = {
       person_id: "a", person_name: "Giulia Rossi", ferie_days: 1, permesso_days: 0,
       permesso_hours: 0, malattia_days: 0, ferie_hours: 8, malattia_hours: 0,
-      permesso_recognized_hours: 0, conflict_hours: 0, inps_protocols: null,
+      permesso_recognized_hours: 0, conflict_hours: 0, inps_protocols: null, missing_certificates: 0,
     };
     const report = monthlyReportRows(people, [credit]);
     expect(report.map((r) => [r.person_id, r.worked_hours, r.ferie_hours, r.covered_hours])).toEqual([

@@ -60,6 +60,7 @@ import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import {
   ABSENCE_SUMMARY_NOTE,
   formatSummaryDays,
+  missingCertificatesWarning,
 } from "@/features/absences/summary";
 import { useApproveRegularClockRecords, useRegularClockCount } from "@/features/clock/hooks";
 import { approveRegularLabel, approvedRegularToast } from "@/features/clock/autoApprove";
@@ -154,6 +155,7 @@ export default function VenueHoursScreen() {
   // Ferie, permessi e malattia del periodo: ore nel consuntivo, giorni nel dettaglio.
   const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
+  const certificatesWarning = missingCertificatesWarning(absences);
   const canExport = exportAvailability({
     hoursReady: query.isSuccess,
     absencesReady: absenceQuery.isSuccess,
@@ -467,6 +469,16 @@ export default function VenueHoursScreen() {
             ) : null}
 
             <View className="mt-2 gap-2.5">
+              {/* Prima di esportare: le malattie del periodo senza
+                  certificato. Avvisa e basta, l'export resta libero. */}
+              {certificatesWarning ? (
+                <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
+                  <Icon name="alert" size={16} color="#E2922F" />
+                  <Text className="flex-1 text-[13px] leading-5 text-t2">
+                    {certificatesWarning}
+                  </Text>
+                </View>
+              ) : null}
               {canExport.monthly ? (
                 <>
                   <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />

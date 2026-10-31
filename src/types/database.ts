@@ -2507,6 +2507,7 @@ export type Database = {
           malattia_hours: number
           member_id: string
           member_name: string
+          missing_certificates: number
           permesso_days: number
           permesso_hours: number
           permesso_recognized_hours: number

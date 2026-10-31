@@ -318,23 +318,6 @@ function AbsenceSummary({ absences }: { absences: readonly AbsenceWithPerson[] }
           </ul>
         )}
       </Card>
-
-      <Card>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-t3">Da completare</h2>
-        {s.missingCertificates > 0 ? (
-          <p className="mt-3 flex items-start gap-2 text-sm text-t2">
-            <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-warning" />
-            {s.missingCertificates === 1
-              ? "1 malattia senza certificato: lo aggiungi dalla riga, con «Aggiungi certificato»."
-              : `${s.missingCertificates} malattie senza certificato: lo aggiungi dalla riga, con «Aggiungi certificato».`}
-          </p>
-        ) : (
-          <p className="mt-3 flex items-center gap-2 text-sm text-t3">
-            <span aria-hidden className="size-2 shrink-0 rounded-full bg-success" />
-            Nessun certificato mancante.
-          </p>
-        )}
-      </Card>
     </>
   );
 }

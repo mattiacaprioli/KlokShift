@@ -23,6 +23,8 @@ export type AbsenceSummaryRow = {
   conflict_hours: number;
   /** I riferimenti dei certificati medici, già uniti ("123, 456"). */
   inps_protocols: string | null;
+  /** Le malattie del periodo senza riferimento del certificato. */
+  missing_certificates: number;
 };
 
 /**
@@ -32,6 +34,23 @@ export type AbsenceSummaryRow = {
  */
 export const ABSENCE_SUMMARY_NOTE =
   "Giorni di calendario, compresi sabati, domeniche e festivi. Le ore riconosciute sono solo quelle indicate per giorno o per un permesso orario approvato; i giorni senza ore restano da quantificare. I crediti in conflitto con ore lavorate sono esclusi dal totale e segnalati da verificare.";
+
+/**
+ * L'avviso della pagina Ore (app e web), sopra gli export: le malattie del
+ * periodo senza certificato. Non blocca niente — il riferimento arriva spesso
+ * dopo, e il controllo vero è del consulente — ma chi esporta deve sapere che
+ * nel file quella colonna resta vuota. `null` = niente da dire.
+ *
+ * Al posto del riquadro «Da completare» della pagina Assenze (fino al 31/10),
+ * che restava lì per sempre.
+ */
+export function missingCertificatesWarning(
+  rows: readonly Pick<AbsenceSummaryRow, "missing_certificates">[]
+): string | null {
+  const n = rows.reduce((sum, r) => sum + r.missing_certificates, 0);
+  if (n === 0) return null;
+  return `${n === 1 ? "1 malattia" : `${n} malattie`} senza certificato in questo periodo: nell'export la colonna resta vuota. Il riferimento lo aggiunge il dipendente o chi gestisce le assenze.`;
+}
 
 /** "3 gg", "2,5 h", "—". */
 export function formatSummaryDays(days: number): string {
