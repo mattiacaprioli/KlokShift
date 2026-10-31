@@ -115,8 +115,13 @@ export type Content = {
 
   footer: {
     tagline: string;
+    /** Titoli delle colonne in alto: le pagine del sito e il recapito. */
+    productLabel: string;
+    contactLabel: string;
+    legalLabel: string;
     email: string;
     emailLabel: string;
+    /** Le pagine legali: una riga piccola in fondo, accanto al copyright. */
     links: Link[];
     /** Chi vende e partita IVA: obbligatori nella home (art. 35 DPR 633/72). */
     owner: string;

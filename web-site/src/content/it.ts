@@ -272,7 +272,7 @@ export const it: Content = {
       },
       {
         q: "Dove finiscono i dati?",
-        a: "Su server nell'Unione Europea. Ogni azienda vede solo i propri.",
+        a: "Database e documenti su server nell'Unione Europea, e ogni azienda vede solo i propri. Notifiche ed email passano anche da fornitori fuori dall'UE: l'elenco è in «Sicurezza e GDPR», in fondo alla pagina.",
       },
       {
         q: "Come vi contatto?",
@@ -292,6 +292,9 @@ export const it: Content = {
 
   footer: {
     tagline: "Turni, presenze e ore per chi lavora su turni.",
+    productLabel: "Prodotto",
+    contactLabel: "Contatti",
+    legalLabel: "Note legali",
     // Stesso recapito di `public/privacy.html`, `termini.html` e `rimborsi.html`:
     // se cambia, va cambiato in tutte e quattro.
     email: "info@klokshift.com",
@@ -299,13 +302,13 @@ export const it: Content = {
     // Termini, rimborsi e privacy devono restare raggiungibili da qui: Paddle li
     // controlla nella revisione del dominio (plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md, M08).
     links: [
-      { href: "./termini.html", label: "Termini e condizioni" },
-      { href: "./rimborsi.html", label: "Politica di rimborso" },
-      { href: "./privacy.html", label: "Informativa sulla privacy" },
+      { href: "./termini.html", label: "Termini" },
+      { href: "./rimborsi.html", label: "Rimborsi" },
+      { href: "./privacy.html", label: "Privacy" },
       // Una voce sola per l'area dati, come fanno i concorrenti: da lì si
       // arriva ad accordo sul trattamento, sub-responsabili e dati del team.
       { href: "./sicurezza.html", label: "Sicurezza e GDPR" },
-      { href: "./elimina-account.html", label: "Elimina il tuo account" },
+      { href: "./elimina-account.html", label: "Elimina account" },
     ],
     // La partita IVA va mostrata nella home di chi vende online (art. 35 DPR
     // 633/72): stessi dati di termini.html e privacy.html.

@@ -82,4 +82,14 @@ describe("pagine legali", () => {
     expect(dpa).not.toContain("5 giorni lavorativi");
     expect(dpa).not.toContain("Su richiesta, il responsabile del trattamento conferma");
   });
+
+  it.each([...NEW_PAGES, "privacy.html", "termini.html", "rimborsi.html", "elimina-account.html"])(
+    "%s ha «Torna al sito» in cima",
+    (name) => {
+      const html = page(name);
+      const back = html.indexOf('class="back" href="./"');
+      expect(back).toBeGreaterThan(-1);
+      expect(back).toBeLessThan(html.indexOf("<h1>"));
+    }
+  );
 });
