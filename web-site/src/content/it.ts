@@ -302,9 +302,9 @@ export const it: Content = {
       { href: "./termini.html", label: "Termini e condizioni" },
       { href: "./rimborsi.html", label: "Politica di rimborso" },
       { href: "./privacy.html", label: "Informativa sulla privacy" },
-      { href: "./dpa.html", label: "Accordo sul trattamento dei dati" },
-      { href: "./sub-responsabili.html", label: "Sub-responsabili" },
-      { href: "./sicurezza.html", label: "Sicurezza dei dati" },
+      // Una voce sola per l'area dati, come fanno i concorrenti: da lì si
+      // arriva ad accordo sul trattamento, sub-responsabili e dati del team.
+      { href: "./sicurezza.html", label: "Sicurezza e GDPR" },
       { href: "./elimina-account.html", label: "Elimina il tuo account" },
     ],
     // La partita IVA va mostrata nella home di chi vende online (art. 35 DPR

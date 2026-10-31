@@ -49,11 +49,15 @@ describe("pagine legali", () => {
     }
   });
 
-  it("il footer del sito porta alle pagine nuove", () => {
+  it("il footer resta corto: una voce sola porta a sicurezza, DPA e fornitori", () => {
     const hrefs = siteContent.footer.links.map((l) => l.href);
-    expect(hrefs).toEqual(
-      expect.arrayContaining(["./dpa.html", "./sub-responsabili.html", "./sicurezza.html"])
-    );
+    expect(hrefs).toContain("./sicurezza.html");
+    expect(hrefs).not.toContain("./dpa.html");
+    expect(hrefs.length).toBeLessThanOrEqual(5);
+    const security = page("sicurezza.html");
+    for (const href of ["dpa.html", "sub-responsabili.html", "dati-del-team.html"]) {
+      expect(security).toContain(`href="${href}"`);
+    }
   });
 
   it("la sitemap elenca le pagine nuove", () => {
