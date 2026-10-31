@@ -487,7 +487,7 @@ prerequisiti per i primi incassi; non autorizza attivazioni live o addebiti.
 - [ ] Preparare per il commercialista contratto Paddle ed esempi mensile, annuale e più sedi, con vendita, commissioni, rimborso, payout e reverse invoice; controparti ricavate dai documenti effettivi.
 - [ ] Definire soggetto venditore, dati B2B, documenti, IVA/natura, eventuale bollo, estero e commissioni; non assumere che l'importo netto ricevuto sia il fatturato.
 - [ ] Stabilire documenti provider, trattamento payout, rinnovi e rimborsi del canale scelto; eventuali eccezioni dirette sono separate.
-- [ ] Aggiornare condizioni del servizio, informativa privacy, ruoli rispetto ai dati del personale e termini di conservazione in base al flusso effettivo.
+- [x] Aggiornare condizioni del servizio, informativa privacy, ruoli rispetto ai dati del personale e termini di conservazione in base al flusso effettivo. Fatto in locale il 31/10 (spec `docs/superpowers/specs/2026-10-31-dpa-e-pagine-legali-design.md`): DPA sulle clausole tipo UE, sub-responsabili, sicurezza, scheda per l'informativa ai dipendenti, accettazione registrata con blocco della gestione. Restano rilascio, prova a mano (`docs/TEST-LEGAL-ACCEPTANCE.md`) e le azioni verso i fornitori (`docs/privacy/fornitori.md`).
 - [ ] Definire servizio limitato di archivio/restituzione, istruzioni del cliente e matrice di conservazione per dati operativi, commerciali, fiscali e backup; verificare le promesse già pubblicate.
 - [ ] Confermare recapiti e dati legali oggi indicati come pendenti in `web-site/README.md`.
 - [ ] Validare il servizio di archivio e la matrice di conservazione sul trattamento effettivo: i 12 mesi sono la scelta commerciale, non un termine stabilito dall'EDPB.

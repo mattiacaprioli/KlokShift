@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { GENERIC_ERROR, userErrorMessage } from "../../../src/lib/errors";
 
 describe("userErrorMessage", () => {
+  it("a termini cambiati dice di aggiornare, non di riprovare (accettazione)", () => {
+    const message = userErrorMessage(new Error("legal_version_outdated"));
+    expect(message).toMatch(/aggiorna l'app/i);
+  });
+
   it("traduce il blocco dei turni nati da una timbratura (C06)", () => {
     const message = userErrorMessage(new Error("unplanned_shift_locked"));
     expect(message).not.toBe(GENERIC_ERROR);

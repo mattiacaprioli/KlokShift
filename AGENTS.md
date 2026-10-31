@@ -302,6 +302,38 @@ cambia solo con l'avviso firmato. Prove e procedura in
 - L'area del fondatore richiede autorizzazione server distinta dai permessi
   di titolare cliente. L'accesso globale non deriva da `authority = owner`.
 
+## Dati personali e DPA (2026-10-31)
+
+Per i dati del team (schede, turni, ore, timbrature, assenze, documenti, chat)
+il **titolare del trattamento è l'azienda** e KlokShift è responsabile; per
+account, abbonamento, sicurezza e sito il titolare è KlokShift. Il DPA
+(`web-site/public/dpa.html`) è il testo ufficiale delle clausole tipo UE
+2021/915 con condizioni aggiuntive separate: le clausole non si modificano.
+Allegati in `sub-responsabili.html`, `sicurezza.html`, `dati-del-team.html`;
+fonti e lacune in `docs/privacy/`. Spec
+`docs/superpowers/specs/2026-10-31-dpa-e-pagine-legali-design.md`.
+
+- **Accettazione** (`20261102000000`): `private.legal_acceptances`, scritta da
+  `accept_legal_terms` o da `create_workspace(p_name, p_legal_version)`. Un
+  titolare basta per l'azienda. Il **blocco** è solo nella vista di gestione
+  (app `(manager)/_layout.tsx`, web `Dashboard`): i dipendenti non si fermano
+  mai, e il server non rifiuta le operazioni apposta.
+- ⚠️ **Versione legale gemella**: `private.current_legal_version()` e
+  `LEGAL_VERSION` (`src/features/legal/version.ts`) cambiano insieme. Una
+  modifica sostanziale: email ai titolari, poi **dopo i 30 giorni** la
+  migration che alza la versione (è lei a far scattare il blocco); la pagina
+  vecchia resta come `dpa-vN.html`.
+- **Mai la malattia nelle notifiche** (`20261102000100`): il testo è anche la
+  push, che passa da Expo, Apple e Google. L'anteprima della chat invece resta,
+  per scelta del fondatore.
+- **Niente font o script esterni** su sito e dashboard (`shared/fonts.css`, test
+  `noExternalFonts`).
+- **Ogni nuovo fornitore che riceve dati è un sub-responsabile**: nuova versione
+  di `sub-responsabili.html` ed email ai titolari **15 giorni** prima (Sentry
+  compreso, se lo si accende). Violazioni: avviso ai titolari **entro 48 ore**
+  (`docs/privacy/procedura-violazione.md`). Le pagine legali le tiene coerenti
+  `tests/unit/web/legalPages.test.ts`.
+
 ## Stack
 | Categoria | Tecnologia |
 |-----------|-----------|

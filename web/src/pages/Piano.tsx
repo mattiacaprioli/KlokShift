@@ -514,6 +514,7 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
         L’abbonamento si rinnova da solo e puoi fermarlo quando vuoi; puoi chiedere il rimborso entro 14 giorni da ogni addebito.
         {" "}<a className="focus-gold text-gold underline" href={LEGAL_URLS.terms} target="_blank" rel="noreferrer">Termini</a>
         {" · "}<a className="focus-gold text-gold underline" href={LEGAL_URLS.refunds} target="_blank" rel="noreferrer">Rimborsi</a>
+        {" · "}<a className="focus-gold text-gold underline" href={LEGAL_URLS.dpa} target="_blank" rel="noreferrer">Trattamento dei dati</a>
       </p>
       <div className="mt-5">
         <Button variant="gold" disabled={!quote || buy.isPending} onClick={() => buy.mutate()}>

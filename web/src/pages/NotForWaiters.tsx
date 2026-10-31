@@ -11,6 +11,7 @@ import { signupIntent } from "@/features/team/viewModeLogic";
 import { collaboratorInviteText } from "@/features/team/collaboratorSummary";
 import { Button, Field, Input } from "../ui/primitives";
 import { SupportLine } from "../ui/SupportLine";
+import { LegalCheckbox } from "../legal/LegalCheckbox";
 
 /**
  * Il muro davanti a chi non gestisce (ancora) nessuna azienda.
@@ -136,12 +137,13 @@ function OpenWorkspaceCard() {
   const navigate = useNavigate();
   const create = useCreateFirstVenue();
   const [name, setName] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const trimmed = name.trim();
 
   async function submit() {
-    if (!trimmed || create.isPending) return;
+    if (!trimmed || !acceptedLegal || create.isPending) return;
     setError(null);
     try {
       await create.mutateAsync({
@@ -150,6 +152,7 @@ function OpenWorkspaceCard() {
         address: null,
         cuisine_type: null,
         description: null,
+        acceptedLegal,
       });
       // L’invalidazione del contesto smonta questo form. mutateAsync prosegue
       // anche dopo lo smontaggio, a differenza del callback del singolo mutate.
@@ -179,6 +182,7 @@ function OpenWorkspaceCard() {
             autoFocus
           />
         </Field>
+        <LegalCheckbox checked={acceptedLegal} onChange={setAcceptedLegal} />
         {error ? (
           <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
             {error}
@@ -187,7 +191,7 @@ function OpenWorkspaceCard() {
         <Button
           type="submit"
           variant="gold"
-          disabled={create.isPending || !trimmed}
+          disabled={create.isPending || !trimmed || !acceptedLegal}
         >
           {create.isPending ? "Creazione…" : "Crea l'azienda"}
         </Button>

@@ -8,6 +8,7 @@ import { useToast } from "@/providers/Toast";
 import { userErrorMessage } from "@/lib/errors";
 import { useViewMode } from "@/features/team/ViewMode";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { LegalCheckbox } from "@/features/legal/LegalCheckbox";
 import { useCreateFirstVenue } from "./hooks";
 
 /**
@@ -36,6 +37,7 @@ export function OpenWorkspaceSection() {
   const create = useCreateFirstVenue();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   // Senza il contesto `canManage` è falso anche per chi un'azienda ce l'ha già:
   // un dato mancante non deve offrire di aprirne una seconda (come il gate web).
@@ -43,9 +45,16 @@ export function OpenWorkspaceSection() {
 
   function submit() {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || !acceptedLegal) return;
     create.mutate(
-      { name: trimmed, city: null, address: null, cuisine_type: null, description: null },
+      {
+        name: trimmed,
+        city: null,
+        address: null,
+        cuisine_type: null,
+        description: null,
+        acceptedLegal,
+      },
       {
         onSuccess: () => {
           // La vista passa alla gestione da sé: il navigatore monta `(manager)`
@@ -76,9 +85,10 @@ export function OpenWorkspaceSection() {
               Diventa il nome della tua azienda e della prima sede. Puoi
               cambiarli dopo, e aggiungere altre sedi quando vuoi.
             </Text>
+            <LegalCheckbox checked={acceptedLegal} onChange={setAcceptedLegal} />
             <GoldButton
               label={create.isPending ? "Apertura…" : "Apri"}
-              disabled={create.isPending || !name.trim()}
+              disabled={create.isPending || !name.trim() || !acceptedLegal}
               onPress={submit}
             />
           </>

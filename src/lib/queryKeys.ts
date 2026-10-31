@@ -21,6 +21,11 @@ export const qk = {
     staffCanChat: (workspaceId: string) =>
       ["context", "staffCanChat", workspaceId] as const,
   },
+  /** Termini e accordo sul trattamento dei dati ancora da accettare (`features/legal`). */
+  legal: {
+    all: ["legal"] as const,
+    pending: (userId: string) => ["legal", "pending", userId] as const,
+  },
   /** Diritto commerciale distinto da identità, permessi e vecchio Free/Pro. */
   workspaceAccess: {
     all: ["workspaceAccess"] as const,

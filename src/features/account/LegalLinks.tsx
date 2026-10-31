@@ -14,6 +14,16 @@ const ROWS: Row[] = [
     url: LEGAL_URLS.privacy,
   },
   {
+    label: "Accordo sul trattamento dei dati",
+    hint: "Come trattiamo i dati del team per l'azienda",
+    url: LEGAL_URLS.dpa,
+  },
+  {
+    label: "Sicurezza dei dati",
+    hint: "Come proteggiamo i dati, e cosa non c'è ancora",
+    url: LEGAL_URLS.security,
+  },
+  {
     label: "Eliminazione dell'account",
     hint: "Cosa viene eliminato e cosa resta",
     url: LEGAL_URLS.accountDeletion,

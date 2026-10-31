@@ -302,6 +302,9 @@ export const it: Content = {
       { href: "./termini.html", label: "Termini e condizioni" },
       { href: "./rimborsi.html", label: "Politica di rimborso" },
       { href: "./privacy.html", label: "Informativa sulla privacy" },
+      { href: "./dpa.html", label: "Accordo sul trattamento dei dati" },
+      { href: "./sub-responsabili.html", label: "Sub-responsabili" },
+      { href: "./sicurezza.html", label: "Sicurezza dei dati" },
       { href: "./elimina-account.html", label: "Elimina il tuo account" },
     ],
     // La partita IVA va mostrata nella home di chi vende online (art. 35 DPR

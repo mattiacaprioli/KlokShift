@@ -1907,6 +1907,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_legal_terms: {
+        Args: { p_version: string; p_workspace: string }
+        Returns: undefined
+      }
       add_member: {
         Args: {
           p_authority?: Database["public"]["Enums"]["member_authority"]
@@ -2404,7 +2408,10 @@ export type Database = {
         }
         Returns: string
       }
-      create_workspace: { Args: { p_name: string }; Returns: string }
+      create_workspace: {
+        Args: { p_legal_version?: string; p_name: string }
+        Returns: string
+      }
       delete_account: { Args: { p_user: string }; Returns: undefined }
       delete_shift: { Args: { p_shift: string }; Returns: undefined }
       delete_shift_template: {
@@ -2699,6 +2706,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_pending_legal_acceptances: {
+        Args: never
+        Returns: {
+          can_accept: boolean
+          workspace_id: string
+          workspace_name: string
+        }[]
       }
       get_platform_admin_access: { Args: never; Returns: Json }
       get_staff_planning: {

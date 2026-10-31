@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sub-responsabili · KlokShift</title>
+    <meta name="robots" content="index" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #5a5a5a;
+        --line: #e6e6e6;
+        --accent: #b8860b;
+        --card: #faf8f4;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.65;
+      }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 40px 22px 80px; }
+      header { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 28px; }
+      .brand { display: inline-block; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 600; text-decoration: none; }
+      h1 { font-size: 28px; margin: 8px 0 6px; }
+      .updated { color: var(--muted); font-size: 14px; }
+      h2 { font-size: 19px; margin: 34px 0 8px; }
+      h3 { font-size: 16px; margin: 20px 0 4px; }
+      p, li { color: var(--fg); font-size: 15.5px; }
+      ul { padding-left: 20px; }
+      li { margin: 4px 0; }
+      a { color: var(--accent); }
+      .note {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 22px 0;
+        font-size: 14.5px;
+        color: var(--muted);
+      }
+      .pending { background: #fff3cd; padding: 8px 10px; border-radius: 6px; font-weight: 600; }
+      table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14.5px; }
+      th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: var(--card); }
+      footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #14110c; --fg: #f2ede4; --muted: #a89f92; --line: #2a241b; --accent: #eab54c; --card: #1c1811; }
+        .pending { background: #4a3c10; color: #ffe9a8; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="./">KlokShift</a>
+        <h1>Sub-responsabili</h1>
+        <div class="updated">Versione 1 · 31 ottobre 2026</div>
+      </header>
+
+      <p>
+        Per offrire il servizio KlokShift si appoggia ad alcuni fornitori che
+        trattano dati del team delle aziende clienti per nostro conto: sono i
+        <strong>sub-responsabili</strong> previsti dall'<a href="dpa.html">accordo sul
+        trattamento dei dati</a> (Allegato IV). Questa pagina è l'elenco
+        aggiornato.
+      </p>
+
+      <h2>Elenco</h2>
+      <table>
+        <tr><th>Fornitore</th><th>Per cosa</th><th>Quali dati</th><th>Dove</th><th>Garanzia per i dati fuori dall'UE</th></tr>
+        <tr>
+          <td>Supabase, Inc.</td>
+          <td>Database, accesso all'account, archivio dei documenti, aggiornamenti in tempo reale</td>
+          <td>Tutti i dati inseriti nel servizio</td>
+          <td>Unione Europea (Francoforte). Accessi dall'estero solo nei casi previsti dal contratto del fornitore, per esempio assistenza e sicurezza</td>
+          <td>Clausole contrattuali tipo della Commissione Europea (Decisione 2021/914)</td>
+        </tr>
+        <tr>
+          <td>650 Industries, Inc. (Expo)</td>
+          <td>Invio delle notifiche push ai telefoni</td>
+          <td>Identificativo del dispositivo, titolo e testo della notifica, compresa l'anteprima dei messaggi della chat (nome di chi scrive e inizio del messaggio)</td>
+          <td>Stati Uniti</td>
+          <td>Il fornitore dichiara di aderire all'EU-U.S. Data Privacy Framework</td>
+        </tr>
+        <tr>
+          <td>Google LLC (Firebase Cloud Messaging)</td>
+          <td>Consegna delle notifiche push sui telefoni Android</td>
+          <td>Identificativo del dispositivo, titolo e testo della notifica</td>
+          <td>Stati Uniti e altri paesi</td>
+          <td>EU-U.S. Data Privacy Framework; clausole contrattuali tipo nei termini Firebase</td>
+        </tr>
+        <tr>
+          <td>Apple Inc. (Apple Push Notification service)</td>
+          <td>Consegna delle notifiche push sugli iPhone</td>
+          <td>Identificativo del dispositivo, titolo e testo della notifica</td>
+          <td>Stati Uniti e altri paesi</td>
+          <td>Clausole contrattuali tipo, secondo l'informativa di Apple</td>
+        </tr>
+        <tr>
+          <td>Resend, Inc.</td>
+          <td>Invio delle email del servizio: inviti, avvisi sull'archivio e sul piano</td>
+          <td>Indirizzo email e testo dell'email</td>
+          <td>Stati Uniti</td>
+          <td>EU-U.S. Data Privacy Framework e clausole contrattuali tipo</td>
+        </tr>
+        <tr>
+          <td>GitHub, Inc. (GitHub Pages)</td>
+          <td>Pubblicazione della dashboard web</td>
+          <td>Indirizzo IP e dati tecnici delle richieste. I dati dell'azienda non passano da GitHub: la dashboard li legge direttamente da Supabase</td>
+          <td>Stati Uniti</td>
+          <td>EU-U.S. Data Privacy Framework</td>
+        </tr>
+      </table>
+
+      <div class="note">
+        <strong>Non è un sub-responsabile Paddle.com</strong>, che vende gli
+        abbonamenti come rivenditore (Merchant of Record): tratta i dati di
+        pagamento di chi acquista come titolare autonomo, secondo la propria
+        informativa. Non riceve dati del team.
+      </div>
+
+      <h2>Notifiche sul telefono</h2>
+      <p>
+        Il testo di una notifica passa da Expo e poi da Apple o Google per
+        arrivare al telefono, e compare anche sullo schermo bloccato. Per
+        questo le notifiche delle assenze non dicono mai se si tratta di una
+        malattia. Le notifiche della chat mostrano chi scrive e l'inizio del
+        messaggio; chi non le vuole può spegnerle dalle impostazioni delle
+        notifiche nell'app.
+      </p>
+
+      <h2>Quando cambia un fornitore</h2>
+      <p>
+        Prima di aggiungere o sostituire un sub-responsabile avvisiamo via email i
+        titolari delle aziende clienti con almeno <strong>15 giorni</strong> di
+        anticipo, indicando chi è, cosa fa e dove. In questo periodo l'azienda può
+        opporsi scrivendo a <a href="mailto:info@klokshift.com">info@klokshift.com</a>.
+        Se dopo il confronto l'opposizione resta, l'azienda può fermare i rinnovi e
+        disdire l'abbonamento; il periodo già pagato non viene rimborsato.
+      </p>
+
+      <h2>Storico delle modifiche</h2>
+      <table>
+        <tr><th>Versione</th><th>Data</th><th>Modifica</th></tr>
+        <tr><td>1</td><td>31 ottobre 2026</td><td>Prima pubblicazione dell'elenco</td></tr>
+      </table>
+
+      <footer>
+        KlokShift · Turni, presenze e ore per chi lavora su turni.
+        <a href="./">Torna al sito</a> ·
+        <a href="termini.html">Termini e condizioni</a> ·
+        <a href="dpa.html">Accordo sul trattamento dei dati</a> ·
+        <a href="privacy.html">Privacy</a>.
+      </footer>
+    </div>
+  </body>
+</html>

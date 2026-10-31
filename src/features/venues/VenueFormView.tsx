@@ -7,6 +7,7 @@ import { Text, View } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { AvatarPickerField } from "@/components/ui/AvatarPickerField";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { LegalCheckbox } from "@/features/legal/LegalCheckbox";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { TabPanel, TabPills } from "@/components/ui/TabPills";
 import { deleteAvatarByUrl, uploadAvatar } from "@/features/account/api";
@@ -72,6 +73,9 @@ export function VenueFormView({
   const saveLogo = useUpdateVenueLogo();
   const saving = save.isPending || createFirst.isPending;
   const [logoBusy, setLogoBusy] = useState(false);
+  // Solo la prima sede apre un'azienda: lì si accettano termini e DPA.
+  const needsLegal = !venue && !!firstWorkspace;
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("dati");
   const scrollRef = useRef<RNScrollView>(null);
   const tabs =
@@ -119,7 +123,7 @@ export function VenueFormView({
     try {
       let venueId: string;
       if (!venue && firstWorkspace) {
-        venueId = (await createFirst.mutateAsync(input)).venueId;
+        venueId = (await createFirst.mutateAsync({ ...input, acceptedLegal })).venueId;
       } else if (!workspaceId) {
         // Azienda non letta: nessuna chiamata, e mai un'azienda «di ripiego».
         toast.show("Non riusciamo a leggere la tua azienda. Riprova.", "error");
@@ -276,6 +280,10 @@ export function VenueFormView({
                 textAlignVertical="top"
               />
 
+              {needsLegal ? (
+                <LegalCheckbox checked={acceptedLegal} onChange={setAcceptedLegal} />
+              ) : null}
+
               <GoldButton
                 className="mt-2"
                 label={
@@ -285,7 +293,7 @@ export function VenueFormView({
                       ? "Salva sede"
                       : "Crea sede"
                 }
-                disabled={saving}
+                disabled={saving || (needsLegal && !acceptedLegal)}
                 onPress={onSubmit}
               />
 

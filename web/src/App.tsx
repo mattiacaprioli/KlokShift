@@ -33,6 +33,9 @@ import { AiutoPage } from "./pages/Aiuto";
 import { PianoPage } from "./pages/Piano";
 import { ProvaPage } from "./pages/Prova";
 import { RequirePermission } from "./ui/RequirePermission";
+import { AccettaTerminiPage } from "./pages/AccettaTermini";
+import { resolveLegalGate } from "@/features/legal/gate";
+import { usePendingLegalAcceptances } from "@/features/legal/hooks";
 const AdminApp = lazy(() => import("./admin/AdminApp").then((module) => ({ default: module.AdminApp })));
 
 export function App() {
@@ -126,7 +129,8 @@ export function App() {
  */
 function Dashboard({ userId }: { userId: string }) {
   const { signOut } = useAuth();
-  const { canManage, isPending, isError, refetch } = useOwnerVenues();
+  const { canManage, isPending, isError, refetch, workspaceId } = useOwnerVenues();
+  const legal = usePendingLegalAcceptances(userId);
 
   // Prima di sapere se gestisce qualcosa non si può rispondere: mostrargli
   // `NotForWaitersPage` e poi sostituirla con la dashboard sarebbe peggio di
@@ -154,6 +158,28 @@ function Dashboard({ userId }: { userId: string }) {
   // dipendente non ha nulla da farci: schermata esplicita, non un redirect
   // silenzioso che lo lascerebbe a chiedersi cosa è andato storto.
   if (!canManage) return <NotForWaitersPage />;
+
+  // Termini e DPA: finché un titolare non accetta la versione in vigore la
+  // gestione resta ferma. Una risposta che manca non sblocca.
+  const legalState = resolveLegalGate(legal, workspaceId);
+  if (legalState.status === "loading") return <DashboardSkeleton />;
+  if (legalState.status === "error") {
+    return (
+      <main className="mx-auto max-w-xl px-6 py-20">
+        <Placeholder
+          title="Non siamo riusciti a verificare i termini della tua azienda"
+          detail="Controlla la connessione e riprova."
+          action={
+            <div className="flex gap-2">
+              <Button onClick={() => void legal.refetch()}>Riprova</Button>
+              <Button onClick={() => void signOut()}>Esci</Button>
+            </div>
+          }
+        />
+      </main>
+    );
+  }
+  if (legalState.gate.blocked) return <AccettaTerminiPage gate={legalState.gate} />;
 
   return (
     <>

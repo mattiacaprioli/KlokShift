@@ -1,3 +1,4 @@
+import { LEGAL_VERSION } from "@/features/legal/version";
 import { supabase } from "@/lib/supabase";
 import { parseWorkspaceAccess, type WorkspaceAccess } from "./access";
 import { parseWorkspaceBilling, type WorkspaceBilling } from "./billing";
@@ -79,9 +80,15 @@ export async function setStaffCanChat(
   if (!data || data.length === 0) throw new Error("owner_only");
 }
 
-/** Apre un'azienda: chi la apre ne è il titolare. */
-export async function createWorkspace(name: string): Promise<string> {
-  const { data, error } = await supabase.rpc("create_workspace", { p_name: name });
+/**
+ * Apre un'azienda: chi la apre ne è il titolare. Con `legalVersion` accetta
+ * termini e DPA nella stessa transazione, così non passa mai dal blocco.
+ */
+export async function createWorkspace(name: string, legalVersion?: string): Promise<string> {
+  const { data, error } = await supabase.rpc("create_workspace", {
+    p_name: name,
+    p_legal_version: legalVersion,
+  });
   if (error) throw new Error(error.message);
   return data;
 }
@@ -93,6 +100,8 @@ export type NewVenueInput = {
   cuisine_type?: string | null;
   description?: string | null;
   logo_url?: string | null;
+  /** La casella «Accetto i termini e l'accordo…» del form della prima sede. */
+  acceptedLegal?: boolean;
 };
 
 export async function createVenue(
@@ -122,7 +131,10 @@ export async function createFirstVenue(input: NewVenueInput): Promise<{
   workspaceId: string;
   venueId: string;
 }> {
-  const workspaceId = await createWorkspace(input.name);
+  const workspaceId = await createWorkspace(
+    input.name,
+    input.acceptedLegal ? LEGAL_VERSION : undefined
+  );
   const venueId = await createVenue(workspaceId, input);
   return { workspaceId, venueId };
 }

@@ -111,6 +111,10 @@ export function ImpostazioniPage() {
           {current === "documenti" ? (
             <SettingsCard icon="file" title="Documenti" description="Le pagine legali sul sito di KlokShift.">
               <LegalLink href={LEGAL_URLS.privacy} label="Informativa privacy" />
+              <LegalLink href={LEGAL_URLS.terms} label="Termini e condizioni" />
+              <LegalLink href={LEGAL_URLS.dpa} label="Accordo sul trattamento dei dati" />
+              <LegalLink href={LEGAL_URLS.security} label="Sicurezza dei dati" />
+              <LegalLink href={LEGAL_URLS.subprocessors} label="Sub-responsabili" />
               <LegalLink
                 href={LEGAL_URLS.accountDeletion}
                 label="Come cancellare l'account"

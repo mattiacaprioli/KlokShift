@@ -12,6 +12,10 @@ describe("legalUrlsFor", () => {
       accountDeletion: `${DEFAULT_SITE_URL}/elimina-account.html`,
       terms: `${DEFAULT_SITE_URL}/termini.html`,
       refunds: `${DEFAULT_SITE_URL}/rimborsi.html`,
+      dpa: `${DEFAULT_SITE_URL}/dpa.html`,
+      subprocessors: `${DEFAULT_SITE_URL}/sub-responsabili.html`,
+      security: `${DEFAULT_SITE_URL}/sicurezza.html`,
+      teamData: `${DEFAULT_SITE_URL}/dati-del-team.html`,
     });
   });
 
@@ -21,6 +25,10 @@ describe("legalUrlsFor", () => {
       accountDeletion: "https://example.test/elimina-account.html",
       terms: "https://example.test/termini.html",
       refunds: "https://example.test/rimborsi.html",
+      dpa: "https://example.test/dpa.html",
+      subprocessors: "https://example.test/sub-responsabili.html",
+      security: "https://example.test/sicurezza.html",
+      teamData: "https://example.test/dati-del-team.html",
     });
   });
 

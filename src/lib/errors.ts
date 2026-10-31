@@ -80,6 +80,10 @@ const PATTERNS: { match: string[]; message: string }[] = [
   // nasconderebbe. Sono tutti in `supabase/migrations/` (member_rpcs, shift_rpcs,
   // workspace_rpcs); il messaggio arriva così com'è da PostgREST.
   {
+    match: ["legal_version_outdated"],
+    message: "I termini sono stati aggiornati: aggiorna l'app (o ricarica la pagina) per accettare la nuova versione.",
+  },
+  {
     match: ["owner_only"],
     message: "Solo il titolare può farlo.",
   },

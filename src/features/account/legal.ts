@@ -20,6 +20,11 @@ export function legalUrlsFor(siteUrl?: string) {
     // Richieste da Paddle e citate accanto all'acquisto sulla dashboard web.
     terms: `${baseUrl}/termini.html`,
     refunds: `${baseUrl}/rimborsi.html`,
+    // Accordo sul trattamento dei dati (art. 28) e i suoi allegati pubblici.
+    dpa: `${baseUrl}/dpa.html`,
+    subprocessors: `${baseUrl}/sub-responsabili.html`,
+    security: `${baseUrl}/sicurezza.html`,
+    teamData: `${baseUrl}/dati-del-team.html`,
   } as const;
 }
 

@@ -18,7 +18,7 @@ it("push nasconde l'errore interno della query dei token", async () => {
 type Message = { to: string; title: string; body: string; data: Record<string, unknown> };
 type Ticket = { status: "ok"; id: string } | { status: "error"; message?: string; details?: { error: string } };
 
-function deliveryFixture(tokens = ["ExpoPushToken[one]"]) {
+function deliveryFixture(tokens = ["ExpoPushToken[one]"], type = "shift_assigned") {
   const tokenQuery = { select: () => ({ eq: async () => ({ data: tokens.map((token) => ({ token })), error: null }) }) };
   const cleanup = vi.fn().mockResolvedValue({ data: [], error: null });
   const inTokens = vi.fn(() => ({ select: cleanup }));
@@ -36,7 +36,7 @@ function deliveryFixture(tokens = ["ExpoPushToken[one]"]) {
     "npm:expo-server-sdk@7.2.0": { Expo },
   });
   const request = () => edge.handle(post({ user_id: "user", title: "Titolo riservato", body: "Testo riservato",
-    notification_id: "notification", type: "shift_assigned", related_id: "shift",
+    notification_id: "notification", type, related_id: "shift",
   }, { "x-push-secret": "fixture-push-secret" }));
   return { ...edge, request, send, remove, inTokens, cleanup };
 }
@@ -104,5 +104,16 @@ describe("push: esito effettivo dei ticket e pulizia token", () => {
     expect(await (await f.request()).json()).toEqual({ sent: 0 });
     expect(f.send).not.toHaveBeenCalled();
     expect(f.remove).not.toHaveBeenCalled();
+  });
+});
+
+describe("push: la malattia non esce dall'UE", () => {
+  it("il tipo absence_sick parte come una richiesta d'assenza qualsiasi", async () => {
+    const f = deliveryFixture(["ExpoPushToken[one]"], "absence_sick");
+    f.send.mockResolvedValue([{ status: "ok", id: "ticket" }]);
+    await f.request();
+    const [message] = f.send.mock.calls[0][0];
+    expect(message.data.type).toBe("absence_request");
+    expect(JSON.stringify(message)).not.toMatch(/sick|malattia/i);
   });
 });

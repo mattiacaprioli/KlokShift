@@ -78,7 +78,10 @@ Deno.serve(async (req) => {
     body: payload.body,
     ...(reminder ? { ttl: 3600, priority: "high" as const } : {}),
     data: {
-      type: payload.type,
+      // Il tipo viaggia in chiaro da Expo, Apple e Google: `absence_sick` direbbe
+      // che quella persona è in malattia (dato sanitario fuori UE). Parte come una
+      // richiesta d'assenza qualsiasi; l'app apre Assenze per entrambi i tipi.
+      type: payload.type === "absence_sick" ? "absence_request" : payload.type,
       related_id: payload.related_id,
       notification_id: payload.notification_id,
     },

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sicurezza dei dati · KlokShift</title>
+    <meta name="robots" content="index" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #5a5a5a;
+        --line: #e6e6e6;
+        --accent: #b8860b;
+        --card: #faf8f4;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.65;
+      }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 40px 22px 80px; }
+      header { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 28px; }
+      .brand { display: inline-block; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 600; text-decoration: none; }
+      h1 { font-size: 28px; margin: 8px 0 6px; }
+      .updated { color: var(--muted); font-size: 14px; }
+      h2 { font-size: 19px; margin: 34px 0 8px; }
+      h3 { font-size: 16px; margin: 20px 0 4px; }
+      p, li { color: var(--fg); font-size: 15.5px; }
+      ul { padding-left: 20px; }
+      li { margin: 4px 0; }
+      a { color: var(--accent); }
+      .note {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 22px 0;
+        font-size: 14.5px;
+        color: var(--muted);
+      }
+      .pending { background: #fff3cd; padding: 8px 10px; border-radius: 6px; font-weight: 600; }
+      table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14.5px; }
+      th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: var(--card); }
+      footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #14110c; --fg: #f2ede4; --muted: #a89f92; --line: #2a241b; --accent: #eab54c; --card: #1c1811; }
+        .pending { background: #4a3c10; color: #ffe9a8; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="./">KlokShift</a>
+        <h1>Sicurezza dei dati</h1>
+        <div class="updated">Versione 1 · 31 ottobre 2026</div>
+      </header>
+
+      <p>
+        Come proteggiamo i dati che le aziende inseriscono in KlokShift. È
+        l'Allegato III dell'<a href="dpa.html">accordo sul trattamento dei dati</a>:
+        le misure tecniche e organizzative che ci impegniamo a mantenere. Accanto
+        a ogni misura c'è chi la garantisce, noi o il fornitore che ospita i dati.
+        In fondo c'è anche cosa non c'è ancora.
+      </p>
+
+      <h2>1. Dove stanno i dati</h2>
+      <ul>
+        <li>Database, file e accessi stanno da <strong>Supabase</strong>, in un data center dell'Unione Europea (Francoforte). <em>Fornitore.</em></li>
+        <li>I dischi sono cifrati con AES-256, e anche le eventuali copie del fornitore. Le comunicazioni sono cifrate in transito (TLS 1.2 o superiore). <em>Fornitore, secondo il suo accordo sul trattamento dei dati consultato il 31 ottobre 2026.</em></li>
+        <li>Gli altri fornitori che ricevono dati e cosa ricevono sono nell'elenco dei <a href="sub-responsabili.html">sub-responsabili</a>.</li>
+      </ul>
+
+      <h2>2. Chi vede cosa</h2>
+      <ul>
+        <li>Ogni lettura e ogni scrittura è filtrata dal database stesso, riga per riga, in base alla persona collegata e all'azienda di cui fa parte. Non dipende dall'app. <em>Nostra.</em></li>
+        <li>I dati si modificano solo con funzioni controllate del database, che verificano permessi e regole. Test automatici le provano a ogni modifica del codice prima della pubblicazione. <em>Nostra.</em></li>
+        <li>Chi gestisce ha solo i permessi che il titolare gli assegna (turni, team, ore, documenti, dati della sede) e solo sulle sedi scelte. <em>Nostra.</em></li>
+        <li>I documenti del team stanno in un archivio privato. Li apre solo chi ha il permesso «Documenti» su quella persona, oltre alla persona stessa. Le foto profilo sono invece pubbliche. <em>Nostra.</em></li>
+        <li>Le malattie le vedono solo i titolari e chi ha il permesso «Team» o «Ore» (le ore di malattia servono al riepilogo per il consulente). I colleghi vedono che una persona è assente, mai il motivo. Le notifiche non nominano la malattia, e una comunicazione di malattia non porta note libere. <em>Nostra.</em></li>
+        <li>L'app non raccoglie la posizione del telefono. <em>Nostra.</em></li>
+      </ul>
+
+      <h2>3. Accessi</h2>
+      <ul>
+        <li>Si entra con email confermata e password. Un'email confermata è anche l'unico modo per essere collegati alla propria scheda in un'azienda. <em>Nostra.</em></li>
+        <li>Gli inviti ai collaboratori usano un codice monouso: nel database ne conserviamo solo l'impronta, e l'account nasce solo quando chi è invitato sceglie la password. <em>Nostra.</em></li>
+      </ul>
+
+      <h2>4. Chi di KlokShift accede ai dati</h2>
+      <ul>
+        <li>KlokShift è una ditta individuale: l'unica persona autorizzata ad accedere ai dati delle aziende clienti è il fondatore, Mattia Caprioli, tenuto alla riservatezza. <em>Nostra.</em></li>
+        <li>L'area di amministrazione del fondatore richiede la verifica in due passaggi e registra ogni intervento. Non legge chat, documenti né note delle schede del team. <em>Nostra.</em></li>
+        <li>Con gli strumenti tecnici del fornitore il fondatore potrebbe leggere qualunque dato. Lo fa solo per un'assistenza richiesta dall'azienda, per risolvere un incidente o per un obbligo di legge, e limitandosi al necessario. <em>Nostra.</em></li>
+      </ul>
+
+      <h2>5. Violazioni dei dati</h2>
+      <p>
+        Se ci accorgiamo che dati di un'azienda sono stati persi, alterati o letti da
+        chi non doveva, avvisiamo i suoi titolari senza ingiustificato ritardo e
+        comunque <strong>entro 48 ore</strong> da quando ce ne siamo accorti. Diciamo
+        cosa è successo, quali dati e quante persone riguarda, cosa abbiamo fatto e
+        cosa consigliamo. Ogni violazione resta annotata in un registro interno.
+      </p>
+
+      <h2>6. Fine del servizio</h2>
+      <p>
+        Quando un'azienda smette di usare il servizio, i suoi dati restano
+        consultabili ed esportabili per 12 mesi. Poi li cancelliamo entro 30 giorni,
+        file compresi. L'azienda può chiedere la cancellazione anche prima. I
+        dettagli sono nei <a href="termini.html">termini</a> e nell'accordo sul
+        trattamento dei dati.
+      </p>
+
+      <h2>7. Cosa non c'è ancora</h2>
+      <div class="note">
+        Lo diciamo per chiarezza, perché un'azienda possa valutarlo:
+        <ul>
+          <li><strong>Copie di sicurezza (backup) del database.</strong> Oggi non ci sono. Un guasto grave del fornitore potrebbe far perdere dati. Arriveranno con il passaggio a un piano del fornitore che le include, e questa pagina lo dirà.</li>
+          <li><strong>Verifica in due passaggi per titolari e collaboratori.</strong> Oggi si entra con email e password.</li>
+          <li><strong>Blocco delle password già comparse in violazioni note.</strong> Oggi non c'è.</li>
+          <li>Certificazioni di sicurezza di KlokShift, come ISO 27001 o SOC 2: non ne abbiamo.</li>
+        </ul>
+      </div>
+
+      <h2>Storico delle modifiche</h2>
+      <table>
+        <tr><th>Versione</th><th>Data</th><th>Modifica</th></tr>
+        <tr><td>1</td><td>31 ottobre 2026</td><td>Prima pubblicazione</td></tr>
+      </table>
+
+      <footer>
+        KlokShift · Turni, presenze e ore per chi lavora su turni.
+        <a href="./">Torna al sito</a> ·
+        <a href="termini.html">Termini e condizioni</a> ·
+        <a href="dpa.html">Accordo sul trattamento dei dati</a> ·
+        <a href="privacy.html">Privacy</a>.
+      </footer>
+    </div>
+  </body>
+</html>

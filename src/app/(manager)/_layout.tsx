@@ -1,6 +1,31 @@
 import { Stack } from "expo-router";
+import { QueryError } from "@/components/ui/QueryError";
+import { resolveLegalGate } from "@/features/legal/gate";
+import { useAuth } from "@/lib/auth";
+import { LegalAcceptanceScreen, LegalExitActions } from "@/features/legal/LegalAcceptanceScreen";
+import { usePendingLegalAcceptances } from "@/features/legal/hooks";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { View } from "@/tw";
 
 export default function ManagerLayout() {
+  const { session } = useAuth();
+  const { workspaceId } = useOwnerVenues();
+  const pending = usePendingLegalAcceptances(session?.user.id);
+
+  // Termini e DPA non accettati fermano la gestione dell'azienda in uso (app e
+  // dashboard), mai il lavoro: finché la risposta non c'è, non si sblocca niente.
+  const legal = resolveLegalGate(pending, workspaceId);
+  if (legal.status === "loading") return <View className="flex-1 bg-bg-0" />;
+  if (legal.status === "error") {
+    return (
+      <View className="flex-1 justify-center gap-3 bg-bg-0 px-6">
+        <QueryError onRetry={() => void pending.refetch()} />
+        <LegalExitActions />
+      </View>
+    );
+  }
+  if (legal.gate.blocked) return <LegalAcceptanceScreen gate={legal.gate} />;
+
   return (
     <Stack
       screenOptions={{
