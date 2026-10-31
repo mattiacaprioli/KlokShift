@@ -1119,5 +1119,63 @@ begin
 end $$;
 drop trigger billing_scheduled_changes_boom on public.billing_scheduled_changes;
 
+-- Rinnovo in sospeso oltre le due ore: Paddle ha rinnovato e ritenta il
+-- pagamento, l'avviso è arrivato (past_due). Il cambio inviato aspetta il
+-- recupero, come nel trigger dell'avviso: nessun `renewal_overdue` a vuoto.
+do $$
+declare
+  ws uuid; co uuid; sid uuid; cid uuid; ends timestamptz; ev jsonb;
+  row public.billing_scheduled_changes;
+  team_m text := 'pri_01m577vzt1b6qkyyf80pnq4aj9';
+  base_m text := 'pri_01m577s3dchg2ctcrenkderz05';
+begin
+  perform tests.login('Ow');
+  ws := public.create_workspace('Rinnovo in sospeso: azienda');
+  perform public.create_venue(ws, 'Sede A');
+  perform tests.logout();
+  perform tests.sched_service();
+  co := (public.billing_prepare_checkout('sandbox', tests.id('Ow'), ws, 'team', 'month', 1) ->> 'checkout_id')::uuid;
+  ends := now() + interval '2 days';
+  ev := jsonb_set(jsonb_set(tests.sched_event(80, co, team_m, 1, ends),
+    '{data,id}', '"sub_01dunning"'), '{data,customer_id}', '"ctm_01dunning"');
+  perform tests.sched_apply(ev);
+  perform tests.logout();
+  select id into sid from public.billing_subscriptions where provider_subscription_id = 'sub_01dunning';
+
+  -- Inviato a Paddle; al rinnovo il pagamento non passa: periodo nuovo, past_due.
+  cid := tests.sched_row(sid, ws, ends);
+  update public.billing_scheduled_changes set status = 'applied', applied_at = now() where id = cid;
+  ev := jsonb_set(jsonb_set(tests.sched_event(81, null, base_m, 0, ends + interval '1 month', null, 'past_due'),
+    '{data,id}', '"sub_01dunning"'), '{data,customer_id}', '"ctm_01dunning"');
+  perform tests.sched_service();
+  perform tests.sched_apply(ev, ends);
+  perform tests.logout();
+  perform tests.eq((select status from public.billing_subscriptions where id = sid), 'past_due',
+    'il rinnovo è in sospeso');
+  perform private.queue_scheduled_billing_work(ends + interval '3 hours');
+  select * into row from public.billing_scheduled_changes where id = cid;
+  perform tests.eq(row.status || '/' || coalesce(row.alert_kind, '-'), 'applied/-',
+    'in sospeso a rinnovo +3 ore: resta inviato, nessun allarme');
+  perform tests.eq(row.closed_at, null::timestamptz, 'non chiuso');
+
+  -- Pagamento recuperato: l'avviso del rinnovo conferma il cambio.
+  ev := jsonb_set(jsonb_set(tests.sched_event(82, null, base_m, 0, ends + interval '1 month'),
+    '{data,id}', '"sub_01dunning"'), '{data,customer_id}', '"ctm_01dunning"');
+  perform tests.sched_service();
+  perform tests.sched_apply(ev, ends);
+  perform tests.logout();
+  select * into row from public.billing_scheduled_changes where id = cid;
+  perform tests.eq(row.status || '/' || coalesce(row.alert_kind, '-'), 'confirmed/-',
+    'recuperato il pagamento: confermato');
+
+  -- Con l'abbonamento di nuovo attivo il rinnovo scaduto si chiude come sempre.
+  cid := tests.sched_row(sid, ws, ends + interval '1 month');
+  update public.billing_scheduled_changes set status = 'applied', applied_at = now() where id = cid;
+  perform private.queue_scheduled_billing_work(ends + interval '1 month 3 hours');
+  select * into row from public.billing_scheduled_changes where id = cid;
+  perform tests.eq(row.status || '/' || row.close_reason || '/' || row.alert_kind,
+    'failed/renewal_overdue/renewal_overdue', 'attivo a rinnovo +3 ore: chiuso con l''allarme');
+end $$;
+
 rollback;
 select 'billing scheduled changes: ok' as result;
