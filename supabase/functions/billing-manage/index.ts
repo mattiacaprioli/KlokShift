@@ -5,10 +5,12 @@
 //   - `resume_renewals`: toglie una disdetta o pausa programmata;
 //   - `preview_change` / `apply_change`: aumento di piano o sedi, con l'importo
 //     proporzionale calcolato da Paddle prima della conferma;
+//   - `preview_scheduled_change` / `schedule_change` / `cancel_scheduled_change`:
+//     riduzione di piano o sedi e cambio mensile↔annuale, programmati al
+//     prossimo rinnovo (nessun addebito adesso; l'invio a Paddle lo fa il job);
 //   - `pause`: ferma i rinnovi alla fine del periodo pagato (pausa stagionale);
 //   - `resume`: riparte da una pausa con un periodo nuovo, addebitato subito;
 //   - `cancel`: disdetta a fine periodo pagato, dopo la conferma della pagina.
-// Riduzioni e cambio mensile↔annuale restano assistiti (decisione del 18/10).
 //
 // Questa funzione **non concede nulla**: piano e capacità cambiano solo quando
 // arriva l'avviso firmato a `paddle-webhook`. Con `on_payment_failure:
@@ -21,14 +23,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import {
   buildItems,
+  buildScheduledItems,
   changeBody,
+  currentItems,
   dbError,
   lifecycleRequest,
   paddleConfig,
   parsePreparedChange,
+  parsePreparedScheduledChange,
   parseRequest,
   portalLinks,
   previewSummary,
+  renewalMatches,
+  scheduledPreviewBody,
 } from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -146,6 +153,70 @@ Deno.serve(async (req) => {
       return typeof code === "string" && /payment|declined|card/.test(code)
         ? json({ error: "billing_payment_failed" }, 402)
         : json({ error: "billing_unavailable" }, 502);
+    }
+    return json({ ok: true });
+  }
+
+  if (request.action === "cancel_scheduled_change") {
+    const { error } = await admin.rpc("billing_cancel_scheduled_change", {
+      p_environment: PADDLE.environment, p_user: userData.user.id, p_workspace: request.workspaceId,
+    });
+    if (error) {
+      const failure = dbError(error.message);
+      if (failure.status === 500) console.error("billing-manage: cancel scheduled", error.code ?? "unknown");
+      return json({ error: failure.code }, failure.status);
+    }
+    return json({ ok: true });
+  }
+
+  if (request.action === "preview_scheduled_change" || request.action === "schedule_change") {
+    const { data: prepared, error: prepareErr } = await admin.rpc("billing_prepare_scheduled_change", {
+      p_environment: PADDLE.environment, p_user: userData.user.id, p_workspace: request.workspaceId,
+      p_plan: request.plan, p_interval: request.interval, p_extra_venues: request.extraVenues,
+    });
+    if (prepareErr) {
+      const failure = dbError(prepareErr.message);
+      if (failure.status === 500) console.error("billing-manage: prepare scheduled", prepareErr.code ?? "unknown");
+      return json({ error: failure.code }, failure.status);
+    }
+    const scheduled = parsePreparedScheduledChange(prepared);
+    if (!scheduled) {
+      console.error("billing-manage: risposta di prepare scheduled non valida");
+      return json({ error: "manage_failed" }, 500);
+    }
+
+    const current = await paddle("GET", `/subscriptions/${scheduled.subscriptionId}`);
+    const currentData = current.ok
+      ? (current.data as { data?: { items?: unknown; next_billed_at?: unknown } } | null)?.data
+      : null;
+    // Il rinnovo su cui il database ha deciso deve essere quello di Paddle.
+    if (!currentData || !renewalMatches(currentData.next_billed_at, scheduled.effectiveAt)) {
+      return json({ error: "billing_unavailable" }, 502);
+    }
+    const fromItems = currentItems(currentData.items);
+    const targetItems = buildScheduledItems(currentData.items, scheduled);
+    if (!fromItems || !targetItems) return json({ error: "billing_unavailable" }, 502);
+
+    const preview = await paddle("PATCH", `/subscriptions/${scheduled.subscriptionId}/preview`,
+      scheduledPreviewBody(targetItems));
+    const summary = preview.ok ? previewSummary(preview.data) : null;
+    // Un cambio a rinnovo non deve muovere denaro adesso.
+    if (!summary || summary.dueNowCents !== 0) return json({ error: "billing_unavailable" }, 502);
+
+    if (request.action === "preview_scheduled_change") {
+      return json({ currency: summary.currency, renewalCents: summary.renewalCents, effectiveAt: scheduled.effectiveAt });
+    }
+    if (summary.renewalCents !== request.expectedRenewalCents) return json({ error: "billing_amount_changed" }, 409);
+    const { error: recordErr } = await admin.rpc("billing_record_scheduled_change", {
+      p_environment: PADDLE.environment, p_user: userData.user.id, p_workspace: request.workspaceId,
+      p_plan: request.plan, p_interval: request.interval, p_extra_venues: request.extraVenues,
+      p_from_items: fromItems, p_target_items: targetItems,
+      p_renewal_cents: summary.renewalCents, p_currency: summary.currency,
+    });
+    if (recordErr) {
+      const failure = dbError(recordErr.message);
+      if (failure.status === 500) console.error("billing-manage: record scheduled", recordErr.code ?? "unknown");
+      return json({ error: failure.code }, failure.status);
     }
     return json({ ok: true });
   }

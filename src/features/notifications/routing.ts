@@ -55,7 +55,9 @@ export function routeForNotification(
     if (
       type === "staff_removed" ||
       type === "shift_unassigned" ||
-      type === "archive_reminder"
+      type === "archive_reminder" ||
+      type === "billing_change_reminder" ||
+      type === "billing_admin_alert"
     )
       return null;
     return relatedId ? `/(waiter)/shift/${relatedId}` : null;
@@ -75,6 +77,12 @@ export function routeForNotification(
   // sulla home (niente acquisti nell'app nativa, App Store 3.1.3); la
   // riattivazione e l'export sono sul web.
   if (type === "archive_reminder") return "/(manager)/(tabs)";
+  // Promemoria del cambio di piano al rinnovo: stessa scelta, i dettagli e
+  // l'annullamento sono nella pagina Piano sul web.
+  if (type === "billing_change_reminder") return "/(manager)/(tabs)";
+  // Allarme al fondatore su un cambio di piano: nell'app vale la push, l'area
+  // fondatore è solo sul web. Il `related_id` è l'azienda, non un turno.
+  if (type === "billing_admin_alert") return null;
   // `shift_change_request` porta la conversazione, non il turno: la richiesta si
   // legge e si decide dalla card nel thread.
   if (type === "new_message" || type === "shift_change_request") {

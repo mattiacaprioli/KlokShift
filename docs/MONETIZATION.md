@@ -92,7 +92,17 @@ Il limite deve essere controllato dal server sull'intera azienda, anche quando i
 - Le stesse verifiche valgono per le sedi. Chiusura, riapertura e riduzione degli extra devono preservare lo storico e rispettare la capacità futura.
 - Per un'azienda gratuita, l'aumento della concessione passa dalla decisione del fondatore.
 
-**Esecuzione attuale (18 ottobre 2026):** dalla pagina Piano il titolare fa da solo gli **aumenti** (Base→Team, sedi in più), con l'importo proporzionale calcolato da Paddle e mostrato prima della conferma; carta, ricevute e disdetta passano dal portale clienti di Paddle. **Riduzioni** (Team→Base, meno sedi) e **cambio mensile↔annuale** sono per ora assistiti via email: Paddle applica i cambi subito, e per rispettare la regola «al rinnovo» serve un'operazione pianificata non ancora costruita. La regola non cambia.
+**Esecuzione attuale (18 ottobre 2026):** dalla pagina Piano il titolare fa da solo gli **aumenti** (Base→Team, sedi in più), con l'importo proporzionale calcolato da Paddle e mostrato prima della conferma; carta, ricevute e disdetta passano dal portale clienti di Paddle.
+
+**Cambio al rinnovo (31 ottobre 2026, nel codice, da rilasciare):** anche **riduzioni** (Team→Base, meno sedi) e **cambio mensile↔annuale** li fa da solo il titolare, dalla pagina Piano («Cambia dal prossimo rinnovo»), con data e importo del rinnovo (anteprima Paddle, IVA compresa) prima della conferma. Il cambio vale dal prossimo rinnovo e non si paga niente adesso; fino ad allora l'azienda tiene ciò che ha pagato.
+
+- Team→Base solo con al massimo 30 persone già nel team; meno sedi solo con le sedi aperte già dentro il nuovo numero. Piano e sedi non possono aumentare nello stesso cambio: prima l'aumento, poi il resto.
+- Un solo cambio aperto per abbonamento. Si annulla dalla pagina fino a 24 ore prima del rinnovo; finché è aperto sono bloccati gli aumenti e le aggiunte di persone o sedi oltre il limite futuro. Pausa e chiusura lo annullano finché non è stato inviato a Paddle; dopo l'invio una pausa o chiusura avvenuta ferma il rinnovo stesso.
+- A meno di 24 ore dal rinnovo non si programma: resta l'email a info@klokshift.com.
+- KlokShift lo invia a Paddle nelle 24 ore prima del rinnovo, senza addebito; Paddle rinnova col piano nuovo e il diritto cambia solo con l'avviso firmato. Se non si può più applicare prima del rinnovo (regole cambiate, rifiuto definitivo di Paddle), il rinnovo avviene col piano attuale: il titolare lo sa dall'app, il fondatore con email e push, e la differenza si rimborsa a mano. Gli altri imprevisti (cambio non arrivato a 6 ore dal rinnovo, rinnovo diverso dal programmato, data del rinnovo non rimessa, nessun rinnovo due ore dopo la data) arrivano solo al fondatore, che verifica su Paddle.
+- Il portale clienti di Paddle non permette di cambiare piano: è una funzione su richiesta che KlokShift non ha attivato.
+
+Prove sandbox e procedura in [TEST-BILLING-SCHEDULED.md](TEST-BILLING-SCHEDULED.md).
 
 I dettagli di proration, concorrenza e modifica dei cicli vanno provati con il provider scelto. Chiudere una sede non cancella automaticamente un extra già acquistato né genera un rimborso.
 

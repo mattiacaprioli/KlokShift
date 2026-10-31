@@ -6,6 +6,11 @@ const active = {
   current_period_ends_at: "2026-11-18T10:00:00+00:00", scheduled_change: null,
   past_due_since: null, canceled_at: null, paused_at: null,
 };
+const pending = {
+  plan: "base", billing_interval: "year", extra_venues: 0,
+  effective_at: "2026-11-18T10:00:00+00:00", renewal_cents: 35380, currency: "EUR",
+  status: "pending", cancel_until: "2026-11-17T10:00:00+00:00",
+};
 
 describe("riassunto dell'abbonamento", () => {
   it("nessun abbonamento mai avuto", () => {
@@ -33,6 +38,16 @@ describe("riassunto dell'abbonamento", () => {
     expect(hasOpenSubscription(billing)).toBe(false);
   });
 
+  it("senza cambio programmato al rinnovo: null", () => {
+    expect(parseWorkspaceBilling({ ...active, pending_change: null })?.pending_change).toBeNull();
+    expect(parseWorkspaceBilling(active)?.pending_change).toBeNull();
+  });
+
+  it("legge il cambio programmato al rinnovo", () => {
+    const billing = parseWorkspaceBilling({ ...active, pending_change: pending });
+    expect(billing?.pending_change).toEqual(pending);
+  });
+
   it.each([
     ["stato sconosciuto", { ...active, status: "trialing" }],
     ["piano inventato", { ...active, plan: "pro" }],
@@ -40,6 +55,11 @@ describe("riassunto dell'abbonamento", () => {
     ["sedi negative", { ...active, extra_venues: -1 }],
     ["data non valida", { ...active, past_due_since: "ieri" }],
     ["azione sconosciuta", { ...active, scheduled_change: { action: "upgrade", effective_at: "2026-11-18T10:00:00Z" } }],
+    ["cambio in uno stato non aperto", { ...active, pending_change: { ...pending, status: "confirmed" } }],
+    ["cambio senza termine per annullare", { ...active, pending_change: { ...pending, cancel_until: null } }],
+    ["cambio con importo negativo", { ...active, pending_change: { ...pending, renewal_cents: -1 } }],
+    ["cambio con piano inventato", { ...active, pending_change: { ...pending, plan: "pro" } }],
+    ["cambio con valuta non valida", { ...active, pending_change: { ...pending, currency: "euro" } }],
   ])("rifiuta: %s", (_name, payload) => {
     expect(() => parseWorkspaceBilling(payload)).toThrow("workspace_billing_invalid");
   });

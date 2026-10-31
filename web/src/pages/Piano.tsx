@@ -5,12 +5,14 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useWorkspaceBilling } from "@/features/workspace/hooks";
 import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { workspaceAccessMessage, type WorkspaceAccess } from "@/features/workspace/access";
-import { hasOpenSubscription, type WorkspaceBilling } from "@/features/workspace/billing";
+import { hasOpenSubscription, type PendingPlanChange, type WorkspaceBilling } from "@/features/workspace/billing";
+import { describePlanTarget, pendingChangeCancellable, scheduledChangeBlocker, type PlanTarget } from "@/features/workspace/scheduledChange";
 import { LEGAL_URLS } from "@/features/account/legal";
 import { userErrorMessage } from "@/lib/errors";
 import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
 import { openCheckout, prepareCheckout } from "../billing/checkout";
-import { applyChange, formatCents, openPortal, pauseRenewals, previewChange, restartSubscription, resumeRenewals, stopRenewals } from "../billing/manage";
+import { applyChange, cancelScheduledChange, formatCents, openPortal, pauseRenewals, previewChange, previewScheduledChange,
+  restartSubscription, resumeRenewals, scheduleChange, stopRenewals, type ScheduledSelection } from "../billing/manage";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { FullExportCard } from "../export/FullExportCard";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select, pageColumnsClass } from "../ui/primitives";
@@ -110,6 +112,9 @@ function Value({ label, value }: { label: string; value: string | number | null 
 }
 
 const dateOnly = (value: string) => new Date(value).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" });
+const dateTime = (value: string) => new Date(value).toLocaleString("it-IT", {
+  timeZone: "Europe/Rome", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+});
 /** Mesi di calendario, come il termine dell'archivio sul server (fine operatività + 12 mesi). */
 function addMonths(value: string, months: number): string {
   const d = new Date(value);
@@ -175,17 +180,20 @@ function BillingSection({ workspaceId, access, refetchAccess }: {
       : awaiting.kind === "stop" ? "Chiusura programmata: aggiorniamo lo stato fra pochi secondi."
       : awaiting.kind === "restart" ? "Ripartenza confermata: riattiviamo l’azienda appena Paddle registra il pagamento."
       : "Annullato: aggiorniamo lo stato fra pochi secondi.";
+    // Programmare o annullare un cambio al rinnovo non passa da Paddle: nessun
+    // avviso da aspettare, basta rileggere l'abbonamento.
     return <SubscriptionCard workspaceId={workspaceId} billing={subscription as WorkspaceBilling}
-      notice={notice} busy={!!awaiting} onAwait={(next) => { setLate(false); setAwaiting(next); }} />;
+      usage={access?.usage ?? null} notice={notice} busy={!!awaiting}
+      onAwait={(next) => { setLate(false); setAwaiting(next); }} onRefresh={() => billing.refetch()} />;
   }
   if (!access || access.state === "expired") return null;
   if (access.source === "complimentary_lifetime" && access.state === "operational") return null;
   return <PurchasePanel workspaceId={workspaceId} access={access} onPaid={() => setAwaiting({ kind: "purchase" })} />;
 }
 
-function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
-  workspaceId: string; billing: WorkspaceBilling; notice: string | null; busy: boolean;
-  onAwait: (next: Awaiting) => void;
+function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, onRefresh }: {
+  workspaceId: string; billing: WorkspaceBilling; usage: WorkspaceAccess["usage"]; notice: string | null; busy: boolean;
+  onAwait: (next: Awaiting) => void; onRefresh: () => Promise<unknown>;
 }) {
   const pausing = billing.scheduled_change?.action === "pause";
   const stopping = billing.scheduled_change?.action === "cancel" || pausing;
@@ -201,6 +209,10 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
   const restartPrice = quotePlan(billing.plan, yearly ? "annual" : "monthly", 1 + billing.extra_venues).total;
   const periodEnd = billing.current_period_ends_at ? dateOnly(billing.current_period_ends_at) : null;
   const archiveEnd = billing.current_period_ends_at ? dateOnly(addMonths(billing.current_period_ends_at, 12)) : null;
+  const pending = billing.pending_change;
+  // Pausa e chiusura annullano il cambio non ancora inviato (lo chiude l'avviso di Paddle).
+  const pendingDropped = pending?.status === "pending"
+    ? ` Il cambio programmato dal ${dateOnly(pending.effective_at)} verrà annullato.` : "";
   return (
     <Card>
       <h2 className="font-semibold text-t1">Abbonamento</h2>
@@ -235,7 +247,7 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
       {confirming === "pause" ? (
         <ConfirmDialog
           title="Mettere in pausa l’abbonamento?"
-          message={`${yearly ? "La pausa non congela l’anno pagato: lavori" : "Lavori"} normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, poi gli addebiti si fermano. L’azienda passa alla consultazione ed export per 12 mesi, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.`}
+          message={`${yearly ? "La pausa non congela l’anno pagato: lavori" : "Lavori"} normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, poi gli addebiti si fermano. L’azienda passa alla consultazione ed export per 12 mesi, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.${pendingDropped}`}
           confirmLabel="Metti in pausa"
           pending={pause.isPending}
           onConfirm={() => pause.mutate(undefined, { onSettled: () => setConfirming(null) })}
@@ -244,7 +256,7 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
       ) : confirming === "stop" ? (
         <ConfirmDialog
           title="Chiudere l’abbonamento?"
-          message={`Lavori normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, che resta pagato; poi non ci sono altri addebiti. L’azienda passa alla consultazione ed export fino al ${archiveEnd ?? "termine dell’archivio"}; dopo quella data vengono cancellati i dati dell’azienda (sedi, turni, ore, assenze, schede, documenti e chat), mentre restano gli account delle persone. Per tornare servirà un nuovo acquisto. Se ti fermi solo per una stagione, scegli la pausa: riparti con un clic. Fino all’ultimo giorno puoi annullare la chiusura da qui.`}
+          message={`Lavori normalmente fino al ${periodEnd ?? "termine del periodo pagato"}, che resta pagato; poi non ci sono altri addebiti. L’azienda passa alla consultazione ed export fino al ${archiveEnd ?? "termine dell’archivio"}; dopo quella data vengono cancellati i dati dell’azienda (sedi, turni, ore, assenze, schede, documenti e chat), mentre restano gli account delle persone. Per tornare servirà un nuovo acquisto. Se ti fermi solo per una stagione, scegli la pausa: riparti con un clic. Fino all’ultimo giorno puoi annullare la chiusura da qui.${pendingDropped}`}
           confirmLabel="Chiudi l’abbonamento"
           destructive
           pending={stop.isPending}
@@ -271,13 +283,120 @@ function SubscriptionCard({ workspaceId, billing, notice, busy, onAwait }: {
       ) : null}
       <p className="mt-3 text-xs text-t3">Ricevute e metodo di pagamento si gestiscono sulla pagina sicura di Paddle, che si apre in una nuova scheda.</p>
 
+      {pending
+        ? <PendingChangeRow workspaceId={workspaceId} pending={pending} busy={busy} onCanceled={onRefresh} />
+        : null}
       {billing.status === "active" && !stopping
         // La chiave rimonta il modulo quando l'avviso cambia piano o sedi: niente importo vecchio a schermo.
-        ? <UpgradeForm key={`${billing.plan}-${billing.extra_venues}`} workspaceId={workspaceId} billing={billing} busy={busy}
-            onApplied={(plan, extraVenues) => onAwait({ kind: "change", plan, extraVenues })} />
+        ? pending
+          ? (pendingChangeCancellable(pending)
+              ? <p className="mt-3 text-sm text-t2">Per aumentare annulla prima il cambio programmato.</p> : null)
+          : <UpgradeForm key={`${billing.plan}-${billing.extra_venues}`} workspaceId={workspaceId} billing={billing} busy={busy}
+              onApplied={(plan, extraVenues) => onAwait({ kind: "change", plan, extraVenues })} />
         : null}
-      <p className="mt-5 text-xs text-t3">Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale scrivi a <a className="focus-gold text-gold underline" href="mailto:info@klokshift.com">info@klokshift.com</a>.</p>
+      {billing.status === "active" && billing.scheduled_change === null && !pending
+        ? <ScheduleChangeForm key={`${billing.plan}-${billing.billing_interval}-${billing.extra_venues}`}
+            workspaceId={workspaceId} billing={billing} usage={usage} busy={busy} onScheduled={onRefresh} />
+        : null}
     </Card>
+  );
+}
+
+/** Il cambio programmato al rinnovo, finché non è avvenuto. */
+function PendingChangeRow({ workspaceId, pending, busy, onCanceled }: {
+  workspaceId: string; pending: PendingPlanChange; busy: boolean; onCanceled: () => Promise<unknown>;
+}) {
+  const cancel = useMutation({ mutationFn: () => cancelScheduledChange(workspaceId), onSuccess: () => onCanceled() });
+  const target = { plan: pending.plan, interval: pending.billing_interval, extraVenues: pending.extra_venues };
+  return (
+    <div className="mt-6 border-t border-border-2 pt-5">
+      <h3 className="font-semibold text-t1">Cambio dal prossimo rinnovo</h3>
+      <p className="mt-2 rounded-xl bg-bg-2 p-4 text-sm text-t1" role="status">
+        Dal {dateOnly(pending.effective_at)}: {describePlanTarget(target)} — {formatCents(pending.renewal_cents, pending.currency)} IVA compresa
+      </p>
+      {pendingChangeCancellable(pending) ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button disabled={cancel.isPending || busy} onClick={() => cancel.mutate()}>{cancel.isPending ? "Annullamento…" : "Annulla il cambio"}</Button>
+          <p className="text-xs text-t3">Puoi annullarlo fino al {dateTime(pending.cancel_until)}.</p>
+        </div>
+      ) : <p className="mt-3 text-sm text-t2">{pending.status === "applied"
+        ? `Il cambio è già stato inviato per il rinnovo. Dal ${dateOnly(pending.effective_at)} potrai modificare di nuovo il piano.`
+        : `Manca meno di un giorno al rinnovo: il cambio non si può più annullare. Dal ${dateOnly(pending.effective_at)} potrai modificare di nuovo il piano.`}</p>}
+      {cancel.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(cancel.error)}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Riduzioni e cambio di ciclo: valgono dal prossimo rinnovo, nessun addebito
+ * adesso. L'importo è l'anteprima di Paddle; la conferma porta quell'importo,
+ * così se nel frattempo è cambiato il server lo rifiuta e si rivede.
+ */
+function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: {
+  workspaceId: string; billing: WorkspaceBilling; usage: WorkspaceAccess["usage"]; busy: boolean;
+  onScheduled: () => Promise<unknown>;
+}) {
+  const currentVenues = 1 + billing.extra_venues;
+  const current: PlanTarget = { plan: billing.plan, interval: billing.billing_interval, extraVenues: billing.extra_venues };
+  const [plan, setPlan] = useState<"base" | "team">(billing.plan);
+  const [interval, setBillingInterval] = useState<"month" | "year">(billing.billing_interval);
+  const [venues, setVenues] = useState(currentVenues);
+  const target: PlanTarget = { plan, interval, extraVenues: venues - 1 };
+  // Senza i numeri d'uso decide il server, con lo stesso motivo.
+  const blocker = scheduledChangeBlocker({ current, target, people: usage?.people ?? 0, openVenues: usage?.venues ?? 0 });
+  const preview = useMutation({ mutationFn: (sel: ScheduledSelection) => previewScheduledChange(sel) });
+  const schedule = useMutation({
+    mutationFn: (args: { sel: ScheduledSelection; expectedRenewalCents: number }) =>
+      scheduleChange({ ...args.sel, expectedRenewalCents: args.expectedRenewalCents }),
+    onSuccess: () => onScheduled(),
+    // Importo cambiato o regola non più rispettata: si torna all'anteprima.
+    onError: () => preview.reset(),
+  });
+  const reset = () => { preview.reset(); schedule.reset(); };
+  const quote = preview.data;
+  const previewed = preview.variables;
+
+  return (
+    <div className="mt-6 border-t border-border-2 pt-5">
+      <h3 className="font-semibold text-t1">Cambia dal prossimo rinnovo</h3>
+      <p className="mt-1 text-sm text-t2">Piano più piccolo, meno sedi o un altro periodo: fino al rinnovo non cambia nulla e non paghi niente adesso.</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <Field label="Piano">
+          <Select value={plan} onChange={(e) => { setPlan(e.target.value as "base" | "team"); reset(); }}>
+            <option value="base">Base · fino a 30 persone</option>
+            {billing.plan === "team" ? <option value="team">Team · senza limite di persone</option> : null}
+          </Select>
+        </Field>
+        <Field label="Periodo">
+          <Select value={interval} onChange={(e) => { setBillingInterval(e.target.value as "month" | "year"); reset(); }}>
+            <option value="month">Mensile</option><option value="year">Annuale · 2 mesi gratuiti</option>
+          </Select>
+        </Field>
+        <Field label="Sedi totali">
+          <Select value={String(venues)} onChange={(e) => { setVenues(Number(e.target.value)); reset(); }}>
+            {Array.from({ length: currentVenues }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+          </Select>
+        </Field>
+      </div>
+      {blocker ? <p className="mt-3 text-sm text-t2" role="status">{blocker}</p> : null}
+      {quote && previewed ? (
+        <p className="mt-4 rounded-xl bg-bg-2 p-4 text-sm text-t1">
+          Dal {dateOnly(quote.effectiveAt)}: {describePlanTarget(previewed)} — {formatCents(quote.renewalCents, quote.currency)} IVA compresa
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap gap-3">
+        {quote && previewed
+          ? <Button variant="gold" disabled={schedule.isPending || busy}
+              onClick={() => schedule.mutate({ sel: previewed, expectedRenewalCents: quote.renewalCents })}>
+              {schedule.isPending ? "Invio…" : "Programma il cambio"}
+            </Button>
+          : <Button disabled={!!blocker || preview.isPending || busy}
+              onClick={() => { schedule.reset(); preview.mutate({ workspaceId, plan, interval, extraVenues: venues - 1 }); }}>
+              {preview.isPending ? "Calcolo…" : "Vedi l'importo"}
+            </Button>}
+      </div>
+      {preview.error ?? schedule.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(preview.error ?? schedule.error)}</p> : null}
+    </div>
   );
 }
 

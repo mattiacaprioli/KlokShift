@@ -191,6 +191,23 @@ Non offrire un pulsante generico «cancella tutto». Pausa, uscita commerciale, 
 
 Ogni segnalazione mostra azienda, data, fonte, gravità, azione proposta e stato di risoluzione. La dashboard distingue una richiesta da un risultato effettivo; non nasconde gli errori dietro uno stato «completato» locale.
 
+## Cambi di piano programmati (31 ottobre 2026)
+
+Nel codice, da rilasciare (migration `20261101000500_admin_scheduled_changes`, test `rls/146`). Riduzioni e cambi di ciclo li programma il titolare dalla pagina Piano e partono per Paddle da soli nelle 24 ore prima del rinnovo ([MONETIZATION.md](MONETIZATION.md) §2). Qui arriva solo ciò che non è andato.
+
+- **Panoramica, «Cambi di piano da verificare»**: le righe con un allarme aperto, di tutte le aziende. **Scheda azienda, «Cambi di piano programmati»**: lo storico dell'azienda (punto d'arrivo, data del rinnovo, data della richiesta, chi l'ha chiesta, tentativi, stato). Le righe sandbox hanno l'etichetta «Sandbox».
+- Gli allarmi, una volta per allarme, partono per due strade indipendenti: **email a `FOUNDER_ALERT_EMAIL`** (info@klokshift.com, segreto della Edge Function `billing-scheduled`) e **notifica nell'app con push** (`billing_admin_alert`) a ogni fondatore dell'allowlist non revocato, mandata dal database con la Edge Function `push`. Titolo «Cambio di piano da controllare: {azienda}», una riga per tipo, niente importi; sul web apre la scheda dell'azienda, nell'app è solo push.
+  - `not_sent`: a 6 ore dal rinnovo il cambio non è ancora arrivato a Paddle. Se arriva prima che l'email sia partita, l'allarme si spegne da sé;
+  - `failed`: il cambio non si può più applicare (regole cambiate, errore definitivo di Paddle); il rinnovo avverrà col piano attuale e il titolare lo sa dall'app;
+  - `date_not_fixed`: cambio di ciclo con gli articoli già su Paddle ma la data del rinnovo non rimessa; parte subito, perché finché resta così Paddle non addebita nel giorno giusto. Quando la data non si può più rimettere da qui (`paddle_date_not_fixed_final`) la riga si chiude con motivo `date_not_fixed` e il titolare **non** riceve «resta il piano attuale», perché gli articoli nuovi sono su Paddle. «Riprova adesso» tiene acceso l'allarme;
+  - `renewal_mismatch`: il rinnovo è avvenuto con articoli diversi da quelli programmati; si controlla su Paddle e si rimborsa la differenza. Lo stesso allarme arriva se Paddle conferma l'invio su una riga già chiusa (pausa, disdetta, fallita): lo stato resta, ma su Paddle c'è il cambio;
+  - `renewal_overdue`: due ore dopo la data d'effetto il cambio è ancora aperto e nessun avviso del rinnovo è arrivato. La riga si chiude (`failed` / `renewal_overdue`), il titolare non è avvisato perché lo stato su Paddle non si conosce, e torna libero di aumentare, programmare e aggiungere persone o sedi. Si controllano data e articoli su Paddle e si chiude l'avviso con una nota.
+- **«Riprova adesso»** (`admin_retry_scheduled_billing_change`): rimette in coda un cambio in attesa o non applicato con il rinnovo ancora davanti, e dà una spinta al lavoro pianificato; le regole le ricontrolla lui. Non c'è per `renewal_mismatch` né per un cambio già inviato.
+- **«Segna come verificato»** (`admin_resolve_scheduled_billing_change`): nota obbligatoria («Cosa hai fatto»), con chi e quando. Un allarme nuovo sulla stessa riga la riapre e rimanda l'email.
+- Stesse verifiche delle altre RPC admin (allowlist, sessione viva, `aal2` a ogni chiamata). Il pannello non rimborsa e non cambia nulla su Paddle: rimborsi e date si sistemano sulla dashboard Paddle.
+
+L'email la manda la Edge Function `billing-scheduled`: se è spenta o mal configurata, l'allarme arriva comunque come push (che passa da `push`, non da lei) e nel pannello. ⚠️ La push arriva solo se il fondatore ha l'app con le notifiche attive sullo stesso account dell'allowlist.
+
 ## Assistenza e continuità
 
 Registrare richieste, prima risposta, esito e tempo dedicato, usando soltanto dati necessari. Il supporto approvato comprende email/modulo italiano, gestione lun–ven festivi esclusi, obiettivo di prima risposta entro **2 giorni lavorativi** e una call iniziale di **30 minuti** su richiesta. Gli incidenti bloccanti hanno priorità; prima risposta e risoluzione restano metriche distinte.

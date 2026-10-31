@@ -191,6 +191,129 @@ export type Database = {
           },
         ]
       }
+      billing_scheduled_changes: {
+        Row: {
+          alert_email_attempts: number
+          alert_emailed_at: string | null
+          alert_kind: string | null
+          applied_at: string | null
+          attempts: number
+          close_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
+          confirmed_at: string | null
+          created_at: string
+          currency: string
+          effective_at: string
+          environment: string
+          from_interval: string
+          from_items: Json
+          id: string
+          last_error_code: string | null
+          next_attempt_at: string
+          reminder_email_attempts: number
+          reminder_emailed_at: string | null
+          reminder_notified_at: string | null
+          renewal_cents: number
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subscription_id: string
+          target_extra_venues: number
+          target_interval: string
+          target_items: Json
+          target_plan: string
+          workspace_id: string
+        }
+        Insert: {
+          alert_email_attempts?: number
+          alert_emailed_at?: string | null
+          alert_kind?: string | null
+          applied_at?: string | null
+          attempts?: number
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          currency: string
+          effective_at: string
+          environment: string
+          from_interval: string
+          from_items: Json
+          id?: string
+          last_error_code?: string | null
+          next_attempt_at?: string
+          reminder_email_attempts?: number
+          reminder_emailed_at?: string | null
+          reminder_notified_at?: string | null
+          renewal_cents: number
+          requested_by: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subscription_id: string
+          target_extra_venues: number
+          target_interval: string
+          target_items: Json
+          target_plan: string
+          workspace_id: string
+        }
+        Update: {
+          alert_email_attempts?: number
+          alert_emailed_at?: string | null
+          alert_kind?: string | null
+          applied_at?: string | null
+          attempts?: number
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          effective_at?: string
+          environment?: string
+          from_interval?: string
+          from_items?: Json
+          id?: string
+          last_error_code?: string | null
+          next_attempt_at?: string
+          reminder_email_attempts?: number
+          reminder_emailed_at?: string | null
+          reminder_notified_at?: string | null
+          renewal_cents?: number
+          requested_by?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subscription_id?: string
+          target_extra_venues?: number
+          target_interval?: string
+          target_items?: Json
+          target_plan?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_scheduled_changes_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "billing_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_scheduled_changes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_subscriptions: {
         Row: {
           billing_interval: string
@@ -1896,6 +2019,15 @@ export type Database = {
         Args: { p_offset?: number; p_open_only?: boolean }
         Returns: Json
       }
+      admin_list_scheduled_billing_changes: {
+        Args: {
+          p_attention_only?: boolean
+          p_limit?: number
+          p_offset?: number
+          p_workspace?: string
+        }
+        Returns: Json
+      }
       admin_list_workspaces: {
         Args: {
           p_classification?: string
@@ -1914,6 +2046,14 @@ export type Database = {
       admin_resolve_billing_event: {
         Args: { p_environment: string; p_event_id: string; p_note: string }
         Returns: Json
+      }
+      admin_resolve_scheduled_billing_change: {
+        Args: { p_id: string; p_note: string }
+        Returns: undefined
+      }
+      admin_retry_scheduled_billing_change: {
+        Args: { p_id: string }
+        Returns: undefined
       }
       admin_set_account_classification: {
         Args: {
@@ -1971,6 +2111,10 @@ export type Database = {
         Args: { p_checkout: string; p_transaction_id: string }
         Returns: undefined
       }
+      billing_cancel_scheduled_change: {
+        Args: { p_environment: string; p_user: string; p_workspace: string }
+        Returns: undefined
+      }
       billing_manage_context: {
         Args: { p_environment: string; p_user: string; p_workspace: string }
         Returns: Json
@@ -2004,6 +2148,85 @@ export type Database = {
           p_workspace: string
         }
         Returns: Json
+      }
+      billing_prepare_scheduled_change: {
+        Args: {
+          p_environment: string
+          p_extra_venues: number
+          p_interval: string
+          p_plan: string
+          p_user: string
+          p_workspace: string
+        }
+        Returns: Json
+      }
+      billing_record_scheduled_change: {
+        Args: {
+          p_currency: string
+          p_environment: string
+          p_extra_venues: number
+          p_from_items: Json
+          p_interval: string
+          p_plan: string
+          p_renewal_cents: number
+          p_target_items: Json
+          p_user: string
+          p_workspace: string
+        }
+        Returns: string
+      }
+      billing_scheduled_claim: {
+        Args: { p_environment: string; p_limit?: number }
+        Returns: {
+          alert_email_attempts: number
+          alert_emailed_at: string | null
+          alert_kind: string | null
+          applied_at: string | null
+          attempts: number
+          close_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
+          confirmed_at: string | null
+          created_at: string
+          currency: string
+          effective_at: string
+          environment: string
+          from_interval: string
+          from_items: Json
+          id: string
+          last_error_code: string | null
+          next_attempt_at: string
+          reminder_email_attempts: number
+          reminder_emailed_at: string | null
+          reminder_notified_at: string | null
+          renewal_cents: number
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subscription_id: string
+          target_extra_venues: number
+          target_interval: string
+          target_items: Json
+          target_plan: string
+          workspace_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_scheduled_changes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      billing_scheduled_result: {
+        Args: {
+          p_error: string
+          p_id: string
+          p_ok: boolean
+          p_permanent: boolean
+        }
+        Returns: undefined
       }
       claim_invite_send: {
         Args: {
@@ -3127,6 +3350,8 @@ export type Database = {
         | "archive_reminder"
         | "shift_reconfirmed"
         | "clock_reminder"
+        | "billing_change_reminder"
+        | "billing_admin_alert"
       shift_status: "open" | "closed" | "cancelled"
       venue_scope: "all" | "selected"
     }
@@ -3294,6 +3519,8 @@ export const Constants = {
         "archive_reminder",
         "shift_reconfirmed",
         "clock_reminder",
+        "billing_change_reminder",
+        "billing_admin_alert",
       ],
       shift_status: ["open", "closed", "cancelled"],
       venue_scope: ["all", "selected"],

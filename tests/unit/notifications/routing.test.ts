@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { routeForNotification } from "@/features/notifications/routing";
 import { Constants } from "@/types/database";
+import { webRouteForNotification } from "../../../web/src/lib/notificationRoute";
 
 const TYPES = Constants.public.Enums.notification_type;
 
@@ -18,6 +19,21 @@ describe("dove atterra una notifica", () => {
     // related_id è l'azienda: il ramo finale la aprirebbe come turno.
     expect(routeForNotification("manager", "archive_reminder", "w1")).toBe("/(manager)/(tabs)");
     expect(routeForNotification("waiter", "archive_reminder", "w1")).toBeNull();
+  });
+
+  it("promemoria del cambio di piano: home nell'app, pagina Piano sul web", () => {
+    // related_id è l'azienda; i dettagli del cambio stanno solo sul web.
+    expect(routeForNotification("manager", "billing_change_reminder", "w1")).toBe("/(manager)/(tabs)");
+    expect(routeForNotification("waiter", "billing_change_reminder", "w1")).toBeNull();
+    expect(webRouteForNotification("billing_change_reminder", "w1")).toBe("/piano");
+  });
+
+  it("allarme del cambio di piano al fondatore: solo push nell'app, area fondatore sul web", () => {
+    // related_id è l'azienda: lo stesso link dell'email d'allarme (formatAlert).
+    expect(routeForNotification("manager", "billing_admin_alert", "w1")).toBeNull();
+    expect(routeForNotification("waiter", "billing_admin_alert", "w1")).toBeNull();
+    expect(webRouteForNotification("billing_admin_alert", "w1")).toBe("/amministrazione/aziende/w1");
+    expect(webRouteForNotification("billing_admin_alert", null)).toBe("/amministrazione");
   });
 
   it("professionista: turni sul turno, messaggi ed esiti nel thread", () => {

@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, PageHeader, Placeholder, Select } from "../ui/primitives";
 import { WorkspaceActions, AccountClassification, OperationHistory } from "./WorkspaceActions";
 import { BillingAdjustments } from "./BillingAdjustments";
+import { ScheduledChanges } from "./ScheduledChanges";
 import { RejectedEvents } from "./RejectedEvents";
 import { CustomerDeletion, ExpiredArchives } from "./ExpiredArchives";
 import { Activation } from "./Activation";
@@ -118,6 +119,7 @@ export function OverviewPage({ userId }: {
                 <Footnote className="mt-4">Prime 20 segnalazioni, ordinate per gravità e scadenza. L’elenco aziende mostra anche le altre. Nessuna modifica automatica dei diritti.</Footnote>
               </Card> : <AllClear icon="alert" title="Segnalazioni da verificare">Nessuna segnalazione disponibile.</AllClear>}
               <BillingAdjustments userId={userId} />
+              <ScheduledChanges userId={userId} />
               <RejectedEvents userId={userId} />
               <ExpiredArchives userId={userId} />
             </section>
@@ -434,6 +436,7 @@ function WorkspaceDetail({ userId, id }: { userId: string; id: string }) {
         </div>
         <WorkspaceFinancePanel userId={userId} workspaceId={id} />
         <BillingAdjustments userId={userId} workspaceId={id} />
+        <ScheduledChanges userId={userId} workspaceId={id} />
       </>}
     </section>
     <section aria-label="Persone e sedi" hidden={tab !== 'persone'} className="space-y-6">

@@ -2,16 +2,20 @@
 // `paddleConfig` è la copia di quello di `billing-checkout` (stesse regole).
 
 export type BillingEnvironment = "sandbox" | "live";
-export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change" | "pause" | "resume" | "cancel";
+export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change" | "pause" | "resume" | "cancel"
+  | "preview_scheduled_change" | "schedule_change" | "cancel_scheduled_change";
 export type ManageRequest = {
   action: ManageAction;
   workspaceId: string;
   plan?: "base" | "team";
+  interval?: "month" | "year";
+  expectedRenewalCents?: number;
   extraVenues?: number;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ACTIONS: readonly ManageAction[] = ["portal", "resume_renewals", "preview_change", "apply_change", "pause", "resume", "cancel"];
+const ACTIONS: readonly ManageAction[] = ["portal", "resume_renewals", "preview_change", "apply_change", "pause", "resume", "cancel",
+  "preview_scheduled_change", "schedule_change", "cancel_scheduled_change"];
 
 /** Il browser sceglie azione e capacità desiderata; tutto il resto lo verifica il database. */
 export function parseRequest(body: unknown): ManageRequest | null {
@@ -25,6 +29,18 @@ export function parseRequest(body: unknown): ManageRequest | null {
     if (typeof raw.extraVenues !== "number" || !Number.isSafeInteger(raw.extraVenues) ||
         raw.extraVenues < 0 || raw.extraVenues > 999) return null;
     return { action, workspaceId: raw.workspaceId, plan: raw.plan, extraVenues: raw.extraVenues };
+  }
+  if (action === "preview_scheduled_change" || action === "schedule_change") {
+    if (raw.plan !== "base" && raw.plan !== "team") return null;
+    if (raw.interval !== "month" && raw.interval !== "year") return null;
+    if (typeof raw.extraVenues !== "number" || !Number.isSafeInteger(raw.extraVenues) ||
+        raw.extraVenues < 0 || raw.extraVenues > 999) return null;
+    const base: ManageRequest = { action, workspaceId: raw.workspaceId, plan: raw.plan, interval: raw.interval, extraVenues: raw.extraVenues };
+    if (action === "preview_scheduled_change") return base;
+    // L'importo che il titolare ha visto: se non coincide con quello fresco, non si registra.
+    if (typeof raw.expectedRenewalCents !== "number" || !Number.isSafeInteger(raw.expectedRenewalCents) ||
+        raw.expectedRenewalCents < 0) return null;
+    return { ...base, expectedRenewalCents: raw.expectedRenewalCents };
   }
   return { action, workspaceId: raw.workspaceId };
 }
@@ -57,6 +73,13 @@ const DB_ERRORS: Record<string, number> = {
   billing_price_unavailable: 503,
   billing_not_paused: 409,
   billing_not_needed: 409,
+  billing_change_pending: 409,
+  billing_scheduled_not_reduction: 409,
+  billing_too_close_to_renewal: 409,
+  billing_scheduled_people: 409,
+  billing_scheduled_venues: 409,
+  billing_change_already_sent: 409,
+  billing_nothing_scheduled: 409,
 };
 
 export function dbError(message: string | undefined): { status: number; code: string } {
@@ -125,6 +148,57 @@ export function buildItems(current: unknown, change: PreparedChange): Item[] | n
   return items;
 }
 
+export type PreparedScheduledChange = PreparedChange & {
+  effectiveAt: string;
+  currentInterval: "month" | "year";
+  interval: "month" | "year";
+};
+
+export function parsePreparedScheduledChange(data: unknown): PreparedScheduledChange | null {
+  const base = parsePreparedChange(data);
+  const raw = data as Record<string, unknown> | null;
+  if (!base || !raw || typeof raw.effective_at !== "string" || !Number.isFinite(Date.parse(raw.effective_at)) ||
+      (raw.current_interval !== "month" && raw.current_interval !== "year") ||
+      (raw.billing_interval !== "month" && raw.billing_interval !== "year")) return null;
+  return { ...base, effectiveAt: raw.effective_at, currentInterval: raw.current_interval, interval: raw.billing_interval };
+}
+
+/**
+ * Gli articoli del rinnovo programmato. Nello stesso ciclo valgono le regole di
+ * `buildItems` (i prezzi invariati restano); cambiando ciclo tutti gli articoli
+ * prendono i prezzi d'arrivo. `null` se gli articoli attuali non si riconoscono.
+ */
+export function buildScheduledItems(current: unknown, change: PreparedScheduledChange): Item[] | null {
+  const kept = buildItems(current, change);
+  if (!kept || change.interval === change.currentInterval) return kept;
+  const items: Item[] = [{ price_id: change.planPriceId, quantity: 1 }];
+  if (change.extraVenues > 0) {
+    if (!change.extraPriceId) return null;
+    items.push({ price_id: change.extraPriceId, quantity: change.extraVenues });
+  }
+  return items;
+}
+
+/** Gli articoli ricorrenti attivi letti da Paddle, nella forma che il database registra. */
+export function currentItems(current: unknown): Item[] | null {
+  if (!Array.isArray(current)) return null;
+  const items: Item[] = [];
+  for (const raw of current) {
+    const item = raw as { price?: { id?: unknown }; quantity?: unknown; status?: unknown; recurring?: unknown };
+    if (item.status === "inactive" || item.recurring === false) continue;
+    if (typeof item.price?.id !== "string" || typeof item.quantity !== "number") return null;
+    items.push({ price_id: item.price.id, quantity: item.quantity });
+  }
+  return items.length > 0 ? items : null;
+}
+
+/** Il rinnovo letto da Paddle deve coincidere (±120 s) con quello su cui il database ha deciso. */
+export function renewalMatches(nextBilledAt: unknown, effectiveAt: string): boolean {
+  if (typeof nextBilledAt !== "string") return false;
+  const a = Date.parse(nextBilledAt);
+  return Number.isFinite(a) && Math.abs(a - Date.parse(effectiveAt)) <= 120_000;
+}
+
 /**
  * Pausa e disdetta a fine periodo pagato; ripartenza subito con un periodo
  * nuovo (addebito pieno).
@@ -138,6 +212,11 @@ export function lifecycleRequest(action: "pause" | "resume" | "cancel", subscrip
 
 export function changeBody(items: Item[]) {
   return { items, proration_billing_mode: "prorated_immediately", on_payment_failure: "prevent_change" };
+}
+
+/** Anteprima del rinnovo programmato: niente addebito né accredito adesso. */
+export function scheduledPreviewBody(items: Item[]) {
+  return { items, proration_billing_mode: "do_not_bill", on_payment_failure: "prevent_change" };
 }
 
 const amount = (value: unknown) =>

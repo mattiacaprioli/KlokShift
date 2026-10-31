@@ -21,6 +21,7 @@ vi.mock("../../web/src/export/fullExport", () => ({ downloadFullExport: vi.fn() 
 vi.mock("../../web/src/billing/manage", () => ({
   openPortal: vi.fn(), resumeRenewals: vi.fn(), previewChange: vi.fn(), applyChange: vi.fn(),
   pauseRenewals: vi.fn(), restartSubscription: vi.fn(), stopRenewals: vi.fn(),
+  previewScheduledChange: vi.fn(), scheduleChange: vi.fn(), cancelScheduledChange: vi.fn(),
   formatCents: (cents: number) => `${cents / 100} €`,
 }));
 
@@ -150,7 +151,13 @@ describe("Piano e accesso del cliente", () => {
   const subscription = {
     status: "active", plan: "base", billing_interval: "month", extra_venues: 0,
     current_period_ends_at: "2026-11-18T10:00:00Z", scheduled_change: null, past_due_since: null, canceled_at: null,
-    paused_at: null,
+    paused_at: null, pending_change: null,
+  };
+  /** Dal modulo dell'aumento in poi: il modulo del cambio al rinnovo è dopo. */
+  const upgradeForm = (html: string) => html.split("Cambia dal prossimo rinnovo")[0];
+  const pending = {
+    plan: "base", billing_interval: "year", extra_venues: 0, effective_at: "2099-11-18T10:00:00Z",
+    renewal_cents: 35380, currency: "EUR", status: "pending", cancel_until: "2099-11-17T10:00:00Z",
   };
   it("abbonamento attivo: gestione dal portale e solo aumenti dalla pagina", () => {
     subscriptionAccess();
@@ -162,7 +169,10 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("per tornare serve un nuovo acquisto");
     expect(html).toContain("Aumenta piano o sedi");
     expect(html).toContain("Calcola l’importo");
-    expect(html).toContain("Per passare a un piano più piccolo, ridurre le sedi o cambiare tra mensile e annuale");
+    expect(html).not.toContain("Per passare a un piano più piccolo");
+    expect(html).toContain("Cambia dal prossimo rinnovo");
+    expect(html).toContain("Vedi l&#x27;importo");
+    expect(html).toContain("È la stessa scelta che hai già.");
     expect(html).not.toContain("Annulla la chiusura");
     expect(html).toContain("Scarica tutti i dati");
   });
@@ -175,6 +185,7 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("Annulla la chiusura");
     expect(html).not.toContain("Chiudi l’abbonamento");
     expect(html).not.toContain("Aumenta piano o sedi");
+    expect(html).not.toContain("Cambia dal prossimo rinnovo");
   });
   it("pausa programmata: annulla la pausa, nessun aumento né disdetta", () => {
     subscriptionAccess();
@@ -208,6 +219,42 @@ describe("Piano e accesso del cliente", () => {
   it("Team: il modulo non propone di tornare a Base", () => {
     subscriptionAccess();
     billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team" } });
-    expect(render()).not.toContain("Base · fino a 30 persone");
+    const html = render();
+    expect(upgradeForm(html)).not.toContain("Base · fino a 30 persone");
+    // Il cambio al rinnovo invece lo propone.
+    expect(html.split("Cambia dal prossimo rinnovo")[1]).toContain("Base · fino a 30 persone");
+  });
+  it("cambio in attesa: la riga al posto dei moduli, annullabile", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team", extra_venues: 2, pending_change: pending } });
+    const html = render();
+    expect(html).toContain("Dal 18/11/2099: Base · annuale, 1 sede — 353.8 € IVA compresa");
+    expect(html).toContain("Annulla il cambio");
+    expect(html).toContain("Per aumentare annulla prima il cambio programmato");
+    expect(html).not.toContain("Aumenta piano o sedi");
+    expect(html).not.toContain("Cambia dal prossimo rinnovo");
+    expect(html).not.toContain("Il cambio è già stato inviato");
+    expect(html).not.toContain("Manca meno di un giorno al rinnovo");
+  });
+  it("cambio già inviato a Paddle: niente annullamento né aumento", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team",
+      pending_change: { ...pending, status: "applied" } } });
+    const html = render();
+    expect(html).toContain("Il cambio è già stato inviato per il rinnovo. Dal 18/11/2099 potrai modificare di nuovo il piano.");
+    expect(html).not.toContain("Manca meno di un giorno al rinnovo");
+    expect(html).not.toContain("Annulla il cambio");
+    expect(html).not.toContain("Per aumentare annulla prima");
+    expect(html).not.toContain("Aumenta piano o sedi");
+  });
+  it("cambio in attesa oltre il termine per annullare: non si annulla, ma non si dice inviato", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team",
+      pending_change: { ...pending, cancel_until: "2026-01-01T00:00:00Z" } } });
+    const html = render();
+    expect(html).toContain("Manca meno di un giorno al rinnovo: il cambio non si può più annullare. Dal 18/11/2099 potrai modificare di nuovo il piano.");
+    expect(html).not.toContain("Il cambio è già stato inviato");
+    expect(html).not.toContain("Annulla il cambio");
+    expect(html).not.toContain("Per aumentare annulla prima");
   });
 });

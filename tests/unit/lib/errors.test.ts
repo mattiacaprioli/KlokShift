@@ -32,4 +32,23 @@ describe("userErrorMessage", () => {
     expect(message).not.toBe(GENERIC_ERROR);
     expect(message).toMatch(/già stata registrata/);
   });
+
+  it("distingue il limite di persone del piano programmato da quello attuale", () => {
+    const message = userErrorMessage(new Error("workspace_people_capacity_scheduled"));
+    expect(message).not.toBe(GENERIC_ERROR);
+    expect(message).toMatch(/piano più piccolo dal prossimo rinnovo/);
+    expect(message).not.toBe(userErrorMessage(new Error("workspace_people_capacity")));
+  });
+
+  it("distingue il limite di sedi del piano programmato da quello attuale", () => {
+    const message = userErrorMessage(new Error("workspace_venue_capacity_scheduled"));
+    expect(message).not.toBe(GENERIC_ERROR);
+    expect(message).toMatch(/meno sedi dal prossimo rinnovo/);
+    expect(message).not.toBe(userErrorMessage(new Error("workspace_venue_capacity")));
+  });
+
+  it("dice perché un cambio programmato non si ritenta (area fondatore)", () => {
+    expect(userErrorMessage(new Error("scheduled_change_not_retryable"))).toMatch(/non si può più ritentare/);
+    expect(userErrorMessage(new Error("billing_change_pending"))).toMatch(/già un altro cambio aperto/);
+  });
 });

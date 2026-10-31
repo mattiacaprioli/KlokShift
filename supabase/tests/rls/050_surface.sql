@@ -77,7 +77,10 @@ begin
         and p.proname in ('claim_invite_send', 'peek_invite', 'consume_invite', 'delete_account',
                          'grant_workspace_access', 'billing_apply_event', 'billing_prepare_checkout',
                          'billing_attach_checkout_transaction', 'billing_manage_context',
-                         'billing_prepare_change', 'billing_prepare_lifecycle')
+                         'billing_prepare_change', 'billing_prepare_lifecycle',
+                         'billing_prepare_scheduled_change', 'billing_record_scheduled_change',
+                         'billing_cancel_scheduled_change', 'billing_scheduled_claim',
+                         'billing_scheduled_result')
         and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
     '', 'inviti, delete_account, concessioni e pagamenti sono solo della service role');
   perform tests.eq(
@@ -85,6 +88,22 @@ begin
       where n.nspname in ('public', 'private') and p.prorettype = 'trigger'::regtype
         and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
     '', 'nessuna funzione-trigger è eseguibile dal client');
+  -- Le RPC dell'area fondatore sono di authenticated, ma ognuna si apre con il
+  -- controllo server del fondatore (allowlist, sessione viva, aal2): l'accesso
+  -- globale non deriva mai dall'authority del cliente.
+  perform tests.eq(
+    (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname like 'admin\_%'
+        and p.prosrc not like '%perform private.require_platform_admin()%'),
+    '', 'ogni RPC admin_* passa da private.require_platform_admin');
+  perform tests.eq(
+    (select count(*)::integer from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname in ('admin_list_billing_adjustments', 'admin_resolve_billing_adjustment',
+                          'admin_list_scheduled_billing_changes', 'admin_resolve_scheduled_billing_change',
+                          'admin_retry_scheduled_billing_change')
+        and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
+    5, 'pagamenti e cambi programmati da verificare: RPC admin presenti');
   -- Tutte le funzioni di public sono security definer con search_path fisso o pure/immutabili.
   perform tests.eq(
     (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace

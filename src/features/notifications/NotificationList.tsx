@@ -29,6 +29,8 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   absence_response: "check",
   absence_sick: "alert",
   archive_reminder: "clock",
+  billing_change_reminder: "clock",
+  billing_admin_alert: "alert",
   clock_reminder: "clock",
 };
 

@@ -40,6 +40,8 @@ const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["admin_data_already_deleted"], message: "I dati di questa azienda sono già stati cancellati. Aggiorna la pagina." },
   { match: ["admin_cleanup_failed"], message: "Non è stato possibile togliere i file adesso: restano in coda, riprova fra poco." },
   { match: ["admin_review_note_required"], message: "Scrivi cosa hai fatto, da 3 a 500 caratteri." },
+  { match: ["scheduled_change_not_retryable"], message: "Questo cambio non si può più ritentare: il rinnovo è passato o è avvenuto con un altro piano. Aggiorna la pagina." },
+  { match: ["billing_change_pending"], message: "Per questo abbonamento c'è già un altro cambio aperto: non se ne ritenta un secondo. Aggiorna la pagina." },
   { match: ["admin_review_not_open"], message: "Questa voce non chiede più un'azione. Aggiorna la pagina." },
   { match: ["admin_reason_required"], message: "Inserisci un motivo da 1 a 2000 caratteri." },
   { match: ["admin_stale_revision"], message: "I dati sono cambiati. Aggiorna e prepara una nuova conferma." },
@@ -54,6 +56,9 @@ const PATTERNS: { match: string[]; message: string }[] = [
   // Vale sia per l'azienda nuova (prova non avviata) sia per quella in archivio,
   // e la legge anche l'app nativa: niente inviti all'acquisto (App Store 3.1.3).
   { match: ["workspace_read_only"], message: "Il lavoro operativo non è attivo per questa azienda: chi la gestisce può attivarlo. Lo storico resta consultabile." },
+  // Prima dei generici: il match è per sottostringa.
+  { match: ["workspace_people_capacity_scheduled"], message: "Hai programmato un piano più piccolo dal prossimo rinnovo: per aggiungere altre persone annullalo dalla pagina Piano sul web." },
+  { match: ["workspace_venue_capacity_scheduled"], message: "Hai programmato meno sedi dal prossimo rinnovo: per aprirne un'altra annulla il cambio dalla pagina Piano sul web." },
   { match: ["workspace_people_capacity"], message: "Hai raggiunto il numero massimo di persone del tuo piano. Quello che hai già continua a funzionare." },
   { match: ["workspace_venue_capacity"], message: "Hai raggiunto il numero massimo di sedi aperte del tuo piano. Se chiudi una sede, il suo storico resta." },
   { match: ["attendance_window_closed"], message: "Il tempo per correggere le presenze passate è scaduto. Contatta l'assistenza." },

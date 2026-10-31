@@ -267,6 +267,17 @@ Procedure:
 locale dalla prima prova MFA reale/visuale sul progetto di soli test propri;
 dettagli, filtri, diniego multiutente, nuovo login e revoca live restano aperti.
 
+**Cambio di piano al rinnovo** (2026-10-31, migration `20261101000000`…`000500`,
+da applicare). Riduzioni (Team→Base, meno sedi) e mensile↔annuale li programma
+il titolare dalla pagina Piano: nasce una riga in `billing_scheduled_changes`, a
+Paddle non parte niente. Il lavoro pg_cron `billing-scheduled-changes` → Edge
+Function `billing-scheduled` la invia nelle 24 ore prima del rinnovo con
+`do_not_bill`; ⚠️ il cambio di ciclo vuole **due PATCH** (articoli, poi
+`next_billed_at`), perché una sola fa ripartire il periodo gratis. Finché il
+cambio è aperto le aggiunte oltre la capacità futura sono bloccate; il diritto
+cambia solo con l'avviso firmato. Prove e procedura in
+[docs/TEST-BILLING-SCHEDULED.md](docs/TEST-BILLING-SCHEDULED.md).
+
 - Il piano è aziendale; i due piani hanno le stesse funzioni e capacità diversa.
   Il limite di 30 riguarda persone uniche nell'intera azienda, non per sede.
 - Prova di 30 giorni senza carta per tutte le nuove aziende. Gratuità a vita
