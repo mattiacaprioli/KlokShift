@@ -114,11 +114,14 @@ Deno.serve(async (req) => {
    * (riga illeggibile, cambio chiuso, allarme già rivisto) le applica `runScheduled`.
    */
   async function pendingRows(kind: "reminder" | "alert"): Promise<QueuedEmail[] | null> {
-    let query = admin.from("billing_scheduled_changes").select(COLUMNS);
-    query = kind === "reminder"
-      ? query.not("reminder_notified_at", "is", null).is("reminder_emailed_at", null).lt("reminder_email_attempts", 5)
-      : query.not("alert_kind", "is", null).is("alert_emailed_at", null).lt("alert_email_attempts", 5);
-    const { data, error } = await query.order("created_at", { ascending: true }).limit(EMAIL_LIMIT);
+    // Le colonne della coda cambiano col tipo: nomi scelti qui, filtri uguali.
+    // (Riassegnare la query tipizzata dava TS2589 nel `deno check` della CI.)
+    const [notified, emailed, attempts] = kind === "reminder"
+      ? ["reminder_notified_at", "reminder_emailed_at", "reminder_email_attempts"]
+      : ["alert_kind", "alert_emailed_at", "alert_email_attempts"];
+    const { data, error } = await admin.from("billing_scheduled_changes").select(COLUMNS)
+      .not(notified, "is", null).is(emailed, null).lt(attempts, 5)
+      .order("created_at", { ascending: true }).limit(EMAIL_LIMIT);
     if (error) return null;
     return ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => {
       const name = (row.workspace as { name?: unknown } | null)?.name;
