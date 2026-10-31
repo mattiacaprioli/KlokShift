@@ -65,9 +65,9 @@ export default function WaiterAbsencesScreen() {
         }
       >
         <Text className="text-[13px] leading-5 text-t3">
-          Chiedi ferie o un permesso, o comunica una malattia: la sede riceve la
-          richiesta in chat. I turni già assegnati non spariscono da soli: li
-          sistema la sede.
+          Chiedi ferie o un permesso, o comunica una malattia: la sede riceve
+          una notifica, e la risposta la trovi qui. I turni già assegnati non
+          spariscono da soli: li sistema la sede.
         </Text>
 
         {loading ? (

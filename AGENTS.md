@@ -56,9 +56,13 @@ dall'authority (`private.speaks_for_workspace`).
   chat **fra dipendenti**; verso chi gestisce si scrive sempre, e spegnerlo non
   cancella i thread aperti. Lo applicano `open_conversation` (`chat_disabled`) e
   `get_workspace_contacts` (la rubrica), non l'UI.
-- Le **card** (cambio turno, assenze) nascono sempre sul thread col titolare
+- Le **card** del cambio turno nascono sempre sul thread col titolare
   (`conversation_for_pair(workspace, richiedente, titolare)`): in una chat fra
   colleghi non compaiono.
+- **Ferie, permessi e malattia non passano dalla chat** (2026-10-31,
+  `20261031000100`): notifica, Home («Richieste») e pagina Assenze; le
+  notifiche delle assenze aprono sempre Assenze, mai un thread. Le card già
+  inviate sono state cancellate. Non rimetterle senza una decisione di prodotto.
 
 ## Spostare un turno (2026-09-20)
 

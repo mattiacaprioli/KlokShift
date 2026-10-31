@@ -112,7 +112,7 @@ export default function ManagerAbsencesScreen() {
         ) : (rows ?? []).length === 0 ? (
           <EmptyState
             title="Nessuna assenza"
-            subtitle="Le richieste di ferie e permessi arrivano in chat e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona."
+            subtitle="Le richieste di ferie e permessi le mandano i dipendenti dall’app e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona."
           />
         ) : (
           <>

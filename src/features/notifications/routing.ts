@@ -31,15 +31,13 @@ export function routeForNotification(
     // Per i messaggi related_id è la conversazione, non un turno. Vale anche per
     // l'esito di un cambio turno: la card con la risposta vive nel thread, ed è
     // lì che ha senso atterrare — il turno, se approvato, non è più suo.
-    //
-    // Anche l'esito di ferie e permessi: la card è nel thread col titolare.
-    if (
-      type === "new_message" ||
-      type === "shift_change_response" ||
-      type === "absence_response"
-    ) {
+    if (type === "new_message" || type === "shift_change_response") {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
+    // L'esito di ferie e permessi si legge fra le proprie assenze: dal 31/10
+    // non c'è più una card in chat. Le notifiche vecchie portano ancora la
+    // conversazione nel `related_id`, e va ignorata.
+    if (type === "absence_response") return "/(waiter)/assenze";
     // Il dipendente non riceve mai questi tipi (sono per la sede), ma la
     // funzione è totale sui tipi: meglio dirlo che lasciarlo al ramo finale.
     if (
@@ -82,19 +80,16 @@ export function routeForNotification(
   if (type === "new_message" || type === "shift_change_request") {
     return relatedId ? `/(manager)/chat/${relatedId}` : null;
   }
-  // Le assenze hanno **due** destinatari con due atterraggi diversi
-  // (`absence_response` qui è l'annullamento di un'assenza già approvata).
-  // Con la conversazione è il titolare: la card sta nel suo thread. Senza, è un
-  // collaboratore con «Organico» — quel thread è la coppia (dipendente,
-  // titolare) e la RLS non glielo apre, quindi la sua copia arriva senza
-  // `related_id` e lo porta alla pagina Assenze, dove quelle assenze si
-  // decidono.
+  // Le assenze si decidono dalla pagina Assenze, per il titolare come per il
+  // collaboratore (`absence_response` qui è l'annullamento di un'assenza già
+  // approvata). Fino al 31/10 il titolare atterrava sulla card in chat, e le
+  // sue notifiche vecchie portano ancora la conversazione: si ignora.
   if (
     type === "absence_request" ||
     type === "absence_response" ||
     type === "absence_sick"
   ) {
-    return relatedId ? `/(manager)/chat/${relatedId}` : "/(manager)/assenze";
+    return "/(manager)/assenze";
   }
   return relatedId ? `/(manager)/shift/${relatedId}` : null;
 }

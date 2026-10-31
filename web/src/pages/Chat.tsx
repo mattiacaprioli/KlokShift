@@ -11,7 +11,6 @@ import { useChatThread } from "@/features/chat/useChatThread";
 import { userErrorMessage } from "@/lib/errors";
 import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { AbsenceCard } from "../chat/AbsenceCard";
 import { ChangeRequestCard } from "../chat/ChangeRequestCard";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
@@ -371,21 +370,15 @@ function Thread({
             <div className="flex flex-col gap-2">
               {ordered.map((m) => {
                 const own = m.sender_id === userId;
-                // Le righe di servizio (cambio turno, assenze) non sono
-                // testo: portano un `request_id` e si rendono come card con i
-                // bottoni di chi deve decidere.
+                // Le righe di servizio del cambio turno non sono testo:
+                // portano un `request_id` e si rendono come card con i bottoni
+                // di chi deve decidere. Le assenze in chat non ci sono più
+                // (31/10): una riga rimasta non si mostra.
                 if (
                   m.kind === "absence_request" ||
                   m.kind === "absence_response"
                 ) {
-                  return (
-                    <AbsenceCard
-                      key={m.id}
-                      message={m}
-                      userId={userId}
-                      own={own}
-                    />
-                  );
+                  return null;
                 }
                 if (m.kind !== "text") {
                   return (

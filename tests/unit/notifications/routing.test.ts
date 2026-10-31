@@ -23,7 +23,9 @@ describe("dove atterra una notifica", () => {
   it("professionista: turni sul turno, messaggi ed esiti nel thread", () => {
     expect(routeForNotification("waiter", "shift_assigned", "s1")).toBe("/(waiter)/shift/s1");
     expect(routeForNotification("waiter", "new_message", "c1")).toBe("/(waiter)/chat/c1");
-    expect(routeForNotification("waiter", "absence_response", "c1")).toBe("/(waiter)/chat/c1");
+    // Dal 31/10 l'esito si legge fra le proprie assenze, anche dalle notifiche vecchie.
+    expect(routeForNotification("waiter", "absence_response", "c1")).toBe("/(waiter)/assenze");
+    expect(routeForNotification("waiter", "absence_response", null)).toBe("/(waiter)/assenze");
     expect(routeForNotification("waiter", "staff_invite", "x")).toBe("/(waiter)/inviti");
     // related_id è una riga di organico, non un turno.
     expect(routeForNotification("waiter", "staff_linked", "vm1")).toBe("/(waiter)/(tabs)");
@@ -49,7 +51,9 @@ describe("dove atterra una notifica", () => {
   });
 
   it("gestione: assenze nel thread col titolare, oppure alla pagina Assenze", () => {
-    expect(routeForNotification("manager", "absence_request", "c1")).toBe("/(manager)/chat/c1");
+    // Mai la chat: anche le notifiche vecchie con la conversazione vanno ad Assenze.
+    expect(routeForNotification("manager", "absence_request", "c1")).toBe("/(manager)/assenze");
+    expect(routeForNotification("manager", "absence_sick", "c1")).toBe("/(manager)/assenze");
     expect(routeForNotification("manager", "absence_request", null)).toBe("/(manager)/assenze");
     expect(routeForNotification("manager", "shift_change_request", "c1")).toBe("/(manager)/chat/c1");
     expect(routeForNotification("manager", "team_linked", "v1")).toBe("/(manager)/(tabs)");

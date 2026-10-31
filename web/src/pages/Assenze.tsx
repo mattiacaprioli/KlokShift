@@ -97,7 +97,7 @@ export function AssenzePage() {
       ) : (rows ?? []).length === 0 ? (
         <Placeholder
           title="Nessuna assenza"
-          detail="Le richieste di ferie e permessi arrivano in chat e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona, in Team."
+          detail="Le richieste di ferie e permessi le mandano i dipendenti dall’app e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona, in Team."
         />
       ) : (
         <div className="flex max-w-7xl flex-col gap-6">

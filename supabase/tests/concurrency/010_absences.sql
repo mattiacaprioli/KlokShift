@@ -237,16 +237,14 @@ begin
       select count(*) from public.staff_absences
        where member_id = v_member and start_date between current_date + 200 and current_date + 203
     ), 1::bigint, 'una sola assenza sovrapposta viene persistita');
+    -- Dal 31/10 le assenze non creano card in chat, nemmeno a chi vince.
     perform tests.eq((
       select count(*) from public.messages
-       where kind = 'absence_request' and absence_id in (
+       where absence_id in (
          select id from public.staff_absences
           where member_id = v_member and start_date between current_date + 200 and current_date + 203
        )
-    ), (select count(*) from public.staff_absences
-         where member_id = v_member and requested_by = v_emp
-           and start_date between current_date + 200 and current_date + 203),
-      'la card esiste solo se ha vinto la richiesta del professionista');
+    ), 0::bigint, 'nessuna card in chat per le assenze');
     end if;
 
     if p_scenario = 'disjoint' then
@@ -297,16 +295,19 @@ begin
       'una richiesta pending riceve una sola decisione');
     perform tests.eq((select count(*) from public.messages
                        where absence_id = v_absence and kind = 'absence_response'),
-      v_base_messages + 1, 'la doppia decisione crea una sola card di risposta');
+      v_base_messages, 'la decisione non crea card in chat');
     perform tests.eq((select count(*) from public.notifications
                        where user_id = v_emp and type = 'absence_response'),
       v_base_notifications + 1, 'la doppia decisione crea una sola notifica');
-    perform tests.ok(exists (
-      select 1 from public.messages m join public.staff_absences a on a.id = m.absence_id
-       where a.id = v_absence and m.kind = 'absence_response'
-         and ((a.status = 'approved' and m.content like '%approvat%')
-           or (a.status = 'rejected' and m.content like '%rifiutat%'))
-    ), 'card e stato raccontano la stessa decisione');
+    perform tests.ok((
+      select (a.status = 'approved' and n.title like '%approvat%')
+          or (a.status = 'rejected' and n.title like '%rifiutat%')
+        from public.staff_absences a,
+             lateral (select title from public.notifications
+                       where user_id = v_emp and type = 'absence_response'
+                       order by created_at desc limit 1) n
+       where a.id = v_absence
+    ), 'notifica e stato raccontano la stessa decisione');
     end if;
 
     if p_scenario = 'withdraw_first' then
@@ -335,7 +336,7 @@ begin
       'withdrawn', 'il ritiro resta la transizione effettiva');
     perform tests.eq((select count(*) from public.messages
                        where absence_id = v_absence and kind = 'absence_response'),
-      1::bigint, 'solo la card di ritiro viene creata');
+      0::bigint, 'il ritiro non crea card in chat');
     perform tests.eq((select count(*) from public.notifications
                        where user_id = v_emp and type = 'absence_response'),
       v_base_notifications, 'la decisione respinta non notifica il richiedente');

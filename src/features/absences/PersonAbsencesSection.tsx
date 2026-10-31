@@ -36,7 +36,7 @@ export function PersonAbsencesSection({
         <QueryError onRetry={() => query.refetch()} />
       ) : absences.length === 0 ? (
         <Text className="text-sm leading-5 text-t3">
-          Nessuna assenza. Le richieste di ferie e permessi arrivano in chat;
+          Nessuna assenza. Ferie e permessi li chiede il dipendente dall’app;
           una malattia comunicata a voce la registri da qui.
         </Text>
       ) : (

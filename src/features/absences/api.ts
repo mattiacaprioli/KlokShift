@@ -245,17 +245,6 @@ export async function setAbsenceInpsProtocol(input: {
   if (error) throw new UserFacingError(error.message);
 }
 
-/** Un'assenza per id: è quanto serve alla card dentro il thread di chat. */
-export async function getAbsence(absenceId: string): Promise<Absence | null> {
-  const { data, error } = await supabase
-    .from("staff_absences")
-    .select("*")
-    .eq("id", absenceId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 /**
  * Dipendente: le sue assenze presso tutte le aziende. La RLS restituisce
  * già solo quelle delle sue appartenenze; il filtro rende esplicita la richiesta.

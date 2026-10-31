@@ -54,7 +54,7 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
           <ListSkeleton rows={3} label="Caricamento assenze…" />
         ) : absences.length === 0 ? (
           <p className="text-sm text-t4">
-            Nessuna assenza. Le richieste di ferie e permessi arrivano in chat.
+            Nessuna assenza. Ferie e permessi li chiede il dipendente dall’app.
           </p>
         ) : (
           <>
@@ -337,7 +337,7 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
       </h3>
       <p className="text-xs text-t4">
         Per la malattia comunicata a voce o le ferie già concordate: nasce
-        approvata, senza messaggio in chat.
+        approvata, senza notifiche.
       </p>
       <div className="flex gap-1">
         {ABSENCE_KINDS.map((k) => (

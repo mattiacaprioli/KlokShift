@@ -41,7 +41,7 @@ const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
   // Il promemoria arriva quando manca una timbratura: la card in Home va
   // riletta, per esempio se nel frattempo il turno è cambiato.
   clock_reminder: [qk.assignments.all],
-  // Ferie, permessi e malattia: la card in chat e le liste leggono lo stato
+  // Ferie, permessi e malattia: le liste leggono lo stato
   // dell'assenza, che nessun altro canale porta.
   absence_request: [qk.absences.all],
   absence_response: [qk.absences.all],

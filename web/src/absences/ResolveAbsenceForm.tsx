@@ -22,7 +22,7 @@ export function absencePillTone(
 
 /**
  * Approva o rifiuta una richiesta di ferie o permesso, con una nota facoltativa.
- * La usano la card in chat e il blocco «Richieste» della home.
+ * La usano la pagina Assenze e il blocco «Richieste» della home.
  *
  * Approvare non toglie nessuno dai turni da solo: i turni in conflitto si
  * mostrano, e toglierli è un bottone a parte.

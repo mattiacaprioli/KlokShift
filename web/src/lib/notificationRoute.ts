@@ -22,15 +22,15 @@ export function webRouteForNotification(
   if (type === "new_message" || type === "shift_change_request") {
     return relatedId ? `/chat/${relatedId}` : null;
   }
-  // Le assenze hanno due destinatari e due atterraggi: con la conversazione è il
-  // titolare (card nel thread), senza è un collaboratore con «Organico», che in
-  // quel thread non entra e le decide dalla pagina Assenze.
+  // Le assenze si decidono dalla pagina Assenze, per tutti. Fino al 31/10 il
+  // titolare atterrava sulla card in chat, e le notifiche vecchie portano
+  // ancora la conversazione: si ignora.
   if (
     type === "absence_request" ||
     type === "absence_response" ||
     type === "absence_sick"
   ) {
-    return relatedId ? `/chat/${relatedId}` : "/assenze";
+    return "/assenze";
   }
   // Tutto il resto è legato a un turno. La dashboard non ha una pagina di
   // dettaglio: il turno si apre nel pannello del Planning, che si sposta da solo

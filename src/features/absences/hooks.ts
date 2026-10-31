@@ -10,7 +10,6 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { absenceConflicts, type AbsenceWindow } from "./conflicts";
 import { invalidateAfterShiftRemoval } from "./removal";
 import {
-  getAbsence,
   getAbsenceHourCredits,
   getAbsenceAvailability,
   getPersonShiftsInRange,
@@ -54,20 +53,6 @@ export function useSetAbsenceHourCredits() {
       qc.invalidateQueries({ queryKey: qk.absences.credits(args.absenceId) });
       qc.invalidateQueries({ queryKey: qk.absences.summaryAll });
     },
-  });
-}
-
-/**
- * L'assenza letta per id, per la card nel thread.
- *
- * ⚠️ Query a sé e non un join sui messaggi, per la stessa ragione di
- * `useChangeRequest`: il realtime della chat mette in cache la riga grezza.
- */
-export function useAbsence(absenceId: string | null | undefined) {
-  return useQuery({
-    queryKey: qk.absences.byId(absenceId ?? ""),
-    queryFn: () => getAbsence(absenceId as string),
-    enabled: !!absenceId,
   });
 }
 

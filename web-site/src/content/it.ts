@@ -134,7 +134,7 @@ export const it: Content = {
         body: "E le ore del mese si aggiornano da sole.",
       },
       {
-        title: "Cambi e assenze in chat",
+        title: "Cambi turno e assenze dall'app",
         body: "Sostituzioni e ferie si chiedono dall'app.",
       },
       {

@@ -39,11 +39,12 @@ begin
   perform tests.eq(r.inps_protocol, 'CERT123', 'ma il riferimento del certificato sì');
   perform tests.raises('update public.staff_absences set note = ''x''', 'permission denied', 'nessuna scrittura diretta');
 
-  -- Card in chat + notifica al titolare (con il riferimento alla conversazione).
-  perform tests.eq((select count(*) from public.messages where absence_id = ab), 1::bigint, 'card in chat');
+  -- Niente card in chat (dal 31/10 in chat c'è solo il cambio turno): la
+  -- richiesta arriva al titolare come notifica, che apre la pagina Assenze.
+  perform tests.eq((select count(*) from public.messages where absence_id = ab), 0::bigint, 'nessuna card in chat');
   perform tests.logout();
-  perform tests.ok(exists (select 1 from public.notifications n where n.user_id = tests.id('Ow') and n.type = 'absence_request' and n.related_id is not null),
-    'il titolare riceve la richiesta con la chat');
+  perform tests.ok(exists (select 1 from public.notifications n where n.user_id = tests.id('Ow') and n.type = 'absence_request' and n.related_id is null),
+    'il titolare riceve la richiesta, senza rimando alla chat');
 
   -- Chi la vede.
   perform tests.login('Emp2'); perform tests.eq((select count(*) from public.staff_absences), 0::bigint, 'Emp2 non vede le assenze di Emp');

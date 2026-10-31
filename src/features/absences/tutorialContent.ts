@@ -13,12 +13,12 @@ import type { Tutorial } from "@/features/team/tutorialContent";
 export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
   title: "Ferie, permessi e malattia",
   intro:
-    "Le persone del tuo team chiedono ferie e permessi, e comunicano la malattia, direttamente dall'app. Tu decidi da una card in chat, vedi chi manca nei turni e a fine mese trovi tutto nell'export per il commercialista.",
+    "Le persone del tuo team chiedono ferie e permessi, e comunicano la malattia, direttamente dall'app. Tu decidi dalla Home o dalla pagina Assenze, vedi chi manca nei turni e a fine mese trovi tutto nell'export per il commercialista.",
   sections: [
     {
       title: "Quando arriva una richiesta",
       steps: [
-        "Ricevi una notifica e trovi la richiesta in chat con quella persona. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste», e in Menu › Assenze (nella dashboard, la voce «Assenze» del menu), con il numero sul badge.",
+        "Ricevi una notifica che apre la pagina Assenze. Le richieste da decidere compaiono anche nella Home, nel blocco «Richieste», e in Menu › Assenze (nella dashboard, la voce «Assenze» del menu), con il numero sul badge.",
         "Apri la richiesta: vedi date, motivo e i turni in cui la persona è già assegnata in quei giorni.",
         "Scegli «Approva e togli dai turni» per liberare quei posti, oppure «Approva, i turni li sistemo io». Se non ci sono turni in conflitto c'è solo «Approva».",
         "Se non va bene, «Rifiuta» (in app «Rifiuta la richiesta»). La nota è facoltativa e la legge chi ha chiesto.",
@@ -27,8 +27,8 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
     {
       title: "La malattia",
       points: [
-        "Non si approva: il dipendente la comunica e tu la vedi subito, in chat e nella Home.",
-        "Se in quei giorni la persona è in turno, sulla card trovi «Togli dai turni»: il turno resta, scoperto, e puoi cercare chi copre.",
+        "Non si approva: il dipendente la comunica e tu ricevi una notifica e la vedi subito nella Home e in Assenze.",
+        "Se in quei giorni la persona è in turno, sulla sua riga in Assenze trovi «Togli dai turni»: il turno resta, scoperto, e puoi cercare chi copre.",
         "Si salvano solo le date e, se c'è, il riferimento del certificato medico. Mai diagnosi o altre informazioni sulla salute.",
         "Il riferimento del certificato arriva spesso dopo la visita: lo aggiunge il dipendente o lo aggiungi tu dalla scheda della persona.",
       ],
@@ -38,7 +38,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
       steps: [
         "Apri Team, poi la persona, e vai alla sezione «Assenze».",
         "Premi «Registra assenza»: tipo, date e, per un permesso, anche l'orario.",
-        "Nasce già approvata e senza messaggio in chat. Va bene per una malattia comunicata al telefono, per ferie concordate a voce, o per chi non ha l'app.",
+        "Nasce già approvata e senza notifiche. Va bene per una malattia comunicata al telefono, per ferie concordate a voce, o per chi non ha l'app.",
       ],
     },
     {
@@ -72,7 +72,7 @@ export const ABSENCE_MANAGER_TUTORIAL: Tutorial = {
 export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
   title: "Ferie, permessi e malattia",
   intro:
-    "Chiedi ferie e permessi, e comunica la malattia, senza messaggi o telefonate: la richiesta arriva alla sede in chat e la risposta arriva a te.",
+    "Chiedi ferie e permessi, e comunica la malattia, senza messaggi o telefonate: la richiesta arriva alla sede e la risposta ti arriva con una notifica.",
   sections: [
     {
       title: "Chiedere ferie o un permesso",
@@ -94,7 +94,7 @@ export const ABSENCE_WAITER_TUTORIAL: Tutorial = {
     {
       title: "Dopo l'invio",
       points: [
-        "Quando la sede risponde ti arriva una notifica, e la risposta compare in chat.",
+        "Quando la sede risponde ti arriva una notifica, e la risposta la trovi in «Ferie, permessi e malattia».",
         "Finché la richiesta è in attesa puoi ritirarla. Un'assenza già approvata puoi annullarla solo se non è ancora cominciata, e la sede viene avvisata.",
         "I turni che hai già in quei giorni non spariscono da soli: li sistema la sede. Nell'agenda li vedi segnati con «Sei in ferie» o simile.",
       ],
