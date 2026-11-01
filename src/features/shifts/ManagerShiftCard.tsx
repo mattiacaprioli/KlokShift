@@ -18,6 +18,7 @@ import {
   isOvernightShift,
   shiftSlotLabel,
 } from "@/lib/format";
+import { DRAFT_LABEL, EXPIRED_DRAFT_LABEL, isDraft, isExpiredDraft } from "./drafts";
 import { RECORDED_LABEL, isRecordedShift } from "./recorded";
 import type { ShiftWithCount } from "./types";
 
@@ -94,6 +95,10 @@ export function ManagerShiftCard({
 }) {
   const cancelled = shift.status === "cancelled";
   const closed = shift.status === "closed";
+  const draft = isDraft(shift);
+  const expiredDraft = isExpiredDraft(shift);
+  // Bordo tratteggiato: la bozza non è ancora di nessuno.
+  const draftBorder = draft ? "border-dashed" : "";
   const { filled, total, short } = shiftCounts(shift);
   // Un turno annullato non è scoperto: non deve coprirlo più nessuno.
   const alert = short && !cancelled;
@@ -128,6 +133,7 @@ export function ManagerShiftCard({
       <Card
         className={cn(
           "flex-row items-center gap-3 rounded-2xl border-border-2 p-3.5",
+          draftBorder,
           cancelled && "opacity-60"
         )}
         onPress={onPress}
@@ -162,6 +168,7 @@ export function ManagerShiftCard({
             {venue ? (
               <Text style={{ color: venue.accent }}>{venue.name} · </Text>
             ) : null}
+            {draft ? `${expiredDraft ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL} · ` : ""}
             {alert ? `manca ${total - filled}` : `${filled}/${total} coperti`}
           </Text>
         </View>
@@ -173,6 +180,7 @@ export function ManagerShiftCard({
     <Card
       className={cn(
         "rounded-3xl border-border-2 p-4",
+        draftBorder,
         cancelled && "opacity-60"
       )}
       onPress={onPress}
@@ -224,7 +232,12 @@ export function ManagerShiftCard({
             {/* Nessuna etichetta per «Aperto»: è lo stato normale, e dirlo su
                 ogni card in verde toglieva risalto a quelle che un problema ce
                 l'hanno davvero. */}
-            {alert ? (
+            {draft && !cancelled ? (
+              <Pill
+                label={expiredDraft ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL}
+                variant={expiredDraft ? "cancelled" : "tag"}
+              />
+            ) : alert ? (
               <Pill
                 label={`manca ${total - filled}`}
                 variant="pending"

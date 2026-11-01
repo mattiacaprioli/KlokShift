@@ -11,6 +11,7 @@ import type {
   StaffMember,
   StaffRoleRef,
 } from "@/features/staff/types";
+import type { PublishPreview } from "@/features/shifts/drafts";
 import { isActiveAssignment } from "./status";
 import type { OwnerHoursRow } from "./hoursSummary";
 import {
@@ -169,11 +170,21 @@ function planPayload(p: InternalShiftPlan) {
  * Ritorna gli id dei turni creati, nell'ordine dei piani.
  */
 export async function createInternalShifts(
-  plans: InternalShiftPlan[]
+  plans: InternalShiftPlan[],
+  opts?: {
+    /**
+     * Crea bozze: nessuno le vede né viene avvisato finché non si pubblicano.
+     * Senza l'opzione la chiave **non viene mandata**, così il comportamento
+     * (pubblicato) è identico a quello delle app già installate.
+     */
+    draft?: boolean;
+  }
 ): Promise<string[]> {
   if (plans.length === 0) return [];
   const { data, error } = await supabase.rpc("create_shifts", {
-    p_plans: plans.map(planPayload),
+    p_plans: plans.map((p) =>
+      opts?.draft ? { ...planPayload(p), draft: true } : planPayload(p)
+    ),
   });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -214,6 +225,55 @@ export async function recordPastShift(input: PastShiftRecord): Promise<string> {
   });
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Cosa farebbe pubblicare le bozze di un periodo (RPC `get_publish_preview`). */
+export async function getPublishPreview(
+  venueIds: string[],
+  from: string,
+  to: string
+): Promise<PublishPreview> {
+  // Sempre sedi esplicite: `null` vorrebbe dire «tutte quelle che gestisco».
+  const { data, error } = await supabase.rpc("get_publish_preview", {
+    p_venues: venueIds,
+    p_from: from,
+    p_to: to,
+  });
+  if (error) throw new Error(error.message);
+  return data as unknown as PublishPreview;
+}
+
+/**
+ * Pubblica le bozze indicate. `notified` conta le notifiche create (una per
+ * persona e azienda), non le persone distinte né i turni.
+ */
+export async function publishShifts(
+  shiftIds: string[],
+  notify: boolean
+): Promise<{ published: number; notified: number }> {
+  const { data, error } = await supabase.rpc("publish_shifts", {
+    p_shifts: shiftIds,
+    p_notify: notify,
+  });
+  if (error) throw new Error(error.message);
+  return data as unknown as { published: number; notified: number };
+}
+
+/** «Conferma tutti»: il dipendente conferma più assegnazioni in una volta. */
+export async function confirmMyAssignments(ids: string[]): Promise<number> {
+  const { data, error } = await supabase.rpc("confirm_my_assignments", {
+    p_assignments: ids,
+  });
+  if (error) throw new Error(error.message);
+  return data ?? 0;
+}
+
+/** «Registra come fatto»: una bozza già finita diventa un turno svolto. */
+export async function recordDraftAsDone(shiftId: string): Promise<void> {
+  const { error } = await supabase.rpc("record_draft_as_done", {
+    p_shift: shiftId,
+  });
+  if (error) throw new Error(error.message);
 }
 
 /** Legge i turni indicati e ne ricava i piani riproducibili. */
@@ -722,7 +782,7 @@ export type HourToFix = {
   /** Le ore proposte dalla timbratura, o quelle del turno se non c'è. */
   hours: number;
 };
-export type HourToFixKind = "missing_out" | "to_approve" | "not_clocked";
+export type HourToFixKind = "missing_out" | "to_approve" | "not_clocked" | "clock_overlap";
 
 /**
  * I turni conclusi del periodo le cui ore non contano ancora, uno per persona,
@@ -813,6 +873,9 @@ export async function getMyAssignedUpcoming(
     .select(MY_ASSIGNMENT_SELECT)
     .eq("venue_member.member.user_id", waiterId)
     .neq("status", "declined")
+    // Le bozze non esistono per il dipendente (la RLS le nasconde già: il
+    // filtro tiene fuori anche chi gestisce e lavora, che le leggerebbe).
+    .not("shift.published_at", "is", null)
     // Da ieri: il turno che il dipendente sta lavorando adesso non deve
     // sparire dai suoi "prossimi" appena scocca mezzanotte.
     .gte("shift.date", addDaysToDate(todayString(), -1))
@@ -846,6 +909,7 @@ export async function getMyDeclinedUpcoming(
     .select(MY_ASSIGNMENT_SELECT)
     .eq("venue_member.member.user_id", waiterId)
     .eq("status", "declined")
+    .not("shift.published_at", "is", null)
     .gte("shift.date", addDaysToDate(todayString(), -1));
   if (error) throw new Error(error.message);
   return (data ?? [])
@@ -875,6 +939,7 @@ export async function getMyAssignmentsInRange(
     .select(MY_ASSIGNMENT_SELECT)
     .eq("venue_member.member.user_id", waiterId)
     .neq("status", "declined")
+    .not("shift.published_at", "is", null)
     .gte("shift.date", from)
     .lte("shift.date", to);
   if (error) throw new Error(error.message);
@@ -941,6 +1006,8 @@ export async function getOwnerTodayAssignments(
     .lte("shift.date", today)
     // I turni annullati non contano tra chi lavora oggi.
     .neq("shift.status", "cancelled")
+    // Chi è in servizio oggi conta solo sui turni pubblicati.
+    .not("shift.published_at", "is", null)
     .neq("status", "declined");
   if (error) throw new Error(error.message);
   const rows: TodayAssignmentRow[] = (data ?? []).map(

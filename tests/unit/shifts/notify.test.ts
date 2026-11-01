@@ -46,4 +46,28 @@ describe("reassignNotifyPlan", () => {
       }).fromSkip
     ).toBe("past");
   });
+
+  it("una bozza di partenza non revoca niente", () => {
+    expect(
+      reassignNotifyPlan({
+        shiftDate: "2026-09-23",
+        shiftCancelled: false,
+        shiftDraft: true,
+        from: { status: "assigned", waiterId: "user-1" },
+        toWaiterId: "user-2",
+      })
+    ).toEqual({ notifiesFrom: false, fromSkip: "draft", notifiesTo: true });
+  });
+
+  it("una bozza d'arrivo non avvisa chi entra", () => {
+    expect(
+      reassignNotifyPlan({
+        shiftDate: "2026-09-23",
+        shiftCancelled: false,
+        toDraft: true,
+        from: { status: "confirmed", waiterId: "user-1" },
+        toWaiterId: "user-1",
+      })
+    ).toEqual({ notifiesFrom: true, fromSkip: null, notifiesTo: false });
+  });
 });

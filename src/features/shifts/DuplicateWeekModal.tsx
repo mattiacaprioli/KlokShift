@@ -10,18 +10,17 @@ import { userErrorMessage } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
 import { useToast } from "@/providers/Toast";
 import {
-  DUPLICATE_BULK_WARN,
   DUPLICATE_NOTHING_PAST,
   DUPLICATE_WITH_STAFF_LABEL,
   classifyDuplicate,
   duplicateCreatedToast,
-  duplicateNotificationsWarning,
   duplicateSkippedPastText,
   duplicateTargetExistingText,
   duplicateWithStaffHint,
   weekDateMap,
   weekRangeLabel,
 } from "./duplicate";
+import { DUPLICATE_AS_DRAFT } from "./drafts";
 import { useOwnerShiftsRange } from "./hooks";
 
 /** Righe di anteprima: la settimana intera può essere lunga. */
@@ -64,7 +63,6 @@ export function DuplicateWeekModal({
     skippedCancelled,
     skippedUnplanned,
     skippedPast,
-    notifications,
   } = classifyDuplicate(shifts, dateMap, now);
   // La copia aggiunge, non sostituisce: va detto prima.
   const targetExisting = (targetQuery.data ?? []).filter(
@@ -161,11 +159,10 @@ export function DuplicateWeekModal({
                 />
               </View>
 
-              {withStaff && notifications >= DUPLICATE_BULK_WARN ? (
-                <Text className="mt-4 text-xs leading-4 text-warning">
-                  {duplicateNotificationsWarning(notifications)}
-                </Text>
-              ) : null}
+              {/* Le copie nascono bozze: nessun avviso parte alla creazione. */}
+              <Text className="mt-4 text-xs leading-4 text-t3">
+                {DUPLICATE_AS_DRAFT}
+              </Text>
               {skippedPast > 0 ? (
                 <Text className="mt-4 text-xs leading-4 text-t3">
                   {duplicateSkippedPastText(skippedPast)}

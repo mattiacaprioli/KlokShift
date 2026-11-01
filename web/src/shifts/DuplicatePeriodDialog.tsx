@@ -5,7 +5,6 @@ import type { AssignmentStatus } from "@/features/assignments/status";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
 import {
-  DUPLICATE_BULK_WARN,
   DUPLICATE_NOTHING_PAST,
   DUPLICATE_WITH_STAFF_LABEL,
   classifyDuplicate,
@@ -15,6 +14,7 @@ import {
   duplicateWithStaffHint,
 } from "@/features/shifts/duplicate";
 import type { Shift } from "@/features/shifts/api";
+import { DUPLICATE_AS_DRAFT } from "@/features/shifts/drafts";
 import {
   addDays,
   addMonths,
@@ -110,7 +110,6 @@ export function DuplicatePeriodDialog({
     skippedUnplanned,
     skippedNoSlot,
     skippedPast,
-    notifications,
   } = useMemo(() => classifyDuplicate(shifts, dateMap), [shifts, dateMap]);
 
   // Quanti turni ci sono già nel periodo di destinazione: la copia **aggiunge**,
@@ -236,16 +235,10 @@ export function DuplicatePeriodDialog({
               </span>
             </label>
 
-            {/* Un mese sono decine di turni e altrettante notifiche sui telefoni
-                di altre persone: il numero va davanti agli occhi prima del
-                click, non nella cronologia dopo. */}
-            {withStaff && notifications >= DUPLICATE_BULK_WARN ? (
-              <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
-                Partiranno <b>{notifications} notifiche</b> a chi è assegnato.
-                Togli la spunta qui sopra per copiare solo la griglia e assegnare
-                le persone dopo.
-              </p>
-            ) : null}
+            {/* Le copie nascono bozze: nessun avviso parte alla creazione. */}
+            <p className="mb-4 rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-xs leading-5 text-t3">
+              {DUPLICATE_AS_DRAFT}
+            </p>
 
             {skippedNoSlot > 0 ? (
               <p className="mb-4 rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-xs leading-5 text-t3">

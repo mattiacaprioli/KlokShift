@@ -7,6 +7,9 @@ import { toDateString } from "@/lib/format";
  * (`supabase/migrations/20260920000800_shifts.sql`): gli assegnati attivi **con
  * account collegato**, tolto chi modifica. Se il trigger cambia destinatari,
  * va cambiato con lui, o l'interfaccia prometterà avvisi che nessuno riceve.
+ *
+ * Una **bozza** (`published_at` nullo) non avvisa nessuno: i trigger escono
+ * subito (`20261103000000_shift_drafts.sql`, `20261103000100_shift_drafts_silent.sql`).
  */
 export type ShiftNotifyRecipients = {
   /** Nomi di chi è assegnato e verrà avvisato, per poterli nominare. */
@@ -15,7 +18,7 @@ export type ShiftNotifyRecipients = {
 };
 
 /** Perché chi lascia il turno non riceve la revoca. */
-export type ReassignSkip = "declined" | "no-account" | "past" | "cancelled";
+export type ReassignSkip = "declined" | "no-account" | "past" | "cancelled" | "draft";
 
 export type ReassignNotifyPlan = {
   notifiesFrom: boolean;
@@ -33,12 +36,20 @@ export type ReassignNotifyPlan = {
  * `notify_on_assignment` per chi entra, che chiede solo un account collegato
  * (e non salta i turni passati: chi entra viene avvisato comunque).
  *
+ * Dal 03/11/2026 (`20261103000100`) nessuno dei due parla se il turno è una
+ * bozza: chi esce da una bozza non ha mai visto il turno, e in una bozza
+ * d'arrivo non si avvisa nessuno finché non si pubblica.
+ *
  * Vale anche quando la persona è la stessa su entrambi i lati: è il caso di
  * `move_assignment`, dove esce da un turno ed entra in un altro.
  */
 export function reassignNotifyPlan(input: {
   shiftDate: string;
   shiftCancelled: boolean;
+  /** Il turno di partenza è una bozza. */
+  shiftDraft?: boolean;
+  /** Il turno d'arrivo è una bozza. */
+  toDraft?: boolean;
   from: { status: AssignmentStatus; waiterId: string | null };
   toWaiterId: string | null;
 }): ReassignNotifyPlan {
@@ -49,13 +60,15 @@ export function reassignNotifyPlan(input: {
         ? "no-account"
         : input.shiftCancelled
           ? "cancelled"
-          : input.shiftDate < toDateString(new Date())
+          : input.shiftDraft
+            ? "draft"
+            : input.shiftDate < toDateString(new Date())
             ? "past"
             : null;
 
   return {
     notifiesFrom: fromSkip === null,
     fromSkip,
-    notifiesTo: !!input.toWaiterId,
+    notifiesTo: !!input.toWaiterId && !input.toDraft,
   };
 }

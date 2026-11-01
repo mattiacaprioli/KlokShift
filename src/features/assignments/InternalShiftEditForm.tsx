@@ -49,6 +49,7 @@ import {
   moveImpactLines,
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
+import { isDraft } from "@/features/shifts/drafts";
 import type { Shift } from "@/features/shifts/types";
 import { useVenueCalendar } from "@/features/venues/hooks";
 import { closureWarning } from "@/features/venues/closures";
@@ -209,6 +210,7 @@ function EditForm({
     const impact = shiftMoveImpact({
       shiftId: shift.id,
       cancelled: shift.status === "cancelled",
+      draft: isDraft(shift),
       assignees: (assignmentsQuery.data ?? []).flatMap((a) =>
         a.staff_member
           ? [

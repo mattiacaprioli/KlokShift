@@ -17,6 +17,10 @@ import { periodBounds, periodKey, type ReportPeriod } from "./reportPeriod";
 import {
   createInternalShifts,
   recordPastShift,
+  getPublishPreview,
+  publishShifts,
+  confirmMyAssignments,
+  recordDraftAsDone,
   getInternalShiftPlans,
   moveAssignment,
   getMyAssignedUpcoming,
@@ -141,7 +145,65 @@ function invalidateAfterShiftWrite(qc: ReturnType<typeof useQueryClient>) {
 export function useCreateInternalShifts() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (plans: InternalShiftPlan[]) => createInternalShifts(plans),
+    // Una lista di piani crea turni pubblicati (come sempre); con
+    // `{ plans, draft: true }` nascono bozze, che nessuno vede finché non si
+    // pubblicano.
+    mutationFn: (
+      input: InternalShiftPlan[] | { plans: InternalShiftPlan[]; draft: boolean }
+    ) =>
+      Array.isArray(input)
+        ? createInternalShifts(input)
+        : createInternalShifts(input.plans, { draft: input.draft }),
+    onSuccess: () => invalidateAfterShiftWrite(qc),
+  });
+}
+
+/**
+ * L'anteprima della pubblicazione di un periodo. Non resta in cache: deve
+ * rispecchiare le bozze di adesso; `enabled` la tiene spenta finché la
+ * finestra che la mostra non è aperta.
+ */
+export function usePublishPreview(
+  venueIds: string[],
+  from: string,
+  to: string,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: qk.shifts.publishPreview(venueIds, from, to),
+    queryFn: () => getPublishPreview(venueIds, from, to),
+    enabled: enabled && venueIds.length > 0,
+    gcTime: 0,
+  });
+}
+
+/** Pubblica le bozze: cambiano per tutti, dipendenti compresi. */
+export function usePublishShifts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { shiftIds: string[]; notify: boolean }) =>
+      publishShifts(vars.shiftIds, vars.notify),
+    onSuccess: () => invalidateAfterShiftWrite(qc),
+  });
+}
+
+/** «Conferma tutti» del dipendente. */
+export function useConfirmMyAssignments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => confirmMyAssignments(ids),
+    onSuccess: () => {
+      invalidateShiftViews(qc);
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
+    },
+  });
+}
+
+/** Trasforma una bozza finita in un turno svolto. */
+export function useRecordDraftAsDone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (shiftId: string) => recordDraftAsDone(shiftId),
     onSuccess: () => invalidateAfterShiftWrite(qc),
   });
 }
@@ -195,7 +257,9 @@ export function useCopyInternalShifts() {
             ...p,
             date: input.dateMap[p.date],
             staff: input.withStaff ? p.staff : [],
-          }))
+          })),
+        // Le copie nascono sempre in bozza: si controllano e poi si pubblicano.
+        { draft: true }
       );
     },
     onSuccess: () => invalidateAfterShiftWrite(qc),

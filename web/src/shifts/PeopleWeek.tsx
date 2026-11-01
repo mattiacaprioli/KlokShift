@@ -32,6 +32,12 @@ import {
   formatShiftRange,
 } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
+import {
+  DRAFT_LABEL,
+  EXPIRED_DRAFT_LABEL,
+  isDraft,
+  isExpiredDraft,
+} from "@/features/shifts/drafts";
 import { cn } from "@/lib/cn";
 import { personRoleNames } from "@/features/staff/api";
 import type { ClockAttentionKind } from "@/features/clock/attention";
@@ -442,6 +448,7 @@ export function PeopleWeek({
                           // trascina — `notify_on_shift_change` salta i turni
                           // cancellati, quindi nessuno saprebbe dello spostamento.
                           cancelled={byId.get(ps.shiftId)?.status === "cancelled"}
+                          draftLabel={draftLabelOf(byId.get(ps.shiftId))}
                           busyStaffIds={
                             byId
                               .get(ps.shiftId)
@@ -546,6 +553,14 @@ function absenceCellStyle(a: Pick<AbsenceAvailability, "status">): CSSProperties
   };
 }
 
+/** L'etichetta della bozza, o null se il turno è pubblicato. */
+function draftLabelOf(
+  shift: { published_at: string | null; date: string; start_time: string; end_time: string } | undefined
+): string | null {
+  if (!shift || !isDraft(shift)) return null;
+  return isExpiredDraft(shift) ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL;
+}
+
 function PersonShiftChip({
   personShift,
   clockAttention,
@@ -556,6 +571,7 @@ function PersonShiftChip({
   venue,
   showVenue,
   cancelled,
+  draftLabel,
   busyStaffIds,
   onOpen,
 }: {
@@ -570,6 +586,8 @@ function PersonShiftChip({
   fromStaffName: string;
   /** Turno annullato: non si trascina, come in settimana e mese. */
   cancelled: boolean;
+  /** «Bozza» / «Mai pubblicato» se il turno non è ancora di nessuno. */
+  draftLabel: string | null;
   /** La sede del turno: nome e colore. `null` con una sede sola. */
   venue: { name: string; accent: string } | null;
   /**
@@ -613,6 +631,7 @@ function PersonShiftChip({
         cancelled
           ? `${personShift.title} · annullato: riattivalo dal pannello per spostarlo`
           : [
+              draftLabel,
               venue?.name,
               personShift.title,
               formatShiftRange(personShift.start_time, personShift.end_time),
@@ -640,6 +659,8 @@ function PersonShiftChip({
           : // Non viene: resta visibile, perché è un buco da coprire, ma non
             // deve somigliare a una copertura.
             "border-border bg-bg-1 opacity-60 hover:opacity-100",
+        // Bordo tratteggiato: la bozza non è ancora di nessuno.
+        draftLabel && !cancelled && "border-dashed",
         dragging && "opacity-40"
       )}
     >
@@ -668,6 +689,11 @@ function PersonShiftChip({
             style={{ backgroundColor: venue.accent }}
           />
           <span className="truncate text-[10px] text-t4">{venue.name}</span>
+        </span>
+      ) : null}
+      {draftLabel && !cancelled ? (
+        <span className="mt-0.5 block text-[10px] font-semibold text-gold">
+          {draftLabel}
         </span>
       ) : null}
       {actual && actual.kind !== "missing_out" ? (

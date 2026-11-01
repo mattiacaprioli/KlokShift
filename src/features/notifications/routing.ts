@@ -19,6 +19,10 @@ export function routeForNotification(
 ): Href | null {
   if (role === "waiter") {
     if (type === "staff_invite") return "/(waiter)/inviti";
+    // Turni pubblicati: si guarda l'agenda, non un turno solo (`related_id` è il
+    // primo). Il promemoria delle bozze è per chi gestisce.
+    if (type === "shift_published") return "/(waiter)/(tabs)/turni";
+    if (type === "shift_drafts_reminder") return null;
     // Niente da accettare: la scheda che la sede aveva preparato è già sua. Il
     // `related_id` è una `venue_members`, quindi il ramo finale la scambierebbe
     // per un turno e aprirebbe una schermata vuota.
@@ -65,6 +69,11 @@ export function routeForNotification(
 
   // manager
   if (type === "staff_response") return "/(manager)/(tabs)/staff";
+  // Bozze dimenticate: il `related_id` è il primo turno da pubblicare, come sul
+  // web; senza, ci si ripiega sul calendario.
+  if (type === "shift_drafts_reminder") {
+    return relatedId ? `/(manager)/shift/${relatedId}` : "/(manager)/(tabs)/turni";
+  }
   // Chi è appena entrato in un'azienda atterra sulla sua home: il `related_id` è
   // una sede, non un turno, e il ramo finale lo aprirebbe come tale.
   if (type === "team_linked") return "/(manager)/(tabs)";

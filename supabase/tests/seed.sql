@@ -175,6 +175,7 @@ declare
   v_staff   jsonb;
   v_item    jsonb;
   v_break   integer;
+  v_draft   boolean;
 begin
   if (select auth.uid()) is null then
     raise exception 'not_authenticated' using errcode = '28000';
@@ -199,19 +200,22 @@ begin
     end;
     v_staff := coalesce(v_plan -> 'staff', '[]'::jsonb);
     v_break := coalesce((v_plan ->> 'break_minutes')::integer, 0);
+    v_draft := coalesce((v_plan ->> 'draft')::boolean, false);
     perform private.assert_shift_break(
       (v_plan ->> 'start_time')::time, (v_plan ->> 'end_time')::time, v_break);
 
     foreach v_date in array v_dates loop
       insert into public.shifts (
         venue_id, title, description, date, start_time, end_time, require_confirmation, positions_total,
-        break_minutes
+        break_minutes, published_at, published_by
       ) values (
         v_venue, btrim(v_plan ->> 'title'), nullif(btrim(coalesce(v_plan ->> 'description', '')), ''),
         v_date, (v_plan ->> 'start_time')::time, (v_plan ->> 'end_time')::time,
         coalesce((v_plan ->> 'require_confirmation')::boolean, false),
         private.positions_for(v_plan -> 'role_targets', jsonb_array_length(v_staff)),
-        v_break
+        v_break,
+        case when v_draft then null else now() end,
+        case when v_draft then null else (select auth.uid()) end
       ) returning id into v_shift;
 
       perform private.replace_requirements(v_shift, v_venue, v_plan -> 'role_targets');

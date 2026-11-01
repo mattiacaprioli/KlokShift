@@ -83,6 +83,49 @@ esattamente il bug che questo modulo ha chiuso. ⚠️ `moveImpact.ts` e `notify
 sono gemelli **manuali** dei trigger SQL: se cambia `notify_on_shift_change`,
 cambiali con lui.
 
+## Bozza e pubblicazione (2026-11-03)
+
+Un turno si può preparare **in bozza** (`shifts.published_at` nullo): il team non
+lo vede e nessuno viene avvisato finché chi ha «Turni» non lo **pubblica**.
+Pensato per pianificare un mese intero e avvisare una volta sola.
+
+- **Il default è pubblicato** (`published_at default now()`): la bozza nasce solo
+  da `create_shifts` con la chiave `"draft": true` nel piano. Le versioni
+  dell'app già installate non la mandano, e devono continuare a pubblicare.
+- **Chi non ha «roster» non vede le bozze**: policy RLS *restrictive* su `shifts`,
+  `shift_assignments`, `shift_role_requirements` e `shift_change_requests`
+  (`20261103000000`). Le funzioni DEFINER scavalcano la RLS, quindi ognuna che
+  legge i turni per il dipendente, avvisa o conta ore esclude le bozze da sé
+  (`20261103000100`; l'elenco completo e quelle lasciate com'erano, con il
+  perché, sono nell'intestazione e nel commento finale della migration): trigger
+  di notifica (tacciono), letture del dipendente (agenda, planning, storico e
+  totali ore), timbrature e pause, cambi turno, impostazioni della sede,
+  inventario e viste admin. Chi tocca una di queste funzioni deve ripetere il
+  filtro. Su una bozza le operazioni del dipendente e le presenze rifiutano con
+  `shift_draft`; una bozza non si annulla, si elimina.
+- **Pubblicare** (`20261103000300`): `get_publish_preview` conta chi sarà
+  avvisato; `publish_shifts` manda **una notifica per persona per azienda**
+  (`shift_published`; ordine dei lock: azienda → turni); `confirm_my_assignments`
+  è il «Conferma tutti» del dipendente.
+- **Bozza scaduta** (solo se già **finita**: una iniziata ma non finita si
+  pubblica ancora): non conta mai ore e non si può pubblicare. Si può «Elimina» o `record_draft_as_done` («Registra come fatto»,
+  serve «Ore»): diventa un turno «Inserito a mano»; chi ha una timbratura
+  sovrapposta riceve `clock_expected` e compare in «Ore da sistemare» come
+  `clock_overlap`.
+- **Promemoria**: lavoro pg_cron orario `draft-reminders`
+  (`private.queue_draft_reminders`, prima si prenota la riga, poi si notifica)
+  per le bozze che iniziano entro 24 ore → chi gestisce con «Turni»
+  (`20261103000400`).
+- ⚠️ `moveImpact.ts` e `notify.ts` sono gemelli **manuali** dei trigger anche per
+  la bozza (su una bozza non avvisano). `hasMoveImpact` ignora il flag: una
+  modifica che tocca solo la bozza non apre alcun dialogo. Le frasi sono in
+  `src/features/shifts/drafts.ts`.
+- **Permessi**: pubblicare richiede «Turni»; le bozze le vede chi ha `roster`
+  (cioè «Turni» o «Team»).
+- Test: SQL 152 e 153; `supabase/tests/concurrency/100_publish_shifts.sql` copre
+  la doppia pubblicazione e assegna↔pubblica in parallelo (una sola notifica per
+  persona, ordine dei lock azienda → turni).
+
 ## Ore, assenze e maggiorazioni (2026-09-24)
 
 La decisione completa è in `plans/HOURS-ABSENCES-ADJUSTMENTS.md` e completa il

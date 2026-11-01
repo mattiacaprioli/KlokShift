@@ -8,6 +8,12 @@ import {
   shiftMoveImpact,
   type MoveAssignee,
 } from "@/features/shifts/moveImpact";
+import { DRAFT_SILENT_LINE } from "@/features/shifts/drafts";
+import {
+  moveAssignmentLines,
+  moveImpactLines,
+  hasMoveImpact,
+} from "@/features/shifts/moveImpact";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
 
 function assignment(
@@ -49,6 +55,8 @@ function shift(
     status: "open",
     title: input.id,
     unplanned: false,
+    published_at: "2026-09-01T00:00:00Z",
+    published_by: null,
     recorded_at: null,
     recorded_by: null,
     venue_id: "venue-1",
@@ -69,6 +77,8 @@ describe("shiftMoveImpact", () => {
   it("notifica e riapre soltanto gli assegnati interessati", () => {
     const impact = shiftMoveImpact({
       shiftId: "moving",
+
+      draft: false,
       assignees: [
         {
           status: "confirmed",
@@ -133,12 +143,15 @@ describe("shiftMoveImpact", () => {
       reopens: [],
       absent: [],
       overlaps: [],
+      draft: false,
     });
   });
 
   it("rileva assenza e sovrapposizione di un turno notturno", () => {
     const impact = shiftMoveImpact({
       shiftId: "moving",
+
+      draft: false,
       assignees: [
         {
           status: "confirmed",
@@ -179,6 +192,8 @@ describe("shiftMoveImpact", () => {
   it("non segnala come sovrapposti due turni adiacenti", () => {
     const impact = shiftMoveImpact({
       shiftId: "moving",
+
+      draft: false,
       assignees: [
         {
           status: "confirmed",
@@ -206,6 +221,8 @@ describe("shiftMoveImpact", () => {
   it("vede un notturno iniziato il giorno prima, anche in un'altra sede", () => {
     const impact = shiftMoveImpact({
       shiftId: "moving",
+
+      draft: false,
       assignees: [
         {
           status: "assigned",
@@ -236,6 +253,8 @@ describe("shiftMoveImpact", () => {
   it("non sovrappone un notturno che finisce quando il nuovo turno inizia", () => {
     const impact = shiftMoveImpact({
       shiftId: "moving",
+
+      draft: false,
       assignees: [
         {
           status: "assigned",
@@ -263,6 +282,8 @@ describe("shiftMoveImpact", () => {
   it("vede turno e assenze del giorno successivo a un arrivo notturno", () => {
     const impact = shiftMoveImpact({
       shiftId: "moving",
+
+      draft: false,
       assignees: [
         {
           status: "assigned",
@@ -493,5 +514,150 @@ describe("personClashes", () => {
       ["2026-09-23", "wed-1"],
       ["2026-09-25", "fri"],
     ]);
+  });
+});
+
+describe("bozze: spostare non avvisa nessuno", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-22T12:00:00"));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("un turno in bozza non notifica e non riapre conferme", () => {
+    const impact = shiftMoveImpact({
+      shiftId: "moving",
+      draft: true,
+      assignees: [
+        {
+          status: "confirmed",
+          personId: "bruno",
+          displayName: "Bruno",
+          waiterId: "user-bruno",
+        },
+      ],
+      to: { date: "2026-09-23", start_time: "18:00", end_time: "23:00" },
+      absences: [],
+    });
+    expect(impact.notify).toEqual({ assignees: [], total: 0 });
+    expect(impact.reopens).toEqual([]);
+    expect(moveImpactLines(impact)).toContain(DRAFT_SILENT_LINE);
+    // Una bozza da sola non apre nessun dialogo.
+    expect(hasMoveImpact(impact)).toBe(false);
+  });
+
+  it("assenze e sovrapposizioni si dicono comunque", () => {
+    const impact = shiftMoveImpact({
+      shiftId: "moving",
+      draft: true,
+      assignees: [
+        {
+          status: "assigned",
+          personId: "anna",
+          displayName: "Anna",
+          waiterId: "user-anna",
+        },
+      ],
+      to: { date: "2026-09-24", start_time: "18:00", end_time: "23:00" },
+      absences: [
+        {
+          member_id: "anna",
+          status: "approved",
+          start_date: "2026-09-24",
+          end_date: "2026-09-24",
+          start_time: null,
+          end_time: null,
+        },
+      ],
+    });
+    expect(impact.absent).toHaveLength(1);
+    expect(hasMoveImpact(impact)).toBe(true);
+    expect(moveImpactLines(impact)).toContain(DRAFT_SILENT_LINE);
+  });
+
+  const row = [assignment("a1", "anna")];
+  const published = shift({
+    id: "pub",
+    date: "2026-09-23",
+    start_time: "18:00",
+    end_time: "23:00",
+    shift_assignments: row,
+  });
+  const draft = (id: string) =>
+    shift({
+      id,
+      date: "2026-09-24",
+      start_time: "18:00",
+      end_time: "23:00",
+      published_at: null,
+      shift_assignments: id === "draft-from" ? row : [],
+    });
+
+  it("da bozza a pubblicato: revoca no, arrivo sì", () => {
+    const impact = moveAssignmentImpact({
+      from: draft("draft-from"),
+      assignmentId: "a1",
+      to: { shift: published },
+      absences: [],
+    });
+    expect(impact.plan).toEqual({
+      notifiesFrom: false,
+      fromSkip: "draft",
+      notifiesTo: true,
+    });
+    expect(moveAssignmentLines(impact, "Anna", "t", "2026-09-24")[0]).toBe(
+      "Anna riceverà «Nuovo turno assegnato»."
+    );
+  });
+
+  it("da pubblicato a bozza: revoca sì, arrivo no", () => {
+    const impact = moveAssignmentImpact({
+      from: published,
+      assignmentId: "a1",
+      to: { shift: draft("draft-to") },
+      absences: [],
+    });
+    expect(impact.plan).toEqual({
+      notifiesFrom: true,
+      fromSkip: null,
+      notifiesTo: false,
+    });
+    const lines = moveAssignmentLines(impact, "Anna", "t", "2026-09-23");
+    expect(lines[0]).toBe("Anna riceverà «Turno revocato».");
+    expect(lines).toContain(DRAFT_SILENT_LINE);
+  });
+
+  it("da bozza a bozza (anche il gemello): niente, e lo dice", () => {
+    const impact = moveAssignmentImpact({
+      from: draft("draft-from"),
+      assignmentId: "a1",
+      to: { date: "2026-09-25" },
+      absences: [],
+    });
+    expect(impact.plan.notifiesFrom).toBe(false);
+    expect(impact.plan.notifiesTo).toBe(false);
+    const lines = moveAssignmentLines(impact, "Anna", "t", "2026-09-24");
+    expect(lines).toContain(DRAFT_SILENT_LINE);
+    expect(lines.join(" ")).not.toMatch(/account collegato/);
+  });
+
+  it("da bozza a pubblicato, persona senza account: dice che non riceve nulla", () => {
+    const noAccount = shift({
+      id: "draft-na",
+      date: "2026-09-24",
+      start_time: "18:00",
+      end_time: "23:00",
+      published_at: null,
+      shift_assignments: [assignment("a9", "carlo", "assigned", null)],
+    });
+    const impact = moveAssignmentImpact({
+      from: noAccount,
+      assignmentId: "a9",
+      to: { shift: published },
+      absences: [],
+    });
+    const lines = moveAssignmentLines(impact, "Carlo", "t", "2026-09-24");
+    expect(lines[0]).toMatch(/account collegato/);
+    expect(lines).not.toContain(DRAFT_SILENT_LINE);
   });
 });

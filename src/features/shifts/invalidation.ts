@@ -19,6 +19,7 @@ export function shiftViewQueryKeys(
     qk.shifts.rangeAny,
     qk.shifts.pastAll,
     qk.shifts.pastCountAll,
+    qk.shifts.draftsAll,
     qk.assignments.todayAll,
     qk.staff.all,
     qk.absences.summaryAll,

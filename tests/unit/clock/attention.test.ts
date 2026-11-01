@@ -44,6 +44,8 @@ function shift(input?: {
     end_time: "15:00:00",
     break_minutes: 0,
     break_paid: false,
+    published_at: "2026-09-01T00:00:00Z",
+    published_by: null,
     recorded_at: null,
     recorded_by: null,
     title: "Pomeriggio",

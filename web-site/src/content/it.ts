@@ -159,7 +159,7 @@ export const it: Content = {
       },
       {
         title: "Pianifica la settimana",
-        body: "Dal telefono o dal browser.",
+        body: "Dal telefono o dal browser: prepari in bozza, poi pubblichi.",
       },
       {
         title: "Il team conferma",

@@ -411,6 +411,39 @@ export async function getShiftWithVenue(
   return (data as ShiftWithVenue | null) ?? null;
 }
 
+/**
+ * Le bozze (non annullate) delle sedi indicate, di ogni data: servono all'avviso
+ * «turni in bozza» e a sapere quali sono ormai «mai pubblicate». Solo i campi
+ * che bastano a contarle e a raggrupparle per mese.
+ */
+export async function getOwnerDrafts(
+  venueIds: string[]
+): Promise<
+  Pick<Shift, "id" | "venue_id" | "date" | "start_time" | "end_time">[]
+> {
+  if (venueIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("id, venue_id, date, start_time, end_time")
+    .in("venue_id", venueIds)
+    .is("published_at", null)
+    .neq("status", "cancelled")
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Elimina il turno (RPC `delete_shift`): serve «Turni» sulla sede. Una bozza,
+ * anche scaduta, si può sempre eliminare; un turno uscito con persone no
+ * (`finished_shift_locked`).
+ */
+export async function deleteShift(id: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_shift", { p_shift: id });
+  if (error) throw new Error(error.message);
+}
+
 export async function getShift(id: string): Promise<Shift | null> {
   const { data, error } = await supabase
     .from("shifts")

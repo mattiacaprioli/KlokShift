@@ -27,7 +27,17 @@ import {
   StaffAssignPicker,
   defaultRoleFor,
 } from "@/features/assignments/StaffAssignPicker";
-import { useCreateInternalShifts } from "@/features/assignments/hooks";
+import {
+  useCreateInternalShifts,
+  usePublishShifts,
+} from "@/features/assignments/hooks";
+import {
+  SAVED_AS_DRAFT_NOT_PUBLISHED,
+  SAVE_AND_PUBLISH,
+  SAVE_DRAFT,
+  publishedToast,
+  savedDraftToast,
+} from "@/features/shifts/drafts";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { RepeatDaysField } from "@/features/shifts/RepeatDaysField";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
@@ -104,6 +114,9 @@ export function StaffShiftForm({ initialDate, header }: Props) {
   const rolesQuery = useVenueRoles(venueId);
   const roles = rolesQuery.data ?? [];
   const create = useCreateInternalShifts();
+  const publish = usePublishShifts();
+
+  const [submitting, setSubmitting] = useState<"draft" | "publish" | null>(null);
 
   const [date, setDate] = useState(() => initialDate ?? new Date());
   // Giorni **in più** su cui ripetere lo stesso turno («Ripeti anche il…»).
@@ -285,7 +298,7 @@ export function StaffShiftForm({ initialDate, header }: Props) {
     });
   }
 
-  function onSubmit() {
+  async function onSubmit(mode: "draft" | "publish") {
     if (!venueId) {
       toast.show("Configura prima la tua sede.", "error");
       return;
@@ -307,43 +320,52 @@ export function StaffShiftForm({ initialDate, header }: Props) {
       role_id: selected[id],
     }));
     // Un turno o sette passano dalla stessa RPC, tutto o niente: la data è
-    // l'unica cosa che cambia fra le copie.
-    create.mutate(
-      plannedDates.map((dateStr) => ({
-        venue_id: venueId,
-        // Il nome del modello se si è partiti da uno, altrimenti la fascia
-        // oraria. Mai la data: è già una colonna del turno, e ripeterla nel
-        // titolo riempiva la riga più in vista di ogni card con l'informazione
-        // che la riga sotto dava di nuovo.
-        title: template?.name ?? shiftSlotLabel(toTimeString(start)),
-        date: dateStr,
-        start_time: toTimeString(start),
-        end_time: toTimeString(end),
-        description: note.trim() || null,
-        require_confirmation: requireConfirmation,
-        break_minutes: pause.minutes,
-        // Chi quel giorno è assente resta fuori da quella copia sola.
-        staff: staffForDate(people, dateStr, skippedDays, forcedAbsent),
-        roleTargets,
-      })),
-      {
-        onSuccess: () => {
-          toast.show(
-            plannedDates.length > 1
-              ? `Creati ${plannedDates.length} turni`
-              : selectedIds.length === 0
-                ? "Turno creato: è da coprire"
-                : "Turno assegnato"
-          );
-          router.back();
-        },
-        onError: (e) =>
-          toast.show(
-            userErrorMessage(e, "Impossibile creare il turno. Riprova."),
-            "error"
-          ),
-      }
-    );
+    // l'unica cosa che cambia fra le copie. Nascono sempre in bozza: «Salva e
+    // pubblica» le pubblica subito dopo, con gli avvisi.
+    const plans = plannedDates.map((dateStr) => ({
+      venue_id: venueId,
+      // Il nome del modello se si è partiti da uno, altrimenti la fascia
+      // oraria. Mai la data: è già una colonna del turno, e ripeterla nel
+      // titolo riempiva la riga più in vista di ogni card con l'informazione
+      // che la riga sotto dava di nuovo.
+      title: template?.name ?? shiftSlotLabel(toTimeString(start)),
+      date: dateStr,
+      start_time: toTimeString(start),
+      end_time: toTimeString(end),
+      description: note.trim() || null,
+      require_confirmation: requireConfirmation,
+      break_minutes: pause.minutes,
+      // Chi quel giorno è assente resta fuori da quella copia sola.
+      staff: staffForDate(people, dateStr, skippedDays, forcedAbsent),
+      roleTargets,
+    }));
+    setSubmitting(mode);
+    let ids: string[];
+    try {
+      ids = await create.mutateAsync({ plans, draft: true });
+    } catch (e) {
+      setSubmitting(null);
+      toast.show(
+        userErrorMessage(e, "Impossibile creare il turno. Riprova."),
+        "error"
+      );
+      return;
+    }
+    if (mode === "draft") {
+      setSubmitting(null);
+      toast.show(savedDraftToast(ids.length));
+      router.back();
+      return;
+    }
+    try {
+      const result = await publish.mutateAsync({ shiftIds: ids, notify: true });
+      toast.show(publishedToast(result.published));
+    } catch {
+      // I turni esistono, in bozza: l'errore dice proprio questo.
+      toast.show(SAVED_AS_DRAFT_NOT_PUBLISHED, "error");
+    }
+    setSubmitting(null);
+    router.back();
   }
 
   return (
@@ -446,7 +468,7 @@ export function StaffShiftForm({ initialDate, header }: Props) {
         <RequireConfirmationField
           value={requireConfirmation}
           onChange={setRequireConfirmation}
-          disabled={create.isPending}
+          disabled={submitting !== null}
         />
 
         <Input
@@ -462,25 +484,21 @@ export function StaffShiftForm({ initialDate, header }: Props) {
 
         <GoldButton
           className="mt-1"
-          label={
-            create.isPending
-              ? "Creazione…"
-              : plannedDates.length > 1
-                ? `Crea ${plannedDates.length} turni`
-                : selectedIds.length === 0
-                  ? "Crea turno da coprire"
-                  : selectedIds.length > 1
-                    ? `Assegna a ${selectedIds.length} persone`
-                    : "Assegna turno"
-          }
-          disabled={create.isPending}
-          onPress={onSubmit}
+          label={submitting === "draft" ? "Salvataggio…" : SAVE_DRAFT}
+          disabled={submitting !== null}
+          onPress={() => void onSubmit("draft")}
+        />
+        <GhostButton
+          className="-mt-4"
+          label={submitting === "publish" ? "Pubblicazione…" : SAVE_AND_PUBLISH}
+          disabled={submitting !== null}
+          onPress={() => void onSubmit("publish")}
         />
         {/* Non chiede persone: il modello non le ricorda. */}
         <GhostButton
           className="-mt-4"
           label="Salva come modello"
-          disabled={create.isPending}
+          disabled={submitting !== null}
           onPress={onSaveTemplate}
         />
       </ScrollView>

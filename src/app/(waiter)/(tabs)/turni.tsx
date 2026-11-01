@@ -8,6 +8,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, View } from "@/tw";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { GhostButton } from "@/components/ui/GhostButton";
+import {
+  CONFIRM_ALL,
+  confirmAllQuestion,
+  confirmedToast,
+} from "@/features/shifts/drafts";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -36,6 +43,7 @@ import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
 import {
   useMyAssignedUpcoming,
   useMyAssignmentsInRange,
+  useConfirmMyAssignments,
   useMyDeclinedUpcoming,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
@@ -149,6 +157,8 @@ export default function WaiterShiftsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const confirmAll = useConfirmMyAssignments();
+  const [confirmAllVisible, setConfirmAllVisible] = useState(false);
   const { session } = useAuth();
   const waiterId = session!.user.id;
 
@@ -405,6 +415,33 @@ export default function WaiterShiftsScreen() {
     []
   );
 
+  function onConfirmAll() {
+    confirmAll.mutate(
+      daConfermare.map((a) => a.id),
+      {
+        onSuccess: (n) => {
+          setConfirmAllVisible(false);
+          toast.show(confirmedToast(n));
+        },
+        onError: (e) => {
+          setConfirmAllVisible(false);
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error");
+        },
+      }
+    );
+  }
+
+  const confirmAllButton =
+    daConfermare.length >= 2 ? (
+      <GhostButton
+        size="sm"
+        label={CONFIRM_ALL}
+        disabled={confirmAll.isPending}
+        onPress={() => setConfirmAllVisible(true)}
+        className="mt-2 self-start"
+      />
+    ) : null;
+
   function onConfirm(id: string) {
     respond.mutate(
       { id, status: "confirmed" },
@@ -532,6 +569,7 @@ export default function WaiterShiftsScreen() {
                     subtitle="Tocca il blocco arancio per rispondere"
                     onPress={() => goToDay(daConfermare[0].shift.date)}
                   />
+                  {confirmAllButton}
                 </View>
               ) : null}
               <WeekTimeGrid
@@ -588,17 +626,19 @@ export default function WaiterShiftsScreen() {
             onViewableItemsChanged={onViewableItemsChanged}
             ListHeaderComponent={
               daConfermare.length > 0 ? (
-                <AlertBanner
-                  className="mb-4"
-                  icon="alert"
-                  title={
-                    daConfermare.length === 1
-                      ? "1 turno da confermare"
-                      : `${daConfermare.length} turni da confermare`
-                  }
-                  subtitle="La sede sta aspettando la tua risposta"
-                  onPress={() => goToDay(daConfermare[0].shift.date)}
-                />
+                <View className="mb-4">
+                  <AlertBanner
+                    icon="alert"
+                    title={
+                      daConfermare.length === 1
+                        ? "1 turno da confermare"
+                        : `${daConfermare.length} turni da confermare`
+                    }
+                    subtitle="La sede sta aspettando la tua risposta"
+                    onPress={() => goToDay(daConfermare[0].shift.date)}
+                  />
+                  {confirmAllButton}
+                </View>
               ) : null
             }
             renderSectionHeader={({ section }) => (
@@ -652,6 +692,16 @@ export default function WaiterShiftsScreen() {
           />
         )}
       </View>
+
+      <ConfirmModal
+        visible={confirmAllVisible}
+        title={confirmAllQuestion(daConfermare.length)}
+        confirmLabel={CONFIRM_ALL}
+        cancelLabel="Indietro"
+        pending={confirmAll.isPending}
+        onConfirm={onConfirmAll}
+        onCancel={() => setConfirmAllVisible(false)}
+      />
 
       <DeclineShiftModal
         assignmentId={declining}

@@ -71,7 +71,7 @@ const COPY: Record<FirstStepId, Omit<FirstStep, "id" | "status">> = {
   },
   shift: {
     title: "Crea il primo turno",
-    detail: "Giorno, orario e chi lavora: le persone ricevono la notifica.",
+    detail: "Giorno, orario e chi lavora: le persone ricevono la notifica quando pubblichi.",
     cta: "Crea un turno",
   },
   team: {

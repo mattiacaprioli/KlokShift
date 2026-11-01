@@ -19,7 +19,7 @@ export const FIRST_SHIFT_TUTORIAL: Tutorial = {
         "Ruoli: scegli cosa fanno le persone da te (reception, cassa, magazzino, sala…). Bastano quelli che usi davvero.",
         "Team: aggiungi le persone con nome ed email. Lavori anche tu? Mettiti nel team.",
         "Turno: premi «Nuovo turno» in Home (o il «+» in Turni), scegli giorno, orario e chi lavora.",
-        "Fatto: le persone ricevono la notifica e confermano dall'app con un tocco.",
+        "Fatto: quando pubblichi, le persone ricevono la notifica e confermano dall'app con un tocco. Se prepari più turni, salvali in bozza e pubblicali insieme: avvisi tutti una volta sola.",
       ],
     },
     {
@@ -27,6 +27,7 @@ export const FIRST_SHIFT_TUTORIAL: Tutorial = {
       points: [
         "L'email è quella che fa entrare la persona nell'app: si registra con quella e trova subito i suoi turni.",
         "Chi è fisso risulta già in turno; chi è a chiamata conferma. Puoi chiedere la conferma a tutti dal form del turno.",
+        "Una bozza non la vede nessuno e non avvisa nessuno finché non la pubblichi; se la dimentichi, ti arriva un promemoria.",
         "Un turno che si ripete uguale salvalo come modello, oppure usa «Duplica» per copiare la settimana.",
         "Un turno già passato e mai segnato si registra a posteriori: scegli quel giorno nei turni e aggiungilo, oppure parti dalla pagina Ore.",
       ],

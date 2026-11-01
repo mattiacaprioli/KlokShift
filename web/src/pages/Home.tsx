@@ -36,6 +36,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FirstStepsCard } from "../onboarding/FirstStepsCard";
+import { DraftsBanner } from "../shifts/DraftsBanner";
 import { CollaboratorWelcome } from "../onboarding/CollaboratorWelcome";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
 import { LiveClockLine } from "../shifts/LiveClockLine";
@@ -49,6 +50,7 @@ import {
   Placeholder,
   QueryError,
 } from "../ui/primitives";
+import { EMPTY_SHIFTS_HINT } from "@/features/shifts/drafts";
 import { ListSkeleton, LoadingRegion, Skeleton } from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
@@ -205,6 +207,15 @@ export function HomePage() {
     <>
       <PageHeader title={isMultiVenue ? "Home" : venues[0].name} />
       <FirstStepsCard />
+      {/* Le bozze dimenticate: nessuno le vede finché non si pubblicano. */}
+      {canUseOperations && canAny("can_manage_shifts") ? (
+        <DraftsBanner
+          venueIds={venues
+            .filter((v) => can(v.id, "can_manage_shifts"))
+            .map((v) => v.id)}
+          onOpen={(date) => navigate(`/planning?giorno=${date}`)}
+        />
+      ) : null}
       <CollaboratorWelcome />
 
       {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non
@@ -358,7 +369,7 @@ export function HomePage() {
             <Placeholder
               title="Nessun turno in programma"
               detail={canCreateShift
-                ? "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
+                ? EMPTY_SHIFTS_HINT
                 : "Qui compaiono i prossimi turni delle tue sedi."}
               action={canCreateShift ? (
                 <Link

@@ -25,6 +25,8 @@ export const fullExportSchema = z.object({
     date: z.string(), venue: z.string(), title: z.string(), start_time: z.string(), end_time: z.string(),
     break_minutes: num, break_paid: z.boolean().nullable(), status: z.string(), unplanned: z.boolean().nullable(),
     positions_total: num, description: text,
+    // Dal 03/11: gli export salvati prima non lo portano. Nullo = bozza.
+    published_at: text.optional(),
   })),
   attendance: z.array(z.object({
     date: z.string(), venue: z.string(), shift: z.string(), start_time: z.string(), end_time: z.string(),
@@ -126,10 +128,10 @@ export function fullExportFiles(data: FullExport, missingDocuments: string[] = [
       textCell(p.venues.filter((v) => v.roles).map((v) => `${v.venue}: ${v.roles}`).join(" | ")),
       numberCell(p.contract_hours), label(p.contract_period), textCell(p.hr_note)]));
   files["turni.csv"] = csv(
-    ["Data", "Sede", "Turno", "Inizio", "Fine", "Pausa (min)", "Pausa retribuita", "Stato", "Fuori turno", "Persone previste", "Note"],
+    ["Data", "Sede", "Turno", "Inizio", "Fine", "Pausa (min)", "Pausa retribuita", "Stato", "Fuori turno", "Persone previste", "Note", "Pubblicato il"],
     data.shifts.map((s) => [day(s.date), textCell(s.venue), textCell(s.title), time(s.start_time), time(s.end_time),
       numberCell(s.break_minutes), yesNo(s.break_paid), label(s.status), yesNo(s.unplanned), numberCell(s.positions_total),
-      textCell(s.description)]));
+      textCell(s.description), instant(s.published_at)]));
   files["presenze.csv"] = csv(
     ["Data", "Sede", "Turno", "Inizio previsto", "Fine prevista", "Persona", "Ruolo sul turno", "Stato", "Confermato il",
       "Timbratura", "Entrata", "Uscita", "Pausa timbrata (min)", "Corretta", "Motivo correzione", "Ore lavorate approvate",

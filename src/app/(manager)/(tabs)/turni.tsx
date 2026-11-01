@@ -1,6 +1,6 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -38,6 +38,9 @@ import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
+import { DraftsBanner } from "@/features/shifts/DraftsBanner";
+import { PublishModal } from "@/features/shifts/PublishModal";
+import { EMPTY_SHIFTS_HINT, PUBLISH, isDraft, isExpiredDraft } from "@/features/shifts/drafts";
 import { clockAttentionItems } from "@/features/clock/attention";
 import { useVenueCalendar } from "@/features/venues/hooks";
 import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
@@ -166,6 +169,9 @@ export default function ManagerShiftsScreen() {
    */
   const [hiddenVenues, setHiddenVenues] = useState<Set<string>>(new Set());
   const [duplicating, setDuplicating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  // L'avviso della Home porta qui con il giorno della prima bozza.
+  const { date: dateParam, n: nonce } = useLocalSearchParams<{ date?: string; n?: string }>();
 
   const listRef = useRef<SectionList<ShiftWithCount, ShiftSection>>(null);
   const syncing = useRef(false);
@@ -340,6 +346,27 @@ export default function ManagerShiftsScreen() {
     };
   }, [agenda, upcoming, visibleDay]);
 
+  // Pubblicare è una scrittura di turni: stesso permesso di «Duplica», sulle
+  // sedi accese. «Pubblica» c'è solo se la settimana ha almeno una bozza ancora
+  // pubblicabile (le scadute non si pubblicano più).
+  const publishVenueIds = useMemo(
+    () => scope.filter((venueId) => venueQuery.can(venueId, "can_manage_shifts")),
+    [scope, venueQuery]
+  );
+  const weekHasDrafts = useMemo(() => {
+    const from = startOfWeek(visibleDay);
+    const to = addDaysToDate(from, 6);
+    return agenda.some(
+      (s) =>
+        s.date >= from &&
+        s.date <= to &&
+        s.status !== "cancelled" &&
+        isDraft(s) &&
+        !isExpiredDraft(s) &&
+        publishVenueIds.includes(s.venue_id)
+    );
+  }, [agenda, visibleDay, publishVenueIds]);
+
   function goToDay(date: string, browsing?: boolean) {
     syncing.current = true;
     setVisibleDay(date);
@@ -350,6 +377,27 @@ export default function ManagerShiftsScreen() {
       syncing.current = false;
     }, SYNC_SETTLE_MS);
   }
+
+  // Un giorno che arriva da fuori (l'avviso delle bozze in Home): lo stato si
+  // allinea durante il render, la lista torna in cima in un effetto.
+  // `n` cambia a ogni tocco: lo stesso giorno, toccato di nuovo, riporta qui.
+  const dateKey = dateParam ? `${dateParam}|${nonce ?? ""}` : undefined;
+  const [seenDateParam, setSeenDateParam] = useState<string | undefined>();
+  if (dateParam && dateKey !== seenDateParam) {
+    setSeenDateParam(dateKey);
+    setVisibleDay(dateParam);
+    setAnchorDay(dateParam);
+    setExpanded(false);
+  }
+  useEffect(() => {
+    if (!seenDateParam) return;
+    syncing.current = true;
+    listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
+    const t = setTimeout(() => {
+      syncing.current = false;
+    }, SYNC_SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [seenDateParam]);
 
   function toggleMine() {
     if (filteringMine) {
@@ -494,12 +542,23 @@ export default function ManagerShiftsScreen() {
           })}
           {/* La settimana che si sta guardando, copiata su quella dopo: dal
               27/10/2026 anche dal telefono, non solo dalla dashboard. */}
+          {canCreateShift && weekHasDrafts ? (
+            <Pressable
+              onPress={() => setPublishing(true)}
+              accessibilityRole="button"
+              accessibilityLabel={PUBLISH}
+              className="ml-auto flex-row items-center gap-1"
+              hitSlop={8}
+            >
+              <Mono gold>{PUBLISH}</Mono>
+            </Pressable>
+          ) : null}
           {canCreateShift ? (
             <Pressable
               onPress={() => setDuplicating(true)}
               accessibilityRole="button"
               accessibilityLabel="Duplica la settimana"
-              className="ml-auto flex-row items-center gap-1"
+              className={cn("flex-row items-center gap-1", !weekHasDrafts && "ml-auto")}
               hitSlop={8}
             >
               <Mono gold>Duplica</Mono>
@@ -602,6 +661,14 @@ export default function ManagerShiftsScreen() {
           </ScrollView>
         ) : null}
 
+        {canCreateShift ? (
+          <DraftsBanner
+            className="mt-3"
+            venueIds={publishVenueIds}
+            onOpen={(date) => goToDay(date)}
+          />
+        ) : null}
+
         {selectedClosure ? (
           <ClosedDayBadge className="mt-3" text={`${formatDate(visibleDay)} · ${selectedClosure}`} />
         ) : null}
@@ -631,6 +698,16 @@ export default function ManagerShiftsScreen() {
           // Le sedi accese nell'agenda, su cui si possono fare turni.
           venueIds={scope.filter((venueId) => venueQuery.can(venueId, "can_manage_shifts"))}
           onClose={() => setDuplicating(false)}
+        />
+      ) : null}
+
+      {publishing ? (
+        <PublishModal
+          venueIds={publishVenueIds}
+          from={startOfWeek(visibleDay)}
+          to={addDaysToDate(startOfWeek(visibleDay), 6)}
+          visible
+          onClose={() => setPublishing(false)}
         />
       ) : null}
 
@@ -800,7 +877,7 @@ export default function ManagerShiftsScreen() {
                       ? "Tocca «Oggi» per tornare ai prossimi, oppure registra un turno già fatto in questo giorno."
                       : away
                         ? "Tocca «Oggi» per tornare ai prossimi, oppure crea un turno in questo giorno."
-                        : "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
+                        : EMPTY_SHIFTS_HINT
                   }
                   actionLabel={pastDay ? RECORD_ACTION : "Crea un turno"}
                   onAction={addShift}

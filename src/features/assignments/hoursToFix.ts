@@ -15,6 +15,7 @@ const KIND_LABEL: Record<HourToFixKind, string> = {
   not_clocked: "Non ha timbrato",
   missing_out: "Uscita mancante",
   to_approve: "Da approvare",
+  clock_overlap: "Ha già timbrato in quelle ore",
 };
 
 /** Il perché, accanto al nome: «Non ha timbrato», «Da approvare · 8 h». */

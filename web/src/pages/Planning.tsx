@@ -39,6 +39,14 @@ import {
   type MoveImpact,
 } from "@/features/shifts/moveImpact";
 import {
+  DRAFT_LABEL,
+  DRAFT_SILENT_LINE,
+  EXPIRED_DRAFT_LABEL,
+  PUBLISH,
+  isDraft,
+  isExpiredDraft,
+} from "@/features/shifts/drafts";
+import {
   reassignNotifyPlan,
   type ReassignNotifyPlan,
 } from "@/features/shifts/notify";
@@ -89,7 +97,9 @@ import {
   type PersonDragPayload,
   type ReassignTarget,
 } from "../shifts/dragContext";
+import { DraftsBanner } from "../shifts/DraftsBanner";
 import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
+import { PublishDialog } from "../shifts/PublishDialog";
 import { RecordPastShiftDialog } from "../shifts/RecordPastShiftDialog";
 import {
   RECORD_ACTION,
@@ -159,6 +169,12 @@ export function PlanningPage() {
   // Duplicare un periodo crea turni: stesso permesso che serve a crearne uno
   // (`ShiftPanel` filtra già le sedi con `venuesWith("can_manage_shifts")`).
   const canCreateShift = canUseOperations && canAny("can_manage_shifts");
+  // Pubblicare è una scrittura di turni, come duplicare: solo le sedi dove si
+  // gestiscono i turni.
+  const publishVenueIds = useMemo(
+    () => venueIds.filter((id) => can(id, "can_manage_shifts")),
+    [venueIds, can],
+  );
   /** La sede di un turno: nome e colore. `undefined` con una sede sola. */
   const venueOf = useCallback(
     (venueId: string) => {
@@ -207,6 +223,7 @@ export function PlanningPage() {
     personIds?: string[];
   } | null>(null);
   const [duplicating, setDuplicating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   /** «Turno già fatto»: aperto dal «+» di un giorno passato. */
   const [recording, setRecording] = useState<{
     date: string;
@@ -217,6 +234,9 @@ export function PlanningPage() {
   const deepLinkId = params.get("shift");
   // `?nuovo=oggi`: arriva dalla checklist «Primi passi» e apre il form.
   const createToday = params.get("nuovo") === "oggi";
+  // `?giorno=2026-11-10`: arriva dall'avviso delle bozze in Home, apre il
+  // periodo di quel giorno.
+  const jumpDay = params.get("giorno");
 
   useEffect(() => {
     try {
@@ -278,6 +298,31 @@ export function PlanningPage() {
   const byId = useMemo(
     () => new Map((data ?? []).map((s) => [s.id, s])),
     [data],
+  );
+
+  // Pubblica il periodo che si ha davanti: la settimana sulle viste settimanali,
+  // il mese sulla vista mese. Le bozze già finite non si pubblicano più.
+  const publishFrom = periodDays[0];
+  const publishTo = periodDays[periodDays.length - 1];
+  const publishVenues = useMemo(
+    () =>
+      activeVenueId
+        ? publishVenueIds.filter((id) => id === activeVenueId)
+        : publishVenueIds,
+    [activeVenueId, publishVenueIds],
+  );
+  const periodHasDrafts = useMemo(
+    () =>
+      (data ?? []).some(
+        (s) =>
+          s.date >= publishFrom &&
+          s.date <= publishTo &&
+          s.status !== "cancelled" &&
+          isDraft(s) &&
+          !isExpiredDraft(s) &&
+          publishVenues.includes(s.venue_id),
+      ),
+    [data, publishFrom, publishTo, publishVenues],
   );
 
   // Quante persone mancano sul periodo che si ha davanti. Era il sottotitolo di
@@ -406,6 +451,7 @@ export function PlanningPage() {
     const impact = shiftMoveImpact({
       shiftId: shift.id,
       cancelled: shift.status === "cancelled",
+      draft: isDraft(shift),
       assignees: assigneesOf(shift),
       to: {
         date: toDate,
@@ -460,6 +506,9 @@ export function PlanningPage() {
     const plan = reassignNotifyPlan({
       shiftDate: payload.date,
       shiftCancelled: shift?.status === "cancelled",
+      // Cambiare persona resta nello stesso turno: parte e arrivo sono lo stesso.
+      shiftDraft: shift ? isDraft(shift) : false,
+      toDraft: shift ? isDraft(shift) : false,
       from: {
         status: from?.status ?? "assigned",
         waiterId: from?.staff_member?.waiter_id ?? null,
@@ -527,6 +576,12 @@ export function PlanningPage() {
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       },
     );
+  }
+
+  function goToDay(date: string) {
+    const d = new Date(`${date}T00:00:00`);
+    setMonday(startOfWeek(d));
+    setMonth(startOfMonth(d));
   }
 
   function goToday() {
@@ -600,6 +655,15 @@ export function PlanningPage() {
                 Duplica
               </Button>
             ) : null}
+            {canCreateShift && periodHasDrafts ? (
+              <Button
+                variant="gold"
+                onClick={() => setPublishing(true)}
+                title={isWeekly ? "Pubblica la settimana" : "Pubblica il mese"}
+              >
+                {PUBLISH}
+              </Button>
+            ) : null}
             {/* Il turnario finisce in bacheca: la stampa la fa il browser sulla
                 vista che hai davanti, con i token ribaltati su bianco. */}
             <Button onClick={() => window.print()}>
@@ -666,6 +730,13 @@ export function PlanningPage() {
       {isError || impactShiftsQuery.isError || impactAbsencesQuery.isError ? (
         <QueryError
           error={error ?? impactShiftsQuery.error ?? impactAbsencesQuery.error}
+        />
+      ) : null}
+
+      {canCreateShift ? (
+        <DraftsBanner
+          venueIds={publishVenueIds}
+          onOpen={goToDay}
         />
       ) : null}
 
@@ -736,6 +807,15 @@ export function PlanningPage() {
         />
       ) : null}
 
+      {jumpDay ? (
+        <RunOnMount
+          run={() => {
+            goToDay(jumpDay);
+            setParams({}, { replace: true });
+          }}
+        />
+      ) : null}
+
       {deepLinkId ? (
         <DeepLinkedShift
           id={deepLinkId}
@@ -759,6 +839,15 @@ export function PlanningPage() {
           // le stesse sedi, sennò avviserebbe per turni non copiabili.
           venueIds={scopedIds}
           onClose={() => setDuplicating(false)}
+        />
+      ) : null}
+
+      {publishing ? (
+        <PublishDialog
+          venueIds={publishVenues}
+          from={publishFrom}
+          to={publishTo}
+          onClose={() => setPublishing(false)}
         />
       ) : null}
 
@@ -901,6 +990,7 @@ const SKIP_REASON: Record<
   "no-account": "non ha un account collegato",
   past: "il turno è già passato",
   cancelled: "il turno è annullato",
+  draft: "il turno è una bozza",
 };
 
 function reassignMessage(
@@ -909,6 +999,8 @@ function reassignMessage(
   plan: ReassignNotifyPlan,
 ): string {
   const head = `«${payload.title}» del ${formatDate(payload.date)} passa da ${payload.fromStaffName} a ${to.display_name}.`;
+  // Una bozza non avvisa nessuno: lo si dice, non si tace.
+  if (plan.fromSkip === "draft") return `${head} ${DRAFT_SILENT_LINE}`;
   // Si arriva qui senza nessuno da avvisare solo per l'avviso di assenza.
   if (!plan.notifiesFrom && !plan.notifiesTo) return head;
   if (plan.notifiesFrom && plan.notifiesTo) {
@@ -1173,6 +1265,11 @@ function MonthGrid({
                         cancelled
                           ? `${shift.title} · annullato: riattivalo dal pannello per spostarlo`
                           : [
+                              isDraft(shift)
+                                ? isExpiredDraft(shift)
+                                  ? EXPIRED_DRAFT_LABEL
+                                  : DRAFT_LABEL
+                                : undefined,
                               venueOf(shift.venue_id)?.name,
                               shift.title,
                               formatShiftRange(
@@ -1188,6 +1285,9 @@ function MonthGrid({
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
                         TONE_BORDER[tone],
                         cancelled && "opacity-50",
+                        isDraft(shift) &&
+                          !cancelled &&
+                          "outline outline-1 -outline-offset-1 outline-dashed outline-border-2",
                         draggable && "cursor-grab active:cursor-grabbing",
                         dnd.isSource(shift.id) && "opacity-40",
                       )}
@@ -1278,6 +1378,8 @@ function ShiftCell({
 }) {
   const dnd = useShiftDrag();
   const cancelled = shift.status === "cancelled";
+  const draft = isDraft(shift);
+  const expiredDraft = isExpiredDraft(shift);
   // Il fuori turno descrive lavoro già svolto: non si sposta (C06).
   const draggable = !cancelled && !shift.unplanned;
   const tone = shiftTone(shift);
@@ -1330,6 +1432,8 @@ function ShiftCell({
         cancelled
           ? "border-border bg-bg-1 opacity-50"
           : "border-border-2 bg-bg-1 hover:bg-bg-2",
+        // Bordo tratteggiato: la bozza non è ancora di nessuno.
+        draft && !cancelled && "border-dashed",
         draggable && "cursor-grab active:cursor-grabbing",
         // Dopo il colore di bordo generico, sennò `cn()` lo considera vinto.
         TONE_BORDER[tone],
@@ -1389,6 +1493,10 @@ function ShiftCell({
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
         {cancelled ? (
           <Pill tone="error">Annullato</Pill>
+        ) : draft ? (
+          <Pill tone={expiredDraft ? "error" : "gold"}>
+            {expiredDraft ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL}
+          </Pill>
         ) : short ? (
           // Chi manca lo dice, chi è a posto si limita a contare: il verde su
           // ogni cella della settimana copriva di rumore le due che servono.

@@ -27,6 +27,12 @@ import {
   weeklyTarget,
 } from "@/features/staff/contract";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
+import {
+  DRAFT_LABEL,
+  EXPIRED_DRAFT_LABEL,
+  isDraft,
+  isExpiredDraft,
+} from "@/features/shifts/drafts";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import type { AbsenceAvailability } from "@/features/absences/api";
@@ -147,6 +153,18 @@ export function PeopleWeekList({
     });
   }, [shiftsQuery.data, peopleQuery.data, scope, actualVenueIds]);
 
+  /** «Bozza» / «Mai pubblicato» di un turno, null se è pubblicato. */
+  const draftByShift = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of shiftsQuery.data ?? []) {
+      if (isDraft(s)) {
+        map.set(s.id, isExpiredDraft(s) ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL);
+      }
+    }
+    return map;
+  }, [shiftsQuery.data]);
+  const draftLabelOf = (shiftId: string) => draftByShift.get(shiftId) ?? null;
+
   /** Nome e colore della sede di un turno, con più sedi. */
   const venueOf = (venueId: string) => {
     if (!isMultiVenue) return null;
@@ -209,6 +227,7 @@ export function PeopleWeekList({
           days={days}
           absences={absencesByPerson.get(item.personId) ?? []}
           venueOf={venueOf}
+          draftLabelOf={draftLabelOf}
           onOpenShift={onOpenShift}
           // Il confronto è sull'id della **persona** e non sul `waiter_id`:
           // `PersonLoad` non lo porta, e questo non costa un campo in più
@@ -252,6 +271,7 @@ function PersonWeekCard({
   days,
   absences,
   venueOf,
+  draftLabelOf,
   onOpenShift,
   /** È la riga di chi guarda: da quando chi gestisce può stare nel team. */
   isMe,
@@ -262,6 +282,7 @@ function PersonWeekCard({
   /** Le assenze della persona in settimana: date e stato, mai il tipo. */
   absences: AbsenceAvailability[];
   venueOf: (venueId: string) => { name: string; accent: string } | null;
+  draftLabelOf: (shiftId: string) => string | null;
   onOpenShift: (shiftId: string) => void;
   isMe?: boolean;
 }) {
@@ -426,6 +447,7 @@ function PersonWeekCard({
                   </Text>
                   <Text className="text-[11px] text-t4" numberOfLines={1}>
                     {[
+                      draftLabelOf(ps.shiftId),
                       venue?.name,
                       ps.role,
                       active ? null : ASSIGNMENT_STATUS_LABEL[ps.status],

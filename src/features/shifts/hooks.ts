@@ -11,6 +11,8 @@ import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import { useOwnerVenues, venuesKeyOf } from "@/features/venues/OwnerVenues";
 import type { Enums } from "@/types/database";
 import {
+  deleteShift,
+  getOwnerDrafts,
   getOwnerEndedShifts,
   getOwnerPastShiftsCount,
   getOwnerPastShiftsPage,
@@ -186,6 +188,15 @@ export function useUpdateShiftStatus(shiftId: string) {
   });
 }
 
+/** Elimina un turno (oggi solo le bozze: un turno uscito si annulla). */
+export function useDeleteShift(shiftId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteShift(shiftId),
+    onSuccess: () => invalidateShiftViews(qc, shiftId),
+  });
+}
+
 export function useUpdateShift(shiftId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -244,5 +255,15 @@ export function useMoveShiftToDate() {
 
     onSettled: (_data, _error, { shiftId }) =>
       invalidateShiftViews(qc, shiftId),
+  });
+}
+
+/** Le bozze di tutte le sedi gestite: alimentano l'avviso delle bozze dimenticate. */
+export function useOwnerDrafts() {
+  const { venueIds } = useOwnerVenues();
+  return useQuery({
+    queryKey: qk.shifts.drafts(venueIds),
+    queryFn: () => getOwnerDrafts(venueIds),
+    enabled: venueIds.length > 0,
   });
 }

@@ -10,7 +10,7 @@ const data: FullExport = fullExportSchema.parse({
     left_at: "2026-09-30T10:00:00+00:00", contract_hours: 40, contract_period: "week", hr_note: "Nota; con punto e virgola",
     venues: [{ venue: "Centro", employment_type: "fisso", left_at: null, roles: "Sala, Bar" }] }],
   shifts: [{ date: "2026-08-14", venue: "Centro", title: "Cena", start_time: "18:00:00", end_time: "23:30:00",
-    break_minutes: 30, break_paid: false, status: "closed", unplanned: false, positions_total: 2, description: null }],
+    break_minutes: 30, break_paid: false, status: "closed", unplanned: false, positions_total: 2, description: null, published_at: "2026-08-10T09:00:00+00:00" }],
   attendance: [{ date: "2026-08-14", venue: "Centro", shift: "Cena", start_time: "18:00:00", end_time: "23:30:00",
     person: "=Mario", role: "Sala", status: "confirmed", confirmed_at: "2026-08-13T09:00:00+00:00", clock_method: "app",
     clock_in_at: "2026-08-14T16:02:00+00:00", clock_out_at: "2026-08-14T21:31:00+00:00", clock_break_minutes: 30,
@@ -35,6 +35,8 @@ describe("export completo: file del pacchetto", () => {
   });
   it("date italiane, ora di Roma, decimali con la virgola", () => {
     expect(files["turni.csv"]).toContain("14/08/2026;Centro;Cena;18:00;23:30;30;No;Completo");
+    expect(files["turni.csv"]).toContain(";Pubblicato il");
+    expect(files["turni.csv"]).toContain(";10/08/2026 11:00");
     expect(files["presenze.csv"]).toContain("14/08/2026 18:02");
     expect(files["presenze.csv"]).toContain(";4,98;Timbratura;");
     expect(files["assenze.csv"]).toContain("Ferie;20/08/2026;21/08/2026;;;Approvata;16;");
@@ -52,6 +54,12 @@ describe("export completo: file del pacchetto", () => {
     const noDocs = fullExportFiles({ ...data, documents_included: false, documents: null });
     expect(noDocs["documenti.csv"]).toBeUndefined();
     expect(noDocs["leggimi.txt"]).toContain("Documenti non inclusi");
+  });
+  it("un export salvato prima delle bozze (senza published_at) si legge ancora", () => {
+    const { published_at: _omit, ...older } = (data.shifts[0] as typeof data.shifts[0]);
+    void _omit;
+    const parsed = fullExportSchema.parse({ ...data, shifts: [older] });
+    expect(fullExportFiles(parsed)["turni.csv"]).toContain("14/08/2026;Centro;Cena");
   });
   it("nomi di file sicuri", () => {
     expect(safeName('a/b:c*?"<>|d')).toBe("a_b_c_d");

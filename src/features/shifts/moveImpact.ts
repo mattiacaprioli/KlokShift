@@ -10,6 +10,7 @@ import {
   shiftEndsAt,
   type ShiftTimes,
 } from "@/lib/format";
+import { DRAFT_SILENT_LINE, isDraft } from "./drafts";
 import {
   reassignNotifyPlan,
   type ReassignNotifyPlan,
@@ -30,7 +31,9 @@ import type { ShiftWithAssignees } from "./types";
  *
  * ⚠️ Come `notify.ts`, di cui è il seguito, questo file è un **gemello
  * manuale** dei trigger SQL (`notify_on_shift_change`, `notify_on_assignment`,
- * `notify_on_assignment_removed`). Se cambiano loro, va cambiato lui, o
+ * `notify_on_assignment_removed`). Su una bozza tacciono tutti
+ * (`20261103000100_shift_drafts_silent.sql`): niente notifiche e niente
+ * conferme riaperte, e `draft` lo dice nelle righe. Se cambiano loro, va cambiato lui, o
  * l'interfaccia prometterà conseguenze che non arrivano.
  */
 
@@ -46,6 +49,8 @@ export type MoveImpact = {
   absent: (Named & { status: AbsenceWindow["status"] })[];
   /** Assegnati che finirebbero su due turni sovrapposti. Avviso, mai blocco. */
   overlaps: (Named & { title: string; range: string })[];
+  /** Il turno è una bozza: niente avvisi, e le righe lo dicono. */
+  draft: boolean;
 };
 
 export const NO_IMPACT: MoveImpact = {
@@ -53,6 +58,7 @@ export const NO_IMPACT: MoveImpact = {
   reopens: [],
   absent: [],
   overlaps: [],
+  draft: false,
 };
 
 /**
@@ -125,6 +131,8 @@ export function shiftMoveImpact(input: {
   shiftId: string;
   /** Un turno annullato non fa partire niente: il trigger si ferma prima. */
   cancelled?: boolean;
+  /** Il turno è una bozza: il trigger non avvisa e non riapre conferme. */
+  draft: boolean;
   assignees: MoveAssignee[];
   /** Dove finisce: data e orari nuovi (gli orari possono non cambiare). */
   to: ShiftTimes;
@@ -142,6 +150,7 @@ export function shiftMoveImpact(input: {
   const {
     shiftId,
     cancelled,
+    draft,
     assignees,
     to,
     myWaiterId,
@@ -154,9 +163,9 @@ export function shiftMoveImpact(input: {
   // Gli stessi destinatari di `notify_on_shift_change`: assegnati attivi, con
   // un account collegato, tolto chi sta facendo la modifica.
   const active = assignees.filter((a) => isActiveAssignment(a.status));
-  const notified = active.filter(
-    (a) => a.waiterId && a.waiterId !== myWaiterId
-  );
+  const notified = draft
+    ? []
+    : active.filter((a) => a.waiterId && a.waiterId !== myWaiterId);
   const notify: ShiftNotifyRecipients = {
     assignees: notified.map((a) => a.displayName),
     total: notified.length,
@@ -165,7 +174,7 @@ export function shiftMoveImpact(input: {
   // Il trigger riapre le conferme solo se il turno d'arrivo non è già finito,
   // e non tocca chi sta modificando.
   const reopens =
-    shiftEndsAt(to.date, to.start_time, to.end_time) > now
+    !draft && shiftEndsAt(to.date, to.start_time, to.end_time) > now
       ? active
           .filter((a) => a.status === "confirmed" && a.waiterId !== myWaiterId)
           .map((a) => a.displayName)
@@ -195,7 +204,7 @@ export function shiftMoveImpact(input: {
     }
   }
 
-  return { notify, reopens, absent, overlaps };
+  return { notify, reopens, absent, overlaps, draft };
 }
 
 /** Un altro turno della stessa persona che si accavalla con quello pianificato. */
@@ -264,6 +273,7 @@ function shiftsOverlap(a: ShiftTimes, b: ShiftTimes): boolean {
   );
 }
 
+/** `draft` non conta da solo: la sua riga accompagna le altre, non apre un dialogo. */
 export function hasMoveImpact(i: MoveImpact): boolean {
   return (
     i.notify.total > 0 ||
@@ -290,6 +300,7 @@ function fewNames(names: string[]): string {
  */
 export function moveImpactLines(i: MoveImpact): string[] {
   const lines: string[] = [];
+  if (i.draft) lines.push(DRAFT_SILENT_LINE);
   if (i.notify.total > 0) {
     lines.push(
       i.notify.total === 1
@@ -346,6 +357,9 @@ export type MoveAssignmentImpact = {
   leavesEmpty: boolean;
   /** Il turno d'arrivo ha già tutti i posti coperti. */
   targetFull: boolean;
+  /** Il turno di partenza / d'arrivo è una bozza (il gemello eredita la partenza). */
+  fromDraft: boolean;
+  toDraft: boolean;
 };
 
 export function moveAssignmentImpact(input: {
@@ -363,11 +377,18 @@ export function moveAssignmentImpact(input: {
   const target = "shift" in to ? to.shift : null;
   const toDate = "shift" in to ? to.shift.date : to.date;
 
+  // Il gemello nasce con lo stato di pubblicazione del turno di partenza
+  // (`move_assignment` copia `published_at`).
+  const fromDraft = isDraft(from);
+  const toDraft = target ? isDraft(target) : fromDraft;
+
   // Chi si sposta è la stessa persona su entrambi i lati: la revoca e
   // l'assegnazione hanno lo stesso destinatario.
   const plan = reassignNotifyPlan({
     shiftDate: from.date,
     shiftCancelled: from.status === "cancelled",
+    shiftDraft: fromDraft,
+    toDraft,
     from: { status: row?.status ?? "assigned", waiterId },
     toWaiterId: waiterId,
   });
@@ -387,6 +408,8 @@ export function moveAssignmentImpact(input: {
       ? target.shift_assignments.filter((a) => isActiveAssignment(a.status))
           .length >= target.positions_total
       : false,
+    fromDraft,
+    toDraft,
   };
 }
 
@@ -401,7 +424,13 @@ export function moveAssignmentLines(
     lines.push(`${who} riceverà «Turno revocato» e «Nuovo turno assegnato».`);
   } else if (i.plan.notifiesTo) {
     lines.push(`${who} riceverà «Nuovo turno assegnato».`);
-  } else if (!i.plan.notifiesFrom && !i.plan.notifiesTo) {
+  } else if (i.plan.notifiesFrom) {
+    lines.push(`${who} riceverà «Turno revocato».`);
+    // Pubblicato → bozza: la revoca parte, l'arrivo no.
+    if (i.toDraft) lines.push(DRAFT_SILENT_LINE);
+  } else if (i.toDraft) {
+    lines.push(DRAFT_SILENT_LINE);
+  } else {
     lines.push(`${who} non ha un account collegato: non riceverà nulla.`);
   }
   if (i.absence) {

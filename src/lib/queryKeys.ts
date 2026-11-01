@@ -123,6 +123,20 @@ export const qk = {
       ["shifts", "pastCount", scope, filters] as const,
     pastCountAll: ["shifts", "pastCount"] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
+    /** Le bozze delle sedi gestite (avviso «turni in bozza»). */
+    drafts: (venueIds: string[]) =>
+      ["shifts", "drafts", [...venueIds].sort().join(",")] as const,
+    draftsAll: ["shifts", "drafts"] as const,
+    /** L'anteprima di pubblicazione: sotto `drafts`, si rinfresca con loro. */
+    publishPreview: (venueIds: string[], from: string, to: string) =>
+      [
+        "shifts",
+        "drafts",
+        "preview",
+        [...venueIds].sort().join(","),
+        from,
+        to,
+      ] as const,
     /**
      * Il turno **con la sua sede** (lato dipendente). Chiave a parte da
      * `detail`: è lo stesso id ma un payload diverso, e finché le due query

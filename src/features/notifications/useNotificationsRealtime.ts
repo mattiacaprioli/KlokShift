@@ -28,6 +28,10 @@ const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
   shift_unassigned: [qk.assignments.all],
   shift_cancelled: [qk.assignments.all, qk.shifts.all],
   shift_updated: [qk.assignments.all, qk.shifts.all],
+  // Pubblicare fa comparire i turni al dipendente; il promemoria delle bozze
+  // riguarda l'avviso dei gestori.
+  shift_published: [qk.assignments.all, qk.shifts.all],
+  shift_drafts_reminder: [qk.shifts.draftsAll],
   staff_invite: [qk.staff.all],
   staff_response: [qk.staff.all],
   staff_removed: [qk.staff.all, qk.assignments.all],

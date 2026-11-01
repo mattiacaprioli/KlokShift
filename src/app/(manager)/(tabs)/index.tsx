@@ -45,10 +45,12 @@ import {
 } from "@/features/shifts/homeStats";
 import { useOwnerShifts, useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
+import { EMPTY_SHIFTS_HINT } from "@/features/shifts/drafts";
 import { useSelfStaff } from "@/features/staff/self";
 import { NoVenuesState } from "@/features/venues/NoVenuesState";
 import { FirstStepsCard } from "@/features/onboarding/FirstStepsCard";
 import { CollaboratorPermissionsCard } from "@/features/team/CollaboratorPermissionsCard";
+import { DraftsBanner } from "@/features/shifts/DraftsBanner";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
@@ -431,6 +433,18 @@ export default function ManagerHome() {
               </View>
             ) : null}
 
+            {/* Le bozze dimenticate: nessuno le vede finché non si pubblicano. */}
+            {canCreateShift ? (
+              <DraftsBanner
+                venueIds={venues
+                  .filter((v) => can(v.id, "can_manage_shifts"))
+                  .map((v) => v.id)}
+                onOpen={(date) =>
+                  router.push(`/(manager)/(tabs)/turni?date=${date}&n=${Date.now()}`)
+                }
+              />
+            ) : null}
+
             {/* Ferie e permessi da decidere, malattie appena comunicate. */}
             <AbsencesToHandle
               enabled={canAny("can_manage_staff")}
@@ -596,7 +610,7 @@ export default function ManagerHome() {
                   title="Nessun turno in programma"
                   subtitle={
                     canCreateShift
-                      ? "Scegli giorno, orario e chi lavora: le persone ricevono subito la notifica."
+                      ? EMPTY_SHIFTS_HINT
                       : "Qui compaiono i prossimi turni delle tue sedi."
                   }
                   actionLabel={canCreateShift ? "Crea un turno" : undefined}

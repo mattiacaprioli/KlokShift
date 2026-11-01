@@ -1186,6 +1186,8 @@ export type Database = {
           id: string
           positions_filled: number
           positions_total: number
+          published_at: string | null
+          published_by: string | null
           recorded_at: string | null
           recorded_by: string | null
           require_confirmation: boolean
@@ -1205,6 +1207,8 @@ export type Database = {
           id?: string
           positions_filled?: number
           positions_total?: number
+          published_at?: string | null
+          published_by?: string | null
           recorded_at?: string | null
           recorded_by?: string | null
           require_confirmation?: boolean
@@ -1224,6 +1228,8 @@ export type Database = {
           id?: string
           positions_filled?: number
           positions_total?: number
+          published_at?: string | null
+          published_by?: string | null
           recorded_at?: string | null
           recorded_by?: string | null
           require_confirmation?: boolean
@@ -1234,6 +1240,13 @@ export type Database = {
           venue_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shifts_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shifts_recorded_by_fkey"
             columns: ["recorded_by"]
@@ -2348,6 +2361,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      confirm_my_assignments: {
+        Args: { p_assignments: string[] }
+        Returns: number
+      }
       consume_invite: {
         Args: { p_hash: string; p_user: string }
         Returns: string
@@ -2691,6 +2708,8 @@ export type Database = {
           id: string
           positions_filled: number
           positions_total: number
+          published_at: string | null
+          published_by: string | null
           recorded_at: string | null
           recorded_by: string | null
           require_confirmation: boolean
@@ -2716,6 +2735,10 @@ export type Database = {
         }[]
       }
       get_platform_admin_access: { Args: never; Returns: Json }
+      get_publish_preview: {
+        Args: { p_from: string; p_to: string; p_venues: string[] }
+        Returns: Json
+      }
       get_staff_planning: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -2826,6 +2849,10 @@ export type Database = {
           workspace_name: string
         }[]
       }
+      publish_shifts: {
+        Args: { p_notify: boolean; p_shifts: string[] }
+        Returns: Json
+      }
       reassign: {
         Args: { p_assignment: string; p_to_venue_member: string }
         Returns: string
@@ -2868,6 +2895,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_draft_as_done: { Args: { p_shift: string }; Returns: undefined }
       record_past_shift: {
         Args: {
           p_break_minutes: number
@@ -3367,6 +3395,8 @@ export type Database = {
         | "clock_reminder"
         | "billing_change_reminder"
         | "billing_admin_alert"
+        | "shift_published"
+        | "shift_drafts_reminder"
       shift_status: "open" | "closed" | "cancelled"
       venue_scope: "all" | "selected"
     }
@@ -3536,6 +3566,8 @@ export const Constants = {
         "clock_reminder",
         "billing_change_reminder",
         "billing_admin_alert",
+        "shift_published",
+        "shift_drafts_reminder",
       ],
       shift_status: ["open", "closed", "cancelled"],
       venue_scope: ["all", "selected"],

@@ -184,6 +184,15 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "Questo turno non è ancora finito: pianificalo come nuovo turno.",
   },
   {
+    // Bozze (`20261103000100`): un'operazione che vale solo per un turno pubblicato.
+    match: ["shift_draft"],
+    message: "Questo turno è una bozza: pubblicalo prima, o se è già finito registralo come fatto.",
+  },
+  {
+    match: ["shift_not_draft"],
+    message: "Il turno è già pubblicato.",
+  },
+  {
     match: ["staff_required"],
     message: "Scegli almeno una persona.",
   },

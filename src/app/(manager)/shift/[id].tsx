@@ -31,12 +31,32 @@ import {
 } from "@/lib/format";
 import { userErrorMessage } from "@/lib/errors";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
+import {
+  useDeleteShift,
+  useShift,
+  useUpdateShiftStatus,
+} from "@/features/shifts/hooks";
+import {
+  DRAFT_DELETED_TOAST,
+  DRAFT_DELETE_LABEL,
+  DRAFT_DELETE_MESSAGE,
+  DRAFT_DELETE_TITLE,
+  DRAFT_EXPIRED_NOTE,
+  DRAFT_LABEL,
+  EXPIRED_DRAFT_LABEL,
+  RECORD_DRAFT,
+  RECORD_DRAFT_DONE_TOAST,
+  RECORD_DRAFT_MESSAGE,
+  RECORD_DRAFT_TITLE,
+  isDraft,
+  isExpiredDraft,
+} from "@/features/shifts/drafts";
 import { RECORDED_LABEL, isRecordedShift } from "@/features/shifts/recorded";
 import { ADD_WORKER_LABEL } from "@/features/assignments/addWorker";
 import { AddShiftWorkerModal } from "@/features/assignments/AddShiftWorkerModal";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
+  useRecordDraftAsDone,
   useSetAssignmentPresence,
   useShiftAssignments,
   useShiftRoleRequirements,
@@ -406,8 +426,15 @@ export default function ShiftDetailScreen() {
   );
 
   const statusMutation = useUpdateShiftStatus(id);
+  const deleteMutation = useDeleteShift(id);
+  const recordDraft = useRecordDraftAsDone();
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [recordVisible, setRecordVisible] = useState(false);
   const approveRegular = useApproveClockRecords();
-  const busy = statusMutation.isPending;
+  const busy =
+    statusMutation.isPending ||
+    deleteMutation.isPending ||
+    recordDraft.isPending;
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -421,6 +448,33 @@ export default function ShiftDetailScreen() {
       },
       onError: (e) => {
         setCancelVisible(false);
+        toast.show(userErrorMessage(e, "Operazione non riuscita."), "error");
+      },
+    });
+  }
+
+  function onDeleteDraft() {
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => {
+        setDeleteVisible(false);
+        toast.show(DRAFT_DELETED_TOAST);
+        router.back();
+      },
+      onError: (e) => {
+        setDeleteVisible(false);
+        toast.show(userErrorMessage(e, "Operazione non riuscita."), "error");
+      },
+    });
+  }
+
+  function onRecordDraft() {
+    recordDraft.mutate(id, {
+      onSuccess: () => {
+        setRecordVisible(false);
+        toast.show(RECORD_DRAFT_DONE_TOAST);
+      },
+      onError: (e) => {
+        setRecordVisible(false);
         toast.show(userErrorMessage(e, "Operazione non riuscita."), "error");
       },
     });
@@ -492,6 +546,9 @@ export default function ShiftDetailScreen() {
   // A turno finito (non a mezzanotte) si passa dalla vista "staff assegnato"
   // a quella delle presenze.
   const isPast = isShiftOver(shift);
+  // Una bozza già finita non ha presenze: nessuno l'ha mai vista, e le azioni
+  // sulle ore (presenze, timbrature, sostituti) il database le rifiuta.
+  const presenceMode = isPast && !isDraft(shift);
   // A turno in corso chi gestisce vede chi è entrato: le timbrature le legge
   // chi ha Turni o Ore (la RLS), per gli altri l'assenza sembrerebbe un ritardo.
   const showLiveClock =
@@ -522,7 +579,7 @@ export default function ShiftDetailScreen() {
     isRegularPendingClock(shift, a)
   );
   const showApproveRegular =
-    isPast && regularClocks.length > 0 && approvableClocks.length > 1;
+    presenceMode && regularClocks.length > 0 && approvableClocks.length > 1;
 
   function onApproveRegular() {
     approveRegular.mutate(
@@ -537,11 +594,11 @@ export default function ShiftDetailScreen() {
       }
     );
   }
-  const staffRows = isPast ? presenceRows : assignments;
+  const staffRows = presenceMode ? presenceRows : assignments;
   // Il sostituto che nessuno aveva segnato: lo aggiunge chi ha Ore, a turno
   // finito. Il fuori turno è di chi ha timbrato, l'annullato non ha presenze.
   const canAddWorker =
-    isPast &&
+    presenceMode &&
     canUseOperations &&
     can(shift.venue_id, "can_view_hours") &&
     !shift.unplanned &&
@@ -600,6 +657,20 @@ export default function ShiftDetailScreen() {
           />
         </Card>
 
+        {isDraft(shift) ? (
+          <View className="mt-3 gap-2">
+            <Pill
+              label={isExpiredDraft(shift) ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL}
+              variant={isExpiredDraft(shift) ? "cancelled" : "tag"}
+            />
+            {isExpiredDraft(shift) ? (
+              <Text className="text-xs leading-4 text-t3">
+                {DRAFT_EXPIRED_NOTE}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {isRecordedShift(shift) && shift.recorded_at ? (
           <Text className="mt-3 text-xs leading-4 text-t3">
             {RECORDED_LABEL} il {formatDate(toDateString(new Date(shift.recorded_at)))}:
@@ -650,7 +721,39 @@ export default function ShiftDetailScreen() {
 
           {/* In fondo: l'azione che toglie il turno a tutti non è la prima che
               si incontra. */}
-          {shift.unplanned ? null : shift.status === "open" ? (
+          {/* Una bozza scaduta non si è mai vista né è mai partita: si registra
+              come fatta (chi ha «Ore») o si elimina. */}
+          {isExpiredDraft(shift) &&
+          assignments.some(
+            (a) => a.status === "assigned" || a.status === "confirmed"
+          ) &&
+          !shift.unplanned &&
+          shift.status !== "cancelled" &&
+          canUseOperations &&
+          can(shift.venue_id, "can_view_hours") ? (
+            <Pressable
+              disabled={busy}
+              onPress={() => setRecordVisible(true)}
+              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-gold">
+                {RECORD_DRAFT}
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {shift.unplanned ? null : isDraft(shift) && shift.status === "open" ? (
+            // Una bozza non ha avvisato nessuno: non si annulla, si elimina.
+            <Pressable
+              disabled={busy}
+              onPress={() => setDeleteVisible(true)}
+              className="items-center rounded-2xl border border-border-2 py-3.5"
+            >
+              <Text className="text-sm font-sans-semibold text-error">
+                {DRAFT_DELETE_LABEL}
+              </Text>
+            </Pressable>
+          ) : shift.status === "open" ? (
             <Pressable
               disabled={busy}
               onPress={() => setCancelVisible(true)}
@@ -724,8 +827,8 @@ export default function ShiftDetailScreen() {
         ) : null}
 
         <View className="mt-8 gap-3">
-          <Mono>{isPast ? "Presenze" : "Chi lavora"}</Mono>
-            {isPast ? (
+          <Mono>{presenceMode ? "Presenze" : "Chi lavora"}</Mono>
+            {presenceMode ? (
               <Text className="-mt-1 text-xs text-t3">
                 Segna chi ha svolto il turno e correggi le ore se serve.
               </Text>
@@ -749,16 +852,16 @@ export default function ShiftDetailScreen() {
               />
             ) : staffRows.length === 0 ? (
               <EmptyState
-                title={isPast ? "Nessuna presenza" : "Nessuno assegnato"}
+                title={presenceMode ? "Nessuna presenza" : "Nessuno assegnato"}
                 subtitle={
-                  isPast
+                  presenceMode
                     ? assignments.length > 0
                       ? "Chi era assegnato ha rifiutato il turno."
                       : "Su questo turno non era segnato nessuno."
                     : "In questo turno non c'è ancora nessuno."
                 }
               />
-            ) : isPast ? (
+            ) : presenceMode ? (
               presenceRows.map((a) => (
                 <PresenceRow
                   key={a.id}
@@ -837,6 +940,29 @@ export default function ShiftDetailScreen() {
           onClose={() => setAddingWorker(false)}
         />
       ) : null}
+
+      <ConfirmModal
+        visible={deleteVisible}
+        title={DRAFT_DELETE_TITLE}
+        message={DRAFT_DELETE_MESSAGE}
+        confirmLabel={DRAFT_DELETE_LABEL}
+        cancelLabel="Indietro"
+        destructive
+        pending={deleteMutation.isPending}
+        onConfirm={onDeleteDraft}
+        onCancel={() => setDeleteVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={recordVisible}
+        title={RECORD_DRAFT_TITLE}
+        message={RECORD_DRAFT_MESSAGE}
+        confirmLabel={RECORD_DRAFT}
+        cancelLabel="Indietro"
+        pending={recordDraft.isPending}
+        onConfirm={onRecordDraft}
+        onCancel={() => setRecordVisible(false)}
+      />
 
       <ConfirmModal
         visible={cancelVisible}

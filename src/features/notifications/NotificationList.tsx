@@ -32,6 +32,8 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   billing_change_reminder: "clock",
   billing_admin_alert: "alert",
   clock_reminder: "clock",
+  shift_published: "calendar",
+  shift_drafts_reminder: "clock",
 };
 
 type Props = {

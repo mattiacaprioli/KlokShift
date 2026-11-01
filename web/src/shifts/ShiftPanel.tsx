@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   useCreateInternalShifts,
+  usePublishShifts,
   useShiftAssignments,
   useShiftRoleRequirements,
   useUpdateInternalShift,
@@ -18,6 +19,15 @@ import {
   moveImpactLines,
   shiftMoveImpact,
 } from "@/features/shifts/moveImpact";
+import {
+  DRAFT_SILENT_LINE,
+  SAVED_AS_DRAFT_NOT_PUBLISHED,
+  SAVE_AND_PUBLISH,
+  SAVE_DRAFT,
+  isDraft,
+  publishedToast,
+  savedDraftToast,
+} from "@/features/shifts/drafts";
 import {
   plannedDatesOf,
   repeatHint,
@@ -243,6 +253,7 @@ function InternalForm({
   const assignmentsQuery = useShiftAssignments(shift?.id ?? "", !!shift?.id);
   const roleReqsQuery = useShiftRoleRequirements(shift?.id ?? "", !!shift?.id);
   const create = useCreateInternalShifts();
+  const publish = usePublishShifts();
   const update = useUpdateInternalShift(shift?.id ?? "");
   // Chi ha chiesto di essere sostituito: la decisione si prende in chat, dove
   // c'è il motivo. Qui è solo il segnale che c'è una risposta da dare.
@@ -625,7 +636,18 @@ function InternalForm({
     );
   }
 
-  const pending = create.isPending || update.isPending;
+  // Il turno nuovo nasce sempre in bozza; «Salva e pubblica» lo pubblica subito
+  // dopo. `submitting` copre **tutta** la sequenza crea → pubblica: fra le due
+  // chiamate i pulsanti restano bloccati, sennò un secondo clic crea doppioni.
+  const [submitting, setSubmitting] = useState<"draft" | "publish" | null>(
+    null
+  );
+  const submitMode = useRef<"draft" | "publish">("draft");
+  const pending =
+    create.isPending ||
+    update.isPending ||
+    publish.isPending ||
+    submitting !== null;
   const mutationError = create.error ?? update.error;
 
   /**
@@ -640,7 +662,7 @@ function InternalForm({
     notifies: boolean;
   } | null>(null);
 
-  function save(values: InternalShiftForm) {
+  async function save(values: InternalShiftForm) {
     const payload = {
       title: values.title.trim() || shiftSlotLabel(values.start_time),
       date: values.date,
@@ -663,22 +685,38 @@ function InternalForm({
     // Un turno o dieci passano dalla stessa mutation: la data è l'unica cosa
     // che cambia tra le copie — la sede no, sono copie dello stesso turno.
     const dates = [values.date, ...extraDates.filter((d) => d !== values.date)];
-    create.mutate(
-      dates.sort().map((d) => ({
-        ...payload,
-        venue_id: values.venue_id,
-        date: d,
-        // Chi quel giorno è assente resta fuori da quella copia sola.
-        staff: staffForDate(payload.staff, d, skippedDays, forcedAbsent),
-      })),
-      {
-        onSuccess: () => {
-          // La sede appena usata diventa quella proposta al prossimo turno.
-          choose(values.venue_id);
-          onClose();
-        },
+    const mode = submitMode.current;
+    const plans = dates.sort().map((d) => ({
+      ...payload,
+      venue_id: values.venue_id,
+      date: d,
+      // Chi quel giorno è assente resta fuori da quella copia sola.
+      staff: staffForDate(payload.staff, d, skippedDays, forcedAbsent),
+    }));
+    setSubmitting(mode);
+    let ids: string[];
+    try {
+      ids = await create.mutateAsync({ plans, draft: true });
+    } catch {
+      // L'errore sta in `create.error`, mostrato nel piede del pannello.
+      setSubmitting(null);
+      return;
+    }
+    // La sede appena usata diventa quella proposta al prossimo turno.
+    choose(values.venue_id);
+    if (mode === "draft") {
+      toast.show(savedDraftToast(ids.length));
+    } else {
+      try {
+        const result = await publish.mutateAsync({ shiftIds: ids, notify: true });
+        toast.show(publishedToast(result.published));
+      } catch {
+        // I turni esistono, in bozza: l'errore dice proprio questo.
+        toast.show(SAVED_AS_DRAFT_NOT_PUBLISHED, "error");
       }
-    );
+    }
+    setSubmitting(null);
+    onClose();
   }
 
   function onSubmit(values: InternalShiftForm) {
@@ -698,7 +736,7 @@ function InternalForm({
         values.start_time !== shift.start_time.slice(0, 5) ||
         values.end_time !== shift.end_time.slice(0, 5));
     if (!moved || !shift) {
-      save(values);
+      void save(values);
       return;
     }
     if (
@@ -720,6 +758,7 @@ function InternalForm({
     const impact = shiftMoveImpact({
       shiftId: shift.id,
       cancelled: shift.status === "cancelled",
+      draft: isDraft(shift),
       assignees: (assignmentsQuery.data ?? []).flatMap((a) =>
         a.staff_member
           ? [
@@ -742,7 +781,7 @@ function InternalForm({
       dayShifts: targetDayQuery.data ?? [],
     });
     if (!hasMoveImpact(impact)) {
-      save(values);
+      void save(values);
       return;
     }
     setPendingMove({
@@ -1159,15 +1198,31 @@ function InternalForm({
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" variant="gold" disabled={pending}>
-            {pending
+          <Button
+            type="submit"
+            variant="gold"
+            disabled={pending}
+            onClick={() => {
+              submitMode.current = "draft";
+            }}
+          >
+            {submitting === "draft" || (shift && pending)
               ? "Salvataggio…"
               : shift
                 ? "Salva modifiche"
-                : extraDates.length > 0
-                  ? `Crea ${extraDates.length + 1} turni`
-                  : "Crea turno"}
+                : SAVE_DRAFT}
           </Button>
+          {!shift ? (
+            <Button
+              disabled={pending}
+              onClick={() => {
+                submitMode.current = "publish";
+                void handleSubmit(onSubmit)();
+              }}
+            >
+              {submitting === "publish" ? "Pubblicazione…" : SAVE_AND_PUBLISH}
+            </Button>
+          ) : null}
           {onCancelEdit ? (
             <Button onClick={onCancelEdit} disabled={pending}>
               Annulla modifiche
@@ -1177,7 +1232,11 @@ function InternalForm({
             Salva come modello
           </Button>
         </div>
-        {shift ? (
+        {shift && isDraft(shift) ? (
+          <p className="min-w-60 flex-1 text-[11px] leading-4 text-t4">
+            {DRAFT_SILENT_LINE}
+          </p>
+        ) : shift ? (
           <p className="min-w-60 flex-1 text-[11px] leading-4 text-t4">
             Chi viene aggiunto riceve una notifica; a chi viene tolto il turno
             sparisce. Se cambi giorno o orario, gli assegnati vengono avvisati.
@@ -1192,7 +1251,7 @@ function InternalForm({
           message={pendingMove.message}
           confirmLabel={pendingMove.notifies ? "Salva e avvisa" : "Salva"}
           pending={pending}
-          onConfirm={() => save(pendingMove.values)}
+          onConfirm={() => void save(pendingMove.values)}
           onCancel={() => setPendingMove(null)}
         />
       ) : null}

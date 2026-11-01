@@ -6,6 +6,7 @@ import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
 import { absenceCellLabel } from "@/features/absences/labels";
 import {
+  useRecordDraftAsDone,
   useShiftAssignments,
   useShiftRoleRequirements,
 } from "@/features/assignments/hooks";
@@ -16,7 +17,23 @@ import {
 } from "@/features/assignments/status";
 import { usePendingRequestsForShift } from "@/features/changeRequests/hooks";
 import { liveClockStatusIn } from "@/features/clock/live";
-import { useUpdateShiftStatus } from "@/features/shifts/hooks";
+import { useDeleteShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
+import {
+  DRAFT_DELETED_TOAST,
+  DRAFT_DELETE_LABEL,
+  DRAFT_DELETE_MESSAGE,
+  DRAFT_DELETE_TITLE,
+  DRAFT_EXPIRED_NOTE,
+  DRAFT_LABEL,
+  DRAFT_SILENT_LINE,
+  EXPIRED_DRAFT_LABEL,
+  RECORD_DRAFT,
+  RECORD_DRAFT_DONE_TOAST,
+  RECORD_DRAFT_MESSAGE,
+  RECORD_DRAFT_TITLE,
+  isDraft,
+  isExpiredDraft,
+} from "@/features/shifts/drafts";
 import { moveImpactWindow } from "@/features/shifts/moveImpact";
 import type { Shift } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -82,6 +99,11 @@ export function ShiftDetails({
   // Anche da un turno passato o annullato: «come venerdì scorso» è proprio il
   // caso. Il fuori turno no: non è stato pianificato.
   const canSaveTemplate = canManage && !shift.unplanned;
+  const draft = isDraft(shift);
+  const expiredDraft = isExpiredDraft(shift, now);
+  // Una bozza finita non è mai partita: si elimina (chi gestisce i turni) o si
+  // registra come fatta (chi ha «Ore»).
+  const canDeleteDraft = canManage && draft && !cancelled && !shift.unplanned;
   const [savingTemplate, setSavingTemplate] = useState(false);
   const showLiveClock =
     !cancelled &&
@@ -93,6 +115,13 @@ export function ShiftDetails({
     () => assignmentsQuery.data ?? [],
     [assignmentsQuery.data]
   );
+  // `record_past_shift` chiede almeno una persona assegnata o confermata.
+  const canRecordDraft =
+    expiredDraft &&
+    !cancelled &&
+    !shift.unplanned &&
+    can(shift.venue_id, "can_view_hours") &&
+    assignments.some((a) => a.status === "assigned" || a.status === "confirmed");
   const requestedByAssignment = useMemo(
     () =>
       new Map(
@@ -128,6 +157,17 @@ export function ShiftDetails({
               canRestore={canManage}
               onDone={onClose}
             />
+          </div>
+        ) : null}
+
+        {draft && !cancelled ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Pill tone={expiredDraft ? "error" : "gold"}>
+              {expiredDraft ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL}
+            </Pill>
+            <p className="min-w-0 flex-1 text-xs leading-4 text-t3">
+              {expiredDraft ? DRAFT_EXPIRED_NOTE : DRAFT_SILENT_LINE}
+            </p>
           </div>
         ) : null}
 
@@ -282,7 +322,7 @@ export function ShiftDetails({
             </section>
 
             {/* Solo a turno concluso: prima non c'è nulla da consuntivare. */}
-            {over && !cancelled ? (
+            {over && !cancelled && !draft ? (
               <PresenceSection
                 shiftId={shift.id}
                 venueId={shift.venue_id}
@@ -297,15 +337,21 @@ export function ShiftDetails({
         </div>
       </div>
 
-      {canEdit || canSaveTemplate ? (
+      {canEdit || canSaveTemplate || canDeleteDraft || canRecordDraft ? (
         <footer className="flex flex-wrap gap-2 border-t border-border-2 px-6 py-4">
           {canEdit ? (
-            <>
-              <Button variant="gold" onClick={onEdit}>
-                Modifica
-              </Button>
-              <CancelShiftButton shift={shift} onDone={onClose} />
-            </>
+            <Button variant="gold" onClick={onEdit}>
+              Modifica
+            </Button>
+          ) : null}
+          {canRecordDraft ? (
+            <RecordDraftButton shift={shift} onDone={onClose} />
+          ) : null}
+          {/* Una bozza non ha avvisato nessuno: non si annulla, si elimina. */}
+          {canDeleteDraft ? (
+            <DeleteDraftButton shift={shift} onDone={onClose} />
+          ) : canEdit ? (
+            <CancelShiftButton shift={shift} onDone={onClose} />
           ) : null}
           {canSaveTemplate ? (
             <Button
@@ -461,5 +507,102 @@ function CancelledBanner({
       </p>
       {canRestore ? <RestoreShiftButton shift={shift} onDone={onDone} /> : null}
     </div>
+  );
+}
+
+/** Elimina una bozza: sparisce per sempre, e nessuno è mai stato avvisato. */
+function DeleteDraftButton({
+  shift,
+  onDone,
+}: {
+  shift: Shift;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const del = useDeleteShift(shift.id);
+  const [asking, setAsking] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="danger"
+        onClick={() => setAsking(true)}
+        disabled={del.isPending}
+      >
+        {DRAFT_DELETE_LABEL}
+      </Button>
+      {asking ? (
+        <ConfirmDialog
+          title={DRAFT_DELETE_TITLE}
+          message={DRAFT_DELETE_MESSAGE}
+          confirmLabel={DRAFT_DELETE_LABEL}
+          cancelLabel="Indietro"
+          destructive
+          pending={del.isPending}
+          onCancel={() => setAsking(false)}
+          onConfirm={() =>
+            del.mutate(undefined, {
+              onSuccess: () => {
+                toast.show(DRAFT_DELETED_TOAST);
+                onDone();
+              },
+              onError: (e) => {
+                toast.show(userErrorMessage(e), "error");
+                setAsking(false);
+              },
+            })
+          }
+        />
+      ) : null}
+    </>
+  );
+}
+
+/** «Registra come fatto»: la bozza finita diventa un turno svolto. */
+function RecordDraftButton({
+  shift,
+  onDone,
+}: {
+  shift: Shift;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const record = useRecordDraftAsDone();
+  const [asking, setAsking] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="gold"
+        onClick={() => setAsking(true)}
+        disabled={record.isPending}
+      >
+        {RECORD_DRAFT}
+      </Button>
+      {asking ? (
+        <ConfirmDialog
+          title={RECORD_DRAFT_TITLE}
+          message={RECORD_DRAFT_MESSAGE}
+          confirmLabel={RECORD_DRAFT}
+          cancelLabel="Indietro"
+          pending={record.isPending}
+          onCancel={() => setAsking(false)}
+          onConfirm={() =>
+            record.mutate(shift.id, {
+              onSuccess: () => {
+                toast.show(RECORD_DRAFT_DONE_TOAST);
+                onDone();
+              },
+              onError: (e) => {
+                toast.show(userErrorMessage(e), "error");
+                setAsking(false);
+              },
+            })
+          }
+        />
+      ) : null}
+    </>
   );
 }

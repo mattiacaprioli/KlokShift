@@ -85,6 +85,11 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
     audience: ["manager", "web"],
   },
   {
+    q: "Il dipendente non vede il turno",
+    a: "Probabilmente è ancora una bozza: pubblicalo dal calendario. Finché è in bozza lo vedi solo tu e nessuno riceve la notifica.",
+    audience: ["manager", "web"],
+  },
+  {
     q: "Come preparo le ore per il consulente?",
     a: "Nella pagina Ore scegli il mese e scarica il PDF o il CSV; le assenze hanno un CSV a parte. KlokShift conta le ore: importi e buste paga li fa il consulente.",
     audience: ["manager", "web"],

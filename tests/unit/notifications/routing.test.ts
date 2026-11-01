@@ -76,4 +76,16 @@ describe("dove atterra una notifica", () => {
     expect(routeForNotification("manager", "team_removed", "v1")).toBeNull();
     expect(routeForNotification("manager", "shift_declined", "s1")).toBe("/(manager)/shift/s1");
   });
+
+  it("bozze: il dipendente vede i turni, il promemoria è per chi gestisce", () => {
+    expect(routeForNotification("waiter", "shift_published", "s1")).toBe("/(waiter)/(tabs)/turni");
+    expect(routeForNotification("waiter", "shift_drafts_reminder", "s1")).toBeNull();
+    expect(routeForNotification("manager", "shift_drafts_reminder", "s1")).toBe("/(manager)/shift/s1");
+    expect(routeForNotification("manager", "shift_drafts_reminder", null)).toBe("/(manager)/(tabs)/turni");
+  });
+
+  it("bozze sul web: si apre il turno nel Planning", () => {
+    expect(webRouteForNotification("shift_drafts_reminder", "s1")).toBe("/planning?shift=s1");
+    expect(webRouteForNotification("shift_published", "s1")).toBe("/planning?shift=s1");
+  });
 });

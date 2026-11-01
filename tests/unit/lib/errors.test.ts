@@ -32,6 +32,15 @@ describe("userErrorMessage", () => {
     expect(message).toMatch(/Eliminane uno/);
   });
 
+  it("dice di pubblicare prima una bozza, e che il turno è già pubblicato", () => {
+    expect(userErrorMessage(new Error("shift_draft"))).toBe(
+      "Questo turno è una bozza: pubblicalo prima, o se è già finito registralo come fatto."
+    );
+    expect(userErrorMessage(new Error("shift_not_draft"))).toBe(
+      "Il turno è già pubblicato."
+    );
+  });
+
   it("dice che l'uscita c'è già, nei casi concorrenti (C13)", () => {
     const message = userErrorMessage(new Error("clock_already_closed"));
     expect(message).not.toBe(GENERIC_ERROR);
