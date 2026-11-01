@@ -13,9 +13,6 @@ export const DRAFT_LABEL = "Bozza";
 export const EXPIRED_DRAFT_LABEL = "Mai pubblicato";
 export const SAVE_DRAFT = "Salva in bozza";
 export const SAVE_AND_PUBLISH = "Salva e pubblica";
-export const PUBLISH = "Pubblica";
-export const PUBLISH_NOTIFY = "Pubblica e avvisa";
-export const PUBLISH_SILENT = "Pubblica senza avvisi";
 export const CONFIRM_ALL = "Conferma tutti";
 export const RECORD_DRAFT = "Registra come fatto";
 export const DRAFT_SILENT_LINE =
@@ -44,6 +41,13 @@ export type PublishPreview = {
   shift_ids: string[];
   shifts: number;
   people: number;
+  /**
+   * Persone nei turni, con o senza account, chi pubblica compreso; e se chi
+   * pubblica è fra loro. Servono a dire *perché* non si avvisa nessuno
+   * (20261103000500). Facoltativi: un server più vecchio non li manda.
+   */
+  assignees?: number;
+  self?: boolean;
   outside: number;
   expired: number;
 };
@@ -71,32 +75,87 @@ export function draftsBannerText(input: {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-export const NOBODY_TO_NOTIFY =
-  "Nessuno da avvisare: i turni sono senza persone o senza account.";
-
-/** La scelta «avvisa / senza avvisi» ha senso solo se c'è qualcuno da avvisare. */
-export function shouldOfferNotifyChoice(
-  p: Pick<PublishPreview, "people">
-): boolean {
-  return p.people > 0;
+/**
+ * Il comando di pubblicazione nell'intestazione del calendario: dice quanti
+ * turni escono, così basta lui al posto di un avviso a parte.
+ */
+export function publishCta(count: number): string {
+  return `Pubblica ${count} ${count === 1 ? "turno" : "turni"}`;
 }
 
-/** Cosa succede pubblicando: una riga per cosa, la terza solo se serve. */
-export function publishPreviewLines(p: PublishPreview): string[] {
-  const lines = [
-    `${p.shifts} ${p.shifts === 1 ? "turno" : "turni"}`,
-    p.people === 0
-      ? NOBODY_TO_NOTIFY
-      : `Avvisiamo ${p.people} ${p.people === 1 ? "persona" : "persone"}`,
-  ];
-  if (p.outside > 0) {
-    lines.push(
-      p.outside === 1
-        ? "C'è un'altra bozza fuori da questo periodo"
-        : `Ci sono altre ${p.outside} bozze fuori da questo periodo`
+export const PUBLISH_CTA_HINT = "Il team non li vede finché non li pubblichi.";
+
+/**
+ * Le bozze che il pulsante non pubblica, accanto al periodo: quelle di altre
+ * settimane o mesi e quelle ormai finite. Null se non ce ne sono.
+ */
+export function otherDraftsText(input: {
+  upcoming: number;
+  expired: number;
+}): string | null {
+  const { upcoming, expired } = input;
+  const parts: string[] = [];
+  if (upcoming > 0) {
+    parts.push(
+      upcoming === 1
+        ? "1 bozza in un altro periodo"
+        : `${upcoming} bozze in altri periodi`
     );
   }
-  return lines;
+  if (expired > 0) {
+    parts.push(`${expired} mai ${expired === 1 ? "pubblicato" : "pubblicati"}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/**
+ * Le bozze che «Pubblica» non tocca, ridotte alla riga accanto al periodo: il
+ * testo e il giorno a cui porta (la prima ancora da pubblicare, altrimenti la
+ * prima ormai finita). Solo le sedi in `venueIds`, cioè quelle dove chi guarda
+ * può pubblicare. Condiviso da app e dashboard.
+ */
+export function otherDrafts(
+  drafts: (ShiftTimes & { venue_id: string })[],
+  opts: { from: string; to: string; venueIds: string[]; now?: Date }
+): { text: string | null; target: string | null } {
+  const now = opts.now ?? new Date();
+  let upcoming = 0;
+  let expired = 0;
+  let target: string | null = null;
+  let expiredTarget: string | null = null;
+  for (const d of drafts) {
+    if (!opts.venueIds.includes(d.venue_id)) continue;
+    if (d.date >= opts.from && d.date <= opts.to) continue;
+    if (isShiftOver(d, now)) {
+      expired += 1;
+      if (expiredTarget === null || d.date < expiredTarget) expiredTarget = d.date;
+    } else {
+      upcoming += 1;
+      if (target === null || d.date < target) target = d.date;
+    }
+  }
+  const text = otherDraftsText({ upcoming, expired });
+  return { text, target: text ? (target ?? expiredTarget) : null };
+}
+
+/**
+ * Perché la pubblicazione non avvisa nessuno. Chi pubblica non riceve mai la
+ * propria notifica: il titolare che si mette in turno da sé non è «un turno
+ * senza persone», e prima la finestra diceva proprio quello.
+ */
+export function nobodyToNotifyText(
+  p: Pick<PublishPreview, "assignees" | "self">
+): string {
+  if (p.assignees === undefined) return "Nessuno da avvisare.";
+  if (p.assignees === 0) {
+    return "Nessuno da avvisare: questi turni non hanno ancora persone.";
+  }
+  if (p.self && p.assignees === 1) {
+    return "Nessuno da avvisare: nei turni ci sei solo tu, e chi pubblica non riceve la notifica.";
+  }
+  return p.self
+    ? "Nessuno da avvisare: a parte te, chi è nei turni non ha ancora l'app collegata."
+    : "Nessuno da avvisare: chi è nei turni non ha ancora l'app collegata.";
 }
 
 const monthName = new Intl.DateTimeFormat("it-IT", { month: "long" });
@@ -152,7 +211,37 @@ export const PUBLISH_PREVIEW_ERROR = "Impossibile preparare la pubblicazione.";
 export const PUBLISH_EMPTY =
   "Non ci sono bozze da pubblicare in questo periodo.";
 export const PUBLISH_ERROR = "Impossibile pubblicare i turni.";
-export const PUBLISH_TITLE = "Pubblica i turni";
+
+/** Il titolo della finestra: dice il periodo che esce, non «i turni» in generale. */
+export function publishTitle(period: "week" | "month"): string {
+  return period === "week" ? "Pubblica la settimana" : "Pubblica il mese";
+}
+
+/** Accanto al numero grande: «5 turni in bozza». */
+export function draftsCountLabel(count: number): string {
+  return count === 1 ? "turno in bozza" : "turni in bozza";
+}
+
+/**
+ * La scelta degli avvisi è una spunta, accesa di default, e non un secondo
+ * pulsante: con due pulsanti gialli e grigi affiancati non si capiva quale
+ * fosse quello normale.
+ */
+export function notifyLabel(people: number): string {
+  return `Avvisa ${people} ${people === 1 ? "persona" : "persone"}`;
+}
+export const NOTIFY_HINT =
+  "Ognuno riceve una sola notifica con tutti i suoi turni.";
+export const SILENT_HINT =
+  "Vedranno i turni nell'agenda, senza notifica.";
+
+/** Le bozze che questa pubblicazione lascia dove sono. Null se non ce ne sono. */
+export function outsideNote(outside: number): string | null {
+  if (outside <= 0) return null;
+  return outside === 1
+    ? "C'è un'altra bozza fuori da questo periodo: resta in bozza."
+    : `Altre ${outside} bozze fuori da questo periodo restano in bozza.`;
+}
 
 export const DRAFT_DELETE_LABEL = "Elimina";
 export const DRAFT_DELETE_TITLE = "Eliminare la bozza?";

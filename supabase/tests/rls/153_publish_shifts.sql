@@ -452,8 +452,12 @@ end $$;
 -- ---------------------------------------------------------------------------
 do $$
 declare
-  at_ timestamptz := (current_date::timestamp + time '18:30') at time zone 'Europe/Rome';
-  tom date := current_date + 1;
+  -- L'istante del cron è **domani** alle 18:30: l'azienda di prova esiste dal
+  -- momento del reset (seed: `grant_workspace_access(..., now(), ...)`), e un
+  -- istante di oggi già passato la troverebbe non ancora attiva. Con «oggi alle
+  -- 18:30» il test passava solo se lanciato prima delle 18:30.
+  at_ timestamptz := ((current_date + 1)::timestamp + time '18:30') at time zone 'Europe/Rome';
+  tom date := current_date + 2;
   n integer;
   n_emp integer;
   pubblicato uuid;
@@ -465,7 +469,7 @@ begin
     jsonb_build_object('venue_id', tests.id('V1'), 'title', 'Cena B', 'draft', true,
       'dates', jsonb_build_array(tom::text), 'start_time', '18:00', 'end_time', '23:00'),
     jsonb_build_object('venue_id', tests.id('V1'), 'title', 'Lontana', 'draft', true,
-      'dates', jsonb_build_array((current_date + 2)::text), 'start_time', '06:00', 'end_time', '10:00'),
+      'dates', jsonb_build_array((current_date + 3)::text), 'start_time', '06:00', 'end_time', '10:00'),
     jsonb_build_object('venue_id', tests.id('V1'), 'title', 'Annullata', 'draft', true,
       'dates', jsonb_build_array(tom::text), 'start_time', '20:00', 'end_time', '23:00')));
   pubblicato := (public.create_shifts(jsonb_build_array(

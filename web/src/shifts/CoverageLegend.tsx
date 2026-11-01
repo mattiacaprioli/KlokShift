@@ -49,6 +49,10 @@ export function CoverageLegend({
           <span className={`h-3 w-0.5 rounded ${TONE_BG[i.tone]}`} /> {i.label}
         </span>
       ))}
+      <span className="flex items-center gap-1.5">
+        <span className="h-3 w-4 rounded border border-dotted border-t4" /> bozza,
+        il team non la vede
+      </span>
       {dragHint ? <span className="print:hidden">{dragHint}</span> : null}
     </p>
   );

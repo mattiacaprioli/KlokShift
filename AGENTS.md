@@ -104,7 +104,9 @@ Pensato per pianificare un mese intero e avvisare una volta sola.
   filtro. Su una bozza le operazioni del dipendente e le presenze rifiutano con
   `shift_draft`; una bozza non si annulla, si elimina.
 - **Pubblicare** (`20261103000300`): `get_publish_preview` conta chi sarà
-  avvisato; `publish_shifts` manda **una notifica per persona per azienda**
+  avvisato (`people`, mai chi pubblica) e dal `000500` anche chi c'è nei turni
+  (`assignees`, `self`), per dire il motivo quando non si avvisa nessuno;
+  `publish_shifts` manda **una notifica per persona per azienda**
   (`shift_published`; ordine dei lock: azienda → turni); `confirm_my_assignments`
   è il «Conferma tutti» del dipendente.
 - **Bozza scaduta** (solo se già **finita**: una iniziata ma non finita si

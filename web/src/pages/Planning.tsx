@@ -23,6 +23,7 @@ import {
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import {
   useMoveShiftToDate,
+  useOwnerDrafts,
   useOwnerShiftsRange,
   useShift,
 } from "@/features/shifts/hooks";
@@ -42,9 +43,11 @@ import {
   DRAFT_LABEL,
   DRAFT_SILENT_LINE,
   EXPIRED_DRAFT_LABEL,
-  PUBLISH,
+  PUBLISH_CTA_HINT,
   isDraft,
   isExpiredDraft,
+  otherDrafts,
+  publishCta,
 } from "@/features/shifts/drafts";
 import {
   reassignNotifyPlan,
@@ -97,7 +100,6 @@ import {
   type PersonDragPayload,
   type ReassignTarget,
 } from "../shifts/dragContext";
-import { DraftsBanner } from "../shifts/DraftsBanner";
 import { DuplicatePeriodDialog } from "../shifts/DuplicatePeriodDialog";
 import { PublishDialog } from "../shifts/PublishDialog";
 import { RecordPastShiftDialog } from "../shifts/RecordPastShiftDialog";
@@ -109,6 +111,7 @@ import { MovePersonDialog } from "../shifts/MovePersonDialog";
 import { PeopleWeek } from "../shifts/PeopleWeek";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { MoreMenu } from "../ui/MoreMenu";
 import {
   Button,
   PageHeader,
@@ -311,9 +314,12 @@ export function PlanningPage() {
         : publishVenueIds,
     [activeVenueId, publishVenueIds],
   );
-  const periodHasDrafts = useMemo(
+  // Quante bozze escono premendo «Pubblica»: il pulsante le conta, e da solo
+  // fa da avviso (prima c'era anche una fascia sopra la griglia che diceva la
+  // stessa cosa).
+  const periodDraftCount = useMemo(
     () =>
-      (data ?? []).some(
+      (data ?? []).filter(
         (s) =>
           s.date >= publishFrom &&
           s.date <= publishTo &&
@@ -321,8 +327,20 @@ export function PlanningPage() {
           isDraft(s) &&
           !isExpiredDraft(s) &&
           publishVenues.includes(s.venue_id),
-      ),
+      ).length,
     [data, publishFrom, publishTo, publishVenues],
+  );
+  // Le bozze che «Pubblica» non tocca: altri periodi e quelle già finite. Una
+  // riga accanto alle date, che porta alla prima.
+  const allDrafts = useOwnerDrafts();
+  const otherDraftsLine = useMemo(
+    () =>
+      otherDrafts(allDrafts.data ?? [], {
+        from: publishFrom,
+        to: publishTo,
+        venueIds: publishVenues,
+      }),
+    [allDrafts.data, publishVenues, publishFrom, publishTo],
   );
 
   // Quante persone mancano sul periodo che si ha davanti. Era il sottotitolo di
@@ -612,17 +630,46 @@ export function PlanningPage() {
             {activeVenueName ? (
               <span className="hidden print:inline"> · {activeVenueName}</span>
             ) : null}
+            {/* Le bozze che «Pubblica» non tocca: una riga discreta che porta
+                alla prima, invece di una fascia sopra la griglia. */}
+            {canCreateShift && otherDraftsLine.text && otherDraftsLine.target ? (
+              <span className="print:hidden">
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => goToDay(otherDraftsLine.target!)}
+                  className="focus-gold rounded text-t2 underline-offset-2 hover:text-gold hover:underline"
+                >
+                  {otherDraftsLine.text} →
+                </button>
+              </span>
+            ) : null}
           </>
         }
         badge={
-          missing > 0 ? (
-            <span
-              className="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 text-xs font-semibold text-warning"
-              title={isWeekly ? "In questa settimana" : "In questo mese"}
-            >
-              {missingPeopleLabel(missing)}
-            </span>
-          ) : null
+          <>
+            {missing > 0 ? (
+              <span
+                className="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 text-xs font-semibold text-warning"
+                title={isWeekly ? "In questa settimana" : "In questo mese"}
+              >
+                {missingPeopleLabel(missing)}
+              </span>
+            ) : null}
+            {/* Pubblica sta accanto al periodo che pubblica, non in mezzo agli
+                strumenti: compare solo se in questo periodo ci sono bozze, e
+                dice quante. Il giallo pieno resta a «Nuovo turno». */}
+            {canCreateShift && periodDraftCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setPublishing(true)}
+                title={PUBLISH_CTA_HINT}
+                className="focus-gold rounded-full border border-gold/60 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold transition hover:bg-gold/20 print:hidden"
+              >
+                {publishCta(periodDraftCount)}
+              </button>
+            ) : null}
+          </>
         }
         actions={
           <>
@@ -642,33 +689,6 @@ export function PlanningPage() {
                 ))}
               </Select>
             ) : null}
-            {/* Si duplica il periodo che si ha davanti: la settimana sulle viste
-                settimanali, il mese sulla vista mese. Il dialogo dice quanti
-                turni e quante notifiche prima di procedere — che su un mese non
-                è una formalità. */}
-            {canCreateShift ? (
-              <Button
-                onClick={() => setDuplicating(true)}
-                title={isWeekly ? "Duplica la settimana" : "Duplica il mese"}
-                aria-label={isWeekly ? "Duplica la settimana" : "Duplica il mese"}
-              >
-                Duplica
-              </Button>
-            ) : null}
-            {canCreateShift && periodHasDrafts ? (
-              <Button
-                variant="gold"
-                onClick={() => setPublishing(true)}
-                title={isWeekly ? "Pubblica la settimana" : "Pubblica il mese"}
-              >
-                {PUBLISH}
-              </Button>
-            ) : null}
-            {/* Il turnario finisce in bacheca: la stampa la fa il browser sulla
-                vista che hai davanti, con i token ribaltati su bianco. */}
-            <Button onClick={() => window.print()}>
-              Stampa
-            </Button>
             <div className="flex overflow-hidden rounded-xl border border-border-2">
               {VIEWS.map((v) => (
                 <button
@@ -685,25 +705,59 @@ export function PlanningPage() {
                 </button>
               ))}
             </div>
-            <Button
-              onClick={() =>
-                isWeekly
-                  ? setMonday((m) => addDays(m, -7))
-                  : setMonth((m) => addMonths(m, -1))
-              }
-            >
-              ←
-            </Button>
-            <Button onClick={goToday}>Oggi</Button>
-            <Button
-              onClick={() =>
-                isWeekly
-                  ? setMonday((m) => addDays(m, 7))
-                  : setMonth((m) => addMonths(m, 1))
-              }
-            >
-              →
-            </Button>
+            {/* Indietro, oggi, avanti: un gruppo solo, come la scelta della
+                vista accanto. Tre pulsanti sciolti erano tre cose in più da
+                leggere in una barra già piena. */}
+            <div className="flex overflow-hidden rounded-xl border border-border-2">
+              <button
+                type="button"
+                aria-label={isWeekly ? "Settimana precedente" : "Mese precedente"}
+                onClick={() =>
+                  isWeekly
+                    ? setMonday((m) => addDays(m, -7))
+                    : setMonth((m) => addMonths(m, -1))
+                }
+                className="focus-gold bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={goToday}
+                className="focus-gold border-x border-border-2 bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3"
+              >
+                Oggi
+              </button>
+              <button
+                type="button"
+                aria-label={isWeekly ? "Settimana successiva" : "Mese successivo"}
+                onClick={() =>
+                  isWeekly
+                    ? setMonday((m) => addDays(m, 7))
+                    : setMonth((m) => addMonths(m, 1))
+                }
+                className="focus-gold bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3"
+              >
+                →
+              </button>
+            </div>
+            {/* Le azioni di ogni tanto. Si duplica il periodo che si ha davanti
+                (settimana o mese): il dialogo dice quanti turni prima di
+                procedere. La stampa la fa il browser sulla vista aperta, con i
+                token ribaltati su bianco. */}
+            <MoreMenu
+              items={[
+                ...(canCreateShift
+                  ? [
+                      {
+                        label: isWeekly ? "Duplica la settimana" : "Duplica il mese",
+                        onSelect: () => setDuplicating(true),
+                      },
+                    ]
+                  : []),
+                { label: "Stampa", onSelect: () => window.print() },
+              ]}
+            />
             {/* Il «+» di ogni giorno resta; questo è il comando che si vede
                 subito, senza sapere dove cercare. Stessa porta (`openCreate`),
                 quindi anche lui spiega perché un'azienda non operativa non
@@ -730,13 +784,6 @@ export function PlanningPage() {
       {isError || impactShiftsQuery.isError || impactAbsencesQuery.isError ? (
         <QueryError
           error={error ?? impactShiftsQuery.error ?? impactAbsencesQuery.error}
-        />
-      ) : null}
-
-      {canCreateShift ? (
-        <DraftsBanner
-          venueIds={publishVenueIds}
-          onOpen={goToDay}
         />
       ) : null}
 
@@ -847,6 +894,8 @@ export function PlanningPage() {
           venueIds={publishVenues}
           from={publishFrom}
           to={publishTo}
+          period={isWeekly ? "week" : "month"}
+          periodLabel={isWeekly ? weekLabel(monday) : monthTitle(month)}
           onClose={() => setPublishing(false)}
         />
       ) : null}
@@ -1287,7 +1336,7 @@ function MonthGrid({
                         cancelled && "opacity-50",
                         isDraft(shift) &&
                           !cancelled &&
-                          "outline outline-1 -outline-offset-1 outline-dashed outline-border-2",
+                          "bg-transparent outline outline-1 -outline-offset-1 outline-dotted outline-t4",
                         draggable && "cursor-grab active:cursor-grabbing",
                         dnd.isSource(shift.id) && "opacity-40",
                       )}
@@ -1431,9 +1480,11 @@ function ShiftCell({
         "focus-gold rounded-lg border border-l-[3px] p-2 text-left transition",
         cancelled
           ? "border-border bg-bg-1 opacity-50"
-          : "border-border-2 bg-bg-1 hover:bg-bg-2",
-        // Bordo tratteggiato: la bozza non è ancora di nessuno.
-        draft && !cancelled && "border-dashed",
+          : draft
+            ? // La bozza è un turno «fantasma»: fondo vuoto e bordo a puntini.
+              // Il tratteggio resta all'assenza.
+              "border-dotted border-t4 bg-transparent hover:bg-bg-2"
+            : "border-border-2 bg-bg-1 hover:bg-bg-2",
         draggable && "cursor-grab active:cursor-grabbing",
         // Dopo il colore di bordo generico, sennò `cn()` lo considera vinto.
         TONE_BORDER[tone],
@@ -1494,7 +1545,7 @@ function ShiftCell({
         {cancelled ? (
           <Pill tone="error">Annullato</Pill>
         ) : draft ? (
-          <Pill tone={expiredDraft ? "error" : "gold"}>
+          <Pill tone={expiredDraft ? "error" : "neutral"}>
             {expiredDraft ? EXPIRED_DRAFT_LABEL : DRAFT_LABEL}
           </Pill>
         ) : short ? (

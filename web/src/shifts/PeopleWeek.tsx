@@ -522,6 +522,10 @@ export function PeopleWeek({
           />{" "}
           assente
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-4 rounded border border-dotted border-t4" />
+          bozza, il team non la vede
+        </span>
         <span className="print:hidden">{DRAG_HINT_PEOPLE}</span>
         </span>,
         legendTarget,
@@ -602,6 +606,7 @@ function PersonShiftChip({
   const active = isActiveAssignment(personShift.status);
   const dragging = dnd.isSource(personShift.shiftId, personShift.assignmentId);
   const actual = personShift.actual;
+  const draft = !!draftLabel && !cancelled;
 
   return (
     <button
@@ -654,20 +659,33 @@ function PersonShiftChip({
         cancelled ? "opacity-50" : "cursor-grab active:cursor-grabbing",
         active && (conflict || personShift.overlaps)
           ? "border-warning bg-warning/15 hover:bg-warning/25"
+          : active && draft
+          ? // La bozza è un turno «fantasma»: fondo vuoto e bordo a puntini
+            // grigio. Il tratteggio arancione è dell'assenza, il giallo pieno
+            // di un turno che il team vede già.
+            "border-dotted border-t4 bg-transparent hover:bg-bg-2"
           : active
           ? "border-border-gold bg-gold/10 hover:bg-gold/20"
           : // Non viene: resta visibile, perché è un buco da coprire, ma non
             // deve somigliare a una copertura.
             "border-border bg-bg-1 opacity-60 hover:opacity-100",
-        // Bordo tratteggiato: la bozza non è ancora di nessuno.
-        draftLabel && !cancelled && "border-dashed",
         dragging && "opacity-40"
       )}
     >
+      {draft ? (
+        <span
+          className={cn(
+            "mb-0.5 block text-[9px] font-semibold uppercase tracking-wider",
+            draftLabel === EXPIRED_DRAFT_LABEL ? "text-error" : "text-t3"
+          )}
+        >
+          {draftLabel}
+        </span>
+      ) : null}
       <span
         className={cn(
           "block font-mono text-[10px]",
-          active ? "text-gold" : "text-t4 line-through"
+          !active ? "text-t4 line-through" : draft ? "text-t2" : "text-gold"
         )}
       >
         {formatShiftRange(personShift.start_time, personShift.end_time)}
@@ -689,11 +707,6 @@ function PersonShiftChip({
             style={{ backgroundColor: venue.accent }}
           />
           <span className="truncate text-[10px] text-t4">{venue.name}</span>
-        </span>
-      ) : null}
-      {draftLabel && !cancelled ? (
-        <span className="mt-0.5 block text-[10px] font-semibold text-gold">
-          {draftLabel}
         </span>
       ) : null}
       {actual && actual.kind !== "missing_out" ? (

@@ -38,9 +38,9 @@ import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
-import { DraftsBanner } from "@/features/shifts/DraftsBanner";
+import { PublishBar } from "@/features/shifts/PublishBar";
 import { PublishModal } from "@/features/shifts/PublishModal";
-import { EMPTY_SHIFTS_HINT, PUBLISH, isDraft, isExpiredDraft } from "@/features/shifts/drafts";
+import { EMPTY_SHIFTS_HINT, isDraft, isExpiredDraft } from "@/features/shifts/drafts";
 import { clockAttentionItems } from "@/features/clock/attention";
 import { useVenueCalendar } from "@/features/venues/hooks";
 import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
@@ -353,19 +353,19 @@ export default function ManagerShiftsScreen() {
     () => scope.filter((venueId) => venueQuery.can(venueId, "can_manage_shifts")),
     [scope, venueQuery]
   );
-  const weekHasDrafts = useMemo(() => {
-    const from = startOfWeek(visibleDay);
-    const to = addDaysToDate(from, 6);
-    return agenda.some(
-      (s) =>
-        s.date >= from &&
-        s.date <= to &&
-        s.status !== "cancelled" &&
-        isDraft(s) &&
-        !isExpiredDraft(s) &&
-        publishVenueIds.includes(s.venue_id)
-    );
-  }, [agenda, visibleDay, publishVenueIds]);
+  const weekDraftCount = useMemo(
+    () =>
+      agenda.filter(
+        (s) =>
+          s.date >= weekFrom &&
+          s.date <= weekTo &&
+          s.status !== "cancelled" &&
+          isDraft(s) &&
+          !isExpiredDraft(s) &&
+          publishVenueIds.includes(s.venue_id)
+      ).length,
+    [agenda, weekFrom, weekTo, publishVenueIds]
+  );
 
   function goToDay(date: string, browsing?: boolean) {
     syncing.current = true;
@@ -522,7 +522,7 @@ export default function ManagerShiftsScreen() {
         {/* L'interruttore fra le due viste. Sta sopra il calendario perché
             decide *cosa* si legge sotto, mentre il calendario e i chip di sede
             valgono per entrambe. */}
-        <View className="mt-4 flex-row items-center gap-2">
+        <View className="mt-4 flex-row flex-wrap items-center gap-2">
           {(["days", "people"] as const).map((m) => {
             const on = mode === m;
             return (
@@ -540,43 +540,37 @@ export default function ManagerShiftsScreen() {
               </Pressable>
             );
           })}
-          {/* La settimana che si sta guardando, copiata su quella dopo: dal
-              27/10/2026 anche dal telefono, non solo dalla dashboard. */}
-          {canCreateShift && weekHasDrafts ? (
+          {/* Duplica e Storico come pill, nello stile di Giorni e Persone ma
+              con un'icona. Scritte sciolte una accanto all'altra si leggevano
+              come una frase sola («Duplica Storico ›»). */}
+          <View className="ml-auto flex-row items-center gap-2">
+            {/* La settimana che si sta guardando, copiata su quella dopo: dal
+                27/10/2026 anche dal telefono. Le copie nascono in bozza. */}
+            {canCreateShift ? (
+              <Pressable
+                onPress={() => setDuplicating(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Duplica la settimana"
+                className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5"
+                hitSlop={6}
+              >
+                <Icon name="clipboard" size={13} color="#8C8579" />
+                <Mono>Duplica</Mono>
+              </Pressable>
+            ) : null}
+            {/* I turni già fatti si sfogliano dal calendario; lo Storico resta
+                per cercarli con i filtri (sede, persona, stato) su tutto il
+                passato. */}
             <Pressable
-              onPress={() => setPublishing(true)}
+              onPress={() => router.push("/(manager)/storico")}
               accessibilityRole="button"
-              accessibilityLabel={PUBLISH}
-              className="ml-auto flex-row items-center gap-1"
-              hitSlop={8}
+              className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5"
+              hitSlop={6}
             >
-              <Mono gold>{PUBLISH}</Mono>
+              <Icon name="clock" size={13} color="#8C8579" />
+              <Mono>Storico</Mono>
             </Pressable>
-          ) : null}
-          {canCreateShift ? (
-            <Pressable
-              onPress={() => setDuplicating(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Duplica la settimana"
-              className={cn("flex-row items-center gap-1", !weekHasDrafts && "ml-auto")}
-              hitSlop={8}
-            >
-              <Mono gold>Duplica</Mono>
-            </Pressable>
-          ) : null}
-          {/* I turni già fatti si sfogliano dal calendario; lo Storico resta
-              per cercarli con i filtri (sede, persona, stato) su tutto il
-              passato. Da qui perché è dove si cercano — non in fondo alla
-              lista, dove stavano prima. */}
-          <Pressable
-            onPress={() => router.push("/(manager)/storico")}
-            accessibilityRole="button"
-            className={cn("flex-row items-center gap-1", !canCreateShift && "ml-auto")}
-            hitSlop={8}
-          >
-            <Mono>Storico</Mono>
-            <Icon name="chevR" size={14} color="#8C8579" />
-          </Pressable>
+          </View>
         </View>
 
         <WeekCalendar
@@ -662,9 +656,13 @@ export default function ManagerShiftsScreen() {
         ) : null}
 
         {canCreateShift ? (
-          <DraftsBanner
+          <PublishBar
             className="mt-3"
             venueIds={publishVenueIds}
+            from={weekFrom}
+            to={weekTo}
+            periodCount={weekDraftCount}
+            onPublish={() => setPublishing(true)}
             onOpen={(date) => goToDay(date)}
           />
         ) : null}

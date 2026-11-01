@@ -97,8 +97,9 @@ export function ManagerShiftCard({
   const closed = shift.status === "closed";
   const draft = isDraft(shift);
   const expiredDraft = isExpiredDraft(shift);
-  // Bordo tratteggiato: la bozza non è ancora di nessuno.
-  const draftBorder = draft ? "border-dashed" : "";
+  // Bordo a puntini, come sulla dashboard: la bozza non è ancora di nessuno.
+  // Il tratteggio è dell'assenza, non va confuso.
+  const draftBorder = draft ? "border-dotted" : "";
   const { filled, total, short } = shiftCounts(shift);
   // Un turno annullato non è scoperto: non deve coprirlo più nessuno.
   const alert = short && !cancelled;
