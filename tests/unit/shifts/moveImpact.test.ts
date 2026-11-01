@@ -127,6 +127,7 @@ describe("shiftMoveImpact", () => {
       shiftMoveImpact({
         shiftId: "cancelled",
         cancelled: true,
+        draft: false,
         assignees: [
           {
             status: "confirmed",
