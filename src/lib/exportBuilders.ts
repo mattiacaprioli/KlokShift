@@ -12,10 +12,11 @@ import {
   type AbsenceSummaryRow,
 } from "@/features/absences/summary";
 
-// Ore come numero italiano (virgola, senza suffisso): "12,5" · "5".
+// Ore come numero italiano (virgola, senza suffisso): "12,25" · "12,5" · "5".
+// Due decimali al massimo; `String` toglie gli zeri finali da solo (7.50 → "7.5").
 function hoursNumber(h: number): string {
-  const r = Math.round(h * 10) / 10;
-  return (r % 1 === 0 ? String(r) : r.toFixed(1)).replace(".", ",");
+  const r = Math.round(h * 100) / 100;
+  return String(r).replace(".", ",");
 }
 
 function escapeHtml(s: string): string {
