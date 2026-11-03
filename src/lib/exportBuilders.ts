@@ -5,6 +5,12 @@
 // l'ultimo passo — Print/Sharing/FileSystem su mobile, Blob/window.print() su web.
 // Il rendering nativo sta in `src/lib/export.ts`, che importa da qui.
 
+import type {
+  DailyKind,
+  HoursDailyRow,
+} from "@/features/assignments/hoursDaily";
+import { HOUR_TO_FIX_KIND_LABEL } from "@/features/assignments/hoursToFix";
+import type { HourToFixKind } from "@/features/assignments/api";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
 import { monthlyReportRows } from "@/features/assignments/monthlyReport";
 import {
@@ -238,6 +244,64 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
     ].join(";")
   );
   return "\uFEFF" + [header, ...lines].join("\r\n");
+}
+
+const DAILY_KIND_LABEL: Record<DailyKind, string> = {
+  work: "Lavoro",
+  to_fix: "Da verificare",
+  ferie: "Ferie",
+  permesso: "Permesso",
+  malattia: "Malattia",
+};
+
+// La nota della riga giornaliera: il motivo del «da verificare», il conflitto
+// con un'assenza, o la fascia di un permesso a ore.
+function dailyNote(r: HoursDailyRow): string {
+  if (r.kind === "to_fix" && r.note) {
+    return HOUR_TO_FIX_KIND_LABEL[r.note as HourToFixKind] ?? "";
+  }
+  if (r.note === "conflict") return "Da verificare";
+  const hourly = r.note?.match(/^hourly:(\d{2}:\d{2})-(\d{2}:\d{2})$/);
+  return hourly ? `Dalle ${hourly[1]} alle ${hourly[2]}` : "";
+}
+
+/**
+ * CSV giornaliero per il consulente: una riga per persona, giorno e turno
+ * (le ore lavorate e le assenze restano righe separate, mai sommate).
+ * Stesse convenzioni del CSV mensile: ';', virgola decimale, BOM. L'ordine è
+ * quello della RPC; le ore vuote restano vuote, non diventano zero.
+ */
+export function buildDailyCsv(rows: HoursDailyRow[]): string {
+  const header = [
+    "Data", "Persona", "Sede", "Turno", "Causale", "Entrata", "Uscita",
+    "Pausa (min)", "Pausa retribuita", "Ore", "Note",
+  ].join(";");
+  const lines = rows.map((r) =>
+    [
+      r.date.split("-").reverse().join("/"),
+      csvText(r.person_name),
+      csvText(r.venue_name ?? ""),
+      csvText(r.title ?? ""),
+      DAILY_KIND_LABEL[r.kind],
+      r.clock_in ?? "",
+      r.clock_out ?? "",
+      r.break_minutes == null ? "" : String(r.break_minutes),
+      r.break_paid == null ? "" : r.break_paid ? "Sì" : "No",
+      r.hours == null ? "" : hoursNumber(r.hours),
+      dailyNote(r),
+    ].join(";")
+  );
+  return "\uFEFF" + [header, ...lines].join("\r\n");
+}
+
+/** "ore-giornaliere-osteria-novembre-2026.csv": stessa regola di `hoursFileName`. */
+export function dailyFileName(
+  companyName: string,
+  periodLabel: string,
+  ext: string,
+  selection: readonly string[] = []
+): string {
+  return exportFileName("ore-giornaliere", companyName, periodLabel, ext, selection);
 }
 
 /**
