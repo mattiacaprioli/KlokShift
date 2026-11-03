@@ -100,6 +100,7 @@ export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const [exporting, setExporting] = useState(false);
   const { profile } = useAuth();
   const router = useRouter();
   const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
@@ -195,7 +196,9 @@ export default function VenueHoursScreen() {
   }
 
   async function onExport(kind: "pdf" | "csv" | "daily" | "absences") {
+    if (exporting) return;
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
+    setExporting(true);
       const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
@@ -213,6 +216,8 @@ export default function VenueHoursScreen() {
       }
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -509,21 +514,21 @@ export default function VenueHoursScreen() {
               ) : null}
               {canExport.monthly ? (
                 <>
-                  <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
+                  <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} disabled={exporting} />
                   <GhostButton
                     label="Esporta CSV mensile"
-                    onPress={() => onExport("csv")}
+                    onPress={() => onExport("csv")} disabled={exporting}
                   />
                   <GhostButton
                     label="Esporta CSV giornaliero"
-                    onPress={() => onExport("daily")}
+                    onPress={() => onExport("daily")} disabled={exporting}
                   />
                 </>
               ) : null}
               {canExport.absences ? (
                 <GhostButton
                   label="Esporta CSV assenze"
-                  onPress={() => onExport("absences")}
+                  onPress={() => onExport("absences")} disabled={exporting}
                 />
               ) : null}
             </View>

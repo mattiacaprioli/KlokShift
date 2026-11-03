@@ -228,13 +228,19 @@ export function OrePage() {
 
   async function printPdf() {
     if (!canExport.monthly || dailyBusy) return;
-    // Il cartellino giorno per giorno si aggiunge al PDF: le righe arrivano prima
-    // di aprire la finestra, che il browser blocca se tarda dopo il clic.
-    let timesheet;
+    // La finestra si apre subito, nel gesto del clic: dopo l'attesa della rete
+    // il browser (Safari soprattutto) la bloccherebbe senza dire niente.
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast.show("Consenti le finestre popup per stampare.", "error");
+      return;
+    }
     setDailyBusy(true);
+    let timesheet;
     try {
       timesheet = { rows: await fetchDaily(), ...periodBounds(period) };
     } catch {
+      w.close();
       toast.show("Export non riuscito. Riprova.", "error");
       return;
     } finally {
@@ -250,8 +256,6 @@ export function OrePage() {
       names,
       timesheet
     );
-    const w = window.open("", "_blank");
-    if (!w) return;
     w.document.write(html);
     w.document.close();
     w.focus();
