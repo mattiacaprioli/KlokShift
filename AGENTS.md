@@ -145,6 +145,22 @@ euro, saldo ferie o busta paga. Non introdurre percentuali universali: fasce,
 cumulabilità e maggiorazioni dipendono dal contratto applicato. Un conflitto fra
 assenza riconosciuta e lavoro effettivo deve risultare **da verificare**, non
 essere contato due volte in silenzio.
+⚠️ Le righe di assenza di `get_workspace_hours_daily` sono un gemello **manuale**
+dei `credit_rows` di `get_workspace_absence_summary` (a guardia c'è il test SQL
+156), a differenza delle ore lavorate, che hanno una sola fonte.
+
+**Export giornaliero** (2026-11-03, migration `20261103000600` e `000700`, da
+rilasciare). Dalla pagina Ore, in app e sulla dashboard, il consulente scarica
+un CSV con una riga per persona, giorno e voce (lavoro, ferie, permesso,
+malattia) e un cartellino giorno per giorno in coda al PDF. Le righe arrivano
+da `get_workspace_hours_daily` e si scaricano solo quando si preme il pulsante,
+mai con la pagina. `private.workspace_hour_rows` è la **fonte unica** di
+riepilogo e giornaliero: la somma delle ore «Lavoro» di una persona nel
+giornaliero deve coincidere con le ore lavorate del mensile, quindi non
+calcolare le ore altrove. Le ore sono al centesimo, arrotondate **per riga in
+SQL**. `private.absence_hours_conflict` è gemella di `shiftOverlapsAbsence`:
+da `20261103000600` il conflitto con un permesso a ore richiede una
+**sovrapposizione di orario**, non basta lo stesso giorno.
 
 ## Timbratura senza turno (2026-10-10)
 

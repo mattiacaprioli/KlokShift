@@ -19,7 +19,7 @@ export const HOURS_TO_FIX_TITLE = "Ore da sistemare";
 export const HOURS_TO_FIX_HINT =
   "Turni finiti le cui ore non contano ancora. Aprili per inserire gli orari, l'uscita o per approvarli.";
 
-const KIND_LABEL: Record<HourToFixKind, string> = {
+export const HOUR_TO_FIX_KIND_LABEL: Record<HourToFixKind, string> = {
   not_clocked: "Non ha timbrato",
   missing_out: "Uscita mancante",
   to_approve: "Da approvare",
@@ -29,8 +29,8 @@ const KIND_LABEL: Record<HourToFixKind, string> = {
 /** Il perché, accanto al nome: «Non ha timbrato», «Da approvare · 8 h». */
 export function hourToFixLabel(item: Pick<HourToFix, "kind" | "hours">): string {
   return item.kind === "to_approve"
-    ? `${KIND_LABEL.to_approve} · ${formatHours(item.hours)}`
-    : KIND_LABEL[item.kind];
+    ? `${HOUR_TO_FIX_KIND_LABEL.to_approve} · ${formatHours(item.hours)}`
+    : HOUR_TO_FIX_KIND_LABEL[item.kind];
 }
 
 /** «ven 23 ott · 18:00–23:00». */

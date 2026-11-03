@@ -68,3 +68,6 @@ pitch/qa/
 expo-env.d.ts
 # @end expo-cli
 !expo-env.d.ts
+
+# Mockup del brainstorming (visual companion)
+.superpowers/

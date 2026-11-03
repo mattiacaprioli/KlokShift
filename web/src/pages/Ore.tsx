@@ -1,11 +1,16 @@
 import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
-import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  fetchOwnerHoursDaily,
+  useHoursToFix,
+  useOwnerHoursSummary,
+} from "@/features/assignments/hooks";
 import {
   HOURS_TO_FIX_HINT,
   HOURS_TO_FIX_TITLE,
@@ -28,13 +33,16 @@ import {
   absencesFileName,
   buildAbsencesCsv,
   buildHoursCsv,
+  buildDailyCsv,
   buildHoursHtml,
+  dailyFileName,
   hoursFileName,
 } from "@/lib/exportBuilders";
 import {
   filterByPeople,
   monthAsRange,
   monthFromParam,
+  periodBounds,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -136,6 +144,8 @@ export function OrePage() {
   const regularCount = useRegularClockCount(workspaceId, period, toFix.length > 0).data ?? 0;
   const approveRegular = useApproveRegularClockRecords();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const [dailyBusy, setDailyBusy] = useState(false);
   function onApproveRegular() {
     if (!workspaceId) return;
     approveRegular.mutate(
@@ -192,8 +202,42 @@ export function OrePage() {
     );
   }
 
-  function printPdf() {
-    if (!canExport.monthly) return;
+  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
+  async function downloadDailyCsv() {
+    if (!canExport.monthly || dailyBusy) return;
+    setDailyBusy(true);
+    try {
+      download(
+        buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection)),
+        dailyFileName(company, label, "csv", names)
+      );
+    } catch {
+      toast.show("Export non riuscito. Riprova.", "error");
+    } finally {
+      setDailyBusy(false);
+    }
+  }
+
+  async function printPdf() {
+    if (!canExport.monthly || dailyBusy) return;
+    // La finestra si apre subito, nel gesto del clic: dopo l'attesa della rete
+    // il browser (Safari soprattutto) la bloccherebbe senza dire niente.
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast.show("Consenti le finestre popup per stampare.", "error");
+      return;
+    }
+    setDailyBusy(true);
+    let timesheet;
+    try {
+      timesheet = { rows: await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), ...periodBounds(period) };
+    } catch {
+      w.close();
+      toast.show("Export non riuscito. Riprova.", "error");
+      return;
+    } finally {
+      setDailyBusy(false);
+    }
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
     const html = buildHoursHtml(
       company,
@@ -201,10 +245,9 @@ export function OrePage() {
       people,
       totalHours,
       absences,
-      names
+      names,
+      timesheet
     );
-    const w = window.open("", "_blank");
-    if (!w) return;
     w.document.write(html);
     w.document.close();
     w.focus();
@@ -337,6 +380,12 @@ export function OrePage() {
               CSV mensile
             </Button>
             <Button
+              onClick={downloadDailyCsv}
+              disabled={!canExport.monthly || dailyBusy}
+            >
+              CSV giornaliero
+            </Button>
+            <Button
               onClick={downloadAbsencesCsv}
               disabled={!canExport.absences}
             >
@@ -345,7 +394,7 @@ export function OrePage() {
             <Button
               variant="gold"
               onClick={printPdf}
-              disabled={!canExport.monthly}
+              disabled={!canExport.monthly || dailyBusy}
             >
               Stampa / PDF
             </Button>

@@ -1,5 +1,6 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -23,6 +24,7 @@ import {
 } from "@/lib/format";
 import {
   exportAbsencesCsv,
+  exportDailyCsv,
   exportHoursCsv,
   exportHoursPdf,
 } from "@/lib/export";
@@ -31,7 +33,11 @@ import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
-import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  fetchOwnerHoursDaily,
+  useHoursToFix,
+  useOwnerHoursSummary,
+} from "@/features/assignments/hooks";
 import {
   HOURS_TO_FIX_HINT,
   HOURS_TO_FIX_TITLE,
@@ -49,6 +55,7 @@ import {
   filterByPeople,
   monthAsRange,
   monthFromParam,
+  periodBounds,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -93,6 +100,8 @@ const TO_FIX_PREVIEW = 8;
 export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const [exporting, setExporting] = useState(false);
   const { profile } = useAuth();
   const router = useRouter();
   const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
@@ -176,12 +185,21 @@ export default function VenueHoursScreen() {
   const maxHours = people.reduce((m, p) => Math.max(m, p.hours), 0);
   const label = periodLabel(period);
 
-  async function onExport(kind: "pdf" | "csv" | "absences") {
+  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
+  async function onExport(kind: "pdf" | "csv" | "daily" | "absences") {
+    if (exporting) return;
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
+    setExporting(true);
       const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
-        await exportHoursPdf(company, label, people, totalHours, absences, names);
+        const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
+        await exportHoursPdf(company, label, people, totalHours, absences, names, {
+          rows: daily,
+          ...periodBounds(period),
+        });
+      } else if (kind === "daily") {
+        await exportDailyCsv(company, label, await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), names);
       } else if (kind === "csv") {
         await exportHoursCsv(company, label, people, absences, names);
       } else {
@@ -189,6 +207,8 @@ export default function VenueHoursScreen() {
       }
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -485,17 +505,21 @@ export default function VenueHoursScreen() {
               ) : null}
               {canExport.monthly ? (
                 <>
-                  <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} />
+                  <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} disabled={exporting} />
                   <GhostButton
                     label="Esporta CSV mensile"
-                    onPress={() => onExport("csv")}
+                    onPress={() => onExport("csv")} disabled={exporting}
+                  />
+                  <GhostButton
+                    label="Esporta CSV giornaliero"
+                    onPress={() => onExport("daily")} disabled={exporting}
                   />
                 </>
               ) : null}
               {canExport.absences ? (
                 <GhostButton
                   label="Esporta CSV assenze"
-                  onPress={() => onExport("absences")}
+                  onPress={() => onExport("absences")} disabled={exporting}
                 />
               ) : null}
             </View>

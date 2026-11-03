@@ -102,7 +102,14 @@ describe("celle CSV (B06)", () => {
     ]);
     expect(csv).toContain('\r\n"Niccolò ""Nico"" Rè";');
     expect(csv).toContain('"Sala; Bar\nCucina"');
-    expect(csv).toContain(";7,3;");
+    expect(csv).toContain(";7,25;");
+  });
+
+  it("arrotonda le ore al centesimo e toglie gli zeri finali", () => {
+    const csv = buildHoursCsv([person({ person_name: "Anna", hours: 7.8333 })]);
+    expect(lines(csv)[1].split(";")[3]).toBe("7,83");
+    expect(buildHoursCsv([person({ hours: 7.5 })])).toContain(";7,5;");
+    expect(buildHoursCsv([person({ hours: 8 })])).toContain(";8;");
   });
 
   it("applica la stessa regola al CSV delle assenze", () => {

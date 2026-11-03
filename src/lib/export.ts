@@ -7,9 +7,12 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
+import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
 import {
   absencesFileName,
   buildAbsencesCsv,
+  buildDailyCsv,
+  dailyFileName,
   buildHoursCsv,
   buildHoursHtml,
   hoursFileName,
@@ -24,7 +27,8 @@ export async function exportHoursPdf(
   people: PersonHours[],
   totalHours: number,
   absences: AbsenceSummaryRow[] = [],
-  selection: readonly string[] = []
+  selection: readonly string[] = [],
+  timesheet?: { rows: HoursDailyRow[]; start: string; end: string }
 ): Promise<void> {
   const html = buildHoursHtml(
     companyName,
@@ -32,9 +36,11 @@ export async function exportHoursPdf(
     people,
     totalHours,
     absences,
-    selection
+    selection,
+    timesheet
   );
-  const { uri } = await Print.printToFileAsync({ html });
+  // A4 orizzontale in punti: expo-print ignora @page e parte da Letter verticale.
+  const { uri } = await Print.printToFileAsync({ html, width: 842, height: 595 });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       UTI: "com.adobe.pdf",
@@ -83,6 +89,27 @@ export async function exportAbsencesCsv(
       UTI: "public.comma-separated-values-text",
       mimeType: "text/csv",
       dialogTitle: `Assenze ${companyName} · ${periodLabel}`,
+    });
+  }
+}
+
+/** Genera il CSV giornaliero (una riga per persona, giorno e voce) e lo condivide. */
+export async function exportDailyCsv(
+  companyName: string,
+  periodLabel: string,
+  rows: HoursDailyRow[],
+  selection: readonly string[] = []
+): Promise<void> {
+  const csv = buildDailyCsv(rows);
+  const uri = `${FileSystem.cacheDirectory}${dailyFileName(companyName, periodLabel, "csv", selection)}`;
+  await FileSystem.writeAsStringAsync(uri, csv, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      UTI: "public.comma-separated-values-text",
+      mimeType: "text/csv",
+      dialogTitle: `Ore giornaliere ${companyName} · ${periodLabel}`,
     });
   }
 }

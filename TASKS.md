@@ -496,6 +496,13 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 - [x] L'agenda di chi gestisce non scarica più tutti i turni futuri: pagine di 4 settimane (`getOwnerShiftsPage`, `useOwnerAgenda`), la prossima scorrendo verso il fondo o saltando avanti col calendario; una pagina che arriva al tetto di righe si ferma al giorno intero prima (test `agendaPagesApi`). Almeno due settimane di passato sempre caricate. Home e Primi passi chiedono solo i prossimi 50 / 1 turni; l'agenda del dipendente arriva a 6 mesi.
 - [ ] Il filtro «Solo i turni da coprire» e il suo numero contano i turni già caricati (le settimane scorse), non tutto il futuro.
 
+### Export ore per il consulente (03/11) — da fare in quest'ordine
+Confronto con i concorrenti (Skello, Factorial, Fluida, Planday, Shiftbase): la base CSV/PDF è alla pari, mancano i dati che il consulente importa nel gestionale paghe.
+- [x] ✅ **1. CSV giornaliero nella pagina Ore (03/11/2026)** (app e dashboard): una riga per persona e giorno con data, sede, turno, entrata, uscita, pausa, ore e causale (lavoro, ferie, permesso, malattia). Oggi il dettaglio per giorno esiste solo in `presenze.csv` dell'export completo. Fatto: anche cartellino nel PDF; migration `20261103000600`/`000700` da rilasciare.
+- [ ] **2. Matricola e causali**: codice dipendente sulla scheda della persona e tabella delle causali dell'azienda (codici del gestionale del consulente), usati nei CSV. Oggi c'è solo l'etichetta «MAL».
+- [ ] **3. Maggiorazioni** (notturno, straordinario, festivo, domenicale), come deciso in [HOURS-ABSENCES-ADJUSTMENTS.md](plans/HOURS-ABSENCES-ADJUSTMENTS.md): quantità, categoria e percentuale, mai importi.
+- [ ] **4. Tracciato Zucchetti/TeamSystem**: solo quando un cliente lo chiede, perché il formato lo decide il consulente.
+
 ### Pubblicazione sugli store (M8)
 - [ ] Account Google Play (25 $ una tantum) e Apple Developer (99 $/anno).
 - [ ] Scheda store (descrizione, screenshot, categoria, classificazione) e modulo «Data safety» (email, nome, foto, messaggi, token push).
