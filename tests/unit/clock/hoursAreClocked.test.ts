@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { AssignmentStatus } from "@/features/assignments/status";
 import {
   hoursAreClocked,
+  presenceToVerify,
   type ClockRecordWithCorrections,
 } from "@/features/clock/hours";
 
@@ -32,5 +34,30 @@ describe("hoursAreClocked", () => {
     expect(hoursAreClocked(row(null), "app")).toBe(true);
     expect(hoursAreClocked(row(null), "qr")).toBe(true);
     expect(hoursAreClocked(row(null), "manual")).toBe(false);
+  });
+});
+
+describe("presenceToVerify", () => {
+  const withStatus = (status: AssignmentStatus, withClock = false) => ({
+    status,
+    clock: withClock ? clock : null,
+  });
+
+  it("doveva timbrare e non l'ha fatto: da verificare, non «Presente»", () => {
+    expect(presenceToVerify(withStatus("confirmed"), true)).toBe(true);
+    expect(presenceToVerify(withStatus("assigned"), true)).toBe(true);
+  });
+
+  it("con una timbratura la presenza è un fatto", () => {
+    expect(presenceToVerify(withStatus("confirmed", true), true)).toBe(false);
+  });
+
+  it("senza timbratura richiesta vale il «Presente» di sempre", () => {
+    expect(presenceToVerify(withStatus("confirmed"), false)).toBe(false);
+  });
+
+  it("chi è già segnato assente o ha rifiutato non è da verificare", () => {
+    expect(presenceToVerify(withStatus("no_show"), true)).toBe(false);
+    expect(presenceToVerify(withStatus("declined"), true)).toBe(false);
   });
 });

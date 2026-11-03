@@ -80,6 +80,7 @@ import {
   effectiveClockTimes,
   hoursAreClocked,
   isRegularPendingClock,
+  presenceToVerify,
 } from "@/features/clock/hours";
 import { effectiveClockMethod } from "@/features/clock/methods";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
@@ -220,6 +221,9 @@ function PresenceRow({
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Persona";
   const present = isWorked(assignment.status);
+  // Doveva timbrare e non l'ha fatto: «Presente» sarebbe solo il valore
+  // iniziale, e le ore non contano. Si decide nella card qui sotto.
+  const toVerify = presenceToVerify(assignment, clocked);
   const effective = present ? (assignment.worked_hours ?? plannedHours) : 0;
 
   const [editing, setEditing] = useState(false);
@@ -264,7 +268,9 @@ function PresenceRow({
             {assignment.role?.name ?? "Ruolo da assegnare"}
           </Text>
         </View>
-        {locked ? (
+        {toVerify ? (
+          <Pill label="Da verificare" variant="pending" />
+        ) : locked ? (
           <Pill
             label={ASSIGNMENT_STATUS_LABEL[assignment.status]}
             variant={present ? "accepted" : "cancelled"}
@@ -310,6 +316,7 @@ function PresenceRow({
         shiftBreak={shiftBreak}
         locked={locked}
         unplanned={unplanned}
+        onMarkAbsent={() => setPresent(false)}
       />
 
       {locked ? (

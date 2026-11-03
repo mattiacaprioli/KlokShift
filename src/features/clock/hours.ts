@@ -214,6 +214,19 @@ export function hoursAreClocked(
   return currentMethod !== "manual";
 }
 
+/**
+ * Doveva timbrare, non ha timbrato e nessuno l'ha segnato assente: la presenza
+ * non è un fatto, è solo il valore iniziale. Un «Presente» verde qui fa credere
+ * che le ore contino, e invece senza orari restano fuori: si mostra «Da
+ * verificare» finché chi ha «Ore» non inserisce gli orari o segna l'assenza.
+ */
+export function presenceToVerify(
+  assignment: { status: AssignmentStatus; clock?: ClockRecordWithCorrections | null },
+  clocked: boolean
+): boolean {
+  return clocked && assignment.clock == null && isActiveAssignment(assignment.status);
+}
+
 export function assignmentActual(
   shift: ShiftTimes & ShiftBreak,
   assignment: ActualInput,

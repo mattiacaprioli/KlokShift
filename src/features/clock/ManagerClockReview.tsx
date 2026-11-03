@@ -62,6 +62,7 @@ export function ManagerClockReview({
   shiftBreak,
   locked = false,
   unplanned = false,
+  onMarkAbsent,
 }: {
   assignment: AssignmentWithStaff;
   /**
@@ -81,6 +82,8 @@ export function ManagerClockReview({
   locked?: boolean;
   /** Turno nato dalla timbratura: annullarla lo toglie. */
   unplanned?: boolean;
+  /** Senza timbratura: l'altra risposta a «è venuto?». */
+  onMarkAbsent?: () => void;
 }) {
   const toast = useToast();
   const router = useRouter();
@@ -120,6 +123,14 @@ export function ManagerClockReview({
               label="Inserisci orari"
               onPress={() => setEntering(true)}
             />
+          ) : null}
+          {!locked && works && onMarkAbsent ? (
+            <Pressable
+              onPress={onMarkAbsent}
+              className="mt-2 items-center rounded-xl border border-border-2 py-2.5"
+            >
+              <Text className="text-sm font-sans-semibold text-t2">Segna assente</Text>
+            </Pressable>
           ) : null}
         </View>
         {entering ? (

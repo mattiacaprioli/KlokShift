@@ -33,6 +33,7 @@ import {
   formatClockTime,
   hoursAreClocked,
   isRegularPendingClock,
+  presenceToVerify,
 } from "@/features/clock/hours";
 import { effectiveClockMethod } from "@/features/clock/methods";
 import { isActiveAssignment } from "@/features/assignments/status";
@@ -113,6 +114,7 @@ function ClockReview({
   shiftBreak,
   locked,
   unplanned,
+  onMarkAbsent,
 }: {
   assignment: AssignmentWithStaff;
   /**
@@ -133,6 +135,8 @@ function ClockReview({
   locked: boolean;
   /** Turno nato dalla timbratura: annullarla lo toglie. */
   unplanned: boolean;
+  /** Senza timbratura: l'altra risposta a «è venuto?». */
+  onMarkAbsent: () => void;
 }) {
   const clock = assignment.clock;
   const approve = useApproveClockRecord();
@@ -169,11 +173,12 @@ function ClockReview({
           if (event.key === "Enter") event.preventDefault();
         }}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-xs text-t3">
-            Non ha timbrato: senza orari queste ore non contano.
-          </p>
-          {!locked && works && mode !== "enter" ? (
+        <p className="text-xs text-t3">
+          Non ha timbrato: senza orari queste ore non contano.
+        </p>
+        {!locked && works && mode !== "enter" ? (
+          // Le due risposte a «è venuto?», affiancate.
+          <div className="mt-2 flex flex-wrap gap-2">
             <Button
               type="button"
               variant="gold"
@@ -189,8 +194,11 @@ function ClockReview({
             >
               Inserisci orari
             </Button>
-          ) : null}
-        </div>
+            <Button type="button" onClick={onMarkAbsent} className="px-3 py-1.5 text-xs">
+              Segna assente
+            </Button>
+          </div>
+        ) : null}
         {mode === "enter" ? (
           <div className="mt-3 grid gap-2 rounded-xl bg-bg-2 p-3 sm:grid-cols-2">
             <RomeDateTimeField
@@ -618,6 +626,11 @@ export function PresenceSection({
           const hours = assignmentHours(a.status, a.worked_hours, times);
           const mineLocked = isMineLocked(a);
           const clocked = clockedOf(a);
+          // Doveva timbrare e non l'ha fatto: «Presente» sarebbe solo il valore
+          // iniziale, e le ore accanto non contano. Si decide sotto.
+          const toVerify = presenceToVerify(a, clocked);
+          const markAbsent = () =>
+            presence.mutate({ id: a.id, status: "no_show", worked_hours: a.worked_hours });
           return (
             <div
               key={a.id}
@@ -632,7 +645,22 @@ export function PresenceSection({
                 ) : null}
               </span>
 
-              {mineLocked ? (
+              {toVerify ? (
+                <>
+                  <span
+                    title="Non ha timbrato: inserisci gli orari o segnalo assente"
+                    className="rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning"
+                  >
+                    Da verificare
+                  </span>
+                  <span
+                    title="Ore del turno: non contano finché non inserisci gli orari"
+                    className="w-20 text-center font-mono text-xs text-t4 line-through"
+                  >
+                    {hours}
+                  </span>
+                </>
+              ) : mineLocked ? (
                 <>
                   <span
                     className={cn(
@@ -708,6 +736,7 @@ export function PresenceSection({
                 shiftBreak={shiftBreak}
                 locked={mineLocked}
                 unplanned={unplanned}
+                onMarkAbsent={markAbsent}
               />
             </div>
           );
