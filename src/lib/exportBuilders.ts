@@ -424,31 +424,35 @@ const ABSENCE_LETTER: Partial<Record<DailyKind, string>> = {
   malattia: "M",
 };
 
-/** Cosa scrivere nella casella di un giorno: lavoro, assenza, o «?» se c'è da verificare. */
+/**
+ * Cosa scrivere nella casella di un giorno. Parti, in ordine: ore di lavoro;
+ * per ogni tipo di assenza presente la lettera con le sue ore (se > 0; un'assenza
+ * in conflitto non ha lettera, porta solo il «?»); «?» se c'è da verificare.
+ * La prima parte sta in grande, le altre sotto in `<small>`. Le ore visibili
+ * tornano coi totali di riga (il «?» non entra mai nelle somme).
+ */
 function timesheetCell(day: HoursDailyRow[]): string {
-  const flagged = day.some((r) => r.kind === "to_fix" || r.note === "conflict");
+  const sum = (rows: HoursDailyRow[]) => rows.reduce((s, r) => s + (r.hours ?? 0), 0);
+  const parts: string[] = [];
   const work = day.filter((r) => r.kind === "work");
-  // Il «?» non entra mai nella somma: se c'è anche lavoro, le ore restano
-  // visibili (e uguali al totale Lavoro) e il «?» le accompagna.
-  if (flagged) {
-    return work.length > 0
-      ? `${hoursNumber(work.reduce((s, r) => s + (r.hours ?? 0), 0))}<br><small>?</small>`
-      : "?";
+  if (work.length > 0) parts.push(hoursNumber(sum(work)));
+  let absenceOnly: string | null = null;
+  for (const kind of ["ferie", "permesso", "malattia"] as const) {
+    const list = day.filter((r) => r.kind === kind && r.note !== "conflict");
+    if (list.length === 0) continue;
+    const h = sum(list);
+    if (h > 0) parts.push(`${ABSENCE_LETTER[kind]} ${hoursNumber(h)}`);
+    else parts.push(ABSENCE_LETTER[kind] as string);
+    absenceOnly = ABSENCE_LETTER[kind] as string;
   }
-  const abs = day.find((r) => r.kind !== "work");
-  const absSmall = (r: HoursDailyRow) =>
-    r.hours != null && r.hours > 0 ? hoursNumber(r.hours) : "";
-  if (work.length > 0) {
-    const h = hoursNumber(work.reduce((s, r) => s + (r.hours ?? 0), 0));
-    const permit = day.find((r) => r.kind === "permesso");
-    return permit
-      ? `${h}<br><small>P ${absSmall(permit)}</small>`.replace(" </small>", "</small>")
-      : h;
+  if (day.some((r) => r.kind === "to_fix" || r.note === "conflict")) parts.push("?");
+  if (parts.length === 0) return "";
+  if (parts.length === 1) {
+    // Un'assenza sola con ore: lettera in grande, ore sotto.
+    const m = absenceOnly && parts[0].startsWith(`${absenceOnly} `) ? parts[0].slice(2) : null;
+    return m ? `${absenceOnly}<br><small>${m}</small>` : parts[0];
   }
-  if (!abs) return "";
-  const letter = ABSENCE_LETTER[abs.kind] ?? "?";
-  const small = absSmall(abs);
-  return small ? `${letter}<br><small>${small}</small>` : letter;
+  return `${parts[0]}<br><small>${parts.slice(1).join(" ")}</small>`;
 }
 
 function timesheetTable(
@@ -510,8 +514,15 @@ function timesheetTable(
         new Set(ok.filter((r) => r.kind === kind && !(r.hours != null && r.hours > 0)).map((r) => r.date)).size;
       const sick = sum("malattia");
       const sickDays = noHours("malattia");
+      // Ore e giorni senza ore possono convivere: si dicono entrambi.
       const sickCell =
-        sick > 0 ? hoursNumber(sick) : sickDays > 0 ? `${sickDays} gg` : "—";
+        sick > 0 && sickDays > 0
+          ? `${hoursNumber(sick)} + ${sickDays} gg`
+          : sick > 0
+            ? hoursNumber(sick)
+            : sickDays > 0
+              ? `${sickDays} gg`
+              : "—";
       const unpaid = noHours("ferie") + noHours("permesso");
       const t = (v: string) => `<td class="t">${v}</td>`;
       return (

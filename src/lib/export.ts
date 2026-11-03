@@ -39,7 +39,9 @@ export async function exportHoursPdf(
     selection,
     timesheet
   );
-  const { uri } = await Print.printToFileAsync({ html });
+  // A4 orizzontale in punti: expo-print ignora @page e parte da Letter verticale.
+  // A4 orizzontale in punti: expo-print ignora @page e parte da Letter verticale.
+  const { uri } = await Print.printToFileAsync({ html, width: 842, height: 595 });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       UTI: "com.adobe.pdf",

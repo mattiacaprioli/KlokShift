@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { qk } from "@/lib/queryKeys";
-import { getOwnerHoursDaily } from "@/features/assignments/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
-import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  fetchOwnerHoursDaily,
+  useHoursToFix,
+  useOwnerHoursSummary,
+} from "@/features/assignments/hooks";
 import {
   HOURS_TO_FIX_HINT,
   HOURS_TO_FIX_TITLE,
@@ -41,7 +43,6 @@ import {
   monthAsRange,
   monthFromParam,
   periodBounds,
-  periodKey,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -202,21 +203,12 @@ export function OrePage() {
   }
 
   // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
-  async function fetchDaily() {
-    if (!workspaceId) throw new Error("no_workspace");
-    const all = await queryClient.fetchQuery({
-      queryKey: qk.staff.ownerHoursDaily(workspaceId, periodKey(period)),
-      queryFn: () => getOwnerHoursDaily(workspaceId, periodBounds(period)),
-    });
-    return filterByPeople(all, selection);
-  }
-
   async function downloadDailyCsv() {
     if (!canExport.monthly || dailyBusy) return;
     setDailyBusy(true);
     try {
       download(
-        buildDailyCsv(await fetchDaily()),
+        buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection)),
         dailyFileName(company, label, "csv", names)
       );
     } catch {
@@ -238,7 +230,7 @@ export function OrePage() {
     setDailyBusy(true);
     let timesheet;
     try {
-      timesheet = { rows: await fetchDaily(), ...periodBounds(period) };
+      timesheet = { rows: await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), ...periodBounds(period) };
     } catch {
       w.close();
       toast.show("Export non riuscito. Riprova.", "error");

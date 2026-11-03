@@ -115,6 +115,8 @@ AS $function$
     from flags r;
 $function$;
 
+revoke all on function private.workspace_hour_rows(uuid, date, date) from public, anon;
+
 CREATE OR REPLACE FUNCTION public.get_workspace_hours_summary(p_workspace uuid, p_from date, p_to date)
  RETURNS TABLE(member_id uuid, member_name text, venue_id uuid, venue_name text, venue_closed boolean, roles text, shifts_count integer, hours numeric, approved_hours numeric, to_review_count integer, proposed_hours numeric, untracked_hours numeric, paid_break_hours numeric, unpaid_break_hours numeric)
  LANGUAGE sql
@@ -229,5 +231,7 @@ AS $function$
     from daily o
    order by o.member_name, o.member_id, o.date, o.clock_in nulls last, o.kind;
 $function$;
+
+revoke all on function public.get_workspace_hours_daily(uuid, date, date) from public, anon;
 
 grant execute on function public.get_workspace_hours_daily(uuid, date, date) to authenticated;

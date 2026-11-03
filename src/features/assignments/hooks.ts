@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  type QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
@@ -13,7 +14,35 @@ import {
   invalidateWorkViews,
 } from "@/features/shifts/invalidation";
 import type { InternalShiftPlan, PastShiftRecord } from "./api";
-import { periodBounds, periodKey, type ReportPeriod } from "./reportPeriod";
+
+/**
+ * Il dettaglio giorno per giorno per l'export, **sempre fresco**: le assenze
+ * scrivono solo `qk.absences.*`, quindi con lo staleTime globale (2 minuti) un
+ * secondo export dopo aver approvato una ferie uscirebbe con righe vecchie.
+ * Condiviso da app e dashboard.
+ */
+export function fetchOwnerHoursDaily(
+  queryClient: QueryClient,
+  workspaceId: string | undefined,
+  period: ReportPeriod,
+  selection: readonly string[] | null
+): Promise<HoursDailyRow[]> {
+  if (!workspaceId) throw new Error("no_workspace");
+  return queryClient
+    .fetchQuery({
+      queryKey: qk.staff.ownerHoursDaily(workspaceId, periodKey(period)),
+      queryFn: () => getOwnerHoursDaily(workspaceId, periodBounds(period)),
+      staleTime: 0,
+    })
+    .then((all) => filterByPeople(all, selection));
+}
+import {
+  filterByPeople,
+  periodBounds,
+  periodKey,
+  type ReportPeriod,
+} from "./reportPeriod";
+import type { HoursDailyRow } from "./hoursDaily";
 import {
   createInternalShifts,
   recordPastShift,
@@ -34,6 +63,7 @@ import {
   getPersonWorkedShifts,
   getOwnerTodayAssignments,
   getOwnerHoursSummary,
+  getOwnerHoursDaily,
   getHoursToFix,
   addShiftWorker,
   reassignShiftAssignment,

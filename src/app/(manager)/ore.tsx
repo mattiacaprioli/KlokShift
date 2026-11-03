@@ -30,12 +30,14 @@ import {
 } from "@/lib/export";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
-import { qk } from "@/lib/queryKeys";
-import { getOwnerHoursDaily } from "@/features/assignments/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
-import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
+import {
+  fetchOwnerHoursDaily,
+  useHoursToFix,
+  useOwnerHoursSummary,
+} from "@/features/assignments/hooks";
 import {
   HOURS_TO_FIX_HINT,
   HOURS_TO_FIX_TITLE,
@@ -54,7 +56,6 @@ import {
   monthAsRange,
   monthFromParam,
   periodBounds,
-  periodKey,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -185,16 +186,6 @@ export default function VenueHoursScreen() {
   const label = periodLabel(period);
 
   // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
-  function fetchDaily() {
-    if (!workspaceId) throw new Error("no_workspace");
-    return queryClient
-      .fetchQuery({
-        queryKey: qk.staff.ownerHoursDaily(workspaceId, periodKey(period)),
-        queryFn: () => getOwnerHoursDaily(workspaceId, periodBounds(period)),
-      })
-      .then((all) => filterByPeople(all, selection));
-  }
-
   async function onExport(kind: "pdf" | "csv" | "daily" | "absences") {
     if (exporting) return;
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
@@ -202,13 +193,13 @@ export default function VenueHoursScreen() {
       const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
-        const daily = await fetchDaily();
+        const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
         await exportHoursPdf(company, label, people, totalHours, absences, names, {
           rows: daily,
           ...periodBounds(period),
         });
       } else if (kind === "daily") {
-        await exportDailyCsv(company, label, await fetchDaily(), names);
+        await exportDailyCsv(company, label, await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), names);
       } else if (kind === "csv") {
         await exportHoursCsv(company, label, people, absences, names);
       } else {

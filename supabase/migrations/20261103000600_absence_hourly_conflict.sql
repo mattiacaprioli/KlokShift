@@ -66,6 +66,8 @@ AS $function$
   );
 $function$;
 
+revoke all on function private.absence_hours_conflict(uuid, date, time, time) from public, anon;
+
 CREATE OR REPLACE FUNCTION public.get_workspace_absence_summary(p_workspace uuid, p_from date, p_to date)
  RETURNS TABLE(member_id uuid, member_name text, ferie_days integer, permesso_days integer, permesso_hours numeric, malattia_days integer, inps_protocols text, ferie_hours numeric, malattia_hours numeric, permesso_recognized_hours numeric, conflict_hours numeric, missing_certificates integer)
  LANGUAGE sql

@@ -145,6 +145,9 @@ euro, saldo ferie o busta paga. Non introdurre percentuali universali: fasce,
 cumulabilità e maggiorazioni dipendono dal contratto applicato. Un conflitto fra
 assenza riconosciuta e lavoro effettivo deve risultare **da verificare**, non
 essere contato due volte in silenzio.
+⚠️ Le righe di assenza di `get_workspace_hours_daily` sono un gemello **manuale**
+dei `credit_rows` di `get_workspace_absence_summary` (a guardia c'è il test SQL
+156), a differenza delle ore lavorate, che hanno una sola fonte.
 
 **Export giornaliero** (2026-11-03, migration `20261103000600` e `000700`, da
 rilasciare). Dalla pagina Ore, in app e sulla dashboard, il consulente scarica

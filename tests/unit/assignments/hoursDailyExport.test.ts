@@ -147,6 +147,49 @@ describe("buildTimesheetHtml (cartellino)", () => {
     expect(html).toContain("1 gg");
   });
 
+  describe("casella del giorno: nessuna informazione persa", () => {
+    const base = { clock_in: null, clock_out: null, break_minutes: null, break_paid: null, venue_name: null, title: null };
+    const abs = (kind: HoursDailyRow["kind"], hours: number | null, extra: Partial<HoursDailyRow> = {}) =>
+      row({ ...base, kind, hours, ...extra });
+
+    it("to_fix + ferie con 8 h riconosciute: F 8 e «?»", () => {
+      const html = buildTimesheetHtml(
+        [row({ kind: "to_fix", hours: null, note: "not_clocked" }), abs("ferie", 8)],
+        nov
+      );
+      expect(html).toContain('<td class="d">F 8<br><small>?</small></td>');
+    });
+
+    it("lavoro 6 + ferie senza credito: 6 e F", () => {
+      const html = buildTimesheetHtml([row({ hours: 6 }), abs("ferie", null)], nov);
+      expect(html).toContain('<td class="d">6<br><small>F</small></td>');
+    });
+
+    it("due permessi orari lo stesso giorno: P 3", () => {
+      const html = buildTimesheetHtml(
+        [abs("permesso", 2, { note: "hourly:08:00-10:00" }), abs("permesso", 1, { note: "hourly:15:00-16:00" })],
+        nov
+      );
+      expect(html).toContain('<td class="d">P<br><small>3</small></td>');
+    });
+
+    it("lavoro 4 + permesso 2 + to_fix: 4, P 2 e «?»", () => {
+      const html = buildTimesheetHtml(
+        [row({ hours: 4 }), abs("permesso", 2, { note: "hourly:15:00-17:00" }), row({ kind: "to_fix", hours: null, note: "not_clocked" })],
+        nov
+      );
+      expect(html).toContain('<td class="d">4<br><small>P 2 ?</small></td>');
+    });
+
+    it("malattia con ore e giorni senza ore: il totale li mostra entrambi", () => {
+      const html = buildTimesheetHtml(
+        [abs("malattia", 12, { date: "2026-11-02" }), abs("malattia", null, { date: "2026-11-03" }), abs("malattia", null, { date: "2026-11-04" })],
+        nov
+      );
+      expect(html).toContain('<td class="t">12 + 2 gg</td>');
+    });
+  });
+
   it("il nome passa da escapeHtml", () => {
     const html = buildTimesheetHtml([row({ person_name: "<script>" })], nov);
     expect(html).toContain("&lt;script&gt;");

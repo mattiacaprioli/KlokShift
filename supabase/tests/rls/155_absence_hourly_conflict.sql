@@ -6,6 +6,7 @@ begin;
 do $$
 declare
   vm2 uuid;
+  vm1 uuid;
   d date;
   ids uuid[];
   s record;
@@ -81,6 +82,29 @@ begin
   select * into s from public.get_workspace_absence_summary(tests.id('W1'), d, d + 1)
    where member_id = tests.id('M_Emp2');
   perform tests.eq(s.ferie_hours, 7.83::numeric, '470 minuti sono 7,83 ore');
+
+  -- 7. Ramo della timbratura approvata: conta l'intervallo timbrato (09:00-16:30),
+  --    non quello del turno (09:00-15:00). Sede V1 con timbratura dall'app.
+  d := current_date - 40;
+  select x.id into vm1 from public.venue_members x
+   where x.member_id = tests.id('M_Emp') and x.venue_id = tests.id('V1');
+  perform public.set_venue_clock_method(tests.id('V1'), 'app');
+  ids := tests.create_shifts(jsonb_build_array(jsonb_build_object(
+    'venue_id', tests.id('V1'), 'title', 'Giorno', 'date', d::text,
+    'start_time', '09:00', 'end_time', '15:00',
+    'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm1)))));
+  perform public.enter_clock_record(
+    (select x.id from public.shift_assignments x where x.shift_id = ids[1]),
+    (d + time '09:00') at time zone 'Europe/Rome',
+    (d + time '16:30') at time zone 'Europe/Rome', null);
+  -- La funzione privata non è eseguibile dai ruoli app: si chiama da superuser.
+  perform tests.logout();
+  perform tests.eq(private.absence_hours_conflict(tests.id('M_Emp'), d, '16:00', '18:00'), true,
+    'timbratura approvata 9-16:30: permesso 16-18 in conflitto');
+  perform tests.eq(private.absence_hours_conflict(tests.id('M_Emp'), d, '16:30', '18:00'), false,
+    'timbratura approvata 9-16:30: permesso 16:30-18 non in conflitto');
+  perform tests.eq(private.absence_hours_conflict(tests.id('M_Emp'), d, '07:00', '09:00'), false,
+    'timbratura approvata 9-16:30: permesso 7-9 non in conflitto');
 end $$;
 
 rollback;
