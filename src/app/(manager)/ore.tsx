@@ -1,5 +1,6 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -23,11 +24,14 @@ import {
 } from "@/lib/format";
 import {
   exportAbsencesCsv,
+  exportDailyCsv,
   exportHoursCsv,
   exportHoursPdf,
 } from "@/lib/export";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
+import { qk } from "@/lib/queryKeys";
+import { getOwnerHoursDaily } from "@/features/assignments/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
@@ -49,6 +53,8 @@ import {
   filterByPeople,
   monthAsRange,
   monthFromParam,
+  periodBounds,
+  periodKey,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -93,6 +99,7 @@ const TO_FIX_PREVIEW = 8;
 export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { profile } = useAuth();
   const router = useRouter();
   const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
@@ -176,12 +183,29 @@ export default function VenueHoursScreen() {
   const maxHours = people.reduce((m, p) => Math.max(m, p.hours), 0);
   const label = periodLabel(period);
 
-  async function onExport(kind: "pdf" | "csv" | "absences") {
+  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
+  function fetchDaily() {
+    if (!workspaceId) throw new Error("no_workspace");
+    return queryClient
+      .fetchQuery({
+        queryKey: qk.staff.ownerHoursDaily(workspaceId, periodKey(period)),
+        queryFn: () => getOwnerHoursDaily(workspaceId, periodBounds(period)),
+      })
+      .then((all) => filterByPeople(all, selection));
+  }
+
+  async function onExport(kind: "pdf" | "csv" | "daily" | "absences") {
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
       const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
-        await exportHoursPdf(company, label, people, totalHours, absences, names);
+        const daily = await fetchDaily();
+        await exportHoursPdf(company, label, people, totalHours, absences, names, {
+          rows: daily,
+          ...periodBounds(period),
+        });
+      } else if (kind === "daily") {
+        await exportDailyCsv(company, label, await fetchDaily(), names);
       } else if (kind === "csv") {
         await exportHoursCsv(company, label, people, absences, names);
       } else {
@@ -489,6 +513,10 @@ export default function VenueHoursScreen() {
                   <GhostButton
                     label="Esporta CSV mensile"
                     onPress={() => onExport("csv")}
+                  />
+                  <GhostButton
+                    label="Esporta CSV giornaliero"
+                    onPress={() => onExport("daily")}
                   />
                 </>
               ) : null}

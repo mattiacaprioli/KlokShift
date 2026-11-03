@@ -1,8 +1,11 @@
 import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { qk } from "@/lib/queryKeys";
+import { getOwnerHoursDaily } from "@/features/assignments/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import { useHoursToFix, useOwnerHoursSummary } from "@/features/assignments/hooks";
@@ -28,13 +31,17 @@ import {
   absencesFileName,
   buildAbsencesCsv,
   buildHoursCsv,
+  buildDailyCsv,
   buildHoursHtml,
+  dailyFileName,
   hoursFileName,
 } from "@/lib/exportBuilders";
 import {
   filterByPeople,
   monthAsRange,
   monthFromParam,
+  periodBounds,
+  periodKey,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -136,6 +143,8 @@ export function OrePage() {
   const regularCount = useRegularClockCount(workspaceId, period, toFix.length > 0).data ?? 0;
   const approveRegular = useApproveRegularClockRecords();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const [dailyBusy, setDailyBusy] = useState(false);
   function onApproveRegular() {
     if (!workspaceId) return;
     approveRegular.mutate(
@@ -192,8 +201,45 @@ export function OrePage() {
     );
   }
 
-  function printPdf() {
-    if (!canExport.monthly) return;
+  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
+  async function fetchDaily() {
+    if (!workspaceId) throw new Error("no_workspace");
+    const all = await queryClient.fetchQuery({
+      queryKey: qk.staff.ownerHoursDaily(workspaceId, periodKey(period)),
+      queryFn: () => getOwnerHoursDaily(workspaceId, periodBounds(period)),
+    });
+    return filterByPeople(all, selection);
+  }
+
+  async function downloadDailyCsv() {
+    if (!canExport.monthly || dailyBusy) return;
+    setDailyBusy(true);
+    try {
+      download(
+        buildDailyCsv(await fetchDaily()),
+        dailyFileName(company, label, "csv", names)
+      );
+    } catch {
+      toast.show("Export non riuscito. Riprova.", "error");
+    } finally {
+      setDailyBusy(false);
+    }
+  }
+
+  async function printPdf() {
+    if (!canExport.monthly || dailyBusy) return;
+    // Il cartellino giorno per giorno si aggiunge al PDF: le righe arrivano prima
+    // di aprire la finestra, che il browser blocca se tarda dopo il clic.
+    let timesheet;
+    setDailyBusy(true);
+    try {
+      timesheet = { rows: await fetchDaily(), ...periodBounds(period) };
+    } catch {
+      toast.show("Export non riuscito. Riprova.", "error");
+      return;
+    } finally {
+      setDailyBusy(false);
+    }
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
     const html = buildHoursHtml(
       company,
@@ -201,7 +247,8 @@ export function OrePage() {
       people,
       totalHours,
       absences,
-      names
+      names,
+      timesheet
     );
     const w = window.open("", "_blank");
     if (!w) return;
@@ -337,6 +384,12 @@ export function OrePage() {
               CSV mensile
             </Button>
             <Button
+              onClick={downloadDailyCsv}
+              disabled={!canExport.monthly || dailyBusy}
+            >
+              CSV giornaliero
+            </Button>
+            <Button
               onClick={downloadAbsencesCsv}
               disabled={!canExport.absences}
             >
@@ -345,7 +398,7 @@ export function OrePage() {
             <Button
               variant="gold"
               onClick={printPdf}
-              disabled={!canExport.monthly}
+              disabled={!canExport.monthly || dailyBusy}
             >
               Stampa / PDF
             </Button>
