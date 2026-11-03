@@ -13,6 +13,7 @@ import type {
 } from "@/features/staff/types";
 import type { PublishPreview } from "@/features/shifts/drafts";
 import { isActiveAssignment } from "./status";
+import { toHoursDailyRows, type DbDailyRow, type HoursDailyRow } from "./hoursDaily";
 import type { OwnerHoursRow } from "./hoursSummary";
 import {
   effectiveClockTimes,
@@ -821,6 +822,20 @@ export async function getOwnerHoursSummary(
     planned_hours: hours,
     hours: approved_hours,
   }));
+}
+
+/** Le righe giorno per giorno dell'export ore: lavoro, da sistemare, assenze. */
+export async function getOwnerHoursDaily(
+  workspaceId: string,
+  { start, end }: { start: string; end: string }
+): Promise<HoursDailyRow[]> {
+  const { data, error } = await supabase.rpc("get_workspace_hours_daily", {
+    p_workspace: workspaceId,
+    p_from: start,
+    p_to: end,
+  });
+  if (error) throw new Error(error.message);
+  return toHoursDailyRows((data ?? []) as DbDailyRow[]);
 }
 
 /**
