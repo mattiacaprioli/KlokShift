@@ -426,8 +426,15 @@ const ABSENCE_LETTER: Partial<Record<DailyKind, string>> = {
 
 /** Cosa scrivere nella casella di un giorno: lavoro, assenza, o «?» se c'è da verificare. */
 function timesheetCell(day: HoursDailyRow[]): string {
-  if (day.some((r) => r.kind === "to_fix" || r.note === "conflict")) return "?";
+  const flagged = day.some((r) => r.kind === "to_fix" || r.note === "conflict");
   const work = day.filter((r) => r.kind === "work");
+  // Il «?» non entra mai nella somma: se c'è anche lavoro, le ore restano
+  // visibili (e uguali al totale Lavoro) e il «?» le accompagna.
+  if (flagged) {
+    return work.length > 0
+      ? `${hoursNumber(work.reduce((s, r) => s + (r.hours ?? 0), 0))}<br><small>?</small>`
+      : "?";
+  }
   const abs = day.find((r) => r.kind !== "work");
   const absSmall = (r: HoursDailyRow) =>
     r.hours != null && r.hours > 0 ? hoursNumber(r.hours) : "";

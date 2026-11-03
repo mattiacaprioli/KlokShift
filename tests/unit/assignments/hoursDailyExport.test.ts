@@ -104,6 +104,15 @@ describe("buildTimesheetHtml (cartellino)", () => {
     expect(html).toContain('<td class="t">4</td>');
   });
 
+  it("lavoro e to_fix lo stesso giorno: ore e «?», totale Lavoro = ore visibili", () => {
+    const html = buildTimesheetHtml(
+      [row({ hours: 4 }), row({ kind: "to_fix", hours: null, note: "not_clocked" })],
+      nov
+    );
+    expect(html).toContain('<td class="d">4<br><small>?</small></td>');
+    expect(html).toContain('<td class="t">4</td>');
+  });
+
   it("sabato con classe we", () => {
     const html = buildTimesheetHtml([row()], nov);
     expect(html).toMatch(/<th class="we">S<br>7<\/th>/);
