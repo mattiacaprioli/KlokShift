@@ -1,5 +1,13 @@
-import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
+import {
+  addMonthsToKey,
+  formatDate,
+  formatHours,
+  formatShiftRange,
+  monthKey,
+  todayString,
+} from "@/lib/format";
 import type { HourToFix, HourToFixKind } from "./api";
+import type { ReportPeriod } from "./reportPeriod";
 
 /**
  * «Ore da sistemare» nella pagina Ore: i turni conclusi le cui ore non contano
@@ -37,4 +45,23 @@ export function hoursToFixSummary(items: Pick<HourToFix, "hours">[]): string {
   const n = items.length;
   const hours = items.reduce((sum, item) => sum + Number(item.hours), 0);
   return `${n} ${n === 1 ? "turno" : "turni"} · ${formatHours(hours)} che non contano ancora`;
+}
+
+/**
+ * Il periodo che guarda la Home: dal primo del mese scorso a oggi. Nei primi
+ * giorni del mese è proprio il mese scorso a dover essere chiuso per le buste
+ * paga, e la sola pagina Ore aprirebbe sul mese nuovo, vuoto.
+ */
+export function homeHoursToFixPeriod(now: Date = new Date()): ReportPeriod {
+  return {
+    kind: "range",
+    from: `${addMonthsToKey(monthKey(now), -1)}-01`,
+    to: todayString(now),
+  };
+}
+
+/** Il mese su cui aprire la pagina Ore: quello del turno più vecchio da sistemare. */
+export function hoursToFixFirstMonth(items: Pick<HourToFix, "date">[]): string | null {
+  if (items.length === 0) return null;
+  return items.reduce((min, item) => (item.date < min ? item.date : min), items[0].date).slice(0, 7);
 }

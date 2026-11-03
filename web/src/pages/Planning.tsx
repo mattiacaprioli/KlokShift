@@ -18,6 +18,7 @@ import {
 } from "@/features/assignments/hooks";
 import {
   clockAttentionItems,
+  clockAttentionLabel,
   type ClockAttentionKind,
 } from "@/features/clock/attention";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
@@ -356,12 +357,12 @@ export function PlanningPage() {
 
   const clockItems = useMemo(
     () =>
-      clockAttentionItems(data ?? []).filter(
+      clockAttentionItems(data ?? [], venues).filter(
         (item) =>
           can(item.shift.venue_id, "can_view_hours") &&
           (isWeekly || isSameMonth(item.shift.date, month)),
       ),
-    [data, can, isWeekly, month],
+    [data, venues, can, isWeekly, month],
   );
   const clockKindsByShift = useMemo(() => {
     const map = new Map<string, ClockAttentionKind[]>();
@@ -1355,11 +1356,7 @@ function MonthGrid({
                       ) : null}
                       {clockKinds.length > 0 ? (
                         <span
-                          aria-label={
-                            clockKinds.includes("missing_out")
-                              ? "Uscita mancante"
-                              : "Ore da approvare"
-                          }
+                          aria-label={clockAttentionLabel(clockKinds) ?? undefined}
                           className="flex size-4 shrink-0 items-center justify-center rounded-full bg-warning/15 text-[10px] font-bold text-warning"
                         >
                           !
@@ -1560,11 +1557,7 @@ function ShiftCell({
           </Pill>
         )}
         {clockKinds.length > 0 && !cancelled ? (
-          <Pill tone="warning">
-            {clockKinds.includes("missing_out")
-              ? "Uscita mancante"
-              : "Ore da approvare"}
-          </Pill>
+          <Pill tone="warning">{clockAttentionLabel(clockKinds)}</Pill>
         ) : null}
       </div>
     </button>

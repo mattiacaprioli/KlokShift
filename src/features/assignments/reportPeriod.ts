@@ -1,4 +1,4 @@
-import { addDaysToDate, formatMonthKey, MONTH_NAMES } from "@/lib/format";
+import { addDaysToDate, formatMonthKey, monthKey, MONTH_NAMES } from "@/lib/format";
 import type { PersonOption } from "@/features/shifts/pastFilters";
 
 /**
@@ -161,4 +161,13 @@ export function selectionLabel(names: readonly string[]): string {
   if (names.length === 0) return "Tutte";
   if (names.length === 1) return names[0];
   return `${names.length} persone`;
+}
+
+/**
+ * Il mese chiesto da un link (`?mese=2026-10`, dall'avviso in Home), se è un
+ * mese vero e non nel futuro. Altrimenti null: la pagina apre sul mese in corso.
+ */
+export function monthFromParam(value: unknown, now: Date = new Date()): string | null {
+  if (typeof value !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return null;
+  return value <= monthKey(now) ? value : null;
 }

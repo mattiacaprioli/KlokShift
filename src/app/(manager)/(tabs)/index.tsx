@@ -11,6 +11,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { StatCard } from "@/components/ui/StatCard";
 import { AbsencesToHandle } from "@/features/absences/AbsencesToHandle";
+import { HoursToFixBanner } from "@/features/assignments/HoursToFixBanner";
 import { withShift } from "@/features/assignments/agenda";
 import {
   useMyAssignedUpcoming,
@@ -444,6 +445,12 @@ export default function ManagerHome() {
                 }
               />
             ) : null}
+
+            {/* Chi non ha timbrato, le uscite mancanti e le ore da approvare:
+                senza questo si scoprivano solo aprendo la pagina Ore. */}
+            <HoursToFixBanner
+              onOpen={(month) => router.push(`/(manager)/ore?mese=${month}`)}
+            />
 
             {/* Ferie e permessi da decidere, malattie appena comunicate. */}
             <AbsencesToHandle

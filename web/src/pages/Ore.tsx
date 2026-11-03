@@ -1,7 +1,7 @@
 import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
@@ -34,6 +34,7 @@ import {
 import {
   filterByPeople,
   monthAsRange,
+  monthFromParam,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -86,11 +87,16 @@ export function OrePage() {
   // che ci si accorge che mancano (come dal foglio ore di 7shifts o Deputy).
   const canRecord = canUseOperations && canAny("can_view_hours");
   const [recording, setRecording] = useState(false);
-  const [month, setMonth] = useState(monthKey(new Date()));
+  // `?mese=2026-10`: dall'avviso «Ore da sistemare» in Home.
+  const [params] = useSearchParams();
+  const [startMonth] = useState(
+    () => monthFromParam(params.get("mese")) ?? monthKey(new Date())
+  );
+  const [month, setMonth] = useState(startMonth);
   const [mode, setMode] = useState<"month" | "range">("month");
   // `range` è quello nei campi, `applied` l'ultimo valido: con le date
   // sbagliate la pagina resta sul periodo di prima, niente query a vuoto.
-  const [range, setRange] = useState(() => monthAsRange(monthKey(new Date())));
+  const [range, setRange] = useState(() => monthAsRange(startMonth));
   const [applied, setApplied] = useState(range);
   const [chosen, setChosen] = useState<string[] | null>(null);
   const adjacentMonth = (offset: number) => addMonthsToKey(month, offset);

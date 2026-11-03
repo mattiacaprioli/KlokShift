@@ -40,6 +40,7 @@ import { DraftsBanner } from "../shifts/DraftsBanner";
 import { CollaboratorWelcome } from "../onboarding/CollaboratorWelcome";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
 import { LiveClockLine } from "../shifts/LiveClockLine";
+import { HoursToFixBanner } from "../hours/HoursToFixBanner";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { UnplannedClockDialog } from "../shifts/UnplannedClockDialog";
 import {
@@ -216,6 +217,9 @@ export function HomePage() {
           onOpen={(date) => navigate(`/planning?giorno=${date}`)}
         />
       ) : null}
+      {/* Chi non ha timbrato, le uscite mancanti e le ore da approvare: senza
+          questo si scoprivano solo aprendo la pagina Ore. */}
+      <HoursToFixBanner onOpen={(month) => navigate(`/ore?mese=${month}`)} />
       <CollaboratorWelcome />
 
       {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non

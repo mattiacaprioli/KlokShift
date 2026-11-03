@@ -1,6 +1,7 @@
 import { PersonAvatar } from "../ui/PersonAvatar";
 import {
-  clockAttentionCounts,
+  CLOCK_ATTENTION_LABEL,
+  clockAttentionSummary,
   type ClockAttentionItem,
 } from "@/features/clock/attention";
 import { formatDate, formatShiftRange } from "@/lib/format";
@@ -14,7 +15,6 @@ export function ClockAttentionBanner({
   onOpen: (item: ClockAttentionItem) => void;
 }) {
   if (items.length === 0) return null;
-  const counts = clockAttentionCounts(items);
 
   return (
     <section className="mb-4 rounded-2xl border border-warning/50 bg-warning/10 p-4 print:hidden">
@@ -23,18 +23,10 @@ export function ClockAttentionBanner({
           <p className="text-sm font-bold text-warning">
             Timbrature da controllare
           </p>
-          <p className="mt-0.5 text-xs text-t2">
-            {counts.missingOut > 0
-              ? `${counts.missingOut} ${counts.missingOut === 1 ? "uscita mancante" : "uscite mancanti"}`
-              : null}
-            {counts.missingOut > 0 && counts.toReview > 0 ? " · " : null}
-            {counts.toReview > 0
-              ? `${counts.toReview} da approvare`
-              : null}
-          </p>
+          <p className="mt-0.5 text-xs text-t2">{clockAttentionSummary(items)}</p>
         </div>
         <span className="rounded-full bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
-          {counts.total === 1 ? "1 intervento" : `${counts.total} interventi`}
+          {items.length === 1 ? "1 intervento" : `${items.length} interventi`}
         </span>
       </div>
 
@@ -57,9 +49,7 @@ export function ClockAttentionBanner({
               {item.personName}
             </span>
             <span className="mt-0.5 block text-xs text-warning">
-              {item.kind === "missing_out"
-                ? "Uscita mancante"
-                : "Ore da approvare"}
+              {CLOCK_ATTENTION_LABEL[item.kind]}
             </span>
             <span className="mt-1 block text-[11px] text-t4">
               {formatDate(item.shift.date)} · {item.shift.title} ·{" "}

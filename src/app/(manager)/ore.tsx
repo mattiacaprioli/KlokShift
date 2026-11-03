@@ -1,6 +1,6 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
@@ -48,6 +48,7 @@ import {
 import {
   filterByPeople,
   monthAsRange,
+  monthFromParam,
   peopleInReport,
   periodLabel,
   pruneSelection,
@@ -100,12 +101,15 @@ export default function VenueHoursScreen() {
   // accorge che mancano (come in 7shifts o Deputy, dal foglio ore).
   const canRecord = canUseOperations && canAny("can_view_hours");
 
-  const [month, setMonth] = useState(monthKey());
+  // `?mese=2026-10`: dall'avviso «Ore da sistemare» in Home.
+  const { mese } = useLocalSearchParams<{ mese?: string }>();
+  const [startMonth] = useState(() => monthFromParam(mese) ?? monthKey());
+  const [month, setMonth] = useState(startMonth);
   const atCurrentMonth = month >= monthKey();
   const [mode, setMode] = useState<"month" | "range">("month");
   // `range` è quello nei campi, `applied` l'ultimo valido: con le date
   // sbagliate la pagina resta sul periodo di prima, niente query a vuoto.
-  const [range, setRange] = useState(() => monthAsRange(monthKey()));
+  const [range, setRange] = useState(() => monthAsRange(startMonth));
   const [applied, setApplied] = useState(range);
   const [chosen, setChosen] = useState<string[] | null>(null);
   const rangeError = mode === "range" ? validateRange(range.from, range.to) : null;

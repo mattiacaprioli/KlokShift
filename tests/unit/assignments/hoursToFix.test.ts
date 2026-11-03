@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  homeHoursToFixPeriod,
   hourToFixLabel,
   hourToFixWhen,
+  hoursToFixFirstMonth,
   hoursToFixSummary,
 } from "@/features/assignments/hoursToFix";
 
@@ -25,5 +27,24 @@ describe("ore da sistemare", () => {
   it("riassume quanti turni e quante ore non contano ancora", () => {
     expect(hoursToFixSummary([{ hours: 5 }])).toMatch(/^1 turno · 5/);
     expect(hoursToFixSummary([{ hours: 5 }, { hours: 3.5 }])).toMatch(/^2 turni · 8,5/);
+  });
+});
+
+describe("ore da sistemare in Home", () => {
+  it("guarda dal primo del mese scorso a oggi, anche a gennaio", () => {
+    // Ora locale senza offset: la CI gira in UTC.
+    expect(homeHoursToFixPeriod(new Date("2026-11-03T10:00:00"))).toEqual({
+      kind: "range",
+      from: "2026-10-01",
+      to: "2026-11-03",
+    });
+    expect(homeHoursToFixPeriod(new Date("2027-01-02T10:00:00"))).toMatchObject({
+      from: "2026-12-01",
+    });
+  });
+
+  it("apre Ore sul mese del turno più vecchio", () => {
+    expect(hoursToFixFirstMonth([{ date: "2026-11-02" }, { date: "2026-10-28" }])).toBe("2026-10");
+    expect(hoursToFixFirstMonth([])).toBeNull();
   });
 });

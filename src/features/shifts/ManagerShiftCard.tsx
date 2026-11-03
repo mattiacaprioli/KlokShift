@@ -20,6 +20,7 @@ import {
 } from "@/lib/format";
 import { DRAFT_LABEL, EXPIRED_DRAFT_LABEL, isDraft, isExpiredDraft } from "./drafts";
 import { RECORDED_LABEL, isRecordedShift } from "./recorded";
+import type { ShiftClockAttention } from "@/features/clock/attention";
 import type { ShiftWithCount } from "./types";
 
 /**
@@ -48,16 +49,23 @@ const MAX_NAMES = 3;
 
 /**
  * «Anna, Bruno, Carla +2»: chi lavora davvero (non chi ha rifiutato). Vuota se
- * la query non porta i nomi — lo storico non li chiede.
+ * la query non porta i nomi — lo storico non li chiede. Chi va sistemato
+ * (`flagged`, per riga di organico) passa davanti: è il nome da leggere, e col
+ * «+N» finirebbe nascosto.
  */
-function assigneeNames(shift: ShiftWithCount): string | null {
+function assigneeNames(
+  shift: ShiftWithCount,
+  flagged: ReadonlySet<string> | undefined
+): { names: { name: string; flagged: boolean }[]; rest: number } | null {
   const names = shift.shift_assignments
     .filter((a) => isActiveAssignment(a.status) && a.display_name)
-    .map((a) => a.display_name as string);
+    .map((a) => ({
+      name: a.display_name as string,
+      flagged: !!a.venue_member_id && !!flagged?.has(a.venue_member_id),
+    }))
+    .sort((a, b) => Number(b.flagged) - Number(a.flagged));
   if (names.length === 0) return null;
-  const shown = names.slice(0, MAX_NAMES).join(", ");
-  const rest = names.length - MAX_NAMES;
-  return rest > 0 ? `${shown} +${rest}` : shown;
+  return { names: names.slice(0, MAX_NAMES), rest: Math.max(0, names.length - MAX_NAMES) };
 }
 
 /**
@@ -79,6 +87,7 @@ export function ManagerShiftCard({
   variant = "agenda",
   venue,
   footer,
+  clockAttention,
 }: {
   shift: ShiftWithCount;
   onPress: () => void;
@@ -92,6 +101,11 @@ export function ManagerShiftCard({
   venue?: { name: string; accent: string };
   /** Sotto la copertura, solo nella variante agenda: lo storico ci mette il consuntivo. */
   footer?: ReactNode;
+  /**
+   * A turno finito, le timbrature da sistemare (`clockAttentionByShift`): il
+   * perché nella pill, e un «!» accanto al nome di chi.
+   */
+  clockAttention?: ShiftClockAttention | null;
 }) {
   const cancelled = shift.status === "cancelled";
   const closed = shift.status === "closed";
@@ -107,7 +121,8 @@ export function ManagerShiftCard({
   const label = shiftLabel(shift);
   const overnight = isOvernightShift(shift.start_time, shift.end_time);
   // Chi c'è, sulla card: per saperlo prima bisognava aprire ogni turno.
-  const names = cancelled ? null : assigneeNames(shift);
+  const names = cancelled ? null : assigneeNames(shift, clockAttention?.memberIds);
+  const clockLabel = cancelled ? null : (clockAttention?.label ?? null);
 
   // Le relazioni della copertura viaggiano già con il turno: nessuna query in
   // più per sapere che il buco è sul barista e non sul cameriere.
@@ -246,6 +261,10 @@ export function ManagerShiftCard({
               />
             ) : cancelled ? (
               <Pill label="Annullato" variant="cancelled" />
+            ) : clockLabel ? (
+              // Prima di «Chiuso»: un turno finito si chiude da sé, ma le ore di
+              // chi non ha timbrato non contano finché qualcuno non le sistema.
+              <Pill label={clockLabel} variant="pending" icon="alert" />
             ) : closed ? (
               <Pill label="Chiuso" variant="closed" />
             ) : isRecordedShift(shift) ? (
@@ -277,7 +296,17 @@ export function ManagerShiftCard({
           )}
           {names ? (
             <Text className="mt-1.5 text-[13px] text-t3" numberOfLines={1}>
-              {names}
+              {names.names.map((n, i) => (
+                <Text key={`${n.name}:${i}`}>
+                  {i > 0 ? ", " : ""}
+                  {n.flagged ? (
+                    <Text className="font-sans-semibold text-warning">{n.name} !</Text>
+                  ) : (
+                    n.name
+                  )}
+                </Text>
+              ))}
+              {names.rest > 0 ? ` +${names.rest}` : ""}
             </Text>
           ) : null}
           {footer}

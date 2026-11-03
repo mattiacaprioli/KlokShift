@@ -342,6 +342,7 @@ export function useReassignShiftAssignment() {
                       // Lo rimette a posto il refetch: qui serve solo al
                       // conteggio dei destinatari, che non è ancora in gioco.
                       waiter_id: null,
+                      clock_method: null,
                     },
                   };
                 }),

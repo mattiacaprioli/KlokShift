@@ -2,7 +2,8 @@ import { Text, View } from "@/tw";
 import { Pill } from "@/components/ui/Pill";
 import { formatHoursVariance } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
-import { clockAttentionForShift } from "./attention";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { clockAttentionForShift, clockAttentionLabel } from "./attention";
 import { shiftDeviations } from "./hours";
 
 /** Oltre questo numero di nomi la riga dice «e altri N». */
@@ -16,14 +17,13 @@ const MAX_DEVIATION_NAMES = 2;
  * timbrate in colore d'avviso finché nessuno le approva.
  */
 export function ShiftClockSummary({ shift }: { shift: ShiftWithAssignees }) {
+  // Solo le sedi attive portano il metodo di timbratura: senza, «non ha timbrato» non si può dire.
+  const { venues: activeVenues } = useOwnerVenues();
   if (shift.status === "cancelled") return null;
-  const kinds = clockAttentionForShift(shift).map((item) => item.kind);
+  const attention = clockAttentionLabel(
+    clockAttentionForShift(shift, activeVenues).map((item) => item.kind)
+  );
   const { measured, deviations } = shiftDeviations(shift);
-  const attention = kinds.includes("missing_out")
-    ? "Uscita mancante"
-    : kinds.includes("to_review")
-      ? "Da approvare"
-      : null;
   if (!attention && measured === 0) return null;
 
   const shown = deviations.slice(0, MAX_DEVIATION_NAMES);

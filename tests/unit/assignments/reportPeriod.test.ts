@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterByPeople,
   monthAsRange,
+  monthFromParam,
   peopleInReport,
   periodBounds,
   periodDays,
@@ -110,5 +111,20 @@ describe("giorni del periodo, estremi compresi", () => {
       from: "2026-10-05",
       to: "2026-10-11",
     });
+  });
+});
+
+describe("mese da un link", () => {
+  const now = new Date("2026-11-03T10:00:00");
+  it("accetta un mese vero, passato o in corso", () => {
+    expect(monthFromParam("2026-10", now)).toBe("2026-10");
+    expect(monthFromParam("2026-11", now)).toBe("2026-11");
+  });
+  it("scarta il resto: la pagina apre sul mese in corso", () => {
+    expect(monthFromParam("2026-12", now)).toBeNull();
+    expect(monthFromParam("2026-13", now)).toBeNull();
+    expect(monthFromParam("ottobre", now)).toBeNull();
+    expect(monthFromParam(undefined, now)).toBeNull();
+    expect(monthFromParam(["2026-10"], now)).toBeNull();
   });
 });

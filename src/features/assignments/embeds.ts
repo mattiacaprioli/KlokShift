@@ -21,7 +21,7 @@ import {
 
 /** Il minimo: chi è la riga, di quale persona e con quale account. */
 export const VENUE_MEMBER_BRIEF =
-  "venue_member:venue_members(id, member_id, member:workspace_members(display_name, user_id))";
+  "venue_member:venue_members(id, member_id, clock_method, member:workspace_members(display_name, user_id))";
 
 /** Come sopra, ma con un inner join: serve a filtrare per account. */
 export const VENUE_MEMBER_BY_ACCOUNT =

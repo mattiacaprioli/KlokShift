@@ -40,7 +40,10 @@ import {
 } from "@/features/shifts/drafts";
 import { cn } from "@/lib/cn";
 import { personRoleNames } from "@/features/staff/api";
-import type { ClockAttentionKind } from "@/features/clock/attention";
+import {
+  CLOCK_ATTENTION_LABEL,
+  type ClockAttentionKind,
+} from "@/features/clock/attention";
 import { actualChipText } from "@/features/clock/hours";
 import { dayLabel, isPastDay, isToday, PAST_DAY_REASON } from "../lib/week";
 import { Placeholder } from "../ui/primitives";
@@ -642,11 +645,7 @@ function PersonShiftChip({
               formatShiftRange(personShift.start_time, personShift.end_time),
               active ? null : ASSIGNMENT_STATUS_LABEL[personShift.status],
               conflict ? "In conflitto con un'assenza" : null,
-              clockAttention === "missing_out"
-                ? "Uscita mancante"
-                : clockAttention === "to_review"
-                  ? "Ore da approvare"
-                  : null,
+              clockAttention ? CLOCK_ATTENTION_LABEL[clockAttention] : null,
               personShift.overlaps
                 ? "Orario sovrapposto a un altro turno: le ore comuni sono contate una volta"
                 : null,
@@ -719,9 +718,10 @@ function PersonShiftChip({
           {actualChipText(actual, personShift.hours)}
         </span>
       ) : null}
-      {clockAttention === "missing_out" ? (
+      {/* «Da approvare» lo dice già la riga delle ore qui sopra. */}
+      {clockAttention === "missing_out" || clockAttention === "not_clocked" ? (
         <span className="mt-1 block text-[10px] font-semibold text-warning">
-          ! Uscita mancante
+          ! {CLOCK_ATTENTION_LABEL[clockAttention]}
         </span>
       ) : null}
     </button>

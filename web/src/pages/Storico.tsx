@@ -15,7 +15,7 @@ import {
   formatShiftRange,
 } from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
-import { clockAttentionForShift } from "@/features/clock/attention";
+import { clockAttentionForShift, clockAttentionLabel } from "@/features/clock/attention";
 import { shiftDeviations } from "@/features/clock/hours";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
@@ -248,15 +248,14 @@ function ShiftStatus({
   shift: ShiftWithAssignees;
   withClock: boolean;
 }) {
+  // Solo le sedi attive portano il metodo di timbratura: senza, «non ha timbrato» non si può dire.
+  const { venues: activeVenues } = useOwnerVenues();
   if (shift.status === "cancelled") return <Pill tone="error">Annullato</Pill>;
-  const kinds = withClock
-    ? clockAttentionForShift(shift).map((item) => item.kind)
-    : [];
-  if (kinds.includes("missing_out")) {
-    return <Pill tone="warning">Uscita mancante</Pill>;
-  }
-  if (kinds.includes("to_review")) {
-    return <Pill tone="warning">Da approvare</Pill>;
-  }
+  const attention = withClock
+    ? clockAttentionLabel(
+        clockAttentionForShift(shift, activeVenues).map((item) => item.kind)
+      )
+    : null;
+  if (attention) return <Pill tone="warning">{attention}</Pill>;
   return <Pill tone="neutral">Concluso</Pill>;
 }

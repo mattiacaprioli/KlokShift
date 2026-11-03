@@ -221,6 +221,7 @@ type AssigneesRow = Shift & {
     venue_member: {
       id: string;
       member_id: string;
+      clock_method: Enums<"clock_method"> | null;
       member: { display_name: string; user_id: string | null } | null;
     } | null;
   })[];
@@ -243,6 +244,7 @@ function toShiftWithAssignees({
           display_name: vm.member?.display_name ?? "",
           person_id: vm.member_id,
           waiter_id: vm.member?.user_id ?? null,
+          clock_method: vm.clock_method,
         },
       })
     ),

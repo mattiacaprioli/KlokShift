@@ -41,7 +41,10 @@ import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
 import { PublishBar } from "@/features/shifts/PublishBar";
 import { PublishModal } from "@/features/shifts/PublishModal";
 import { EMPTY_SHIFTS_HINT, isDraft, isExpiredDraft } from "@/features/shifts/drafts";
-import { clockAttentionItems } from "@/features/clock/attention";
+import {
+  clockAttentionByShift,
+  clockAttentionItems,
+} from "@/features/clock/attention";
 import { useVenueCalendar } from "@/features/venues/hooks";
 import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
 
@@ -212,9 +215,12 @@ export default function ManagerShiftsScreen() {
   );
   const clockRangeQuery = useOwnerShiftsRange(weekFrom, weekTo, clockScope);
   const clockItems = useMemo(
-    () => clockAttentionItems(clockRangeQuery.data ?? []),
-    [clockRangeQuery.data]
+    () => clockAttentionItems(clockRangeQuery.data ?? [], venues),
+    [clockRangeQuery.data, venues]
   );
+  // Le stesse eccezioni sulle card della settimana: «Non ha timbrato» e un «!»
+  // accanto al nome di chi.
+  const clockByShift = useMemo(() => clockAttentionByShift(clockItems), [clockItems]);
   const pull = usePullToRefresh(() =>
     Promise.all([
       upcomingQuery.refetch(),
@@ -840,6 +846,7 @@ export default function ManagerShiftsScreen() {
                 shift={item}
                 onPress={() => openShift(item.id)}
                 venue={venueBadge(item.venue_id)}
+                clockAttention={clockByShift.get(item.id)}
               />
             </View>
           )}

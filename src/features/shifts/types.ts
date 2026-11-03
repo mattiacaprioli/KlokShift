@@ -1,4 +1,4 @@
-import type { Tables } from "@/types/database";
+import type { Enums, Tables } from "@/types/database";
 import type {
   CoverageEmbeds,
   RoleRequirementEmbed,
@@ -63,6 +63,8 @@ export type ShiftWithAssignees = Shift & {
       person_id: string;
       /** Senza account collegato non c'è nessuno da notificare. */
       waiter_id: string | null;
+      /** Eccezione della persona alla timbratura della sede; null = come la sede. */
+      clock_method: Enums<"clock_method"> | null;
     } | null;
   }[];
 };
