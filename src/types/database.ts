@@ -2789,6 +2789,23 @@ export type Database = {
           workspace_name: string
         }[]
       }
+      get_workspace_hours_daily: {
+        Args: { p_from: string; p_to: string; p_workspace: string }
+        Returns: {
+          break_minutes: number
+          break_paid: boolean
+          clock_in: string
+          clock_out: string
+          date: string
+          hours: number
+          kind: string
+          member_id: string
+          member_name: string
+          note: string
+          title: string
+          venue_name: string
+        }[]
+      }
       get_workspace_hours_summary: {
         Args: { p_from: string; p_to: string; p_workspace: string }
         Returns: {
