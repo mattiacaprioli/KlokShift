@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
-import { buildDailyCsv, dailyFileName } from "@/lib/exportBuilders";
+import {
+  buildDailyCsv,
+  buildHoursHtml,
+  buildTimesheetHtml,
+  dailyFileName,
+} from "@/lib/exportBuilders";
 
 function row(extra: Partial<HoursDailyRow> = {}): HoursDailyRow {
   return {
@@ -62,5 +67,90 @@ describe("dailyFileName", () => {
     expect(dailyFileName("Osteria", "Novembre 2026", "csv")).toBe(
       "ore-giornaliere-osteria-novembre-2026.csv"
     );
+  });
+});
+
+describe("buildTimesheetHtml (cartellino)", () => {
+  const nov = { start: "2026-11-01", end: "2026-12-01" };
+
+  it("somma le ore work dello stesso giorno in una casella", () => {
+    const html = buildTimesheetHtml(
+      [row({ hours: 4 }), row({ title: "Cena", hours: 4 })],
+      nov
+    );
+    expect(html).toContain('<td class="d">8</td>');
+    expect(html).toContain("Presenze · novembre 2026");
+  });
+
+  it("un periodo a cavallo di due mesi dà due tabelle coi propri totali", () => {
+    const html = buildTimesheetHtml(
+      [row({ date: "2026-10-30", hours: 6 }), row({ date: "2026-11-02", hours: 3 })],
+      { start: "2026-10-25", end: "2026-11-06" }
+    );
+    expect(html.match(/<table/g)).toHaveLength(2);
+    expect(html).toContain("Presenze · ottobre 2026");
+    expect(html).toContain("Presenze · novembre 2026");
+    expect(html).toContain('<td class="t">6</td>');
+    expect(html).toContain('<td class="t">3</td>');
+    expect(html.match(/page-break-before: always/g)!.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("to_fix dà «?» e non entra nel totale Lavoro", () => {
+    const html = buildTimesheetHtml(
+      [row({ hours: 4 }), row({ date: "2026-11-06", kind: "to_fix", hours: null, note: "not_clocked" })],
+      nov
+    );
+    expect(html).toContain('<td class="d">?</td>');
+    expect(html).toContain('<td class="t">4</td>');
+  });
+
+  it("sabato con classe we", () => {
+    const html = buildTimesheetHtml([row()], nov);
+    expect(html).toMatch(/<th class="we">S<br>7<\/th>/);
+    expect(html).toMatch(/<th>G<br>5<\/th>/);
+  });
+
+  it("chi ha righe solo a ottobre non compare a novembre", () => {
+    const html = buildTimesheetHtml(
+      [row({ person_name: "Anna" }), row({ person_id: "b", person_name: "Bruno", date: "2026-10-28" })],
+      { start: "2026-10-25", end: "2026-11-06" }
+    );
+    const [ott, novTable] = html.split("Presenze · novembre 2026");
+    expect(ott).toContain("Bruno");
+    expect(novTable).not.toContain("Bruno");
+  });
+
+  it("assenze: F, P, M e conflitto", () => {
+    const base = { clock_in: null, clock_out: null, break_minutes: null, break_paid: null, venue_name: null, title: null };
+    const html = buildTimesheetHtml(
+      [
+        row({ ...base, kind: "ferie", hours: 8, date: "2026-11-02" }),
+        row({ ...base, kind: "malattia", hours: null, date: "2026-11-03" }),
+        row({ ...base, kind: "permesso", hours: 2, date: "2026-11-04", note: "hourly:15:00-17:00" }),
+        row({ ...base, kind: "ferie", hours: null, date: "2026-11-05", note: "conflict" }),
+      ],
+      nov
+    );
+    expect(html).toContain('<td class="d">F<br><small>8</small></td>');
+    expect(html).toContain('<td class="d">M</td>');
+    expect(html).toContain('<td class="d">P<br><small>2</small></td>');
+    expect(html).toContain('<td class="d">?</td>');
+    expect(html).toContain("1 gg");
+  });
+
+  it("il nome passa da escapeHtml", () => {
+    const html = buildTimesheetHtml([row({ person_name: "<script>" })], nov);
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("<script>");
+  });
+
+  it("buildHoursHtml senza timesheet non ha il cartellino; con timesheet sì", () => {
+    const without = buildHoursHtml("Osteria", "novembre 2026", [], 0);
+    expect(without).not.toContain("Presenze ·");
+    expect(buildHoursHtml("Osteria", "novembre 2026", [], 0, [], [], undefined)).toBe(without);
+    const withTs = buildHoursHtml("Osteria", "novembre 2026", [], 0, [], [], {
+      rows: [row()], ...nov,
+    });
+    expect(withTs).toContain("Presenze · novembre 2026");
   });
 });

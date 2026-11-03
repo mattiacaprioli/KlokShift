@@ -17,6 +17,7 @@ import {
   ABSENCE_SUMMARY_NOTE,
   type AbsenceSummaryRow,
 } from "@/features/absences/summary";
+import { MONTH_NAMES } from "@/lib/format";
 
 // Ore come numero italiano (virgola, senza suffisso): "12,25" · "12,5" · "5".
 // Due decimali al massimo; `String` toglie gli zeri finali da solo (7.50 → "7.5").
@@ -76,7 +77,9 @@ export function buildHoursHtml(
    * I nomi delle persone scelte; vuoto = tutto il team. Il documento lo
    * dice, perché chi lo riceve deve sapere che non è l'azienda intera.
    */
-  selection: readonly string[] = []
+  selection: readonly string[] = [],
+  /** Il cartellino giorno per giorno, dopo le tabelle: su pagina nuova. */
+  timesheet?: { rows: HoursDailyRow[]; start: string; end: string }
 ): string {
   const rows = monthlyReportRows(people, absences);
   const totalShifts = rows.reduce((s, p) => s + p.shifts_count, 0);
@@ -120,6 +123,7 @@ export function buildHoursHtml(
     tfoot td { font-weight: 700; border-top: 2px solid #eab54c; border-bottom: none; }
     .accent { height: 4px; width: 48px; background: #eab54c; border-radius: 2px; margin-bottom: 16px; }
     .foot { margin-top: 28px; color: #a49a8a; font-size: 11px; }
+    ${timesheet ? TIMESHEET_CSS : ""}
   </style></head><body>
     <div class="accent"></div>
     <h1>Ore tracciate</h1>
@@ -131,6 +135,7 @@ export function buildHoursHtml(
       <tfoot><tr><td>Totale</td><td></td><td class="n">${totalShifts}</td><td class="n">${hoursNumber(totalHours)}</td><td class="n">${breakCell(totalPaidBreak, totalUnpaidBreak)}</td><td class="n">${hoursNumber(totalJustified)}</td><td class="n">${hoursNumber(totalCoveredHours)}</td><td></td></tr></tfoot>
     </table>
     ${absences.length > 0 ? absencesHtmlSection(absences) : ""}
+    ${timesheet ? buildTimesheetHtml(timesheet.rows, timesheet) : ""}
     <div class="foot">Documento generato da KlokShift · Il totale indica ore coperte, non un importo o un trattamento retributivo. Le ore da verificare sono escluse. La pausa retribuita è già compresa nelle ore lavorate, quella non retribuita ne è esclusa. I codici evento del CSV vanno confermati con il consulente in base al contratto applicato.</div>
   </body></html>`;
 }
@@ -366,4 +371,168 @@ function exportFileName(
         ? "-selezione"
         : "";
   return `${prefix}-${slug(companyName)}-${slug(periodLabel)}${scope}.${ext}`;
+}
+
+// ---------------------------------------------------------------------------
+// Cartellino: una griglia persona × giorno per ogni mese di calendario.
+// ---------------------------------------------------------------------------
+
+const TIMESHEET_CSS = `
+    .ts table { font-size: 10px; table-layout: fixed; }
+    .ts th, .ts td { padding: 4px 2px; text-align: center; border: 1px solid #e7e2d8; }
+    .ts th.who, .ts td.who { text-align: left; width: 150px; padding-left: 6px; }
+    .ts td.who small { display: block; color: #8c857a; font-size: 9px; }
+    .ts td small { color: #6a6358; font-size: 8px; }
+    .ts .we { background: #f1eee7; }
+    .ts td.t { font-weight: 700; background: #faf7ef; }
+    .ts .legend { margin-top: 8px; color: #8c857a; font-size: 10px; }`;
+
+const WEEKDAY_INITIAL = ["D", "L", "M", "M", "G", "V", "S"];
+
+// Tutte le date in UTC: il fuso della macchina (o della CI) non deve spostare un
+// sabato in venerdì.
+function utcDate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function isoOf(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Lo stesso mese, da `from` (incluso) a `to` (escluso), senza uscire dal mese di `from`. */
+function monthSlices(start: string, end: string): { from: string; to: string; label: string }[] {
+  const out: { from: string; to: string; label: string }[] = [];
+  let cur = utcDate(start);
+  const last = utcDate(end);
+  while (cur < last) {
+    const next = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
+    const to = next < last ? next : last;
+    out.push({
+      from: isoOf(cur),
+      to: isoOf(to),
+      label: `${MONTH_NAMES[cur.getUTCMonth()]} ${cur.getUTCFullYear()}`,
+    });
+    cur = next;
+  }
+  return out;
+}
+
+const ABSENCE_LETTER: Partial<Record<DailyKind, string>> = {
+  ferie: "F",
+  permesso: "P",
+  malattia: "M",
+};
+
+/** Cosa scrivere nella casella di un giorno: lavoro, assenza, o «?» se c'è da verificare. */
+function timesheetCell(day: HoursDailyRow[]): string {
+  if (day.some((r) => r.kind === "to_fix" || r.note === "conflict")) return "?";
+  const work = day.filter((r) => r.kind === "work");
+  const abs = day.find((r) => r.kind !== "work");
+  const absSmall = (r: HoursDailyRow) =>
+    r.hours != null && r.hours > 0 ? hoursNumber(r.hours) : "";
+  if (work.length > 0) {
+    const h = hoursNumber(work.reduce((s, r) => s + (r.hours ?? 0), 0));
+    const permit = day.find((r) => r.kind === "permesso");
+    return permit
+      ? `${h}<br><small>P ${absSmall(permit)}</small>`.replace(" </small>", "</small>")
+      : h;
+  }
+  if (!abs) return "";
+  const letter = ABSENCE_LETTER[abs.kind] ?? "?";
+  const small = absSmall(abs);
+  return small ? `${letter}<br><small>${small}</small>` : letter;
+}
+
+function timesheetTable(
+  rows: HoursDailyRow[],
+  slice: { from: string; to: string; label: string }
+): string {
+  const days: string[] = [];
+  for (let d = utcDate(slice.from); isoOf(d) < slice.to; d = new Date(d.getTime() + 86400000)) {
+    days.push(isoOf(d));
+  }
+  const inMonth = rows.filter((r) => r.date >= slice.from && r.date < slice.to);
+  const people = new Map<string, HoursDailyRow[]>();
+  for (const r of inMonth) {
+    const list = people.get(r.person_id);
+    if (list) list.push(r);
+    else people.set(r.person_id, [r]);
+  }
+  const ordered = [...people.values()].sort((a, b) =>
+    a[0].person_name.localeCompare(b[0].person_name, "it")
+  );
+
+  const isWeekend = (iso: string) => {
+    const wd = utcDate(iso).getUTCDay();
+    return wd === 0 || wd === 6;
+  };
+  const head =
+    `<tr><th class="who">Persona</th>` +
+    days
+      .map((iso) => {
+        const cls = isWeekend(iso) ? ' class="we"' : "";
+        return `<th${cls}>${WEEKDAY_INITIAL[utcDate(iso).getUTCDay()]}<br>${Number(iso.slice(8))}</th>`;
+      })
+      .join("") +
+    `<th>Lavoro</th><th>Ferie</th><th>Permessi</th><th>Malattia</th><th>gg senza ore</th></tr>`;
+
+  const body = ordered
+    .map((list) => {
+      const venues = new Set(
+        list.filter((r) => r.kind === "work" && r.venue_name).map((r) => r.venue_name as string)
+      );
+      const venueLine =
+        venues.size === 1
+          ? `<small>${escapeHtml([...venues][0])}</small>`
+          : venues.size > 1
+            ? `<small>${venues.size} sedi</small>`
+            : "";
+      const cells = days
+        .map((iso) => {
+          const cls = isWeekend(iso) ? "d we" : "d";
+          return `<td class="${cls}">${timesheetCell(list.filter((r) => r.date === iso))}</td>`;
+        })
+        .join("");
+
+      // I totali non toccano mai le righe da verificare né le assenze in conflitto.
+      const ok = list.filter((r) => r.kind !== "to_fix" && r.note !== "conflict");
+      const sum = (kind: DailyKind) =>
+        ok.filter((r) => r.kind === kind).reduce((s, r) => s + (r.hours ?? 0), 0);
+      const noHours = (kind: DailyKind) =>
+        new Set(ok.filter((r) => r.kind === kind && !(r.hours != null && r.hours > 0)).map((r) => r.date)).size;
+      const sick = sum("malattia");
+      const sickDays = noHours("malattia");
+      const sickCell =
+        sick > 0 ? hoursNumber(sick) : sickDays > 0 ? `${sickDays} gg` : "—";
+      const unpaid = noHours("ferie") + noHours("permesso");
+      const t = (v: string) => `<td class="t">${v}</td>`;
+      return (
+        `<tr><td class="who">${escapeHtml(list[0].person_name)}${venueLine}</td>${cells}` +
+        t(countCell(sum("work"))) +
+        t(countCell(sum("ferie"))) +
+        t(countCell(sum("permesso"))) +
+        t(sickCell) +
+        t(unpaid > 0 ? `${unpaid} gg` : "—") +
+        `</tr>`
+      );
+    })
+    .join("");
+
+  return `<div class="ts" style="page-break-before: always"><h2>Presenze · ${slice.label}</h2>
+    <table><thead>${head}</thead><tbody>${body}</tbody></table>
+    <div class="legend">Numeri = ore lavorate · F ferie · P permesso · M malattia · ? da verificare (non conteggiato). Sabato e domenica in grigio.</div></div>`;
+}
+
+/**
+ * Il cartellino: una griglia persona × giorno per ogni mese di calendario dentro
+ * `[start, end)`, ciascuna su pagina nuova. Solo ore e causali, mai importi.
+ */
+export function buildTimesheetHtml(
+  rows: HoursDailyRow[],
+  bounds: { start: string; end: string }
+): string {
+  return monthSlices(bounds.start, bounds.end)
+    .map((slice) => timesheetTable(rows, slice))
+    .join("");
 }
