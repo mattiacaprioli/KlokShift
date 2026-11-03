@@ -36,6 +36,7 @@ function assignment(
       display_name: personId,
       person_id: personId,
       waiter_id: waiterId,
+      clock_method: null,
     },
   };
 }
