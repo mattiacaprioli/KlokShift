@@ -9,6 +9,7 @@ import type { PersonHours } from "@/features/assignments/hoursSummary";
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
 import type { ExportCodes } from "@/features/assignments/exportCodes";
 import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
+import type { SurchargeRow } from "@/features/assignments/surcharges";
 import {
   absencesFileName,
   buildAbsencesCsv,
@@ -29,7 +30,8 @@ export async function exportHoursPdf(
   totalHours: number,
   absences: AbsenceSummaryRow[] = [],
   selection: readonly string[] = [],
-  timesheet?: { rows: HoursDailyRow[]; start: string; end: string }
+  timesheet?: { rows: HoursDailyRow[]; start: string; end: string },
+  surcharges: readonly SurchargeRow[] = []
 ): Promise<void> {
   const html = buildHoursHtml(
     companyName,
@@ -38,7 +40,8 @@ export async function exportHoursPdf(
     totalHours,
     absences,
     selection,
-    timesheet
+    timesheet,
+    surcharges
   );
   // A4 orizzontale in punti: expo-print ignora @page e parte da Letter verticale.
   const { uri } = await Print.printToFileAsync({ html, width: 842, height: 595 });
@@ -58,9 +61,10 @@ export async function exportHoursCsv(
   people: PersonHours[],
   absences: AbsenceSummaryRow[] = [],
   selection: readonly string[] = [],
-  codes?: ExportCodes
+  codes?: ExportCodes,
+  surcharges: readonly SurchargeRow[] = []
 ): Promise<void> {
-  const csv = buildHoursCsv(people, absences, codes);
+  const csv = buildHoursCsv(people, absences, codes, surcharges);
   const uri = `${FileSystem.cacheDirectory}${hoursFileName(companyName, periodLabel, "csv", selection)}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -102,9 +106,10 @@ export async function exportDailyCsv(
   periodLabel: string,
   rows: HoursDailyRow[],
   selection: readonly string[] = [],
-  codes?: ExportCodes
+  codes?: ExportCodes,
+  surcharges: readonly SurchargeRow[] = []
 ): Promise<void> {
-  const csv = buildDailyCsv(rows, codes);
+  const csv = buildDailyCsv(rows, codes, surcharges);
   const uri = `${FileSystem.cacheDirectory}${dailyFileName(companyName, periodLabel, "csv", selection)}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,

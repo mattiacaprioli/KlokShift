@@ -182,6 +182,25 @@ mancante lascia la colonna vuota e fa un avviso nella pagina Ore
 (`exportCodesWarning`), **mai un blocco**; l'avviso tace se l'azienda non usa
 né matricole né codici. Il PDF non porta codici.
 
+**Maggiorazioni** (2026-11-04, migration `20261104000300`/`000400`, da
+rilasciare). Notturno (con la sua fascia), domenica, festivi e straordinario si
+calcolano **in automatico**, ogni volta, da `private.workspace_surcharge_rows`
+sulle stesse righe delle ore: è la sola fonte, letta da `get_workspace_surcharges`
+(pagina Ore, CSV, PDF). Le regole sono **versioni mensili**
+(`workspace_surcharge_rules`, un mese usa l'ultima versione partita entro il
+suo primo giorno): cambiare una percentuale non riscrive i mesi passati. Le
+scrive **chiunque abbia «Ore»**, come i codici; il **patrono** è una colonna
+della sede, senza versioni (vale anche per il passato), festivi nazionali in
+`private.italian_holiday` (4 ottobre dal 2026). Una voce per minuto, **la più
+alta** (a parità festivi > domenica > straordinario > notturno); le porzioni
+si riportano **in proporzione** alle ore che contano, perché la pausa non dice
+dove cade, e non superano mai le ore della riga. Lo straordinario sono le ore
+oltre quelle da contratto nel periodo del contratto, le ultime in ordine di
+tempo, su **tutte** le sedi della persona (`workspace_hour_rows_in`): chi legge
+vede comunque solo le righe delle sue sedi. Le maggiorazioni non cambiano mai il
+totale delle ore e non hanno importi. Chi cambia cosa conta in
+`workspace_hour_rows_in` cambia anche le maggiorazioni (test SQL 159 e 160).
+
 ## Timbratura senza turno (2026-10-10)
 
 Chi gestisce le ore può abilitare una persona (`venue_members.clock_unplanned`,

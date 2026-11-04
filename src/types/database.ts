@@ -1586,6 +1586,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          patron_day: number | null
+          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -1606,6 +1608,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          patron_day?: number | null
+          patron_month?: number | null
           rest_days?: number[]
           staff_sees_planning?: boolean
           workspace_id: string
@@ -1626,6 +1630,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          patron_day?: number | null
+          patron_month?: number | null
           rest_days?: number[]
           staff_sees_planning?: boolean
           workspace_id?: string
@@ -1899,6 +1905,50 @@ export type Database = {
           },
           {
             foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_surcharge_rules: {
+        Row: {
+          holiday_pct: number | null
+          night_end: string
+          night_pct: number | null
+          night_start: string
+          overtime_pct: number | null
+          sunday_pct: number | null
+          updated_at: string
+          valid_from: string
+          workspace_id: string
+        }
+        Insert: {
+          holiday_pct?: number | null
+          night_end?: string
+          night_pct?: number | null
+          night_start?: string
+          overtime_pct?: number | null
+          sunday_pct?: number | null
+          updated_at?: string
+          valid_from: string
+          workspace_id: string
+        }
+        Update: {
+          holiday_pct?: number | null
+          night_end?: string
+          night_pct?: number | null
+          night_start?: string
+          overtime_pct?: number | null
+          sunday_pct?: number | null
+          updated_at?: string
+          valid_from?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_surcharge_rules_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -2790,6 +2840,7 @@ export type Database = {
           venue_name: string
         }[]
       }
+      get_surcharge_rules: { Args: { p_workspace: string }; Returns: Json }
       get_workspace_absence_summary: {
         Args: { p_from: string; p_to: string; p_workspace: string }
         Returns: {
@@ -2855,6 +2906,21 @@ export type Database = {
           untracked_hours: number
           venue_closed: boolean
           venue_id: string
+          venue_name: string
+        }[]
+      }
+      get_workspace_surcharges: {
+        Args: { p_from: string; p_to: string; p_workspace: string }
+        Returns: {
+          clock_in: string
+          clock_out: string
+          date: string
+          hours: number
+          kind: string
+          member_id: string
+          member_name: string
+          percentage: number
+          title: string
           venue_name: string
         }[]
       }
@@ -3045,6 +3111,10 @@ export type Database = {
         Args: { p_template: Json; p_venue: string }
         Returns: string
       }
+      save_surcharge_rules: {
+        Args: { p_rules: Json; p_valid_from: string; p_workspace: string }
+        Returns: undefined
+      }
       save_venue_closure: {
         Args: {
           p_end: string
@@ -3054,6 +3124,10 @@ export type Database = {
           p_venue: string
         }
         Returns: string
+      }
+      save_venue_patron: {
+        Args: { p_day: number; p_month: number; p_venue: string }
+        Returns: undefined
       }
       set_absence_hour_credit: {
         Args: { p_absence: string; p_date: string; p_minutes?: number }
@@ -3181,6 +3255,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          patron_day: number | null
+          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3215,6 +3291,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          patron_day: number | null
+          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3244,6 +3322,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          patron_day: number | null
+          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3276,6 +3356,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          patron_day: number | null
+          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3309,6 +3391,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          patron_day: number | null
+          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string

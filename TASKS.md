@@ -500,7 +500,7 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 Confronto con i concorrenti (Skello, Factorial, Fluida, Planday, Shiftbase): la base CSV/PDF è alla pari, mancano i dati che il consulente importa nel gestionale paghe.
 - [x] ✅ **1. CSV giornaliero nella pagina Ore (03/11/2026)** (app e dashboard): una riga per persona e giorno con data, sede, turno, entrata, uscita, pausa, ore e causale (lavoro, ferie, permesso, malattia). Oggi il dettaglio per giorno esiste solo in `presenze.csv` dell'export completo. Fatto: anche cartellino nel PDF; migration `20261103000600`/`000700` da rilasciare.
 - [x] **2. Matricola e causali** (04/11/2026): campo «Matricola» nella scheda della persona (unica nell'azienda) e «Codici per il consulente» nella pagina Ore (codice azienda e un codice per causale), riportati nei CSV giornaliero, mensile, assenze e nell'export completo, con un avviso che non blocca. Migration `20261104000000`…`000200` da rilasciare. Prova a mano da fare.
-- [ ] **3. Maggiorazioni** (notturno, straordinario, festivo, domenicale), come deciso in [HOURS-ABSENCES-ADJUSTMENTS.md](plans/HOURS-ABSENCES-ADJUSTMENTS.md): quantità, categoria e percentuale, mai importi.
+- [x] **3. Maggiorazioni** (04/11/2026): notturno, domenica, festivi e straordinario calcolati in automatico con regole per mese (pagina Ore → «Maggiorazioni»), «di cui» nella pagina Ore, nei CSV mensile e giornaliero e nel PDF, con i codici per il consulente; quantità e percentuale, mai importi. Migration `20261104000300`/`000400` da rilasciare. Prova a mano da fare.
 - [ ] **4. Tracciato Zucchetti/TeamSystem**: solo quando un cliente lo chiede, perché il formato lo decide il consulente.
 
 ### Pubblicazione sugli store (M8)

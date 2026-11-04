@@ -32,6 +32,10 @@ describe("codici per il consulente (get_export_codes)", () => {
       ferie: "Ferie",
       permesso: "Permesso",
       malattia: "Malattia",
+      night: "Notturno",
+      sunday: "Domenica",
+      holiday: "Festivi",
+      overtime: "Straordinario",
     });
   });
 });
@@ -90,6 +94,12 @@ describe("causali usate nel periodo", () => {
       { ...absence, malattia_days: 1 },
       { ...absence, permesso_hours: 2 },
     ])).toEqual(["work", "permesso", "malattia"]);
+  });
+
+  it("le maggiorazioni con ore", () => {
+    const night = { person_id: "p", date: "2026-10-11", venue_name: null, title: null, clock_in: null,
+      clock_out: null, kind: "night" as const, percentage: 20, hours: 2 };
+    expect(usedExportKeys([base], [absence], [night])).toEqual(["night"]);
   });
 
   it("niente se il periodo è vuoto", () => {

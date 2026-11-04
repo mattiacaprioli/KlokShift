@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
+import type { SurchargeRow } from "@/features/assignments/surcharges";
 import {
   buildDailyCsv,
   buildHoursHtml,
@@ -240,5 +241,46 @@ describe("buildDailyCsv con i codici per il consulente", () => {
 
   it("senza codici l'output è quello di sempre", () => {
     expect(buildDailyCsv([row()], undefined)).toBe(buildDailyCsv([row()]));
+  });
+});
+
+describe("maggiorazioni nel giornaliero e nel cartellino", () => {
+  const work = row({ date: "2026-10-11", title: "Sera", clock_in: "18:00", clock_out: "02:00" });
+  const sur = (extra: Partial<SurchargeRow> = {}): SurchargeRow => ({
+    person_id: "p", person_name: "Anna", date: "2026-10-11", venue_name: "Centro", title: "Sera",
+    clock_in: "18:00", clock_out: "02:00", kind: "night", percentage: 20, hours: 1.88, ...extra,
+  });
+  const both = [sur({ kind: "sunday", percentage: 30, hours: 5.62 }), sur()];
+
+  it("le righe «di cui» subito dopo la riga di lavoro, nell'ordine delle voci", () => {
+    const out = lines(buildDailyCsv([work, row({ date: "2026-10-12" })], undefined, both));
+    expect(out[1].startsWith("11/10/2026;Anna;Centro;Sera;Lavoro;18:00;02:00;")).toBe(true);
+    expect(out[2]).toBe("11/10/2026;Anna;Centro;Sera;Di cui notturno +20%;;;;;1,88;");
+    expect(out[3]).toBe("11/10/2026;Anna;Centro;Sera;Di cui domenica +30%;;;;;5,62;");
+    expect(out[4].startsWith("12/10/2026;Anna;")).toBe(true);
+  });
+
+  it("con i codici, il codice causale della voce", () => {
+    const codes = { codes: { company: "AZ", night: "NOT" }, matricole: new Map([["p", "A1"]]) };
+    const out = lines(buildDailyCsv([work], codes, [sur()]));
+    expect(out[2]).toBe("AZ;A1;NOT;11/10/2026;Anna;Centro;Sera;Di cui notturno +20%;;;;;1,88;");
+  });
+
+  it("una maggiorazione senza la sua riga di lavoro va in coda al giorno", () => {
+    const out = lines(buildDailyCsv([work, row({ date: "2026-10-12" })], undefined, [sur({ clock_in: "19:00" })]));
+    expect(out[2]).toBe("11/10/2026;Anna;Centro;Sera;Di cui notturno +20%;;;;;1,88;");
+  });
+
+  it("senza maggiorazioni il giornaliero è quello di sempre", () => {
+    expect(buildDailyCsv([work], undefined, [])).toBe(buildDailyCsv([work]));
+  });
+
+  it("il cartellino ha una riga «di cui» sotto la persona", () => {
+    const html = buildTimesheetHtml([work], { start: "2026-10-01", end: "2026-11-01" }, both);
+    expect(html).toContain("Di cui notturno +20%");
+    expect(html).toContain("1,88");
+    expect(buildTimesheetHtml([work], { start: "2026-10-01", end: "2026-11-01" }, [])).toBe(
+      buildTimesheetHtml([work], { start: "2026-10-01", end: "2026-11-01" })
+    );
   });
 });

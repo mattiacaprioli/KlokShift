@@ -8,6 +8,8 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import {
   fetchExportCodes,
+  fetchWorkspaceSurcharges,
+  useWorkspaceSurcharges,
   fetchOwnerHoursDaily,
   useExportCodes,
   useHoursToFix,
@@ -27,6 +29,12 @@ import {
   type ExportCodes,
 } from "@/features/assignments/exportCodes";
 import { ExportCodesDialog } from "../hours/ExportCodesDialog";
+import { SurchargeRulesDialog } from "../hours/SurchargeRulesDialog";
+import {
+  missingContractWarning,
+  surchargeSummary,
+  type SurchargeRow,
+} from "@/features/assignments/surcharges";
 import {
   breakSummaryText,
   exportAvailability,
@@ -175,14 +183,25 @@ export function OrePage() {
   // Codici per il consulente: l'avviso usa gli stessi dati che gli export
   // rileggono freschi al clic.
   const exportCodes = useExportCodes(canRecord ? workspaceId : undefined).data;
+  // Le maggiorazioni le calcola il database: qui si mostrano «di cui» e basta.
+  // Si leggono anche in archivio, come le ore.
+  const surchargesData = useWorkspaceSurcharges(
+    canAny("can_view_hours") ? workspaceId : undefined,
+    period
+  ).data;
+  const surchargeRows = filterByPeople(surchargesData?.rows ?? [], selection);
+  const contractWarning = surchargesData
+    ? missingContractWarning(surchargesData.noContract, report.map((r) => r.person_id))
+    : null;
   const codesWarning = exportCodes
     ? exportCodesWarning({
         personIds: report.map((r) => r.person_id),
-        usedKeys: usedExportKeys(report, absences),
+        usedKeys: usedExportKeys(report, absences, surchargeRows),
         codes: exportCodes,
       })
     : null;
   const [editingCodes, setEditingCodes] = useState(false);
+  const [editingSurcharges, setEditingSurcharges] = useState(false);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
   const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
   const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
@@ -207,11 +226,18 @@ export function OrePage() {
 
   // I CSV rileggono i codici per il consulente al clic: una matricola scritta un
   // minuto fa nella scheda deve finire nel file.
-  async function downloadWithCodes(build: (codes: ExportCodes) => Promise<[string, string]>) {
+  async function downloadWithCodes(
+    build: (codes: ExportCodes, surcharges: SurchargeRow[]) => Promise<[string, string]>
+  ) {
     if (dailyBusy) return;
     setDailyBusy(true);
     try {
-      const [content, fileName] = await build(await fetchExportCodes(queryClient, workspaceId));
+      // Maggiorazioni fresche, come le righe del giorno.
+      const [codes, surcharges] = await Promise.all([
+        fetchExportCodes(queryClient, workspaceId),
+        fetchWorkspaceSurcharges(queryClient, workspaceId, period),
+      ]);
+      const [content, fileName] = await build(codes, filterByPeople(surcharges.rows, selection));
       download(content, fileName);
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
@@ -222,8 +248,8 @@ export function OrePage() {
 
   function downloadCsv() {
     if (!canExport.monthly) return;
-    void downloadWithCodes(async (codes) => [
-      buildHoursCsv(people, absences, codes),
+    void downloadWithCodes(async (codes, surcharges) => [
+      buildHoursCsv(people, absences, codes, surcharges),
       hoursFileName(company, label, "csv", names),
     ]);
   }
@@ -239,8 +265,8 @@ export function OrePage() {
   // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
   async function downloadDailyCsv() {
     if (!canExport.monthly) return;
-    await downloadWithCodes(async (codes) => [
-      buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), codes),
+    await downloadWithCodes(async (codes, surcharges) => [
+      buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), codes, surcharges),
       dailyFileName(company, label, "csv", names),
     ]);
   }
@@ -256,8 +282,13 @@ export function OrePage() {
     }
     setDailyBusy(true);
     let timesheet;
+    let surcharges: SurchargeRow[] = [];
     try {
       timesheet = { rows: await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), ...periodBounds(period) };
+      surcharges = filterByPeople(
+        (await fetchWorkspaceSurcharges(queryClient, workspaceId, period)).rows,
+        selection
+      );
     } catch {
       w.close();
       toast.show("Export non riuscito. Riprova.", "error");
@@ -273,7 +304,8 @@ export function OrePage() {
       totalHours,
       absences,
       names,
-      timesheet
+      timesheet,
+      surcharges
     );
     w.document.write(html);
     w.document.close();
@@ -403,6 +435,9 @@ export function OrePage() {
           </div>
 
           <div className="flex gap-2">
+            <Button onClick={() => setEditingSurcharges(true)} disabled={!workspaceId}>
+              Maggiorazioni
+            </Button>
             <Button onClick={() => setEditingCodes(true)} disabled={!workspaceId}>
               Codici per il consulente
             </Button>
@@ -439,10 +474,18 @@ export function OrePage() {
           {certificatesWarning}
         </p>
       ) : null}
+      {contractWarning ? (
+        <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
+          {contractWarning}
+        </p>
+      ) : null}
       {codesWarning ? (
         <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
           {codesWarning}
         </p>
+      ) : null}
+      {editingSurcharges && workspaceId ? (
+        <SurchargeRulesDialog workspaceId={workspaceId} onClose={() => setEditingSurcharges(false)} />
       ) : null}
       {editingCodes && workspaceId ? (
         <ExportCodesDialog workspaceId={workspaceId} onClose={() => setEditingCodes(false)} />
@@ -528,6 +571,11 @@ export function OrePage() {
           <div><p className="text-xs text-t3">Totale ore coperte</p><p className="font-mono text-xl text-gold">{formatHours(totalCoveredHours)}</p></div>
           <p className="text-xs text-t4 sm:col-span-3">Senza timbratura, le ore del turno concluso entrano automaticamente e si possono correggere dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</p>
           {totalConflicts > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</p> : null}
+          {surchargeSummary(surchargeRows).length > 0 ? (
+            <p className="text-xs text-t2 sm:col-span-3">
+              {surchargeSummary(surchargeRows).map((r) => `${r.label}: ${formatHours(r.hours)}`).join(" · ")}
+            </p>
+          ) : null}
           {totalUntracked > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dalle ore lavorate effettive: le trovi in «{HOURS_TO_FIX_TITLE}».</p> : null}
         </Card>
         <Card className="overflow-x-auto p-0">
@@ -566,6 +614,11 @@ export function OrePage() {
                         {breakSummaryText(p, formatHours)}
                       </span>
                     ) : null}
+                    {surchargeSummary(surchargeRows, p.person_id).map((r) => (
+                      <span key={r.label} className="block font-sans text-[11px] text-t4">
+                        {r.label}: {formatHours(r.hours)}
+                      </span>
+                    ))}
                   </td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">{formatHours(p.justified_hours)}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-gold">{formatHours(p.covered_hours)}</td>

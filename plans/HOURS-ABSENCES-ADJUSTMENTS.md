@@ -142,6 +142,15 @@ segnalata come **da verificare** nell'export.
 
 ## Maggiorazioni e attività
 
+> **Aggiornamento 2026-11-04** (spec `docs/superpowers/specs/2026-11-04-maggiorazioni-design.md`).
+> Le maggiorazioni sono **automatiche e calcolate ogni volta** dalle righe che
+> contano (`get_workspace_surcharges`), con regole dell'azienda in versioni
+> mensili (`workspace_surcharge_rules`): niente righe salvate per turno, così
+> non c'è una seconda copia delle ore. Quattro voci (notturno con fascia,
+> domenica, festivi, straordinario oltre le ore da contratto); per minuto vale
+> la più alta. Lo schema `assignment_adjustments` qui sotto resta un'idea per le
+> maggiorazioni **inserite a mano**, non costruita.
+
 Le mansioni ordinarie continuano a usare i ruoli della sede (`venue_roles`). Le
 regole che qualificano economicamente o contrattualmente una parte del lavoro
 usano categorie separate, configurate sull'azienda.

@@ -6,8 +6,18 @@
 
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
 import type { MonthlyReportRow } from "./monthlyReport";
+import { SURCHARGE_KINDS, type SurchargeRow } from "./surcharges";
 
-export type ExportCodeKey = "company" | "work" | "ferie" | "permesso" | "malattia";
+export type ExportCodeKey =
+  | "company"
+  | "work"
+  | "ferie"
+  | "permesso"
+  | "malattia"
+  | "night"
+  | "sunday"
+  | "holiday"
+  | "overtime";
 
 export type ExportCodes = {
   codes: Partial<Record<ExportCodeKey, string>>;
@@ -21,6 +31,10 @@ export const EXPORT_CODE_KEYS: readonly ExportCodeKey[] = [
   "ferie",
   "permesso",
   "malattia",
+  "night",
+  "sunday",
+  "holiday",
+  "overtime",
 ];
 
 export const EXPORT_CODE_LABELS: Record<ExportCodeKey, string> = {
@@ -29,6 +43,10 @@ export const EXPORT_CODE_LABELS: Record<ExportCodeKey, string> = {
   ferie: "Ferie",
   permesso: "Permesso",
   malattia: "Malattia",
+  night: "Notturno",
+  sunday: "Domenica",
+  holiday: "Festivi",
+  overtime: "Straordinario",
 };
 
 const isKey = (k: string): k is ExportCodeKey =>
@@ -87,17 +105,21 @@ export function exportCodesWarning(input: {
 
 /**
  * Le causali che nel periodo compaiono davvero nei file: il lavoro se c'è un
- * turno contato, ogni assenza con giorni o ore. Solo di queste l'avviso dice che
- * manca il codice.
+ * turno contato, ogni assenza con giorni o ore, ogni maggiorazione con ore. Solo
+ * di queste l'avviso dice che manca il codice.
  */
 export function usedExportKeys(
   report: readonly Pick<MonthlyReportRow, "shifts_count" | "worked_hours">[],
-  absences: readonly Pick<AbsenceSummaryRow, "ferie_days" | "permesso_days" | "permesso_hours" | "malattia_days">[]
+  absences: readonly Pick<AbsenceSummaryRow, "ferie_days" | "permesso_days" | "permesso_hours" | "malattia_days">[],
+  surcharges: readonly Pick<SurchargeRow, "kind" | "hours">[] = []
 ): ExportCodeKey[] {
   const keys: ExportCodeKey[] = [];
   if (report.some((r) => r.shifts_count > 0 || r.worked_hours > 0)) keys.push("work");
   if (absences.some((a) => a.ferie_days > 0)) keys.push("ferie");
   if (absences.some((a) => a.permesso_days > 0 || a.permesso_hours > 0)) keys.push("permesso");
   if (absences.some((a) => a.malattia_days > 0)) keys.push("malattia");
+  for (const k of SURCHARGE_KINDS) {
+    if (surcharges.some((s) => s.kind === k && s.hours > 0)) keys.push(k);
+  }
   return keys;
 }

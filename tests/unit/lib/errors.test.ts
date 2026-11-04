@@ -19,6 +19,13 @@ describe("userErrorMessage", () => {
     );
   });
 
+  it("spiega le maggiorazioni e il patrono non validi", () => {
+    expect(userErrorMessage(new Error("invalid_surcharge"))).toBe(
+      "Controlla le maggiorazioni: percentuali fra 0 e 300 con al massimo un decimale, fascia al quarto d'ora."
+    );
+    expect(userErrorMessage(new Error("invalid_patron"))).toBe("Questa data del patrono non esiste.");
+  });
+
   it("dice che un codice per il consulente è troppo lungo", () => {
     expect(userErrorMessage(new Error("invalid_code"))).toBe("Il codice è troppo lungo.");
   });

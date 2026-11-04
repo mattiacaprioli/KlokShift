@@ -22,6 +22,7 @@ import {
 } from "./reportPeriod";
 import type { HoursDailyRow } from "./hoursDaily";
 import type { ExportCodeKey, ExportCodes } from "./exportCodes";
+import type { SurchargeRulesInput, Surcharges } from "./surcharges";
 import {
   createInternalShifts,
   recordPastShift,
@@ -45,6 +46,10 @@ import {
   getOwnerHoursDaily,
   getExportCodes,
   saveExportCodes,
+  getSurchargeRules,
+  saveSurchargeRules,
+  saveVenuePatron,
+  getWorkspaceSurcharges,
   getHoursToFix,
   addShiftWorker,
   reassignShiftAssignment,
@@ -84,6 +89,62 @@ export function useSaveExportCodes(workspaceId: string) {
     mutationFn: (codes: Partial<Record<ExportCodeKey, string>>) =>
       saveExportCodes(workspaceId, codes),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.exportCodes(workspaceId) }),
+  });
+}
+
+/** Regole delle maggiorazioni e patroni: il modulo delle regole e la pagina Ore. */
+export function useSurchargeRules(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: qk.staff.surchargeRules(workspaceId ?? ""),
+    queryFn: () => getSurchargeRules(workspaceId as string),
+    enabled: !!workspaceId,
+  });
+}
+
+/** Le regole e le maggiorazioni già calcolate cambiano insieme. */
+function invalidateSurcharges(qc: QueryClient, workspaceId: string) {
+  void qc.invalidateQueries({ queryKey: qk.staff.surchargeRules(workspaceId) });
+  void qc.invalidateQueries({ queryKey: ["staff", "surcharges", workspaceId] });
+}
+
+export function useSaveSurchargeRules(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ validFrom, rules }: { validFrom: string; rules: SurchargeRulesInput }) =>
+      saveSurchargeRules(workspaceId, validFrom, rules),
+    onSuccess: () => invalidateSurcharges(qc, workspaceId),
+  });
+}
+
+export function useSaveVenuePatron(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ venueId, day, month }: { venueId: string; day: number | null; month: number | null }) =>
+      saveVenuePatron(venueId, day, month),
+    onSuccess: () => invalidateSurcharges(qc, workspaceId),
+  });
+}
+
+/** Le maggiorazioni del periodo per la pagina Ore («di cui …» e avviso). */
+export function useWorkspaceSurcharges(workspaceId: string | undefined, period: ReportPeriod) {
+  return useQuery({
+    queryKey: qk.staff.surcharges(workspaceId ?? "", periodKey(period)),
+    queryFn: () => getWorkspaceSurcharges(workspaceId as string, periodBounds(period)),
+    enabled: !!workspaceId,
+  });
+}
+
+/** Le maggiorazioni per un export, **sempre fresche**, come le righe del giorno. */
+export function fetchWorkspaceSurcharges(
+  queryClient: QueryClient,
+  workspaceId: string | undefined,
+  period: ReportPeriod
+): Promise<Surcharges> {
+  if (!workspaceId) throw new Error("no_workspace");
+  return queryClient.fetchQuery({
+    queryKey: qk.staff.surcharges(workspaceId, periodKey(period)),
+    queryFn: () => getWorkspaceSurcharges(workspaceId, periodBounds(period)),
+    staleTime: 0,
   });
 }
 

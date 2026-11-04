@@ -15,6 +15,13 @@ import type { PublishPreview } from "@/features/shifts/drafts";
 import { isActiveAssignment } from "./status";
 import { toHoursDailyRows, type DbDailyRow, type HoursDailyRow } from "./hoursDaily";
 import { toExportCodes, type ExportCodeKey, type ExportCodes } from "./exportCodes";
+import {
+  toSurchargeRules,
+  toSurcharges,
+  type SurchargeRules,
+  type SurchargeRulesInput,
+  type Surcharges,
+} from "./surcharges";
 import type { OwnerHoursRow } from "./hoursSummary";
 import {
   effectiveClockTimes,
@@ -847,6 +854,55 @@ export async function getExportCodes(workspaceId: string): Promise<ExportCodes> 
   const { data, error } = await supabase.rpc("get_export_codes", { p_workspace: workspaceId });
   if (error) throw new Error(error.message);
   return toExportCodes(data);
+}
+
+/** Le regole delle maggiorazioni (versioni mensili) e i patroni delle sedi. */
+export async function getSurchargeRules(workspaceId: string): Promise<SurchargeRules> {
+  const { data, error } = await supabase.rpc("get_surcharge_rules", { p_workspace: workspaceId });
+  if (error) throw new Error(error.message);
+  return toSurchargeRules(data);
+}
+
+/** Scrive (o sostituisce) la versione delle regole che vale da `validFrom` (primo del mese). */
+export async function saveSurchargeRules(
+  workspaceId: string,
+  validFrom: string,
+  rules: SurchargeRulesInput
+): Promise<void> {
+  const { error } = await supabase.rpc("save_surcharge_rules", {
+    p_workspace: workspaceId,
+    p_valid_from: validFrom,
+    p_rules: rules,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Il patrono della sede; `null` e `null` = nessuno. Vale anche per i mesi passati. */
+export async function saveVenuePatron(
+  venueId: string,
+  day: number | null,
+  month: number | null
+): Promise<void> {
+  const { error } = await supabase.rpc("save_venue_patron", {
+    p_venue: venueId,
+    p_day: day as number,
+    p_month: month as number,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Le maggiorazioni del periodo, calcolate dal database (`get_workspace_surcharges`). */
+export async function getWorkspaceSurcharges(
+  workspaceId: string,
+  { start, end }: { start: string; end: string }
+): Promise<Surcharges> {
+  const { data, error } = await supabase.rpc("get_workspace_surcharges", {
+    p_workspace: workspaceId,
+    p_from: start,
+    p_to: end,
+  });
+  if (error) throw new Error(error.message);
+  return toSurcharges(data ?? []);
 }
 
 /** Sostituisce i codici dell'azienda: una chiave assente o vuota si cancella. */

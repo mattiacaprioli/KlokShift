@@ -116,7 +116,7 @@ begin
   --    di 20261005000500_commercial_archive_reads più le letture della timbratura
   --    senza turno (una ridefinizione partita da una versione vecchia l'aveva perso),
   --    l'anteprima della pubblicazione delle bozze, le righe del giorno e i codici
-  --    per il consulente.
+  --    per il consulente, le regole delle maggiorazioni.
   perform tests.eq(
     (select coalesce(string_agg(p.proname, ', ' order by p.proname), '') from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
@@ -126,7 +126,8 @@ begin
           'get_member_performance', 'get_member_worked_shifts', 'get_staff_planning',
           'get_workspace_absence_summary', 'get_workspace_contacts', 'get_workspace_hours_summary',
           'get_open_unplanned_clocks', 'get_my_unplanned_clock', 'get_publish_preview',
-          'get_workspace_hours_daily', 'get_export_codes'])
+          'get_workspace_hours_daily', 'get_export_codes', 'get_surcharge_rules',
+          'get_workspace_surcharges'])
         and p.prosrc not like '%commercial_readable_%'),
     '', 'le letture operative DEFINER mantengono il confine commerciale');
 end $$;

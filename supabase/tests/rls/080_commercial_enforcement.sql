@@ -96,6 +96,9 @@ begin
   perform tests.raises(format('select public.update_member(%L,''{"matricola":"AR1"}'')',tests.id('M_Emp')),
     'workspace_read_only','matricola negata');
   perform tests.eq(public.get_export_codes(ws)->'codes','{}'::jsonb,'i codici si leggono anche in archivio');
+  perform tests.raises(format('select public.save_surcharge_rules(%L,''2026-11-01'',''{"night_pct":20}'')',ws),
+    'workspace_read_only','maggiorazioni negate');
+  perform tests.eq(public.get_surcharge_rules(ws)->'versions','[]'::jsonb,'le maggiorazioni si leggono anche in archivio');
   perform tests.raises(format('update public.venues set name=''Operativo'' where id=%L',v1),'workspace_read_only','scrittura diretta sede negata');
   perform tests.raises(format('insert into public.venue_roles(venue_id,name) values(%L,''Nuova'')',v1),'workspace_read_only','ruoli diretti negati');
   perform tests.raises(format('insert into public.staff_documents(member_id,name,storage_path) values(%L,''Test'',%L)',

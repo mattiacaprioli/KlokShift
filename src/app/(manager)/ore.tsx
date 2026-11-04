@@ -36,7 +36,9 @@ import { RECORD_ACTION } from "@/features/shifts/recorded";
 import {
   fetchOwnerHoursDaily,
   fetchExportCodes,
+  fetchWorkspaceSurcharges,
   useExportCodes,
+  useWorkspaceSurcharges,
   useHoursToFix,
   useOwnerHoursSummary,
 } from "@/features/assignments/hooks";
@@ -49,6 +51,7 @@ import {
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import { exportCodesWarning, usedExportKeys } from "@/features/assignments/exportCodes";
+import { missingContractWarning, surchargeSummary } from "@/features/assignments/surcharges";
 import {
   breakSummaryText,
   exportAvailability,
@@ -175,10 +178,20 @@ export default function VenueHoursScreen() {
   // Codici per il consulente: l'avviso usa gli stessi dati che gli export
   // rileggono freschi al tocco.
   const exportCodes = useExportCodes(canRecord ? workspaceId : undefined).data;
+  // Le maggiorazioni le calcola il database: qui si mostrano «di cui» e basta.
+  // Si leggono anche in archivio, come le ore.
+  const surchargesData = useWorkspaceSurcharges(
+    canAny("can_view_hours") ? workspaceId : undefined,
+    period
+  ).data;
+  const surchargeRows = filterByPeople(surchargesData?.rows ?? [], selection);
+  const contractWarning = surchargesData
+    ? missingContractWarning(surchargesData.noContract, report.map((r) => r.person_id))
+    : null;
   const codesWarning = exportCodes
     ? exportCodesWarning({
         personIds: report.map((r) => r.person_id),
-        usedKeys: usedExportKeys(report, absences),
+        usedKeys: usedExportKeys(report, absences, surchargeRows),
         codes: exportCodes,
       })
     : null;
@@ -205,20 +218,25 @@ export default function VenueHoursScreen() {
     setExporting(true);
     const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
+      // Maggiorazioni fresche, come le righe del giorno.
+      const surcharges =
+        kind === "absences"
+          ? []
+          : filterByPeople((await fetchWorkspaceSurcharges(queryClient, workspaceId, period)).rows, selection);
       if (kind === "pdf") {
         const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
         await exportHoursPdf(company, label, people, totalHours, absences, names, {
           rows: daily,
           ...periodBounds(period),
-        });
+        }, surcharges);
       } else {
         // Il PDF è da leggere: i codici servono solo ai CSV da importare.
         const codes = await fetchExportCodes(queryClient, workspaceId);
         if (kind === "daily") {
           const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
-          await exportDailyCsv(company, label, daily, names, codes);
+          await exportDailyCsv(company, label, daily, names, codes, surcharges);
         } else if (kind === "csv") {
-          await exportHoursCsv(company, label, people, absences, names, codes);
+          await exportHoursCsv(company, label, people, absences, names, codes, surcharges);
         } else {
           await exportAbsencesCsv(company, label, absences, names, codes);
         }
@@ -428,6 +446,9 @@ export default function VenueHoursScreen() {
                   </View>
                   <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
                   {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
+                  {surchargeSummary(surchargeRows).map((r) => (
+                    <Text key={r.label} className="mt-1 text-xs text-t2">{r.label}: {formatHours(r.hours)}</Text>
+                  ))}
                   {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo: le trovi in «{HOURS_TO_FIX_TITLE}».</Text> : null}
                   <Text className="text-xs text-t3">
                     {totalShifts} turni · {report.length}{" "}
@@ -454,6 +475,13 @@ export default function VenueHoursScreen() {
                       {breakSummaryText(p, formatHours) ? (
                         <Text className="text-xs text-t3">
                           Ore lavorate: {breakSummaryText(p, formatHours)}
+                        </Text>
+                      ) : null}
+                      {surchargeSummary(surchargeRows, p.person_id).length > 0 ? (
+                        <Text className="text-xs text-t3">
+                          {surchargeSummary(surchargeRows, p.person_id)
+                            .map((r) => `${r.label}: ${formatHours(r.hours)}`)
+                            .join(" · ")}
                         </Text>
                       ) : null}
                       <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale ore coperte {formatHours(p.covered_hours)}</Text>
@@ -521,6 +549,12 @@ export default function VenueHoursScreen() {
                   </Text>
                 </View>
               ) : null}
+              {contractWarning ? (
+                <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
+                  <Icon name="alert" size={16} color="#E2922F" />
+                  <Text className="flex-1 text-[13px] leading-5 text-t2">{contractWarning}</Text>
+                </View>
+              ) : null}
               {codesWarning ? (
                 <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
                   <Icon name="alert" size={16} color="#E2922F" />
@@ -553,13 +587,22 @@ export default function VenueHoursScreen() {
         {/* Fuori dal ramo «con dati»: un'azienda nuova li prepara prima del
             primo mese, come sulla dashboard. */}
         {query.isLoading || absenceQuery.isLoading ? null : (
-          <Pressable
-            onPress={() => router.push("/codici-consulente")}
-            className="items-center py-2"
-            accessibilityRole="link"
-          >
-            <Text className="text-sm font-sans-semibold text-gold">Codici per il consulente</Text>
-          </Pressable>
+          <View className="flex-row justify-center gap-6">
+            <Pressable
+              onPress={() => router.push("/maggiorazioni")}
+              className="items-center py-2"
+              accessibilityRole="link"
+            >
+              <Text className="text-sm font-sans-semibold text-gold">Maggiorazioni</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/codici-consulente")}
+              className="items-center py-2"
+              accessibilityRole="link"
+            >
+              <Text className="text-sm font-sans-semibold text-gold">Codici per il consulente</Text>
+            </Pressable>
+          </View>
         )}
       </ScrollView>
     </View>

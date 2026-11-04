@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { exportAvailability } from "@/features/assignments/monthlyReport";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
+import type { SurchargeRow } from "@/features/assignments/surcharges";
 import {
   absencesFileName,
   buildAbsencesCsv,
@@ -163,5 +164,51 @@ describe("codici per il consulente nel mensile e nelle assenze", () => {
     const out = lines(buildAbsencesCsv([absence()], codes));
     expect(out[0].startsWith("Nome;Matricola;Ferie (giorni di calendario)")).toBe(true);
     expect(out[1]).toBe("Marco;M9;1;0;0;0;");
+  });
+});
+
+describe("maggiorazioni nel mensile e nel PDF", () => {
+  const sur = (extra: Partial<SurchargeRow> = {}): SurchargeRow => ({
+    person_id: "p", person_name: "Anna", date: "2026-10-11", venue_name: "Centro", title: "Sera",
+    clock_in: "18:00", clock_out: "02:00", kind: "night", percentage: 20, hours: 1.88, ...extra,
+  });
+  const both = [sur({ kind: "sunday", percentage: 30, hours: 5.62 }), sur()];
+
+  it("una colonna «di cui» per voce dopo le pause", () => {
+    const out = lines(buildHoursCsv([person()], [], undefined, both));
+    expect(out[0]).toContain(";Pausa non retribuita esclusa;Di cui notturno +20%;Di cui domenica +30%;Ferie");
+    expect(out[1]).toContain(";1,88;5,62;");
+  });
+
+  it("con il codice della voce fra parentesi", () => {
+    const codes = { codes: { night: "NOT" }, matricole: new Map<string, string>() };
+    expect(lines(buildHoursCsv([person()], [], codes, both))[0]).toContain(";Di cui notturno +20% (NOT);");
+  });
+
+  it("due percentuali della stessa voce: due colonne, stesso codice", () => {
+    const codes = { codes: { night: "NOT" }, matricole: new Map<string, string>() };
+    const header = lines(buildHoursCsv([person()], [], codes, [sur(), sur({ percentage: 25, hours: 2, date: "2026-11-02" })]))[0];
+    expect(header).toContain(";Di cui notturno +20% (NOT);Di cui notturno +25% (NOT);");
+  });
+
+  it("chi non ha maggiorazioni ha zero", () => {
+    const out = lines(buildHoursCsv([person(), person({ person_id: "q", person_name: "Bea" })], [], undefined, both));
+    expect(out[0].split(";").slice(6, 8)).toEqual(["Di cui notturno +20%", "Di cui domenica +30%"]);
+    expect(out[2].split(";").slice(6, 8)).toEqual(["0", "0"]);
+  });
+
+  it("senza maggiorazioni il mensile è quello di sempre", () => {
+    expect(buildHoursCsv([person()], [], undefined, [])).toBe(buildHoursCsv([person()]));
+    expect(buildHoursCsv([person()], [], undefined, undefined)).toBe(buildHoursCsv([person()]));
+  });
+
+  it("il PDF ha le colonne «di cui» e il totale", () => {
+    const html = buildHoursHtml("Osteria", "ottobre 2026", [person()], 8, [], [], undefined, both);
+    expect(html).toContain("Di cui notturno +20%");
+    expect(html).toContain("Di cui domenica +30%");
+    expect(html).toContain(">5,62<");
+    expect(buildHoursHtml("Osteria", "ottobre 2026", [person()], 8, [], [], undefined, [])).toBe(
+      buildHoursHtml("Osteria", "ottobre 2026", [person()], 8)
+    );
   });
 });

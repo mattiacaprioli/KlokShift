@@ -83,3 +83,8 @@ do $$ begin
     create publication supabase_realtime;
   end if;
 end $$;
+
+-- I test possono contare le chiamate a una funzione nella propria transazione
+-- (pg_stat_xact_user_functions): per esempio che la pagina Ore, senza regole
+-- delle maggiorazioni, non rifaccia il conto delle ore (test 160). Solo banco.
+grant set on parameter track_functions to postgres;
