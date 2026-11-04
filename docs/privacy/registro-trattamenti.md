@@ -38,8 +38,8 @@ Allegato II del DPA:
 | Assenze | chi lavora nei turni | ferie, permessi, malattia (date; per la malattia eventuale protocollo del certificato) — **dati sanitari** |
 | Documenti | persone della scheda | contratti, attestati, certificati, scadenze |
 | Comunicazioni | membri dell'azienda | messaggi della chat, notifiche, identificativi dei dispositivi |
-| Schede del team | persone dell'azienda | nome nell'azienda, email, telefono, lingue, tipo di rapporto, ore da contratto, note |
-| Export | — | ore e presenze per il consulente del lavoro, export completo dell'azienda |
+| Schede del team | persone dell'azienda | nome nell'azienda, email, telefono, lingue, tipo di rapporto, ore da contratto, matricola del programma paghe, note |
+| Export | — | ore e presenze per il consulente del lavoro (con matricola e codici delle causali), export completo dell'azienda |
 | Conservazione a fine servizio | tutti i precedenti | archivio 12 mesi da `operational_until`, poi cancellazione entro 30 giorni (`admin_delete_workspace_data`, coda file `workspace-file-cleanup`) |
 
 ## c) Trasferimenti verso paesi terzi

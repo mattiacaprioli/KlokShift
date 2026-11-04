@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { userErrorMessage } from "@/lib/errors";
+import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { operationsGate } from "@/features/workspace/access";
 import { useExportCodes, useSaveExportCodes } from "@/features/assignments/hooks";
 import {
   EXPORT_CODE_KEYS,
@@ -64,6 +66,10 @@ function CodesForm({
   const toast = useToast();
   const save = useSaveExportCodes(workspaceId);
   const pending = save.isPending;
+  // In archivio i codici si leggono ma non si cambiano: lo si dice, invece di
+  // lasciar fallire «Salva».
+  const { access, isOwner } = useOwnerVenues();
+  const gate = operationsGate(access, { isOwner });
   const [values, setValues] = useState<Record<ExportCodeKey, string>>(() => {
     const out = {} as Record<ExportCodeKey, string>;
     for (const k of EXPORT_CODE_KEYS) out[k] = initial.codes[k] ?? "";
@@ -80,7 +86,7 @@ function CodesForm({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (pending) return;
+    if (pending || !gate.allowed) return;
     save.mutate(values, {
       onSuccess: () => {
         toast.show("Codici salvati");
@@ -97,6 +103,7 @@ function CodesForm({
             <Input
               value={values[k]}
               maxLength={20}
+              disabled={!gate.allowed}
               autoComplete="off"
               onChange={(e) => setValues((prev) => ({ ...prev, [k]: e.target.value }))}
             />
@@ -108,12 +115,17 @@ function CodesForm({
           {userErrorMessage(save.error)}
         </p>
       ) : null}
+      {gate.allowed ? null : (
+        <p className="mt-4 text-sm text-t3">{gate.reason}</p>
+      )}
       <div className="mt-6 flex flex-wrap gap-2">
-        <Button type="submit" variant="gold" disabled={pending}>
-          {pending ? "Salvataggio…" : "Salva"}
-        </Button>
+        {gate.allowed ? (
+          <Button type="submit" variant="gold" disabled={pending}>
+            {pending ? "Salvataggio…" : "Salva"}
+          </Button>
+        ) : null}
         <Button onClick={onClose} disabled={pending}>
-          Annulla
+          {gate.allowed ? "Annulla" : "Chiudi"}
         </Button>
       </div>
     </form>

@@ -182,3 +182,15 @@ export function contractSectionMode(input: {
   if (!input.managesPerson || input.isMe) return null;
   return "matricola";
 }
+
+/** Il messaggio dopo «Salva» nella sezione «Contratto» (app e dashboard). */
+export function contractSavedMessage(input: {
+  mode: "contract" | "matricola";
+  /** Le ore da contratto sono cambiate rispetto a prima. */
+  contractChanged: boolean;
+  /** Il campo ore è vuoto: il contratto non c'è più. */
+  removed: boolean;
+}): string {
+  if (input.mode === "matricola" || !input.contractChanged) return "Matricola aggiornata";
+  return input.removed ? "Contratto rimosso" : "Contratto aggiornato";
+}

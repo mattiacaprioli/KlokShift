@@ -42,6 +42,9 @@ begin
   exception when others then v_err := sqlerrm;
   end;
   perform tests.eq(v_err, 'matricola_taken', 'senza Team su chi ce l''ha, niente nome');
+  -- Un collaboratore non scrive la propria matricola, come il resto del contratto.
+  perform tests.raises(format('select public.update_member(%L, %L::jsonb)', tests.id('M_Co'),
+    '{"matricola":"CO1"}'), 'not_allowed', 'la propria matricola no');
   perform tests.login('Ow');
 
   -- Chi è uscito tiene la sua matricola.

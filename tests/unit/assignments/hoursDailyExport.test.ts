@@ -233,6 +233,11 @@ describe("buildDailyCsv con i codici per il consulente", () => {
     expect(lines(buildDailyCsv([row({ person_id: "q" })], codes))[1].split(";")[1]).toBe("'=B7");
   });
 
+  it("protegge un codice che comincia con +", () => {
+    const plus = { codes: { company: "+AZ", work: "+01" }, matricole: new Map<string, string>() };
+    expect(lines(buildDailyCsv([row()], plus))[1].startsWith("'+AZ;;'+01;")).toBe(true);
+  });
+
   it("senza codici l'output è quello di sempre", () => {
     expect(buildDailyCsv([row()], undefined)).toBe(buildDailyCsv([row()]));
   });

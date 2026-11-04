@@ -28,6 +28,7 @@ import {
   CONTRACT_PERIODS,
   contractChanged,
   contractHoursInput,
+  contractSavedMessage,
   contractSectionMode,
   formatContract,
   parseContractHours,
@@ -876,7 +877,13 @@ function ContractForm({
           matricola: nextMatricola,
         },
       });
-      toast.show(withContract ? "Contratto aggiornato" : "Matricola aggiornata");
+      toast.show(
+        contractSavedMessage({
+          mode,
+          contractChanged: withContract && contractChanged(contract, parsed, period),
+          removed: parsed == null,
+        })
+      );
       onDone();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");

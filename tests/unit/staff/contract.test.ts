@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   contractChanged,
+  contractSavedMessage,
   contractSectionMode,
   contractHoursInput,
   formatContract,
@@ -96,5 +97,17 @@ describe("chi vede contratto e matricola nella scheda", () => {
   it("niente sulla propria scheda né senza «Team»", () => {
     expect(contractSectionMode({ isOwner: false, isMe: true, managesPerson: true })).toBeNull();
     expect(contractSectionMode({ isOwner: false, isMe: false, managesPerson: false })).toBeNull();
+  });
+});
+
+describe("messaggio dopo il salvataggio del contratto", () => {
+  it("dice se il contratto è stato tolto o cambiato", () => {
+    expect(contractSavedMessage({ mode: "contract", contractChanged: true, removed: true })).toBe("Contratto rimosso");
+    expect(contractSavedMessage({ mode: "contract", contractChanged: true, removed: false })).toBe("Contratto aggiornato");
+  });
+
+  it("se è cambiata solo la matricola parla della matricola", () => {
+    expect(contractSavedMessage({ mode: "contract", contractChanged: false, removed: true })).toBe("Matricola aggiornata");
+    expect(contractSavedMessage({ mode: "matricola", contractChanged: false, removed: false })).toBe("Matricola aggiornata");
   });
 });

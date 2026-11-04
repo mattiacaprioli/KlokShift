@@ -9,6 +9,7 @@ import { ListSkeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { operationsGate } from "@/features/workspace/access";
 import { useExportCodes, useSaveExportCodes } from "@/features/assignments/hooks";
 import {
   EXPORT_CODE_KEYS,
@@ -48,10 +49,10 @@ export default function ExportCodesScreen() {
             Te li dà il tuo consulente: sono i codici del suo programma paghe. Puoi
             lasciarli vuoti.
           </Text>
-          {query.isPending ? (
-            <ListSkeleton />
-          ) : query.isError || !workspaceId ? (
+          {!workspaceId || query.isError ? (
             <QueryError onRetry={() => void query.refetch()} />
+          ) : query.isPending ? (
+            <ListSkeleton />
           ) : (
             <CodesForm workspaceId={workspaceId} initial={query.data} />
           )}
@@ -65,6 +66,10 @@ function CodesForm({ workspaceId, initial }: { workspaceId: string; initial: Exp
   const router = useRouter();
   const toast = useToast();
   const save = useSaveExportCodes(workspaceId);
+  // In archivio i codici si leggono ma non si cambiano: lo si dice, invece di
+  // lasciar fallire «Salva».
+  const { access, isOwner } = useOwnerVenues();
+  const gate = operationsGate(access, { isOwner });
   const [values, setValues] = useState<Record<ExportCodeKey, string>>(() => {
     const out = {} as Record<ExportCodeKey, string>;
     for (const k of EXPORT_CODE_KEYS) out[k] = initial.codes[k] ?? "";
@@ -92,9 +97,14 @@ function CodesForm({ workspaceId, initial }: { workspaceId: string; initial: Exp
           autoCapitalize="characters"
           autoCorrect={false}
           maxLength={20}
+          editable={gate.allowed}
         />
       ))}
-      <GoldButton label="Salva" onPress={() => void onSave()} disabled={save.isPending} />
+      {gate.allowed ? (
+        <GoldButton label="Salva" onPress={() => void onSave()} disabled={save.isPending} />
+      ) : (
+        <Text className="text-sm leading-5 text-t3">{gate.reason}</Text>
+      )}
     </View>
   );
 }

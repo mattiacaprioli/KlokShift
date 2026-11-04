@@ -546,15 +546,20 @@ export default function VenueHoursScreen() {
                   onPress={() => onExport("absences")} disabled={exporting}
                 />
               ) : null}
-              <Pressable
-                onPress={() => router.push("/codici-consulente")}
-                className="items-center py-2"
-                accessibilityRole="link"
-              >
-                <Text className="text-sm font-sans-semibold text-gold">Codici per il consulente</Text>
-              </Pressable>
             </View>
           </>
+        )}
+
+        {/* Fuori dal ramo «con dati»: un'azienda nuova li prepara prima del
+            primo mese, come sulla dashboard. */}
+        {query.isLoading || absenceQuery.isLoading ? null : (
+          <Pressable
+            onPress={() => router.push("/codici-consulente")}
+            className="items-center py-2"
+            accessibilityRole="link"
+          >
+            <Text className="text-sm font-sans-semibold text-gold">Codici per il consulente</Text>
+          </Pressable>
         )}
       </ScrollView>
     </View>

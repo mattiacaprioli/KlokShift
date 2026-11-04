@@ -92,6 +92,10 @@ begin
   perform tests.raises(format('select public.assign(%L,%L)',future_sid,mid),'workspace_read_only','nuova assegnazione negata');
   perform tests.raises(format('select public.delete_shift(%L)',sid),'workspace_read_only','storico non cancellato dal normale form');
   perform tests.raises(format('select public.add_member(%L,''{"full_name":"Archivio"}'')',ws),'workspace_read_only','nuovo membro negato');
+  perform tests.raises(format('select public.save_export_codes(%L,''{"work":"01"}'')',ws),'workspace_read_only','codici del consulente negati');
+  perform tests.raises(format('select public.update_member(%L,''{"matricola":"AR1"}'')',tests.id('M_Emp')),
+    'workspace_read_only','matricola negata');
+  perform tests.eq(public.get_export_codes(ws)->'codes','{}'::jsonb,'i codici si leggono anche in archivio');
   perform tests.raises(format('update public.venues set name=''Operativo'' where id=%L',v1),'workspace_read_only','scrittura diretta sede negata');
   perform tests.raises(format('insert into public.venue_roles(venue_id,name) values(%L,''Nuova'')',v1),'workspace_read_only','ruoli diretti negati');
   perform tests.raises(format('insert into public.staff_documents(member_id,name,storage_path) values(%L,''Test'',%L)',
