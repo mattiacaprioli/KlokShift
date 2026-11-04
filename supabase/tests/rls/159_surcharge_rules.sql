@@ -50,6 +50,10 @@ begin
     '{"night_pct":20,"night_start":"22:10"}'), 'invalid_surcharge', 'fascia non al quarto d''ora');
   perform tests.raises(format('select public.save_surcharge_rules(%L, %L, %L::jsonb)', w1, '2026-11-01',
     '{"night_pct":20,"night_start":"06:00","night_end":"06:00"}'), 'invalid_surcharge', 'inizio uguale alla fine');
+  perform tests.raises(format('select public.save_surcharge_rules(%L, %L, %L::jsonb)', w1, '2026-11-01',
+    '{"night_pct":20,"night_end":"24:00"}'), 'invalid_surcharge', '24:00 non è un orario');
+  perform tests.raises(format('select public.save_surcharge_rules(%L, %L, %L::jsonb)', w1, '2026-11-01',
+    '{"nigth_pct":20}'), 'invalid_surcharge', 'chiave sconosciuta');
 
   -- Co2 ha solo «Ore»: scrive le regole. Co ha solo «Turni»: niente.
   perform tests.login('Co2');
@@ -73,6 +77,8 @@ begin
                               and (p ->> 'day')::int = 4 and (p ->> 'month')::int = 10), 'patrono letto');
   perform tests.raises(format('select public.save_venue_patron(%L, 31, 2)', tests.id('V1')),
     'invalid_patron', 'data impossibile');
+  perform tests.raises(format('select public.save_venue_patron(%L, 4, 10)', gen_random_uuid()),
+    'not_allowed', 'sede che non esiste');
   perform public.save_venue_patron(tests.id('V2'), 10, 11);
 
   -- Festivi.

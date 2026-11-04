@@ -15,10 +15,14 @@ begin
   perform tests.eq(r -> 'codes', '{"company":"AZ1","work":"01","ferie":"FE"}'::jsonb,
     'i codici si salvano senza spazi ai lati');
 
-  -- Il salvataggio sostituisce l'insieme: una chiave assente sparisce.
+  -- Il salvataggio tocca solo le chiavi mandate: una chiave assente resta (una
+  -- versione vecchia del modulo non cancella i codici che non conosce).
   perform public.save_export_codes(tests.id('W1'), '{"company":"AZ1","work":"01"}'::jsonb);
   perform tests.eq(public.get_export_codes(tests.id('W1')) -> 'codes',
-    '{"company":"AZ1","work":"01"}'::jsonb, 'una causale tolta non resta');
+    '{"company":"AZ1","work":"01","ferie":"FE"}'::jsonb, 'una chiave non mandata resta');
+  perform public.save_export_codes(tests.id('W1'), '{"ferie":""}'::jsonb);
+  perform tests.eq(public.get_export_codes(tests.id('W1')) -> 'codes',
+    '{"company":"AZ1","work":"01"}'::jsonb, 'una causale svuotata sparisce');
   perform public.save_export_codes(tests.id('W1'), '{"company":"AZ1","work":"01","malattia":""}'::jsonb);
   perform tests.eq(public.get_export_codes(tests.id('W1')) -> 'codes',
     '{"company":"AZ1","work":"01"}'::jsonb, 'vuoto = nessun codice');

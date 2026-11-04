@@ -15,7 +15,9 @@ import {
   PATRON_HELP,
   PCT_ERROR,
   SURCHARGES_HELP,
+  PATRON_ERROR,
   isQuarterTime,
+  parsePatron,
   parseSurchargePct,
   rulesChangeNote,
   rulesForMonth,
@@ -41,6 +43,8 @@ export function SurchargeRulesDialog({
   const { venues, isOwner, can } = useOwnerVenues();
   const current = monthKey();
   const minMonth = addMonthsToKey(current, -12);
+  // Fino a un anno avanti: un cambio di contratto già noto si programma.
+  const maxMonth = addMonthsToKey(current, 12);
   const [month, setMonth] = useState(current);
   const hourVenues = venues.filter((v) => isOwner || can(v.id, "can_view_hours"));
 
@@ -87,7 +91,7 @@ export function SurchargeRulesDialog({
                 <button
                   type="button"
                   aria-label="Mese dopo"
-                  disabled={month >= current}
+                  disabled={month >= maxMonth}
                   onClick={() => setMonth((m) => addMonthsToKey(m, 1))}
                   className="focus-gold px-3 py-1.5 text-gold disabled:opacity-30"
                 >
@@ -239,15 +243,20 @@ function PatronsForm({
     return out;
   });
 
+  const parsed = Object.fromEntries(
+    venues.map((v) => [v.id, parsePatron(values[v.id]?.day ?? "", values[v.id]?.month ?? "")])
+  );
+  const invalid = Object.values(parsed).some((p) => p === "invalid");
+
   async function onSave() {
+    if (invalid) return;
     try {
       for (const v of venues) {
-        const cur = values[v.id];
+        const cur = parsed[v.id];
+        if (cur === "invalid") continue;
         const p = initial(v.id);
-        const day = cur.day.trim() === "" ? null : Number(cur.day);
-        const mon = cur.month.trim() === "" ? null : Number(cur.month);
-        if (day === (p?.day ?? null) && mon === (p?.month ?? null)) continue;
-        await save.mutateAsync({ venueId: v.id, day, month: mon });
+        if (cur.day === (p?.day ?? null) && cur.month === (p?.month ?? null)) continue;
+        await save.mutateAsync({ venueId: v.id, day: cur.day, month: cur.month });
       }
       toast.show("Patroni salvati");
     } catch (e) {
@@ -271,7 +280,7 @@ function PatronsForm({
               onChange={(e) => setValues((prev) => ({ ...prev, [v.id]: { ...prev[v.id], day: e.target.value } }))}
             />
           </Field>
-          <Field label="Mese">
+          <Field label="Mese" error={parsed[v.id] === "invalid" ? PATRON_ERROR : undefined}>
             <Input
               value={values[v.id]?.month ?? ""}
               inputMode="numeric"
@@ -284,7 +293,7 @@ function PatronsForm({
       ))}
       {gate.allowed ? (
         <div>
-          <Button onClick={() => void onSave()} disabled={save.isPending}>
+          <Button onClick={() => void onSave()} disabled={save.isPending || invalid}>
             Salva i patroni
           </Button>
         </div>

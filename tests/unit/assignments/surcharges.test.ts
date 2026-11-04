@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isQuarterTime,
+  parsePatron,
   rulesChangeNote,
   missingContractWarning,
   rulesForMonth,
@@ -169,5 +170,27 @@ describe("cosa cambia salvando le regole di un mese", () => {
 
   it("il mese corrente senza versioni dopo: niente da dire", () => {
     expect(rulesChangeNote([v("2026-09-01")], "2026-11", "2026-11")).toBeNull();
+  });
+});
+
+describe("patrono e mesi futuri", () => {
+  it("il patrono è giorno e mese insieme, o niente", () => {
+    expect(parsePatron("4", "10")).toEqual({ day: 4, month: 10 });
+    expect(parsePatron(" ", "")).toEqual({ day: null, month: null });
+    expect(parsePatron("29", "2")).toEqual({ day: 29, month: 2 });
+    for (const [d, m] of [["4a", ""], ["4", ""], ["", "10"], ["3.5", "10"], ["31", "2"], ["0", "1"], ["1", "13"]]) {
+      expect(parsePatron(d, m)).toBe("invalid");
+    }
+  });
+
+  it("un mese futuro dice da quando valgono", () => {
+    const v = { valid_from: "2027-03-01", night_pct: 20, night_start: "22:00", night_end: "06:00",
+      sunday_pct: null, holiday_pct: null, overtime_pct: null };
+    expect(rulesChangeNote([], "2027-01", "2026-11")).toBe(
+      "Valgono da gennaio 2027: fino ad allora restano le regole di prima."
+    );
+    expect(rulesChangeNote([v], "2027-01", "2026-11")).toBe(
+      "Valgono da gennaio 2027 a febbraio 2027: da marzo 2027 valgono le regole salvate per marzo 2027."
+    );
   });
 });

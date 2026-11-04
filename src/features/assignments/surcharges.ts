@@ -256,10 +256,39 @@ export function rulesChangeNote(
     .filter((m) => m > month)
     .sort()[0];
   const from = formatMonthKey(month);
-  if (!next) return month < current ? `I file dei mesi da ${from} in poi cambiano.` : null;
+  const future = month > current;
+  if (!next) {
+    if (future) return `Valgono da ${from}: fino ad allora restano le regole di prima.`;
+    return month < current ? `I file dei mesi da ${from} in poi cambiano.` : null;
+  }
   const last = addMonthsToKey(next, -1);
   const until = formatMonthKey(next);
-  const changes =
-    last === month ? `Cambia solo il file di ${from}` : `Cambiano solo i file da ${from} a ${formatMonthKey(last)}`;
+  const changes = future
+    ? last === month
+      ? `Valgono solo per ${from}`
+      : `Valgono da ${from} a ${formatMonthKey(last)}`
+    : last === month
+      ? `Cambia solo il file di ${from}`
+      : `Cambiano solo i file da ${from} a ${formatMonthKey(last)}`;
   return `${changes}: da ${until} valgono le regole salvate per ${until}.`;
 }
+
+/**
+ * Il patrono scritto nel modulo: giorno e mese interi e una data che esiste (il
+ * 29 febbraio sì), oppure entrambi vuoti = nessun patrono. Come `save_venue_patron`.
+ */
+export function parsePatron(
+  dayText: string,
+  monthText: string
+): { day: number | null; month: number | null } | "invalid" {
+  const d = dayText.trim();
+  const m = monthText.trim();
+  if (d === "" && m === "") return { day: null, month: null };
+  if (!/^\d{1,2}$/.test(d) || !/^\d{1,2}$/.test(m)) return "invalid";
+  const day = Number(d);
+  const month = Number(m);
+  if (month < 1 || month > 12 || day < 1) return "invalid";
+  const daysInMonth = new Date(2024, month, 0).getDate();
+  return day > daysInMonth ? "invalid" : { day, month };
+}
+export const PATRON_ERROR = "Giorno e mese di una data che esiste (es. 4 e 10), o entrambi vuoti.";

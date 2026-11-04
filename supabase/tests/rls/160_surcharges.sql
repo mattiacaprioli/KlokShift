@@ -231,6 +231,23 @@ begin
   perform tests.eq((select sum(x.hours) from public.get_workspace_surcharges(w1, '2026-09-01', '2026-10-01') x
                      where x.member_id = tests.id('M_Emp') and x.title = 'Tardi 2' and x.kind = 'overtime'),
     0.25, 'periodi intrecciati: le ore del giorno non si azzerano');
+
+  -- La base è quella che vede chi legge: con «Ore» solo su V1, il turno di
+  -- V1 conta 4 ore (il turno sovrapposto di V2 non è nel suo perimetro), e le
+  -- sue maggiorazioni stanno su quelle 4 ore, non sull'ora che resta al titolare.
+  ids := tests.create_shifts(jsonb_build_array(
+    jsonb_build_object('venue_id', tests.id('V1'), 'title', 'Notte V1', 'date', '2026-10-06',
+      'start_time', '22:00', 'end_time', '02:00', 'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm2b))),
+    jsonb_build_object('venue_id', tests.id('V2'), 'title', 'Notte V2', 'date', '2026-10-06',
+      'start_time', '23:00', 'end_time', '03:00', 'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm2)))
+  ));
+  perform tests.eq((select d.hours from public.get_workspace_hours_daily(w1, '2026-10-01', '2026-11-01') d
+                     where d.title = 'Notte V1' and d.kind = 'work'), 1.00, 'il titolare: 1 ora sola su V1');
+  perform tests.login('Co');
+  perform tests.eq((select d.hours from public.get_workspace_hours_daily(w1, '2026-10-01', '2026-11-01') d
+                     where d.title = 'Notte V1' and d.kind = 'work'), 4.00, 'chi vede solo V1: 4 ore');
+  perform tests.eq((select sum(x.hours) from public.get_workspace_surcharges(w1, '2026-10-01', '2026-11-01') x
+                     where x.title = 'Notte V1' and x.kind = 'night'), 4.00, 'notturno sulle 4 ore che vede');
   perform tests.logout();
 end $$;
 

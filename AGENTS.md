@@ -173,7 +173,8 @@ scheda la matricola la scrive anche chi ha «Team», le ore da contratto solo
 il titolare (`contractSectionMode`).
 I **codici** dell'azienda (codice azienda e uno per causale) stanno in
 `workspace_export_codes`, chiave e valore, scritti da chi ha «Ore» con
-`save_export_codes`; le chiavi sono pronte ad accogliere le maggiorazioni.
+`save_export_codes`, che tocca solo le chiavi mandate (vuoto = cancella); le
+chiavi accolgono anche le maggiorazioni.
 `get_export_codes` è la **sola fonte** dell'export per codici e matricole: dà
 le matricole nel perimetro «Ore», anche a chi non ha «Team» (servono al file).
 Le RPC delle ore non cambiano firma: i costruttori dei CSV ricevono i codici
@@ -197,7 +198,9 @@ si riportano **in proporzione** alle ore che contano, perché la pausa non dice
 dove cade, e non superano mai le ore della riga. Lo straordinario sono le ore
 oltre quelle da contratto nel periodo del contratto, le ultime in ordine di
 tempo, su **tutte** le sedi della persona (`workspace_hour_rows_in`): chi legge
-vede comunque solo le righe delle sue sedi. Le maggiorazioni non cambiano mai il
+vede comunque solo le righe delle sue sedi, e il «di cui» sta sulle ore della
+riga come le vede lui (`20261104000500`). Le regole si programmano fino a un
+anno avanti. Le maggiorazioni non cambiano mai il
 totale delle ore e non hanno importi. Chi cambia cosa conta in
 `workspace_hour_rows_in` cambia anche le maggiorazioni (test SQL 159 e 160).
 

@@ -227,7 +227,9 @@ export function OrePage() {
   // I CSV rileggono i codici per il consulente al clic: una matricola scritta un
   // minuto fa nella scheda deve finire nel file.
   async function downloadWithCodes(
-    build: (codes: ExportCodes, surcharges: SurchargeRow[]) => Promise<[string, string]>
+    build: (codes: ExportCodes, surcharges: SurchargeRow[]) => Promise<[string, string]>,
+    // Il CSV delle assenze non ha maggiorazioni: non si scaricano.
+    withSurcharges = true
   ) {
     if (dailyBusy) return;
     setDailyBusy(true);
@@ -235,9 +237,12 @@ export function OrePage() {
       // Maggiorazioni fresche, come le righe del giorno.
       const [codes, surcharges] = await Promise.all([
         fetchExportCodes(queryClient, workspaceId),
-        fetchWorkspaceSurcharges(queryClient, workspaceId, period),
+        withSurcharges ? fetchWorkspaceSurcharges(queryClient, workspaceId, period) : null,
       ]);
-      const [content, fileName] = await build(codes, filterByPeople(surcharges.rows, selection));
+      const [content, fileName] = await build(
+        codes,
+        surcharges ? filterByPeople(surcharges.rows, selection) : []
+      );
       download(content, fileName);
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
@@ -256,10 +261,10 @@ export function OrePage() {
 
   function downloadAbsencesCsv() {
     if (!canExport.absences) return;
-    void downloadWithCodes(async (codes) => [
-      buildAbsencesCsv(absences, codes),
-      absencesFileName(company, label, "csv", names),
-    ]);
+    void downloadWithCodes(
+      async (codes) => [buildAbsencesCsv(absences, codes), absencesFileName(company, label, "csv", names)],
+      false
+    );
   }
 
   // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
