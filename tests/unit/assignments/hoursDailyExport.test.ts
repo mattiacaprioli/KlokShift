@@ -206,3 +206,34 @@ describe("buildTimesheetHtml (cartellino)", () => {
     expect(withTs).toContain("Presenze · novembre 2026");
   });
 });
+
+describe("buildDailyCsv con i codici per il consulente", () => {
+  const codes = {
+    codes: { company: "AZ1", work: "01", ferie: "FE" },
+    matricole: new Map([["p", "A12"], ["q", "=B7"]]),
+  };
+
+  it("mette codice azienda, matricola e codice causale in testa", () => {
+    const out = lines(buildDailyCsv([
+      row(),
+      row({ kind: "ferie", clock_in: null, clock_out: null, break_minutes: null, break_paid: null, hours: 8, venue_name: null, title: null }),
+      row({ kind: "to_fix", hours: null, note: "not_clocked" }),
+      row({ person_id: "x", person_name: "Senza", kind: "malattia", clock_in: null, clock_out: null, break_minutes: null, break_paid: null, hours: null, venue_name: null, title: null }),
+    ], codes));
+    expect(out[0]).toBe(
+      "Codice azienda;Matricola;Codice causale;Data;Persona;Sede;Turno;Causale;Entrata;Uscita;Pausa (min);Pausa retribuita;Ore;Note"
+    );
+    expect(out[1]).toBe("AZ1;A12;01;05/11/2026;Anna;Centro;Sala;Lavoro;09:00;17:00;30;No;7,5;");
+    expect(out[2]).toBe("AZ1;A12;FE;05/11/2026;Anna;;;Ferie;;;;;8;");
+    expect(out[3]).toBe("AZ1;A12;;05/11/2026;Anna;Centro;Sala;Da verificare;09:00;17:00;30;No;;Non ha timbrato");
+    expect(out[4]).toBe("AZ1;;;05/11/2026;Senza;;;Malattia;;;;;;");
+  });
+
+  it("protegge una matricola che sembra una formula", () => {
+    expect(lines(buildDailyCsv([row({ person_id: "q" })], codes))[1].split(";")[1]).toBe("'=B7");
+  });
+
+  it("senza codici l'output è quello di sempre", () => {
+    expect(buildDailyCsv([row()], undefined)).toBe(buildDailyCsv([row()]));
+  });
+});

@@ -194,6 +194,8 @@ export const qk = {
       ["staff", "ownerHours", workspaceId, period] as const,
     ownerHoursDaily: (workspaceId: string, period: string) =>
       ["staff", "ownerHoursDaily", workspaceId, period] as const,
+    /** Codici per il consulente e matricole (`get_export_codes`), per azienda. */
+    exportCodes: (workspaceId: string) => ["staff", "exportCodes", workspaceId] as const,
     // Sotto `staff` come il riepilogo: si rilegge con lui dopo ogni turno,
     // timbratura o presenza toccata.
     hoursToFix: (workspaceId: string, period: string) =>

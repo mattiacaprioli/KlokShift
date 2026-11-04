@@ -7,7 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { companyName } from "@/features/venues/companyName";
 import {
+  fetchExportCodes,
   fetchOwnerHoursDaily,
+  useExportCodes,
   useHoursToFix,
   useOwnerHoursSummary,
 } from "@/features/assignments/hooks";
@@ -19,6 +21,12 @@ import {
   hoursToFixSummary,
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
+import {
+  exportCodesWarning,
+  usedExportKeys,
+  type ExportCodes,
+} from "@/features/assignments/exportCodes";
+import { ExportCodesDialog } from "../hours/ExportCodesDialog";
 import {
   breakSummaryText,
   exportAvailability,
@@ -164,6 +172,17 @@ export function OrePage() {
   const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
   const certificatesWarning = missingCertificatesWarning(absences);
+  // Codici per il consulente: l'avviso usa gli stessi dati che gli export
+  // rileggono freschi al clic.
+  const exportCodes = useExportCodes(canRecord ? workspaceId : undefined).data;
+  const codesWarning = exportCodes
+    ? exportCodesWarning({
+        personIds: report.map((r) => r.person_id),
+        usedKeys: usedExportKeys(report, absences),
+        codes: exportCodes,
+      })
+    : null;
+  const [editingCodes, setEditingCodes] = useState(false);
   const totalJustified = report.reduce((s, p) => s + p.justified_hours, 0);
   const totalCoveredHours = report.reduce((s, p) => s + p.covered_hours, 0);
   const totalConflicts = report.reduce((s, p) => s + p.conflict_hours, 0);
@@ -186,36 +205,44 @@ export function OrePage() {
     URL.revokeObjectURL(url);
   }
 
-  function downloadCsv() {
-    if (!canExport.monthly) return;
-    download(
-      buildHoursCsv(people, absences),
-      hoursFileName(company, label, "csv", names)
-    );
-  }
-
-  function downloadAbsencesCsv() {
-    if (!canExport.absences) return;
-    download(
-      buildAbsencesCsv(absences),
-      absencesFileName(company, label, "csv", names)
-    );
-  }
-
-  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
-  async function downloadDailyCsv() {
-    if (!canExport.monthly || dailyBusy) return;
+  // I CSV rileggono i codici per il consulente al clic: una matricola scritta un
+  // minuto fa nella scheda deve finire nel file.
+  async function downloadWithCodes(build: (codes: ExportCodes) => Promise<[string, string]>) {
+    if (dailyBusy) return;
     setDailyBusy(true);
     try {
-      download(
-        buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection)),
-        dailyFileName(company, label, "csv", names)
-      );
+      const [content, fileName] = await build(await fetchExportCodes(queryClient, workspaceId));
+      download(content, fileName);
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
     } finally {
       setDailyBusy(false);
     }
+  }
+
+  function downloadCsv() {
+    if (!canExport.monthly) return;
+    void downloadWithCodes(async (codes) => [
+      buildHoursCsv(people, absences, codes),
+      hoursFileName(company, label, "csv", names),
+    ]);
+  }
+
+  function downloadAbsencesCsv() {
+    if (!canExport.absences) return;
+    void downloadWithCodes(async (codes) => [
+      buildAbsencesCsv(absences, codes),
+      absencesFileName(company, label, "csv", names),
+    ]);
+  }
+
+  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
+  async function downloadDailyCsv() {
+    if (!canExport.monthly) return;
+    await downloadWithCodes(async (codes) => [
+      buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), codes),
+      dailyFileName(company, label, "csv", names),
+    ]);
   }
 
   async function printPdf() {
@@ -376,7 +403,10 @@ export function OrePage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={downloadCsv} disabled={!canExport.monthly}>
+            <Button onClick={() => setEditingCodes(true)} disabled={!workspaceId}>
+              Codici per il consulente
+            </Button>
+            <Button onClick={downloadCsv} disabled={!canExport.monthly || dailyBusy}>
               CSV mensile
             </Button>
             <Button
@@ -387,7 +417,7 @@ export function OrePage() {
             </Button>
             <Button
               onClick={downloadAbsencesCsv}
-              disabled={!canExport.absences}
+              disabled={!canExport.absences || dailyBusy}
             >
               CSV assenze
             </Button>
@@ -408,6 +438,14 @@ export function OrePage() {
         <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
           {certificatesWarning}
         </p>
+      ) : null}
+      {codesWarning ? (
+        <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
+          {codesWarning}
+        </p>
+      ) : null}
+      {editingCodes && workspaceId ? (
+        <ExportCodesDialog workspaceId={workspaceId} onClose={() => setEditingCodes(false)} />
       ) : null}
 
       {isError ? <QueryError error={error} /> : null}

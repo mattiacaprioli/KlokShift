@@ -163,3 +163,22 @@ export function targetExplainer(
   // Una stima («≈»): un decimale basta, il quarto d'ora qui non c'entra.
   return `${formatContract(contract)} ≈ ${formatHours(Math.round(target * 10) / 10)} a settimana`;
 }
+
+/**
+ * Cosa mostra la sezione «Contratto» della scheda, in app e sulla dashboard.
+ *
+ * Le ore da contratto sono un accordo fra la persona e l'azienda: le vede e le
+ * cambia solo il titolare. La matricola invece la scrive chiunque abbia «Team»
+ * sulla persona (`update_member`), perché serve all'export del consulente; non
+ * sulla propria scheda, come il resto dei dati di contratto
+ * (`private.is_restricted_self`). `null` = la sezione non c'è.
+ */
+export function contractSectionMode(input: {
+  isOwner: boolean;
+  isMe: boolean;
+  managesPerson: boolean;
+}): "contract" | "matricola" | null {
+  if (input.isOwner) return "contract";
+  if (!input.managesPerson || input.isMe) return null;
+  return "matricola";
+}

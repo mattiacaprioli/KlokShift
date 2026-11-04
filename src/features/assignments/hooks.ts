@@ -21,6 +21,7 @@ import {
   type ReportPeriod,
 } from "./reportPeriod";
 import type { HoursDailyRow } from "./hoursDaily";
+import type { ExportCodeKey, ExportCodes } from "./exportCodes";
 import {
   createInternalShifts,
   recordPastShift,
@@ -42,6 +43,8 @@ import {
   getOwnerTodayAssignments,
   getOwnerHoursSummary,
   getOwnerHoursDaily,
+  getExportCodes,
+  saveExportCodes,
   getHoursToFix,
   addShiftWorker,
   reassignShiftAssignment,
@@ -49,6 +52,40 @@ import {
   setAssignmentPresence,
   updateInternalShift,
 } from "./api";
+
+/** Codici per il consulente e matricole dell'azienda: la pagina Ore e i suoi export. */
+export function useExportCodes(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: qk.staff.exportCodes(workspaceId ?? ""),
+    queryFn: () => getExportCodes(workspaceId as string),
+    enabled: !!workspaceId,
+  });
+}
+
+/**
+ * Codici e matricole per un export, **sempre freschi**, come le righe del giorno:
+ * una matricola scritta un minuto fa nella scheda deve finire nel file.
+ */
+export function fetchExportCodes(
+  queryClient: QueryClient,
+  workspaceId: string | undefined
+): Promise<ExportCodes> {
+  if (!workspaceId) throw new Error("no_workspace");
+  return queryClient.fetchQuery({
+    queryKey: qk.staff.exportCodes(workspaceId),
+    queryFn: () => getExportCodes(workspaceId),
+    staleTime: 0,
+  });
+}
+
+export function useSaveExportCodes(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (codes: Partial<Record<ExportCodeKey, string>>) =>
+      saveExportCodes(workspaceId, codes),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.exportCodes(workspaceId) }),
+  });
+}
 
 /**
  * Il dettaglio giorno per giorno per l'export, **sempre fresco**: le assenze

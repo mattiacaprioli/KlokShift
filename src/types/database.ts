@@ -457,6 +457,7 @@ export type Database = {
         Row: {
           contract_hours: number | null
           contract_period: string | null
+          matricola: string | null
           member_id: string
           note: string | null
           updated_at: string
@@ -464,6 +465,7 @@ export type Database = {
         Insert: {
           contract_hours?: number | null
           contract_period?: string | null
+          matricola?: string | null
           member_id: string
           note?: string | null
           updated_at?: string
@@ -471,6 +473,7 @@ export type Database = {
         Update: {
           contract_hours?: number | null
           contract_period?: string | null
+          matricola?: string | null
           member_id?: string
           note?: string | null
           updated_at?: string
@@ -1755,6 +1758,35 @@ export type Database = {
           },
         ]
       }
+      workspace_export_codes: {
+        Row: {
+          code: string
+          key: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          code: string
+          key: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          code?: string
+          key?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_export_codes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_file_cleanup: {
         Row: {
           attempts: number
@@ -2509,6 +2541,7 @@ export type Database = {
         }[]
       }
       get_chat_unread_count: { Args: never; Returns: number }
+      get_export_codes: { Args: { p_workspace: string }; Returns: Json }
       get_hours_summary: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -3002,6 +3035,10 @@ export type Database = {
       }
       respond_to_invite: {
         Args: { p_accept: boolean; p_member: string }
+        Returns: undefined
+      }
+      save_export_codes: {
+        Args: { p_codes: Json; p_workspace: string }
         Returns: undefined
       }
       save_shift_template: {

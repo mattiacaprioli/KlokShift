@@ -133,3 +133,35 @@ describe("export di una parte dell'organico", () => {
     expect(absencesFileName("Osteria", "Ottobre 2026", "csv", ["Anna", "Bruno"])).toBe("assenze-osteria-ottobre-2026-selezione.csv");
   });
 });
+
+describe("codici per il consulente nel mensile e nelle assenze", () => {
+  const codes = {
+    codes: { work: "01", ferie: "FE", malattia: "MAL" },
+    matricole: new Map([["p", "A12"], ["a", "M9"]]),
+  };
+
+  it("mette la matricola dopo il nome e i codici nelle intestazioni", () => {
+    const out = lines(buildHoursCsv([person()], [], codes));
+    expect(out[0]).toBe(
+      "Nome;Matricola;Ruolo;Turni;Ore lavorate effettive (01);Di cui pausa retribuita;Pausa non retribuita esclusa;Ferie (FE) - ore riconosciute;MAL/Malattia (MAL) - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale ore coperte;Ore di assenza da verificare;Ore senza timbratura escluse;Stato"
+    );
+    expect(out[1].startsWith("Anna;A12;Sala;1;8;")).toBe(true);
+  });
+
+  it("un codice con il punto e virgola non sposta le colonne", () => {
+    const odd = { codes: { work: 'A;"B' }, matricole: new Map<string, string>() };
+    const header = lines(buildHoursCsv([person()], [], odd))[0];
+    expect(header).toContain(';"Ore lavorate effettive (A;""B)";');
+    expect(header.split(/;(?=(?:[^"]*"[^"]*")*[^"]*$)/)).toHaveLength(15);
+  });
+
+  it("senza codici il mensile è quello di sempre", () => {
+    expect(buildHoursCsv([person()], [], undefined)).toBe(buildHoursCsv([person()]));
+  });
+
+  it("mette la matricola nel CSV delle assenze", () => {
+    const out = lines(buildAbsencesCsv([absence()], codes));
+    expect(out[0].startsWith("Nome;Matricola;Ferie (giorni di calendario)")).toBe(true);
+    expect(out[1]).toBe("Marco;M9;1;0;0;0;");
+  });
+});

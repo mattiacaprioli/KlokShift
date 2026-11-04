@@ -7,6 +7,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
+import type { ExportCodes } from "@/features/assignments/exportCodes";
 import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
 import {
   absencesFileName,
@@ -56,9 +57,10 @@ export async function exportHoursCsv(
   periodLabel: string,
   people: PersonHours[],
   absences: AbsenceSummaryRow[] = [],
-  selection: readonly string[] = []
+  selection: readonly string[] = [],
+  codes?: ExportCodes
 ): Promise<void> {
-  const csv = buildHoursCsv(people, absences);
+  const csv = buildHoursCsv(people, absences, codes);
   const uri = `${FileSystem.cacheDirectory}${hoursFileName(companyName, periodLabel, "csv", selection)}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -77,9 +79,10 @@ export async function exportAbsencesCsv(
   companyName: string,
   periodLabel: string,
   rows: AbsenceSummaryRow[],
-  selection: readonly string[] = []
+  selection: readonly string[] = [],
+  codes?: ExportCodes
 ): Promise<void> {
-  const csv = buildAbsencesCsv(rows);
+  const csv = buildAbsencesCsv(rows, codes);
   const uri = `${FileSystem.cacheDirectory}${absencesFileName(companyName, periodLabel, "csv", selection)}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -98,9 +101,10 @@ export async function exportDailyCsv(
   companyName: string,
   periodLabel: string,
   rows: HoursDailyRow[],
-  selection: readonly string[] = []
+  selection: readonly string[] = [],
+  codes?: ExportCodes
 ): Promise<void> {
-  const csv = buildDailyCsv(rows);
+  const csv = buildDailyCsv(rows, codes);
   const uri = `${FileSystem.cacheDirectory}${dailyFileName(companyName, periodLabel, "csv", selection)}`;
   await FileSystem.writeAsStringAsync(uri, csv, {
     encoding: FileSystem.EncodingType.UTF8,

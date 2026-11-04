@@ -162,6 +162,26 @@ SQL**. `private.absence_hours_conflict` è gemella di `shiftOverlapsAbsence`:
 da `20261103000600` il conflitto con un permesso a ore richiede una
 **sovrapposizione di orario**, non basta lo stesso giorno.
 
+**Matricola e codici per il consulente** (2026-11-04, migration `20261104000000`…
+`000200`, da rilasciare). La **matricola** è il codice del dipendente nel
+programma paghe: sta in `member_hr.matricola` (la leggono la persona e chi ha
+«Team»), la scrive `update_member` con le regole del contratto ed è **unica
+nell'azienda**, senza distinzione di maiuscole e con gli usciti compresi
+(`matricola_taken`): non c'è un indice perché `member_hr` non porta l'azienda.
+L'errore nomina chi ce l'ha solo a chi può vedere quella persona. Nella
+scheda la matricola la scrive anche chi ha «Team», le ore da contratto solo
+il titolare (`contractSectionMode`).
+I **codici** dell'azienda (codice azienda e uno per causale) stanno in
+`workspace_export_codes`, chiave e valore, scritti da chi ha «Ore» con
+`save_export_codes`; le chiavi sono pronte ad accogliere le maggiorazioni.
+`get_export_codes` è la **sola fonte** dell'export per codici e matricole: dà
+le matricole nel perimetro «Ore», anche a chi non ha «Team» (servono al file).
+Le RPC delle ore non cambiano firma: i costruttori dei CSV ricevono i codici
+come ultimo parametro facoltativo, e senza escono come prima. Un codice
+mancante lascia la colonna vuota e fa un avviso nella pagina Ore
+(`exportCodesWarning`), **mai un blocco**; l'avviso tace se l'azienda non usa
+né matricole né codici. Il PDF non porta codici.
+
 ## Timbratura senza turno (2026-10-10)
 
 Chi gestisce le ore può abilitare una persona (`venue_members.clock_unplanned`,

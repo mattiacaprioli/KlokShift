@@ -23,7 +23,10 @@ begin
 
   -- Titolare: tutto, documenti compresi.
   perform tests.login('Ow');
+  perform public.update_member(tests.id('M_Emp'), '{"matricola":"E1"}'::jsonb);
   r := public.export_workspace_data(w1);
+  perform tests.eq((select x ->> 'matricola' from jsonb_array_elements(r -> 'people') x where x ->> 'name' = 'Emma'),
+    'E1', 'la matricola nella scheda esportata');
   perform tests.eq(r #>> '{workspace,name}', 'W1', 'il titolare esporta la sua azienda');
   perform tests.eq(jsonb_array_length(r -> 'venues'), 2, 'due sedi');
   perform tests.eq(jsonb_array_length(r -> 'people'), 5, 'cinque schede');

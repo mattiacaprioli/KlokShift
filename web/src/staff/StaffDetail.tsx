@@ -28,6 +28,7 @@ import {
   CONTRACT_PERIODS,
   contractChanged,
   contractHoursInput,
+  contractSectionMode,
   formatContract,
   parseContractHours,
   personContract,
@@ -213,6 +214,11 @@ function PersonPanel({
   // lo storico delle sue ore) ma non sono chip di dove trovarlo.
   const liveMemberships = memberships.filter((m) => m.link_status !== "left");
   const multiVenue = liveMemberships.length > 1;
+  const contractMode = contractSectionMode({
+    isOwner,
+    isMe,
+    managesPerson: memberships.length > 0,
+  });
 
   // Un tab compare solo se chi guarda ha qualcosa da farci: stessi permessi che
   // prima nascondevano le sezioni.
@@ -326,8 +332,11 @@ function PersonPanel({
             {/* Dietro il permesso Ore: senza, la RPC torna zero righe e uno
                 «0 h» sembrerebbe un dato. */}
             {canAny("can_view_hours") ? <ThisMonth person={person} /> : null}
-            {/* Le ore da contratto sono un accordo fra la persona e l'azienda. */}
-            {isOwner ? <ContractSection person={person} /> : null}
+            {/* Le ore da contratto sono un accordo fra la persona e l'azienda:
+                solo il titolare. La matricola anche chi ha «Team» su di lei. */}
+            {contractMode ? (
+              <ContractSection person={person} mode={contractMode} />
+            ) : null}
           </TabPanel>
           <TabPanel active={tab === "sedi"}>
             <Workplaces
@@ -785,23 +794,37 @@ function LanguagesRow({ person }: { person: StaffPersonDetail }) {
  * cui il planning somma le ore di tutte le sedi. Da lì viene il confronto nella
  * colonna ore della vista "persone"; qui non si blocca niente.
  */
-function ContractSection({ person }: { person: StaffPersonDetail }) {
+function ContractSection({
+  person,
+  mode,
+}: {
+  person: StaffPersonDetail;
+  /** «matricola»: chi ha «Team» ma non è titolare, vedi `contractSectionMode`. */
+  mode: "contract" | "matricola";
+}) {
   const [editing, setEditing] = useState(false);
   const contract = personContract(person);
 
   return (
     <section className="flex flex-col gap-3">
       <SectionHeading
-        title="Contratto"
+        title={mode === "contract" ? "Contratto" : "Matricola"}
         onEdit={editing ? undefined : () => setEditing(true)}
       />
       {editing ? (
-        <ContractForm person={person} onDone={() => setEditing(false)} />
+        <ContractForm
+          person={person}
+          mode={mode}
+          onDone={() => setEditing(false)}
+        />
       ) : (
         <ReadGrid>
-          <ReadItem label="Ore da contratto" wide>
-            {contract ? formatContract(contract) : null}
-          </ReadItem>
+          {mode === "contract" ? (
+            <ReadItem label="Ore da contratto" wide>
+              {contract ? formatContract(contract) : null}
+            </ReadItem>
+          ) : null}
+          <ReadItem label="Matricola">{person.matricola}</ReadItem>
         </ReadGrid>
       )}
     </section>
@@ -810,9 +833,11 @@ function ContractSection({ person }: { person: StaffPersonDetail }) {
 
 function ContractForm({
   person,
+  mode,
   onDone,
 }: {
   person: StaffPersonDetail;
+  mode: "contract" | "matricola";
   onDone: () => void;
 }) {
   const update = useUpdateStaffPerson();
@@ -822,26 +847,36 @@ function ContractForm({
   const [period, setPeriod] = useState<ContractPeriod>(
     contract?.period ?? "week"
   );
+  const [matricola, setMatricola] = useState(person.matricola ?? "");
 
   // Le regole del campo (virgola, limiti, cosa conta come modifica) sono in
   // `features/staff/contract.ts`, le stesse della dashboard.
   const { hours: parsed, invalid } = parseContractHours(hours);
-  const dirty = contractChanged(contract, parsed, period);
+  const nextMatricola = matricola.trim() || null;
+  const withContract = mode === "contract";
+  const dirty =
+    (withContract && contractChanged(contract, parsed, period)) ||
+    nextMatricola !== (person.matricola ?? null);
   useUnsavedEdit("contratto", dirty);
 
   async function onSave() {
-    if (invalid) return;
+    if (withContract && invalid) return;
     try {
       await update.mutateAsync({
         id: person.id,
         // Campo vuoto = nessun contratto: le due colonne si azzerano insieme,
-        // come impone `staff_people_contract_pair_ck`.
-        fields:
-          parsed == null
-            ? { contract_hours: null, contract_period: null }
-            : { contract_hours: parsed, contract_period: period },
+        // come impone `staff_people_contract_pair_ck`. Chi non è titolare
+        // manda solo la matricola: il contratto non lo tocca.
+        fields: {
+          ...(!withContract
+            ? {}
+            : parsed == null
+              ? { contract_hours: null, contract_period: null }
+              : { contract_hours: parsed, contract_period: period }),
+          matricola: nextMatricola,
+        },
       });
-      toast.show(parsed == null ? "Contratto rimosso" : "Contratto aggiornato");
+      toast.show(withContract ? "Contratto aggiornato" : "Matricola aggiornata");
       onDone();
     } catch (e) {
       toast.show(userErrorMessage(e), "error");
@@ -850,6 +885,8 @@ function ContractForm({
 
   return (
     <EditPanel>
+      {withContract ? (
+      <>
       <div className="grid grid-cols-2 gap-3">
         <Field
           label="Ore da contratto"
@@ -885,10 +922,24 @@ function ContractForm({
         programmi, nella vista <b>persone</b> dei turni: non bloccano niente.
         Lascia vuoto se non vuoi il confronto.
       </p>
+      </>
+      ) : null}
+
+      <Field
+        label="Matricola (facoltativa)"
+        hint="Il codice del dipendente nel programma paghe del consulente."
+      >
+        <Input
+          value={matricola}
+          maxLength={30}
+          autoComplete="off"
+          onChange={(e) => setMatricola(e.target.value)}
+        />
+      </Field>
 
       <EditActions
         pending={update.isPending}
-        canSave={dirty && !invalid}
+        canSave={dirty && !(withContract && invalid)}
         onSave={() => void onSave()}
         onCancel={onDone}
       />

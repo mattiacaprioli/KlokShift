@@ -7,6 +7,22 @@ describe("userErrorMessage", () => {
     expect(message).toMatch(/aggiorna l'app/i);
   });
 
+  it("dice che la matricola è già di un'altra persona", () => {
+    expect(userErrorMessage(new Error("matricola_taken"))).toBe(
+      "Questa matricola è già usata da un'altra persona dell'azienda."
+    );
+  });
+
+  it("dice chi ha già la matricola, quando il database lo nomina", () => {
+    expect(userErrorMessage(new Error("matricola_taken:Emma Rossi"))).toBe(
+      "Questa matricola è già usata da Emma Rossi."
+    );
+  });
+
+  it("dice che un codice per il consulente è troppo lungo", () => {
+    expect(userErrorMessage(new Error("invalid_code"))).toBe("Il codice è troppo lungo.");
+  });
+
   it("traduce il blocco dei turni nati da una timbratura (C06)", () => {
     const message = userErrorMessage(new Error("unplanned_shift_locked"));
     expect(message).not.toBe(GENERIC_ERROR);

@@ -14,6 +14,7 @@ import type {
 import type { PublishPreview } from "@/features/shifts/drafts";
 import { isActiveAssignment } from "./status";
 import { toHoursDailyRows, type DbDailyRow, type HoursDailyRow } from "./hoursDaily";
+import { toExportCodes, type ExportCodeKey, type ExportCodes } from "./exportCodes";
 import type { OwnerHoursRow } from "./hoursSummary";
 import {
   effectiveClockTimes,
@@ -836,6 +837,28 @@ export async function getOwnerHoursDaily(
   });
   if (error) throw new Error(error.message);
   return toHoursDailyRows((data ?? []) as DbDailyRow[]);
+}
+
+/**
+ * Codici dell'azienda e matricole per l'export (`get_export_codes`): le matricole
+ * sono solo delle persone nel perimetro «Ore» di chi esporta.
+ */
+export async function getExportCodes(workspaceId: string): Promise<ExportCodes> {
+  const { data, error } = await supabase.rpc("get_export_codes", { p_workspace: workspaceId });
+  if (error) throw new Error(error.message);
+  return toExportCodes(data);
+}
+
+/** Sostituisce i codici dell'azienda: una chiave assente o vuota si cancella. */
+export async function saveExportCodes(
+  workspaceId: string,
+  codes: Partial<Record<ExportCodeKey, string>>
+): Promise<void> {
+  const { error } = await supabase.rpc("save_export_codes", {
+    p_workspace: workspaceId,
+    p_codes: codes,
+  });
+  if (error) throw new Error(error.message);
 }
 
 /**

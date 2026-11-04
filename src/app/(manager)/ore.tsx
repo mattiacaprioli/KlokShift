@@ -35,6 +35,8 @@ import { companyName } from "@/features/venues/companyName";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
 import {
   fetchOwnerHoursDaily,
+  fetchExportCodes,
+  useExportCodes,
   useHoursToFix,
   useOwnerHoursSummary,
 } from "@/features/assignments/hooks";
@@ -46,6 +48,7 @@ import {
   hoursToFixSummary,
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
+import { exportCodesWarning, usedExportKeys } from "@/features/assignments/exportCodes";
 import {
   breakSummaryText,
   exportAvailability,
@@ -169,6 +172,16 @@ export default function VenueHoursScreen() {
   const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
   const certificatesWarning = missingCertificatesWarning(absences);
+  // Codici per il consulente: l'avviso usa gli stessi dati che gli export
+  // rileggono freschi al tocco.
+  const exportCodes = useExportCodes(canRecord ? workspaceId : undefined).data;
+  const codesWarning = exportCodes
+    ? exportCodesWarning({
+        personIds: report.map((r) => r.person_id),
+        usedKeys: usedExportKeys(report, absences),
+        codes: exportCodes,
+      })
+    : null;
   const canExport = exportAvailability({
     hoursReady: query.isSuccess,
     absencesReady: absenceQuery.isSuccess,
@@ -190,7 +203,7 @@ export default function VenueHoursScreen() {
     if (exporting) return;
     if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
     setExporting(true);
-      const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
+    const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
     try {
       if (kind === "pdf") {
         const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
@@ -198,12 +211,17 @@ export default function VenueHoursScreen() {
           rows: daily,
           ...periodBounds(period),
         });
-      } else if (kind === "daily") {
-        await exportDailyCsv(company, label, await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), names);
-      } else if (kind === "csv") {
-        await exportHoursCsv(company, label, people, absences, names);
       } else {
-        await exportAbsencesCsv(company, label, absences, names);
+        // Il PDF è da leggere: i codici servono solo ai CSV da importare.
+        const codes = await fetchExportCodes(queryClient, workspaceId);
+        if (kind === "daily") {
+          const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
+          await exportDailyCsv(company, label, daily, names, codes);
+        } else if (kind === "csv") {
+          await exportHoursCsv(company, label, people, absences, names, codes);
+        } else {
+          await exportAbsencesCsv(company, label, absences, names, codes);
+        }
       }
     } catch {
       toast.show("Export non riuscito. Riprova.", "error");
@@ -503,6 +521,12 @@ export default function VenueHoursScreen() {
                   </Text>
                 </View>
               ) : null}
+              {codesWarning ? (
+                <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
+                  <Icon name="alert" size={16} color="#E2922F" />
+                  <Text className="flex-1 text-[13px] leading-5 text-t2">{codesWarning}</Text>
+                </View>
+              ) : null}
               {canExport.monthly ? (
                 <>
                   <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} disabled={exporting} />
@@ -522,6 +546,13 @@ export default function VenueHoursScreen() {
                   onPress={() => onExport("absences")} disabled={exporting}
                 />
               ) : null}
+              <Pressable
+                onPress={() => router.push("/codici-consulente")}
+                className="items-center py-2"
+                accessibilityRole="link"
+              >
+                <Text className="text-sm font-sans-semibold text-gold">Codici per il consulente</Text>
+              </Pressable>
             </View>
           </>
         )}

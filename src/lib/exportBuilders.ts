@@ -12,6 +12,7 @@ import type {
 import { HOUR_TO_FIX_KIND_LABEL } from "@/features/assignments/hoursToFix";
 import type { HourToFixKind } from "@/features/assignments/api";
 import type { PersonHours } from "@/features/assignments/hoursSummary";
+import type { ExportCodes } from "@/features/assignments/exportCodes";
 import { monthlyReportRows } from "@/features/assignments/monthlyReport";
 import {
   ABSENCE_SUMMARY_NOTE,
@@ -197,11 +198,39 @@ function csvText(v: string): string {
  * Le due colonne di pausa accanto alle ore lavorate dicono quanta pausa è già
  * dentro (retribuita) e quanta ne è rimasta fuori (non retribuita).
  */
-export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow[] = []): string {
-  const header = "Nome;Ruolo;Turni;Ore lavorate effettive;Di cui pausa retribuita;Pausa non retribuita esclusa;Ferie - ore riconosciute;MAL/Malattia - ore riconosciute;Permessi - ore riconosciute;Ore di assenza giustificata;Totale ore coperte;Ore di assenza da verificare;Ore senza timbratura escluse;Stato";
+export function buildHoursCsv(
+  people: PersonHours[],
+  absences: AbsenceSummaryRow[] = [],
+  codes?: ExportCodes
+): string {
+  // Con i codici per il consulente: la matricola dopo il nome e il codice di
+  // ogni causale fra parentesi nell'intestazione della sua colonna. Senza,
+  // il file è quello di sempre.
+  // Il codice lo scrive l'utente: la cella passa da `csvCell`, o un «;» dentro
+  // sposterebbe tutte le colonne dopo.
+  const coded = (label: string, code: string | undefined, rest = "") =>
+    csvCell(`${label}${codes && code ? ` (${code})` : ""}${rest}`);
+  const header = [
+    "Nome",
+    ...(codes ? ["Matricola"] : []),
+    "Ruolo",
+    "Turni",
+    coded("Ore lavorate effettive", codes?.codes.work),
+    "Di cui pausa retribuita",
+    "Pausa non retribuita esclusa",
+    coded("Ferie", codes?.codes.ferie, " - ore riconosciute"),
+    coded("MAL/Malattia", codes?.codes.malattia, " - ore riconosciute"),
+    coded("Permessi", codes?.codes.permesso, " - ore riconosciute"),
+    "Ore di assenza giustificata",
+    "Totale ore coperte",
+    "Ore di assenza da verificare",
+    "Ore senza timbratura escluse",
+    "Stato",
+  ].join(";");
   const lines = monthlyReportRows(people, absences).map((p) =>
     [
       csvText(p.person_name),
+      ...(codes ? [csvText(codes.matricole.get(p.person_id) ?? "")] : []),
       csvText(p.roles ?? ""),
       String(p.shifts_count),
       hoursNumber(p.worked_hours),
@@ -228,9 +257,10 @@ export function buildHoursCsv(people: PersonHours[], absences: AbsenceSummaryRow
  * calendario, e l'intestazione lo dice, perché un CSV non ha una nota a piè di
  * pagina. Le celle vuote valgono zero: un foglio le somma senza lamentarsi.
  */
-export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
+export function buildAbsencesCsv(rows: AbsenceSummaryRow[], codes?: ExportCodes): string {
   const header = [
     "Nome",
+    ...(codes ? ["Matricola"] : []),
     "Ferie (giorni di calendario)",
     "Permessi (giorni)",
     "Permessi (ore)",
@@ -241,6 +271,7 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[]): string {
   const lines = rows.map((r) =>
     [
       csvText(r.person_name),
+      ...(codes ? [csvText(codes.matricole.get(r.person_id) ?? "")] : []),
       num(r.ferie_days),
       num(r.permesso_days),
       num(r.permesso_hours),
@@ -276,13 +307,24 @@ function dailyNote(r: HoursDailyRow): string {
  * Stesse convenzioni del CSV mensile: ';', virgola decimale, BOM. L'ordine è
  * quello della RPC; le ore vuote restano vuote, non diventano zero.
  */
-export function buildDailyCsv(rows: HoursDailyRow[]): string {
+export function buildDailyCsv(rows: HoursDailyRow[], codes?: ExportCodes): string {
+  // Con i codici per il consulente, tre colonne in testa come nel CSV di
+  // Fluida: codice azienda, matricola, codice causale. «Da verificare» non ha
+  // codice: non è una voce di busta paga.
   const header = [
+    ...(codes ? ["Codice azienda", "Matricola", "Codice causale"] : []),
     "Data", "Persona", "Sede", "Turno", "Causale", "Entrata", "Uscita",
     "Pausa (min)", "Pausa retribuita", "Ore", "Note",
   ].join(";");
   const lines = rows.map((r) =>
     [
+      ...(codes
+        ? [
+            csvText(codes.codes.company ?? ""),
+            csvText(codes.matricole.get(r.person_id) ?? ""),
+            csvText((r.kind === "to_fix" ? undefined : codes.codes[r.kind]) ?? ""),
+          ]
+        : []),
       r.date.split("-").reverse().join("/"),
       csvText(r.person_name),
       csvText(r.venue_name ?? ""),

@@ -63,6 +63,8 @@ export type StaffPerson = {
   status: MemberStatus;
   contract_hours: number | null;
   contract_period: "day" | "week" | "month" | null;
+  /** Il codice del dipendente nel programma paghe del consulente (`member_hr`). */
+  matricola: string | null;
   /** Ultimo invio dell'invito (`member_invites.last_sent_at`). */
   invited_at: string | null;
   invite_count: number;

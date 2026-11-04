@@ -59,6 +59,7 @@ import {
   CONTRACT_PERIODS,
   contractChanged,
   contractHoursInput,
+  contractSectionMode,
   formatContract,
   parseContractHours,
   personContract,
@@ -1036,24 +1037,42 @@ function PersonLanguagesRow({ person }: { person: StaffPersonDetail }) {
  * colonna ore della vista "persone" del planning web; nessun turno viene
  * bloccato, né qui né lì.
  */
-function PersonContractSection({ person }: { person: StaffPersonDetail }) {
+function PersonContractSection({
+  person,
+  mode,
+}: {
+  person: StaffPersonDetail;
+  /** «matricola»: chi ha «Team» ma non è titolare, vedi `contractSectionMode`. */
+  mode: "contract" | "matricola";
+}) {
   const [editing, setEditing] = useState(false);
   const contract = personContract(person);
 
   return (
     <View className="gap-4">
       <EditSectionHeader
-        title="Contratto"
+        title={mode === "contract" ? "Contratto" : "Matricola"}
         onEdit={editing ? undefined : () => setEditing(true)}
       />
       {editing ? (
-        <PersonContractForm person={person} onDone={() => setEditing(false)} />
+        <PersonContractForm
+          person={person}
+          mode={mode}
+          onDone={() => setEditing(false)}
+        />
       ) : (
         <ReadCard>
+          {mode === "contract" ? (
+            <ReadField
+              first
+              label="Ore da contratto"
+              value={contract ? formatContract(contract) : null}
+            />
+          ) : null}
           <ReadField
-            first
-            label="Ore da contratto"
-            value={contract ? formatContract(contract) : null}
+            first={mode === "matricola"}
+            label="Matricola"
+            value={person.matricola}
           />
         </ReadCard>
       )}
@@ -1063,9 +1082,11 @@ function PersonContractSection({ person }: { person: StaffPersonDetail }) {
 
 function PersonContractForm({
   person,
+  mode,
   onDone,
 }: {
   person: StaffPersonDetail;
+  mode: "contract" | "matricola";
   onDone: () => void;
 }) {
   const toast = useToast();
@@ -1075,34 +1096,47 @@ function PersonContractForm({
   const [period, setPeriod] = useState<ContractPeriod>(
     contract?.period ?? "week"
   );
+  const [matricola, setMatricola] = useState(person.matricola ?? "");
 
   // Le regole del campo (virgola, limiti, cosa conta come modifica) sono in
   // `features/staff/contract.ts`, le stesse della dashboard.
   const { hours: parsed, invalid } = parseContractHours(hours);
-  const dirty = contractChanged(contract, parsed, period);
+  const nextMatricola = matricola.trim() || null;
+  const withContract = mode === "contract";
+  const dirty =
+    (withContract && contractChanged(contract, parsed, period)) ||
+    nextMatricola !== (person.matricola ?? null);
   useUnsavedEdit("contratto", dirty);
 
   async function onSave() {
-    if (invalid) return;
+    if (withContract && invalid) return;
     try {
       await update.mutateAsync({
         id: person.id,
         // Campo vuoto = nessun contratto: le due colonne si azzerano insieme,
-        // come impone `staff_people_contract_pair_ck`.
-        fields:
-          parsed == null
-            ? { contract_hours: null, contract_period: null }
-            : { contract_hours: parsed, contract_period: period },
+        // come impone `staff_people_contract_pair_ck`. Chi non è titolare
+        // manda solo la matricola: il contratto non lo tocca.
+        fields: {
+          ...(!withContract
+            ? {}
+            : parsed == null
+              ? { contract_hours: null, contract_period: null }
+              : { contract_hours: parsed, contract_period: period }),
+          matricola: nextMatricola,
+        },
       });
-      toast.show(parsed == null ? "Contratto rimosso" : "Contratto aggiornato");
+      toast.show(withContract ? "Contratto aggiornato" : "Matricola aggiornata");
       onDone();
-    } catch {
-      toast.show("Impossibile salvare. Riprova.", "error");
+    } catch (e) {
+      // `matricola_taken` va detto: «Impossibile salvare» non spiega niente.
+      toast.show(userErrorMessage(e), "error");
     }
   }
 
   return (
     <EditPanel>
+      {withContract ? (
+      <>
       <View className="gap-2">
         <Input
           label="Ore da contratto (facoltative)"
@@ -1133,9 +1167,24 @@ function PersonContractForm({
         Quante ore deve fare. Servono a confrontarle con i turni che programmi:
         non bloccano niente. Lascia vuoto se non vuoi il confronto.
       </Text>
+      </>
+      ) : null}
+      <View className="gap-2">
+        <Input
+          label="Matricola (facoltativa)"
+          value={matricola}
+          onChangeText={setMatricola}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={30}
+        />
+        <Text className="text-xs leading-4 text-t3">
+          Il codice del dipendente nel programma paghe del consulente.
+        </Text>
+      </View>
       <EditActions
         pending={update.isPending}
-        canSave={dirty && !invalid}
+        canSave={dirty && !(withContract && invalid)}
         onSave={() => void onSave()}
         onCancel={onDone}
       />
@@ -1205,6 +1254,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
   // delle sue ore) ma non contano per "in quante sedi lavora" né per le azioni.
   const liveMemberships = memberships.filter((m) => m.link_status !== "left");
   const multiVenue = liveMemberships.length > 1;
+  const contractMode = contractSectionMode({
+    isOwner,
+    isMe,
+    managesPerson: memberships.length > 0,
+  });
   // Riprendere qualcuno o dargli un'altra sede è del titolare: l'update su
   // `staff_members` la RLS lo concede solo a lui. Con un account, poi, solo se
   // lavora ancora per lui da qualche parte: chi ha lasciato tutte le sedi
@@ -1388,8 +1442,11 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
               <PersonThisMonthSection person={person} />
             ) : null}
             {/* Le ore da contratto sono un accordo fra la persona e l'azienda,
-                non un dato della sede: le vede e le cambia solo il titolare. */}
-            {isOwner ? <PersonContractSection person={person} /> : null}
+                non un dato della sede: le vede e le cambia solo il titolare.
+                La matricola anche chi ha «Team» su di lei. */}
+            {contractMode ? (
+              <PersonContractSection person={person} mode={contractMode} />
+            ) : null}
           </TabPanel>
 
           <TabPanel active={tab === "sedi"}>

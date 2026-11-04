@@ -17,7 +17,7 @@ export const fullExportSchema = z.object({
   documents_included: z.boolean(),
   venues: z.array(z.object({ name: z.string(), address: maybe(text), city: maybe(text), created_at: z.string(), closed_at: text })),
   people: z.array(z.object({
-    name: z.string(), email: text, phone: text, authority: z.string(), status: z.string(),
+    name: z.string(), matricola: text.optional(), email: text, phone: text, authority: z.string(), status: z.string(),
     joined_at: z.string(), left_at: text, contract_hours: num, contract_period: text, hr_note: text,
     venues: z.array(z.object({ venue: z.string(), employment_type: text, left_at: text, roles: z.string() })),
   })),
@@ -119,9 +119,9 @@ export function fullExportFiles(data: FullExport, missingDocuments: string[] = [
   files["sedi.csv"] = csv(["Sede", "Indirizzo", "Città", "Creata il", "Chiusa il"],
     data.venues.map((v) => [textCell(v.name), textCell(v.address), textCell(v.city), instant(v.created_at), instant(v.closed_at)]));
   files["persone.csv"] = csv(
-    ["Nome", "Email", "Telefono", "Ruolo in azienda", "Stato", "Ingresso", "Uscita", "Sedi", "Contratto per sede",
+    ["Nome", "Matricola", "Email", "Telefono", "Ruolo in azienda", "Stato", "Ingresso", "Uscita", "Sedi", "Contratto per sede",
       "Ruoli sui turni", "Ore da contratto", "Periodo ore", "Nota HR"],
-    data.people.map((p) => [textCell(p.name), textCell(p.email), textCell(p.phone), label(p.authority), label(p.status),
+    data.people.map((p) => [textCell(p.name), textCell(p.matricola), textCell(p.email), textCell(p.phone), label(p.authority), label(p.status),
       instant(p.joined_at), instant(p.left_at),
       textCell(p.venues.map((v) => v.venue + (v.left_at ? ` (fino al ${instant(v.left_at).slice(0, 10)})` : "")).join(", ")),
       textCell(p.venues.map((v) => `${v.venue}: ${label(v.employment_type) || "—"}`).join(", ")),

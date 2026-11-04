@@ -66,7 +66,7 @@ export { linkStatusOf } from "./types";
 
 const PERSON_COLUMNS =
   "id, workspace_id, user_id, display_name, phone, email, authority, status, link_conflict_at, created_at, " +
-  "hr:member_hr(note, contract_hours, contract_period)";
+  "hr:member_hr(note, contract_hours, contract_period, matricola)";
 
 const VENUE_EMBED =
   "venue:venues!venue_members_venue_id_workspace_id_fkey(id, name, city, closed_at, clock_method, break_clocked)";
@@ -111,6 +111,8 @@ type RawHr = {
   note: string | null;
   contract_hours: number | null;
   contract_period: string | null;
+  /** Assente nelle select che leggono solo la nota. */
+  matricola?: string | null;
 };
 
 type RawRoles = { role: StaffRoleRef | null }[];
@@ -201,6 +203,7 @@ function toPerson(row: RawMember): StaffPerson {
       hr?.contract_period && isContractPeriod(hr.contract_period)
         ? hr.contract_period
         : null,
+    matricola: hr?.matricola ?? null,
     // ⚠️ `member_invites` non ha nessun accesso da REST (contiene l'hash del
     // token): l'ultimo invio non è leggibile dal client. Restano i campi, vuoti.
     invited_at: null,
@@ -677,6 +680,8 @@ export type StaffPersonPatch = {
   note?: string | null;
   contract_hours?: number | null;
   contract_period?: "day" | "week" | "month" | null;
+  /** Il codice del dipendente nel programma paghe: unico nell'azienda. */
+  matricola?: string | null;
 };
 
 /**

@@ -26,6 +26,8 @@ export class UserFacingError extends Error {
 
 const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["invalid_avatar_url"], message: "Immagine del profilo non valida. Caricala di nuovo." },
+  { match: ["matricola_taken"], message: "Questa matricola è già usata da un'altra persona dell'azienda." },
+  { match: ["invalid_code"], message: "Il codice è troppo lungo." },
   { match: ["admin_not_allowed"], message: "L'accesso amministrativo non è autorizzato. Accedi con l'account abilitato." },
   { match: ["admin_mfa_required"], message: "Completa la verifica con il secondo fattore per accedere." },
   { match: ["admin_mfa_verification_failed"], message: "Verifica non riuscita. Controlla il codice e riprova." },
@@ -374,6 +376,11 @@ export function userErrorMessage(
 
   const raw = e instanceof Error ? e.message : typeof e === "string" ? e : "";
   if (!raw) return fallback;
+
+  // `matricola_taken:<nome>`: il database nomina chi ha già la matricola solo a
+  // chi può vedere quella persona (vedi `update_member`).
+  const holder = /matricola_taken:([^\n]+)/.exec(raw)?.[1]?.trim();
+  if (holder) return `Questa matricola è già usata da ${holder}.`;
 
   const lower = raw.toLowerCase();
   for (const p of PATTERNS) {

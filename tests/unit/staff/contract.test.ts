@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   contractChanged,
+  contractSectionMode,
   contractHoursInput,
   formatContract,
   loadTone,
@@ -79,5 +80,21 @@ describe("modulo del contratto (app e dashboard)", () => {
     expect(contractChanged(current, 38, "week")).toBe(true);
     expect(contractChanged(current, null, "week")).toBe(true);
     expect(contractChanged(null, null, "month")).toBe(false);
+  });
+});
+
+describe("chi vede contratto e matricola nella scheda", () => {
+  it("il titolare vede tutto, anche sulla propria scheda", () => {
+    expect(contractSectionMode({ isOwner: true, isMe: false, managesPerson: true })).toBe("contract");
+    expect(contractSectionMode({ isOwner: true, isMe: true, managesPerson: true })).toBe("contract");
+  });
+
+  it("chi ha «Team» sulla persona scrive la matricola, non il contratto", () => {
+    expect(contractSectionMode({ isOwner: false, isMe: false, managesPerson: true })).toBe("matricola");
+  });
+
+  it("niente sulla propria scheda né senza «Team»", () => {
+    expect(contractSectionMode({ isOwner: false, isMe: true, managesPerson: true })).toBeNull();
+    expect(contractSectionMode({ isOwner: false, isMe: false, managesPerson: false })).toBeNull();
   });
 });

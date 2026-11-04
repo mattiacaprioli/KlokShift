@@ -41,6 +41,14 @@ describe("export completo: file del pacchetto", () => {
     expect(files["presenze.csv"]).toContain(";4,98;Timbratura;");
     expect(files["assenze.csv"]).toContain("Ferie;20/08/2026;21/08/2026;;;Approvata;16;");
   });
+  it("la matricola sta dopo il nome; gli export vecchi non la portano", () => {
+    const withMatricola = fullExportFiles(fullExportSchema.parse({
+      ...data, people: [{ ...data.people[0], matricola: "A12" }],
+    }));
+    expect(withMatricola["persone.csv"].split("\r\n")[0].startsWith("\uFEFFNome;Matricola;Email")).toBe(true);
+    expect(withMatricola["persone.csv"].split("\r\n")[1].startsWith("'=Mario;A12;")).toBe(true);
+    expect(files["persone.csv"].split("\r\n")[1].startsWith("'=Mario;;")).toBe(true);
+  });
   it("testo protetto da formule e punto e virgola", () => {
     expect(files["persone.csv"]).toContain("'=Mario");
     expect(files["persone.csv"]).toContain('"Nota; con punto e virgola"');
