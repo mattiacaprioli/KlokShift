@@ -1,6 +1,6 @@
 import { TableSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
@@ -11,7 +11,6 @@ import {
   fetchWorkspaceSurcharges,
   useWorkspaceSurcharges,
   fetchOwnerHoursDaily,
-  useExportCodes,
   useHoursToFix,
   useOwnerHoursSummary,
 } from "@/features/assignments/hooks";
@@ -29,6 +28,21 @@ import {
   type ExportCodes,
 } from "@/features/assignments/exportCodes";
 import { ExportCodesDialog } from "../hours/ExportCodesDialog";
+import { ExportDialog } from "../hours/ExportDialog";
+import {
+  EXPORT_BUTTON_LABEL,
+  EXPORT_FORMATS,
+  buildExportPreview,
+  toFixInSelection,
+  type ExportFormat,
+  type ExportIssueTarget,
+  type ExportPreview,
+} from "@/features/assignments/exportPreview";
+import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
+import type { PersonHours } from "@/features/assignments/hoursSummary";
+import type { MonthlyReportRow } from "@/features/assignments/monthlyReport";
+import type { HourToFix } from "@/features/assignments/api";
+import type { AbsenceSummaryRow } from "@/features/absences/summary";
 import { SurchargeRulesDialog } from "../hours/SurchargeRulesDialog";
 import {
   missingContractWarning,
@@ -102,6 +116,29 @@ import { NoVenues } from "../venues/NoVenues";
 /** Righe di «Ore da sistemare» visibili prima di «Mostra tutti». */
 const TO_FIX_PREVIEW = 8;
 
+/**
+ * Quello che il pannello d'export fotografa e legge all'apertura, e con cui
+ * scarica: anteprima e file vengono da qui, anche se la pagina intanto cambia.
+ */
+type ExportData = {
+  company: string;
+  label: string;
+  period: ReportPeriod;
+  names: string[];
+  people: PersonHours[];
+  absences: AbsenceSummaryRow[];
+  report: MonthlyReportRow[];
+  totalHours: number;
+  toFix: HourToFix[];
+  certificates: string | null;
+  contract: string | null;
+  availability: { monthly: boolean; absences: boolean };
+  codes: ExportCodes;
+  surcharges: SurchargeRow[];
+  /** `null` se all'apertura le ore non c'erano: giornaliero, mensile e PDF restano spenti. */
+  daily: HoursDailyRow[] | null;
+};
+
 export function OrePage() {
   const { profile } = useAuth();
   const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
@@ -161,7 +198,6 @@ export function OrePage() {
   const approveRegular = useApproveRegularClockRecords();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [dailyBusy, setDailyBusy] = useState(false);
   function onApproveRegular() {
     if (!workspaceId) return;
     approveRegular.mutate(
@@ -175,14 +211,10 @@ export function OrePage() {
   const [showAllToFix, setShowAllToFix] = useState(false);
   const toFixShown = showAllToFix ? toFix : toFix.slice(0, TO_FIX_PREVIEW);
   const label = periodLabel(period);
-  const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
   // Ferie, permessi e malattia del periodo: ore nel consuntivo, giorni nel dettaglio.
   const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
   const certificatesWarning = missingCertificatesWarning(absences);
-  // Codici per il consulente: l'avviso usa gli stessi dati che gli export
-  // rileggono freschi al clic.
-  const exportCodes = useExportCodes(canRecord ? workspaceId : undefined).data;
   // Le maggiorazioni le calcola il database: qui si mostrano «di cui» e basta.
   // Si leggono anche in archivio, come le ore.
   const surchargesData = useWorkspaceSurcharges(
@@ -192,13 +224,6 @@ export function OrePage() {
   const surchargeRows = filterByPeople(surchargesData?.rows ?? [], selection);
   const contractWarning = surchargesData
     ? missingContractWarning(surchargesData.noContract, report.map((r) => r.person_id))
-    : null;
-  const codesWarning = exportCodes
-    ? exportCodesWarning({
-        personIds: report.map((r) => r.person_id),
-        usedKeys: usedExportKeys(report, absences, surchargeRows),
-        codes: exportCodes,
-      })
     : null;
   const [editingCodes, setEditingCodes] = useState(false);
   const [editingSurcharges, setEditingSurcharges] = useState(false);
@@ -224,98 +249,153 @@ export function OrePage() {
     URL.revokeObjectURL(url);
   }
 
-  // I CSV rileggono i codici per il consulente al clic: una matricola scritta un
-  // minuto fa nella scheda deve finire nel file.
-  async function downloadWithCodes(
-    build: (codes: ExportCodes, surcharges: SurchargeRow[]) => Promise<[string, string]>,
-    // Il CSV delle assenze non ha maggiorazioni: non si scaricano.
-    withSurcharges = true
-  ) {
-    if (dailyBusy) return;
-    setDailyBusy(true);
+  // «Esporta per il consulente»: un pannello come il «Prepare report» di
+  // Planday (spec 2026-11-15-anteprima-export-design.md). Codici, maggiorazioni
+  // e righe del giorno si leggono UNA volta all'apertura — freschi, una
+  // matricola scritta un minuto fa deve finire nel file — e il file si
+  // costruisce con quelli: l'anteprima è il file. Il giornaliero non si legge
+  // mai con la pagina.
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("daily");
+  const [exportData, setExportData] = useState<ExportData | null>(null);
+  const [exportState, setExportState] = useState<"loading" | "error" | "ready">("loading");
+  // Ogni apertura ha il suo numero: una lettura arrivata tardi (pannello
+  // chiuso, mese cambiato, riaperto) non sovrascrive quella giusta.
+  const exportSeq = useRef(0);
+
+  async function loadExport() {
+    const seq = ++exportSeq.current;
+    // La fotografia del momento in cui si apre: periodo, persone, ore e avvisi.
+    // Anteprima e file usano solo questa, anche se la pagina intanto cambia.
+    const snapshot = {
+      company: companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name),
+      label,
+      period,
+      names,
+      people,
+      absences,
+      report,
+      totalHours,
+      toFix: toFixInSelection(toFix, selection),
+      certificates: certificatesWarning,
+      contract: contractWarning,
+      availability: canExport,
+    };
+    setExportState("loading");
     try {
-      // Maggiorazioni fresche, come le righe del giorno.
-      const [codes, surcharges] = await Promise.all([
+      const [codes, surcharges, daily] = await Promise.all([
         fetchExportCodes(queryClient, workspaceId),
-        withSurcharges ? fetchWorkspaceSurcharges(queryClient, workspaceId, period) : null,
+        canExport.monthly ? fetchWorkspaceSurcharges(queryClient, workspaceId, period) : null,
+        canExport.monthly ? fetchOwnerHoursDaily(queryClient, workspaceId, period, selection) : null,
       ]);
-      const [content, fileName] = await build(
+      if (seq !== exportSeq.current) return;
+      setExportData({
+        ...snapshot,
         codes,
-        surcharges ? filterByPeople(surcharges.rows, selection) : []
-      );
-      download(content, fileName);
+        surcharges: surcharges ? filterByPeople(surcharges.rows, selection) : [],
+        daily,
+      });
+      setExportState("ready");
     } catch {
-      toast.show("Export non riuscito. Riprova.", "error");
-    } finally {
-      setDailyBusy(false);
+      if (seq === exportSeq.current) setExportState("error");
     }
   }
 
-  function downloadCsv() {
-    if (!canExport.monthly) return;
-    void downloadWithCodes(async (codes, surcharges) => [
-      buildHoursCsv(people, absences, codes, surcharges),
-      hoursFileName(company, label, "csv", names),
-    ]);
+  function openExport() {
+    if (!canExport.monthly && !canExport.absences) return;
+    setExportFormat(canExport.monthly ? "daily" : "absences");
+    setExportData(null);
+    setExportOpen(true);
+    void loadExport();
   }
 
-  function downloadAbsencesCsv() {
-    if (!canExport.absences) return;
-    void downloadWithCodes(
-      async (codes) => [buildAbsencesCsv(absences, codes), absencesFileName(company, label, "csv", names)],
-      false
-    );
+  function closeExport() {
+    exportSeq.current++;
+    setExportOpen(false);
   }
 
-  // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
-  async function downloadDailyCsv() {
-    if (!canExport.monthly) return;
-    await downloadWithCodes(async (codes, surcharges) => [
-      buildDailyCsv(await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), codes, surcharges),
-      dailyFileName(company, label, "csv", names),
-    ]);
+  const exportPreviews: Record<ExportFormat, ExportPreview> | null = exportData
+    ? (Object.fromEntries(
+        EXPORT_FORMATS.map((f) => [
+          f.key,
+          buildExportPreview({
+            format: f.key,
+            people: exportData.people,
+            absences: exportData.absences,
+            daily: exportData.daily,
+            codes: exportData.codes,
+            surcharges: exportData.surcharges,
+            toFix: exportData.toFix,
+            warnings: {
+              codes: exportCodesWarning({
+                personIds: exportData.report.map((r) => r.person_id),
+                usedKeys: usedExportKeys(exportData.report, exportData.absences, exportData.surcharges),
+                codes: exportData.codes,
+              }),
+              certificates: exportData.certificates,
+              contract: exportData.contract,
+            },
+            availability: exportData.availability,
+          }),
+        ])
+      ) as Record<ExportFormat, ExportPreview>)
+    : null;
+
+  function downloadExport() {
+    if (!exportData || !exportPreviews?.[exportFormat].available) return;
+    const { codes, surcharges, daily, company, label: fileLabel, names: fileNames, people: p, absences: a } = exportData;
+    if (exportFormat === "pdf") {
+      printPdf(exportData);
+      return;
+    }
+    if (exportFormat === "daily") {
+      download(buildDailyCsv(daily ?? [], codes, surcharges), dailyFileName(company, fileLabel, "csv", fileNames));
+    } else if (exportFormat === "monthly") {
+      download(buildHoursCsv(p, a, codes, surcharges), hoursFileName(company, fileLabel, "csv", fileNames));
+    } else {
+      download(buildAbsencesCsv(a, codes), absencesFileName(company, fileLabel, "csv", fileNames));
+    }
+    closeExport();
   }
 
-  async function printPdf() {
-    if (!canExport.monthly || dailyBusy) return;
-    // La finestra si apre subito, nel gesto del clic: dopo l'attesa della rete
-    // il browser (Safari soprattutto) la bloccherebbe senza dire niente.
+  function printPdf(data: ExportData) {
+    // La finestra si apre come prima cosa, nel gesto del clic: i dati sono già
+    // letti all'apertura del pannello, quindi nessuna attesa di rete prima
+    // (dopo un'attesa il browser, Safari soprattutto, la bloccherebbe).
     const w = window.open("", "_blank");
     if (!w) {
       toast.show("Consenti le finestre popup per stampare.", "error");
       return;
     }
-    setDailyBusy(true);
-    let timesheet;
-    let surcharges: SurchargeRow[] = [];
-    try {
-      timesheet = { rows: await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection), ...periodBounds(period) };
-      surcharges = filterByPeople(
-        (await fetchWorkspaceSurcharges(queryClient, workspaceId, period)).rows,
-        selection
-      );
-    } catch {
-      w.close();
-      toast.show("Export non riuscito. Riprova.", "error");
-      return;
-    } finally {
-      setDailyBusy(false);
-    }
     // Sul web il PDF lo fa il browser: stesso HTML che l'app manda a expo-print.
     const html = buildHoursHtml(
-      company,
-      label,
-      people,
-      totalHours,
-      absences,
-      names,
-      timesheet,
-      surcharges
+      data.company,
+      data.label,
+      data.people,
+      data.totalHours,
+      data.absences,
+      data.names,
+      { rows: data.daily ?? [], ...periodBounds(data.period) },
+      data.surcharges
     );
     w.document.write(html);
     w.document.close();
     w.focus();
     w.print();
+    closeExport();
+  }
+
+  function onExportIssue(target: ExportIssueTarget) {
+    closeExport();
+    if (target === "to_fix") {
+      document.getElementById("ore-da-sistemare")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (target === "codes") {
+      setEditingCodes(true);
+    } else if (target === "absences") {
+      navigate("/assenze");
+    } else {
+      navigate("/staff");
+    }
   }
 
   // Le sedi chiuse hanno ancora le loro ore: il vuoto è solo senza nessuna sede.
@@ -446,48 +526,34 @@ export function OrePage() {
             <Button onClick={() => setEditingCodes(true)} disabled={!workspaceId}>
               Codici per il consulente
             </Button>
-            <Button onClick={downloadCsv} disabled={!canExport.monthly || dailyBusy}>
-              CSV mensile
-            </Button>
-            <Button
-              onClick={downloadDailyCsv}
-              disabled={!canExport.monthly || dailyBusy}
-            >
-              CSV giornaliero
-            </Button>
-            <Button
-              onClick={downloadAbsencesCsv}
-              disabled={!canExport.absences || dailyBusy}
-            >
-              CSV assenze
-            </Button>
             <Button
               variant="gold"
-              onClick={printPdf}
-              disabled={!canExport.monthly || dailyBusy}
+              onClick={openExport}
+              // Si apre a ore e assenze arrivate: aperto prima, mancherebbero
+              // al file le ore del giorno e le maggiorazioni.
+              disabled={isPending || absenceQuery.isPending || (!canExport.monthly && !canExport.absences)}
             >
-              Stampa / PDF
+              {EXPORT_BUTTON_LABEL}
             </Button>
           </div>
         </div>
       </StickyHeader>
 
-      {/* Prima di esportare: le malattie del periodo senza certificato.
-          Avvisa e basta, l'export resta libero. */}
-      {certificatesWarning ? (
-        <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
-          {certificatesWarning}
-        </p>
-      ) : null}
-      {contractWarning ? (
-        <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
-          {contractWarning}
-        </p>
-      ) : null}
-      {codesWarning ? (
-        <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-t2 print:hidden">
-          {codesWarning}
-        </p>
+      {/* Gli avvisi prima dell'export (certificati, contratto, codici) vivono
+          nel pannello, accanto al file che riguardano. */}
+      {exportOpen ? (
+        <ExportDialog
+          subtitle={`${label}, ${names.length > 0 ? names.join(", ") : `tutte le persone (${report.length})`}`}
+          format={exportFormat}
+          onFormat={setExportFormat}
+          state={exportState}
+          preview={exportPreviews}
+          busy={false}
+          onRetry={() => void loadExport()}
+          onDownload={downloadExport}
+          onIssue={onExportIssue}
+          onClose={closeExport}
+        />
       ) : null}
       {editingSurcharges && workspaceId ? (
         <SurchargeRulesDialog workspaceId={workspaceId} onClose={() => setEditingSurcharges(false)} />
@@ -516,6 +582,7 @@ export function OrePage() {
           si inseriscono gli orari, l'uscita o si approva. Fino al 26/10/2026 qui
           c'era solo «N turni da verificare», senza dire quali. */}
       {toFix.length > 0 ? (
+        <div id="ore-da-sistemare" className="scroll-mt-40">
         <Card className="mb-4 border-warning/40 bg-warning/5 p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm font-semibold text-t1">{HOURS_TO_FIX_TITLE}</p>
@@ -566,6 +633,7 @@ export function OrePage() {
             </button>
           ) : null}
         </Card>
+        </div>
       ) : null}
 
       {report.length > 0 && !isPending && !absenceQuery.isPending && !isError && !absenceQuery.isError ? (

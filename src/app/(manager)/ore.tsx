@@ -1,12 +1,13 @@
 import { ListSkeleton } from "@/components/ui/Skeleton";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ScrollView as RNScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
+import { Pressable, Text, View } from "@/tw";
+import { palette } from "@/constants/colors";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
@@ -37,7 +38,6 @@ import {
   fetchOwnerHoursDaily,
   fetchExportCodes,
   fetchWorkspaceSurcharges,
-  useExportCodes,
   useWorkspaceSurcharges,
   useHoursToFix,
   useOwnerHoursSummary,
@@ -50,8 +50,31 @@ import {
   hoursToFixSummary,
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
-import { exportCodesWarning, usedExportKeys } from "@/features/assignments/exportCodes";
-import { missingContractWarning, surchargeSummary } from "@/features/assignments/surcharges";
+import {
+  exportCodesWarning,
+  usedExportKeys,
+  type ExportCodes,
+} from "@/features/assignments/exportCodes";
+import {
+  EXPORT_BUTTON_LABEL,
+  EXPORT_FORMATS,
+  buildExportPreview,
+  toFixInSelection,
+  type ExportFormat,
+  type ExportIssueTarget,
+  type ExportPreview,
+} from "@/features/assignments/exportPreview";
+import { ExportSheet } from "@/features/assignments/ExportSheet";
+import type { HoursDailyRow } from "@/features/assignments/hoursDaily";
+import type { PersonHours } from "@/features/assignments/hoursSummary";
+import type { MonthlyReportRow } from "@/features/assignments/monthlyReport";
+import type { HourToFix } from "@/features/assignments/api";
+import type { AbsenceSummaryRow } from "@/features/absences/summary";
+import {
+  missingContractWarning,
+  surchargeSummary,
+  type SurchargeRow,
+} from "@/features/assignments/surcharges";
 import {
   breakSummaryText,
   exportAvailability,
@@ -102,6 +125,29 @@ const asDate = (d: string) => new Date(`${d}T00:00:00`);
  */
 /** Righe di «Ore da sistemare» visibili prima di «Mostra tutti». */
 const TO_FIX_PREVIEW = 8;
+
+/**
+ * Quello che il pannello d'export fotografa e legge all'apertura, e con cui
+ * scarica: anteprima e file vengono da qui, anche se la pagina intanto cambia.
+ */
+type ExportData = {
+  company: string;
+  label: string;
+  period: ReportPeriod;
+  names: string[];
+  people: PersonHours[];
+  absences: AbsenceSummaryRow[];
+  report: MonthlyReportRow[];
+  totalHours: number;
+  toFix: HourToFix[];
+  certificates: string | null;
+  contract: string | null;
+  availability: { monthly: boolean; absences: boolean };
+  codes: ExportCodes;
+  surcharges: SurchargeRow[];
+  /** `null` se all'apertura le ore non c'erano: giornaliero, mensile e PDF restano spenti. */
+  daily: HoursDailyRow[] | null;
+};
 
 export default function VenueHoursScreen() {
   const insets = useSafeAreaInsets();
@@ -175,9 +221,6 @@ export default function VenueHoursScreen() {
   const absences = filterByPeople(allAbsences, selection);
   const report = monthlyReportRows(people, absences);
   const certificatesWarning = missingCertificatesWarning(absences);
-  // Codici per il consulente: l'avviso usa gli stessi dati che gli export
-  // rileggono freschi al tocco.
-  const exportCodes = useExportCodes(canRecord ? workspaceId : undefined).data;
   // Le maggiorazioni le calcola il database: qui si mostrano «di cui» e basta.
   // Si leggono anche in archivio, come le ore.
   const surchargesData = useWorkspaceSurcharges(
@@ -187,13 +230,6 @@ export default function VenueHoursScreen() {
   const surchargeRows = filterByPeople(surchargesData?.rows ?? [], selection);
   const contractWarning = surchargesData
     ? missingContractWarning(surchargesData.noContract, report.map((r) => r.person_id))
-    : null;
-  const codesWarning = exportCodes
-    ? exportCodesWarning({
-        personIds: report.map((r) => r.person_id),
-        usedKeys: usedExportKeys(report, absences, surchargeRows),
-        codes: exportCodes,
-      })
     : null;
   const canExport = exportAvailability({
     hoursReady: query.isSuccess,
@@ -212,40 +248,138 @@ export default function VenueHoursScreen() {
   const label = periodLabel(period);
 
   // Il dettaglio giorno per giorno si scarica solo quando serve, non con la pagina.
-  async function onExport(kind: "pdf" | "csv" | "daily" | "absences") {
-    if (exporting) return;
-    if (!(kind === "absences" ? canExport.absences : canExport.monthly)) return;
-    setExporting(true);
-    const company = companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name);
+  // «Esporta per il consulente»: il pannello che sale dal basso (gemello della
+  // dashboard, spec 2026-11-15-anteprima-export-design.md). Codici,
+  // maggiorazioni e righe del giorno si leggono UNA volta all'apertura —
+  // freschi — e il file si costruisce con quelli. Il giornaliero non si legge
+  // mai con la pagina.
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("daily");
+  const [exportData, setExportData] = useState<ExportData | null>(null);
+  const [exportState, setExportState] = useState<"loading" | "error" | "ready">("loading");
+  // Ogni apertura ha il suo numero: una lettura arrivata tardi (pannello
+  // chiuso, mese cambiato, riaperto) non sovrascrive quella giusta.
+  const exportSeq = useRef(0);
+
+  async function loadExport() {
+    const seq = ++exportSeq.current;
+    // La fotografia del momento in cui si apre: periodo, persone, ore e avvisi.
+    // Anteprima e file usano solo questa, anche se la pagina intanto cambia.
+    const snapshot = {
+      company: companyName(venues.length > 0 ? venues : historyVenues, profile?.full_name),
+      label,
+      period,
+      names,
+      people,
+      absences,
+      report,
+      totalHours,
+      toFix: toFixInSelection(toFix, selection),
+      certificates: certificatesWarning,
+      contract: contractWarning,
+      availability: canExport,
+    };
+    setExportState("loading");
     try {
-      // Maggiorazioni fresche, come le righe del giorno.
-      const surcharges =
-        kind === "absences"
-          ? []
-          : filterByPeople((await fetchWorkspaceSurcharges(queryClient, workspaceId, period)).rows, selection);
-      if (kind === "pdf") {
-        const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
-        await exportHoursPdf(company, label, people, totalHours, absences, names, {
-          rows: daily,
-          ...periodBounds(period),
-        }, surcharges);
-      } else {
-        // Il PDF è da leggere: i codici servono solo ai CSV da importare.
-        const codes = await fetchExportCodes(queryClient, workspaceId);
-        if (kind === "daily") {
-          const daily = await fetchOwnerHoursDaily(queryClient, workspaceId, period, selection);
-          await exportDailyCsv(company, label, daily, names, codes, surcharges);
-        } else if (kind === "csv") {
-          await exportHoursCsv(company, label, people, absences, names, codes, surcharges);
-        } else {
-          await exportAbsencesCsv(company, label, absences, names, codes);
-        }
-      }
+      const [codes, surcharges, daily] = await Promise.all([
+        fetchExportCodes(queryClient, workspaceId),
+        canExport.monthly ? fetchWorkspaceSurcharges(queryClient, workspaceId, period) : null,
+        canExport.monthly ? fetchOwnerHoursDaily(queryClient, workspaceId, period, selection) : null,
+      ]);
+      if (seq !== exportSeq.current) return;
+      setExportData({
+        ...snapshot,
+        codes,
+        surcharges: surcharges ? filterByPeople(surcharges.rows, selection) : [],
+        daily,
+      });
+      setExportState("ready");
     } catch {
-      toast.show("Export non riuscito. Riprova.", "error");
+      if (seq === exportSeq.current) setExportState("error");
+    }
+  }
+
+  function openExport() {
+    if (!canExport.monthly && !canExport.absences) return;
+    setExportError(null);
+    setExportFormat(canExport.monthly ? "daily" : "absences");
+    setExportData(null);
+    setExportOpen(true);
+    void loadExport();
+  }
+
+  function closeExport() {
+    exportSeq.current++;
+    setExportOpen(false);
+  }
+
+  const exportPreviews: Record<ExportFormat, ExportPreview> | null = exportData
+    ? (Object.fromEntries(
+        EXPORT_FORMATS.map((f) => [
+          f.key,
+          buildExportPreview({
+            format: f.key,
+            people: exportData.people,
+            absences: exportData.absences,
+            daily: exportData.daily,
+            codes: exportData.codes,
+            surcharges: exportData.surcharges,
+            toFix: exportData.toFix,
+            warnings: {
+              codes: exportCodesWarning({
+                personIds: exportData.report.map((r) => r.person_id),
+                usedKeys: usedExportKeys(exportData.report, exportData.absences, exportData.surcharges),
+                codes: exportData.codes,
+              }),
+              certificates: exportData.certificates,
+              contract: exportData.contract,
+            },
+            availability: exportData.availability,
+          }),
+        ])
+      ) as Record<ExportFormat, ExportPreview>)
+    : null;
+
+  // L'errore dello scarico si dice dentro il pannello: un toast resterebbe
+  // sotto il `Modal` e non si vedrebbe.
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function downloadExport() {
+    if (exporting || !exportData || !exportPreviews?.[exportFormat].available) return;
+    setExporting(true);
+    setExportError(null);
+    const { codes, surcharges, daily, company, label: fileLabel, names: fileNames, people: p, absences: a } = exportData;
+    try {
+      if (exportFormat === "pdf") {
+        // Il PDF è da leggere: i codici servono solo ai CSV da importare.
+        await exportHoursPdf(company, fileLabel, p, exportData.totalHours, a, fileNames, {
+          rows: daily ?? [],
+          ...periodBounds(exportData.period),
+        }, surcharges);
+      } else if (exportFormat === "daily") {
+        await exportDailyCsv(company, fileLabel, daily ?? [], fileNames, codes, surcharges);
+      } else if (exportFormat === "monthly") {
+        await exportHoursCsv(company, fileLabel, p, a, fileNames, codes, surcharges);
+      } else {
+        await exportAbsencesCsv(company, fileLabel, a, fileNames, codes);
+      }
+      closeExport();
+    } catch {
+      setExportError("Export non riuscito. Riprova.");
     } finally {
       setExporting(false);
     }
+  }
+
+  // «Ore da sistemare» è in cima alla pagina: il pannello ci riporta lì.
+  const scrollRef = useRef<RNScrollView>(null);
+  const [toFixY, setToFixY] = useState(0);
+  function onExportIssue(target: ExportIssueTarget) {
+    closeExport();
+    if (target === "to_fix") scrollRef.current?.scrollTo({ y: toFixY, animated: true });
+    else if (target === "codes") router.push("/codici-consulente");
+    else if (target === "absences") router.push("/(manager)/assenze");
+    else router.push("/(manager)/(tabs)/staff");
   }
 
   return (
@@ -269,8 +403,11 @@ export default function VenueHoursScreen() {
         />
       </View>
 
-      <ScrollView
-        className="flex-1 bg-bg-0"
+      {/* `RNScrollView` e non quello di `@/tw`: serve il ref per tornare a
+          «Ore da sistemare» dal pannello d'export (come `staff/[id]`). */}
+      <RNScrollView
+        ref={scrollRef}
+        style={{ flex: 1, backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 48,
@@ -362,6 +499,7 @@ export default function VenueHoursScreen() {
             dove si inseriscono gli orari, l'uscita o si approva. */}
         {toFix.length > 0 ? (
           <View
+            onLayout={(e) => setToFixY(e.nativeEvent.layout.y)}
             className="rounded-3xl border border-warning px-5 py-4"
             // Sfondo inline come nelle `Pill`: `bg-warning/5` passerebbe da
             // `color-mix`, che react-native-css non regge.
@@ -539,46 +677,10 @@ export default function VenueHoursScreen() {
             ) : null}
 
             <View className="mt-2 gap-2.5">
-              {/* Prima di esportare: le malattie del periodo senza
-                  certificato. Avvisa e basta, l'export resta libero. */}
-              {certificatesWarning ? (
-                <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
-                  <Icon name="alert" size={16} color="#E2922F" />
-                  <Text className="flex-1 text-[13px] leading-5 text-t2">
-                    {certificatesWarning}
-                  </Text>
-                </View>
-              ) : null}
-              {contractWarning ? (
-                <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
-                  <Icon name="alert" size={16} color="#E2922F" />
-                  <Text className="flex-1 text-[13px] leading-5 text-t2">{contractWarning}</Text>
-                </View>
-              ) : null}
-              {codesWarning ? (
-                <View className="flex-row gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
-                  <Icon name="alert" size={16} color="#E2922F" />
-                  <Text className="flex-1 text-[13px] leading-5 text-t2">{codesWarning}</Text>
-                </View>
-              ) : null}
-              {canExport.monthly ? (
-                <>
-                  <GoldButton label="Esporta PDF" onPress={() => onExport("pdf")} disabled={exporting} />
-                  <GhostButton
-                    label="Esporta CSV mensile"
-                    onPress={() => onExport("csv")} disabled={exporting}
-                  />
-                  <GhostButton
-                    label="Esporta CSV giornaliero"
-                    onPress={() => onExport("daily")} disabled={exporting}
-                  />
-                </>
-              ) : null}
-              {canExport.absences ? (
-                <GhostButton
-                  label="Esporta CSV assenze"
-                  onPress={() => onExport("absences")} disabled={exporting}
-                />
+              {/* Gli avvisi prima dell'export (certificati, contratto,
+                  codici) vivono nel pannello, accanto al file che riguardano. */}
+              {canExport.monthly || canExport.absences ? (
+                <GoldButton label={EXPORT_BUTTON_LABEL} onPress={openExport} />
               ) : null}
             </View>
           </>
@@ -604,7 +706,22 @@ export default function VenueHoursScreen() {
             </Pressable>
           </View>
         )}
-      </ScrollView>
+      </RNScrollView>
+
+      <ExportSheet
+        visible={exportOpen}
+        subtitle={`${label}, ${names.length > 0 ? names.join(", ") : `tutte le persone (${report.length})`}`}
+        format={exportFormat}
+        onFormat={setExportFormat}
+        state={exportState}
+        preview={exportPreviews}
+        busy={exporting}
+        error={exportError}
+        onRetry={() => void loadExport()}
+        onDownload={() => void downloadExport()}
+        onIssue={onExportIssue}
+        onClose={closeExport}
+      />
     </View>
   );
 }

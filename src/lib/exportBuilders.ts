@@ -189,6 +189,19 @@ function absencesHtmlSection(rows: AbsenceSummaryRow[]): string {
     </table>`;
 }
 
+/**
+ * Un CSV prima di diventare testo: l'intestazione e le righe, con ogni cella già
+ * nella forma del file (`csvCell`/`csvText` applicati, ore con la virgola). È la
+ * tabella che mostra l'anteprima dell'export: per costruzione, le stesse righe
+ * del file scaricato.
+ */
+export type CsvTable = { header: string[]; rows: string[][] };
+
+/** ';' come separatore, `\r\n` fra le righe e BOM UTF-8 (default Excel IT). */
+export function tableToCsv(table: CsvTable): string {
+  return "\uFEFF" + [table.header, ...table.rows].map((r) => r.join(";")).join("\r\n");
+}
+
 function csvCell(v: string): string {
   return /[";\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
@@ -222,6 +235,16 @@ export function buildHoursCsv(
   /** Le maggiorazioni del periodo: una colonna «di cui» per voce e percentuale. */
   surcharges: readonly SurchargeRow[] = []
 ): string {
+  return tableToCsv(buildHoursTable(people, absences, codes, surcharges));
+}
+
+/** La tabella di `buildHoursCsv`: la stessa che mostra l'anteprima dell'export. */
+export function buildHoursTable(
+  people: PersonHours[],
+  absences: AbsenceSummaryRow[] = [],
+  codes?: ExportCodes,
+  surcharges: readonly SurchargeRow[] = []
+): CsvTable {
   const surCols = surchargeColumns(surcharges);
   // Con i codici per il consulente: la matricola dopo il nome e il codice di
   // ogni causale fra parentesi nell'intestazione della sua colonna. Senza,
@@ -247,8 +270,8 @@ export function buildHoursCsv(
     "Ore di assenza da verificare",
     "Ore senza timbratura escluse",
     "Stato",
-  ].join(";");
-  const lines = monthlyReportRows(people, absences).map((p) => {
+  ];
+  const rows = monthlyReportRows(people, absences).map((p) => {
     const sur = surchargeTotals(surcharges, p.person_id);
     return [
       csvText(p.person_name),
@@ -267,9 +290,9 @@ export function buildHoursCsv(
       hoursNumber(p.conflict_hours),
       hoursNumber(p.untracked_hours),
       p.conflict_hours > 0 || p.untracked_hours > 0 || p.to_review_count > 0 ? "Da verificare" : "",
-    ].join(";");
+    ];
   });
-  return "﻿" + [header, ...lines].join("\r\n");
+  return { header, rows };
 }
 
 /**
@@ -281,6 +304,11 @@ export function buildHoursCsv(
  * pagina. Le celle vuote valgono zero: un foglio le somma senza lamentarsi.
  */
 export function buildAbsencesCsv(rows: AbsenceSummaryRow[], codes?: ExportCodes): string {
+  return tableToCsv(buildAbsencesTable(rows, codes));
+}
+
+/** La tabella di `buildAbsencesCsv`: la stessa che mostra l'anteprima dell'export. */
+export function buildAbsencesTable(rows: AbsenceSummaryRow[], codes?: ExportCodes): CsvTable {
   const header = [
     "Nome",
     ...(codes ? ["Matricola"] : []),
@@ -289,7 +317,7 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[], codes?: ExportCodes)
     "Permessi (ore)",
     "Malattia (giorni di calendario)",
     "Riferimenti certificati medici",
-  ].join(";");
+  ];
   const num = (n: number) => (n > 0 ? hoursNumber(n) : "0");
   const lines = rows.map((r) =>
     [
@@ -300,9 +328,9 @@ export function buildAbsencesCsv(rows: AbsenceSummaryRow[], codes?: ExportCodes)
       num(r.permesso_hours),
       num(r.malattia_days),
       csvText(r.inps_protocols ?? ""),
-    ].join(";")
+    ]
   );
-  return "\uFEFF" + [header, ...lines].join("\r\n");
+  return { header, rows: lines };
 }
 
 const DAILY_KIND_LABEL: Record<DailyKind, string> = {
@@ -339,6 +367,18 @@ export function buildDailyCsv(
    */
   surcharges: readonly SurchargeRow[] = []
 ): string {
+  return tableToCsv(buildDailyTable(rows, codes, surcharges));
+}
+
+/**
+ * La tabella di `buildDailyCsv`, con le righe **finali** (le «di cui» già al
+ * loro posto): la stessa che mostra l'anteprima dell'export.
+ */
+export function buildDailyTable(
+  rows: HoursDailyRow[],
+  codes?: ExportCodes,
+  surcharges: readonly SurchargeRow[] = []
+): CsvTable {
   // Con i codici per il consulente, tre colonne in testa come nel CSV di
   // Fluida: codice azienda, matricola, codice causale. «Da verificare» non ha
   // codice: non è una voce di busta paga.
@@ -346,7 +386,7 @@ export function buildDailyCsv(
     ...(codes ? ["Codice azienda", "Matricola", "Codice causale"] : []),
     "Data", "Persona", "Sede", "Turno", "Causale", "Entrata", "Uscita",
     "Pausa (min)", "Pausa retribuita", "Ore", "Note",
-  ].join(";");
+  ];
   const lines = rows.map((r) =>
     [
       ...(codes
@@ -367,11 +407,11 @@ export function buildDailyCsv(
       r.break_paid == null ? "" : r.break_paid ? "Sì" : "No",
       r.hours == null ? "" : hoursNumber(r.hours),
       dailyNote(r),
-    ].join(";")
+    ]
   );
-  if (surcharges.length === 0) return "\uFEFF" + [header, ...lines].join("\r\n");
+  if (surcharges.length === 0) return { header, rows: lines };
 
-  const surLine = (s: SurchargeRow) =>
+  const surLine = (s: SurchargeRow): string[] =>
     [
       ...(codes
         ? [
@@ -388,7 +428,7 @@ export function buildDailyCsv(
       "", "", "", "",
       hoursNumber(s.hours),
       "",
-    ].join(";");
+    ];
   const order = surchargeColumns(surcharges).map(surchargeColumnKey);
   const sorted = [...surcharges].sort(
     (a, b) =>
@@ -396,7 +436,7 @@ export function buildDailyCsv(
   );
   // Le «di cui» di una riga di lavoro: stessa persona, giorno, sede, turno e orari.
   const used = new Set<SurchargeRow>();
-  const out: { line: string; person: string; date: string }[] = [];
+  const out: { line: string[]; person: string; date: string }[] = [];
   rows.forEach((r, i) => {
     out.push({ line: lines[i], person: r.person_id, date: r.date });
     if (r.kind !== "work") return;
@@ -421,7 +461,7 @@ export function buildDailyCsv(
     if (at < 0) out.push(item);
     else out.splice(at + 1, 0, item);
   }
-  return "\uFEFF" + [header, ...out.map((o) => o.line)].join("\r\n");
+  return { header, rows: out.map((o) => o.line) };
 }
 
 /** "ore-giornaliere-osteria-novembre-2026.csv": stessa regola di `hoursFileName`. */

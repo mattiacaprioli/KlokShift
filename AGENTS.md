@@ -162,6 +162,18 @@ SQL**. `private.absence_hours_conflict` è gemella di `shiftOverlapsAbsence`:
 da `20261103000600` il conflitto con un permesso a ore richiede una
 **sovrapposizione di orario**, non basta lo stesso giorno.
 
+**Esporta per il consulente** (2026-11-15). Nella pagina Ore, in app e sulla
+dashboard, i quattro export stanno dietro **un solo pulsante** che apre un
+pannello (modello Planday/Deputy): scelta del file, totali, «Resta fuori o va
+controllato» (mai un blocco) e, sulla dashboard, le prime righe del file. Codici,
+maggiorazioni e giornaliero si leggono **una volta all'apertura** e il file si
+costruisce con quelli. I CSV escono da `tableToCsv(build…Table(…))`
+(`src/lib/exportBuilders.ts`) e l'anteprima mostra le righe della **stessa**
+tabella (`src/features/assignments/exportPreview.ts`): non calcolare righe di
+anteprima per un'altra strada. Gli avvisi prima dell'export (certificati,
+contratto, codici) vivono nel pannello, non più sopra la tabella delle ore.
+Dashboard: il PDF apre la finestra nel clic, con i dati già letti.
+
 **Matricola e codici per il consulente** (2026-11-04, migration `20261104000000`…
 `000200`, da rilasciare). La **matricola** è il codice del dipendente nel
 programma paghe: sta in `member_hr.matricola` (la leggono la persona e chi ha
