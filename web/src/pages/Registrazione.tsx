@@ -11,6 +11,7 @@ import {
 import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { PasswordChecklist } from "../ui/PasswordChecklist";
+import { AuthWeek } from "../ui/AuthWeek";
 import {
   resendLabel,
   useResendConfirmation,
@@ -102,9 +103,10 @@ export function RegistrazionePage() {
     <AuthShell
       title="Crea il tuo account"
       subtitle="Prepara la prima sede, poi avvia la prova gratuita di 30 giorni, senza carta."
+      aside={<SignupAside />}
     >
       <AuthPanel>
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
           <Field label="Nome e cognome" error={errors.fullName?.message}>
             <Input
               {...register("fullName")}
@@ -157,14 +159,18 @@ export function RegistrazionePage() {
             {busy ? "Creazione…" : "Crea account"}
           </Button>
 
-          <p className="text-center text-xs leading-5 text-t4">
-            Stai creando un account per gestire la tua azienda. Se un titolare
-            ti ha invitato a gestire la sua, non registrarti qui: apri il link
-            dell&apos;email d&apos;invito, l&apos;account si crea da lì.
-            <br />
-            Se sei un dipendente, ti registri
-            dall&apos;app KlokShift sul telefono.
-          </p>
+          {/* Chi non deve registrarsi qui lo legge prima di farlo: il
+              collaboratore entra dal link dell'invito, il dipendente dall'app. */}
+          <ul className="flex flex-col gap-1 text-xs leading-5 text-t4">
+            <li>
+              <span className="text-t3">Ti ha invitato un titolare?</span> Apri
+              il link nell&apos;email.
+            </li>
+            <li>
+              <span className="text-t3">Sei un dipendente?</span> Registrati
+              dall&apos;app sul telefono.
+            </li>
+          </ul>
         </form>
       </AuthPanel>
 
@@ -178,6 +184,50 @@ export function RegistrazionePage() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+const SIGNUP_POINTS = [
+  "Prepari la settimana in bozza e la pubblichi quando è pronta.",
+  "Il team riceve i turni sul telefono e li conferma con un tocco.",
+  "A fine mese le ore sono pronte per il consulente.",
+];
+
+/**
+ * Accanto al form, da `xl`: la stessa settimana del sito e i tre motivi per
+ * cui registrarsi, come fanno 7shifts, Homebase e Deputy nelle loro pagine.
+ */
+function SignupAside() {
+  return (
+    <div className="w-full max-w-xl">
+      <h2 className="font-serif text-[2rem] leading-tight tracking-tight text-balance text-t1">
+        La settimana del team, pronta in pochi minuti.
+      </h2>
+      <div className="mt-8">
+        <AuthWeek />
+      </div>
+      <ul className="mt-8 flex flex-col gap-3">
+        {SIGNUP_POINTS.map((point) => (
+          <li key={point} className="flex gap-3 text-sm leading-6 text-t2">
+            <span
+              aria-hidden
+              className="mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold/15 text-gold"
+            >
+              <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none">
+                <path
+                  d="M2.5 6.2 5 8.5l4.5-5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            {point}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

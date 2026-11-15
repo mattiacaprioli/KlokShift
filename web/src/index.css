@@ -69,6 +69,55 @@
   .focus-gold {
     @apply outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-0;
   }
+
+  /*
+   * La settimana accanto alla registrazione (`ui/AuthWeek.tsx`): i turni cadono
+   * al loro posto una volta, poi il buco da coprire pulsa piano qualche giro.
+   * È il gemello in CSS di quello del sito, che usa Motion (vietato qui).
+   */
+  .auth-week-in {
+    animation: auth-week-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .auth-week-open {
+    animation:
+      auth-week-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both,
+      auth-week-pulse 2.4s ease-in-out 1.8s 4;
+  }
+}
+
+@keyframes auth-week-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+}
+@keyframes auth-week-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-week-in,
+  .auth-week-open {
+    animation: none;
+  }
+}
+
+/*
+ * Il riempimento automatico di Chrome e Safari colora i campi di grigio-blu o di
+ * giallo, fuori palette. Il fondo del browser non si sovrascrive (è
+ * `!important` nel foglio del browser), quindi lo si fa arrivare dopo un'eternità
+ * con la transizione. Niente `box-shadow` inset: coprirebbe l'anello del focus.
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-t1);
+  caret-color: var(--color-t1);
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
 }
 
 /*

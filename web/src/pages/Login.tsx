@@ -89,8 +89,8 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title="KlokShift"
-      subtitle="Gestione della sede — turni, copertura e ore."
+      title="Accedi a KlokShift"
+      subtitle="Turni, conferme e ore del tuo team, in un posto solo."
     >
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">

@@ -40,9 +40,13 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "focus-gold inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
+        "focus-gold inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed",
+        // Il dorato spento al 40% sul fondo scuro diventava un marrone che
+        // sembrava rotto: spento è grigio, come nei pulsanti principali di
+        // Planday e Deputy. Le altre varianti si spengono sbiadendo.
         variant === "gold" &&
-          "bg-gold text-gold-ink hover:bg-gold-light active:bg-gold-dark",
+          "bg-gold text-gold-ink enabled:hover:bg-gold-light enabled:active:bg-gold-dark disabled:bg-bg-3 disabled:text-t3",
+        variant !== "gold" && "disabled:opacity-40",
         variant === "ghost" &&
           "border border-border-2 bg-bg-2 text-t1 hover:bg-bg-3",
         variant === "danger" &&

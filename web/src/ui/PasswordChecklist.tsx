@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
  */
 export function PasswordChecklist({ value }: { value: string }) {
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
       {passwordRules.map((rule) => {
         const ok = rule.test(value);
         return (
