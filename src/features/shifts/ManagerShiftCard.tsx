@@ -12,6 +12,7 @@ import {
 } from "@/features/assignments/coverage";
 import { isActiveAssignment } from "@/features/assignments/status";
 import {
+  capitalize,
   formatDayLabel,
   formatShiftHours,
   formatTime,
@@ -155,14 +156,18 @@ export function ManagerShiftCard({
         onPress={onPress}
       >
         <View className={cn("h-8 w-1 rounded-full", bar)} />
-        <View className="items-start">
+        {/* Larghezza fissa: «mar 17 nov» spingeva il titolo più a destra di
+            «Domani», e la colonna dei nomi saltava da una riga all'altra. */}
+        <View className="w-[76px] items-start">
           <Text
             className="text-[15px] font-sans-bold text-t1"
             style={{ fontVariant: ["tabular-nums"] }}
           >
             {formatTime(shift.start_time)}
           </Text>
-          <Mono>{formatDayLabel(shift.date)}</Mono>
+          <Text className="text-xs text-t3" numberOfLines={1}>
+            {capitalize(formatDayLabel(shift.date))}
+          </Text>
         </View>
         <View className="flex-1">
           <Text
@@ -222,17 +227,16 @@ export function ManagerShiftCard({
                 legge come un turno che finisce sedici ore prima di iniziare. */}
             {overnight ? <Mono gold>+1</Mono> : null}
           </View>
-          <Mono className="mt-1">{formatShiftHours(shift)}</Mono>
+          <Text className="mt-1 text-xs text-t3">{formatShiftHours(shift)}</Text>
         </View>
 
         <View className="flex-1">
-          {/* Il nome della sede sopra il titolo, in mono come le altre
-              etichette di contesto: è quello che si cerca per primo scorrendo
-              un'agenda che mescola tre sedi. */}
+          {/* Il nome della sede sopra il titolo, nel suo colore: è quello che
+              si cerca per primo scorrendo un'agenda che mescola tre sedi. */}
           {venue ? (
             <Text
-              className="mb-0.5 font-mono text-[9.5px] uppercase"
-              style={{ letterSpacing: 1.3, color: venue.accent }}
+              className="mb-0.5 text-xs font-sans-semibold"
+              style={{ color: venue.accent }}
               numberOfLines={1}
             >
               {venue.name}

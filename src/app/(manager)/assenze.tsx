@@ -82,7 +82,7 @@ export default function ManagerAbsencesScreen() {
   return (
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Team" title="Assenze" />
+        <ScreenHeader eyebrow="Ogni giorno" title="Assenze" />
       </View>
 
       <ScrollView

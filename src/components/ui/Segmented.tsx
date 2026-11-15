@@ -18,17 +18,21 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  compact = false,
   className,
 }: {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (id: T) => void;
+  /** Stretto, accanto a un'etichetta (Settimana/Mese in Home). */
+  compact?: boolean;
   className?: string;
 }) {
   return (
     <View
       className={cn(
         "flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1",
+        compact && "self-start rounded-xl p-0.5",
         className
       )}
     >
@@ -41,14 +45,16 @@ export function Segmented<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             className={cn(
-              "flex-1 items-center rounded-xl py-2.5",
-              active && "bg-bg-2"
+              // Dorata sull'opzione scelta, come sulla dashboard (15/11):
+              // prima qui era grigia e la Home usava due chip dorate.
+              compact ? "items-center rounded-[10px] px-2.5 py-1" : "flex-1 items-center rounded-xl py-2.5",
+              active && "bg-gold"
             )}
           >
             <Text
               className={cn(
-                "text-sm",
-                active ? "font-sans-semibold text-t1" : "text-t3"
+                compact ? "text-xs" : "text-sm",
+                active ? "font-sans-semibold text-gold-ink" : "text-t3"
               )}
             >
               {o.label}

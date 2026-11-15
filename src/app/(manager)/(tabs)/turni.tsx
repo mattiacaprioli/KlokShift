@@ -459,7 +459,9 @@ export default function ManagerShiftsScreen() {
   const title = (
     <View>
       <Mono gold>{isMultiVenue ? "Le tue sedi" : "La tua sede"}</Mono>
-      <Display className="mt-1 text-3xl leading-[38px]">I tuoi turni</Display>
+      {/* «Turni», come sulla dashboard: il titolare qui vede i turni di tutte
+          le sedi, non solo i suoi (quelli sono nel filtro «I miei turni»). */}
+      <Display className="mt-1 text-3xl leading-[38px]">Turni</Display>
     </View>
   );
 

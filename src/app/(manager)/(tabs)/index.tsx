@@ -1,7 +1,7 @@
 import { HomeSkeleton, ListSkeleton } from "@/components/ui/Skeleton";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
+import { Segmented } from "@/components/ui/Segmented";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
@@ -56,6 +56,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { useAuth } from "@/lib/auth";
 import {
+  capitalize,
   formatRelativeStart,
   formatShiftRange,
   todayString,
@@ -304,8 +305,7 @@ export default function ManagerHome() {
         style={{ paddingTop: insets.top + 12 }}
       >
         <View className="flex-1">
-          <Mono gold>La tua area</Mono>
-          <Display className="mt-1 text-4xl leading-[46px]">
+          <Display className="text-4xl leading-[46px]">
             {firstName ? `Ciao, ${firstName}` : "Ciao"}
           </Display>
           {/* Non più uno switcher: non c'è più una sede da scegliere. Con un
@@ -374,17 +374,12 @@ export default function ManagerHome() {
             <View className="gap-2.5">
               <View className="flex-row items-center justify-between gap-3">
                 <Mono className="flex-1">{periodLabel(period)}</Mono>
-                <View className="flex-row gap-1.5">
-                  {STATS_PERIODS.map((p) => (
-                    <Chip
-                      key={p.value}
-                      label={p.label}
-                      gold
-                      active={period === p.value}
-                      onPress={() => setPeriod(p.value)}
-                    />
-                  ))}
-                </View>
+                <Segmented
+                  compact
+                  options={STATS_PERIODS.map((p) => ({ id: p.value, label: p.label }))}
+                  value={period}
+                  onChange={setPeriod}
+                />
               </View>
               <View className="flex-row gap-2.5">
                 <StatCard
@@ -479,12 +474,14 @@ export default function ManagerHome() {
                       router.push(`/(manager)/shift/${myNextShift.id}`)
                     }
                   >
-                    <Mono gold>
-                      {formatRelativeStart(
-                        myNextShift.date,
-                        myNextShift.start_time,
+                    <Text className="text-sm font-sans-semibold text-gold">
+                      {capitalize(
+                        formatRelativeStart(
+                          myNextShift.date,
+                          myNextShift.start_time,
+                        ),
                       )}
-                    </Mono>
+                    </Text>
                     <Text
                       className="mt-2 text-2xl font-sans-bold text-t1"
                       style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.5 }}

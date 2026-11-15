@@ -11,6 +11,7 @@ import {
   formatHoursVariance,
   formatMonthKey,
   formatPastDayLabel,
+  capitalize,
   formatRelativeStart,
   formatShiftRange,
   formatShiftSummary,
@@ -158,9 +159,11 @@ describe("tempo relativo all'inizio di un turno", () => {
     expect(formatRelativeStart("2026-09-24", "21:00", now)).toBe("fra 3 ore");
   });
 
-  it("dal giorno dopo nomina il giorno", () => {
-    expect(formatRelativeStart("2026-09-25", "10:00", now)).toBe("domani alle 10:00");
-    expect(formatRelativeStart("2026-09-27", "19:00:00", now)).toMatch(/^\S+ 27 alle 19:00$/);
+  it("dal giorno dopo nomina il giorno, senza l'ora", () => {
+    // L'orario sta già, grande, sotto l'etichetta: «mar 17 alle 09:00» sopra
+    // «09:00–16:00» lo diceva due volte (15/11).
+    expect(formatRelativeStart("2026-09-25", "10:00", now)).toBe("domani");
+    expect(formatRelativeStart("2026-09-27", "19:00:00", now)).toMatch(/^\S+ 27 \S+$/);
   });
 
   it("«Oggi» e «Domani» si nominano, gli altri giorni si datano", () => {
@@ -240,5 +243,13 @@ describe("pausa del turno", () => {
         break_paid: false,
       })
     ).toBe("Durata 6 h");
+  });
+});
+
+describe("iniziale maiuscola", () => {
+  it("alza solo la prima lettera", () => {
+    expect(capitalize("domani")).toBe("Domani");
+    expect(capitalize("mar 17 nov")).toBe("Mar 17 nov");
+    expect(capitalize("")).toBe("");
   });
 });

@@ -13,7 +13,10 @@ type Props = {
   accessibilityLabel?: string;
 };
 
-/** Small uppercase mono chip — skills, filters, role tags (prototype's Pill). */
+/**
+ * Piccola chip — filtri, sedi, ruoli. In maiuscole e minuscole normali dal
+ * 15/11: il mono maiuscolo spaziato la faceva pesare più del dato accanto.
+ */
 export function Chip({
   label,
   active,
@@ -42,10 +45,9 @@ export function Chip({
     >
       <Text
         className={cn(
-          "font-mono text-[9.5px] uppercase",
+          "text-xs font-sans-medium",
           active ? (gold ? "text-gold-ink" : "text-t1") : "text-t2"
         )}
-        style={{ letterSpacing: 1.3 }}
       >
         {label}
       </Text>

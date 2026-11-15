@@ -83,10 +83,9 @@ export function FloatingTabBar({
               numberOfLines={1}
               style={{
                 color: focused ? GOLD : INACTIVE,
-                fontFamily: FontFamily.mono,
-                fontSize: 10,
-                letterSpacing: 1,
-                textTransform: "uppercase",
+                // Come sito e dashboard: niente maiuscolo spaziato (15/11).
+                fontFamily: focused ? FontFamily.sansSemibold : FontFamily.sansMedium,
+                fontSize: 11,
               }}
             >
               {label}

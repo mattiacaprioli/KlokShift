@@ -310,14 +310,9 @@ export function startOfWeek(date: string): string {
   return addDaysToDate(date, -offset);
 }
 
-const timeAtFmt = new Intl.DateTimeFormat("it-IT", {
-  weekday: "short",
-  day: "numeric",
-});
-
-// Quanto manca all'inizio di un turno: "fra 25 min", "fra 3 ore", "domani alle
-// 19:00", "gio 12 alle 19:00". È `timeAgo` al contrario, per il turno imminente
-// in home: entro la giornata conta il tempo che resta, oltre conta il giorno.
+// Quanto manca all'inizio di un turno: "fra 25 min", "fra 3 ore", "domani",
+// "gio 12 set". È `timeAgo` al contrario, per il turno imminente in home: entro
+// la giornata conta il tempo che resta, oltre conta il giorno.
 export function formatRelativeStart(
   date: string,
   start: string,
@@ -331,9 +326,9 @@ export function formatRelativeStart(
     const hours = Math.round(min / 60);
     return `fra ${hours} ${hours === 1 ? "ora" : "ore"}`;
   }
-  const time = formatTime(start);
-  if (date === addDaysToDate(todayString(now), 1)) return `domani alle ${time}`;
-  return `${timeAtFmt.format(at)} alle ${time}`;
+  // Solo il giorno: chi la usa mette l'orario, grande, subito sotto.
+  if (date === addDaysToDate(todayString(now), 1)) return "domani";
+  return formatDate(date);
 }
 
 // Date -> "YYYY-MM-DD"
@@ -366,4 +361,10 @@ export function timeToDate(time: string): Date {
   const d = new Date();
   d.setHours(h ?? 0, m ?? 0, 0, 0);
   return d;
+}
+
+// "domani" -> "Domani": le etichette nascono minuscole per stare dentro una
+// frase, e a inizio riga vogliono l'iniziale.
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

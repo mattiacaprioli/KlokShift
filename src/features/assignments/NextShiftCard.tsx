@@ -2,10 +2,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import {
   formatShiftHours,
+  capitalize,
   formatRelativeStart,
   formatShiftRange,
 } from "@/lib/format";
@@ -78,10 +78,11 @@ export function NextShiftCard({
       className="rounded-3xl border-border-gold bg-bg-card p-5"
       onPress={onPress}
     >
-      {/* Solo il tempo che manca: `formatRelativeStart` nomina già il giorno
-          quando serve ("domani alle 19:00", "lun 14 alle 17:00"), e affiancarci
-          la data la scriveva due volte di fila. */}
-      <Mono gold>{formatRelativeStart(shift.date, shift.start_time)}</Mono>
+      {/* Il tempo che manca o il giorno ("fra 3 ore", "Domani", "Lun 14 set"):
+          l'orario sta subito sotto, grande, e ripeterlo qui lo diceva due volte. */}
+      <Text className="text-sm font-sans-semibold text-gold">
+        {capitalize(formatRelativeStart(shift.date, shift.start_time))}
+      </Text>
 
       <Text
         className="mt-2 text-3xl font-sans-bold text-t1"
@@ -89,7 +90,7 @@ export function NextShiftCard({
       >
         {formatShiftRange(shift.start_time, shift.end_time)}
       </Text>
-      <Mono className="mt-1">{formatShiftHours(shift)}</Mono>
+      <Text className="mt-1 text-xs text-t3">{formatShiftHours(shift)}</Text>
 
       <View className="mt-4 flex-row items-center gap-3">
         <Avatar uri={shift.venue?.logo_url} name={venueName} size={40} />

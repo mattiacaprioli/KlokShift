@@ -104,12 +104,10 @@ function PersonRow({
           ) : null}
         </View>
         {/* Assente quando le sedi non concordano: vedi `personEmploymentType`. */}
+        {/* Neutra e piccola, come sulla dashboard: dorata e piena era la cosa
+            più vistosa della scheda, per l'informazione che conta meno. */}
         {employment ? (
-          <Chip
-            label={employment === "fisso" ? "Fisso" : "A chiamata"}
-            active
-            gold={employment === "fisso"}
-          />
+          <Pill label={employment === "fisso" ? "Fisso" : "A chiamata"} variant="neutral" />
         ) : null}
         <Icon name="chevR" size={18} color="#8c857a" />
       </View>

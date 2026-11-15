@@ -19,6 +19,7 @@ import { ChipRow, FilterChip } from "@/components/ui/FilterChip";
 import { PickerField } from "@/components/form/ControlledPicker";
 import {
   addMonthsToKey,
+  capitalize,
   formatHours,
   monthKey,
   toDateString,
@@ -398,7 +399,8 @@ export default function VenueHoursScreen() {
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-5" style={{ paddingTop: insets.top + 8 }}>
         <ScreenHeader
-          eyebrow="Team"
+          // Come nel Menu e nella barra della dashboard: Ore sta in «Ogni giorno».
+          eyebrow="Ogni giorno"
           title="Ore"
           right={
             canRecord ? (
@@ -408,7 +410,7 @@ export default function VenueHoursScreen() {
                 accessibilityLabel={RECORD_ACTION}
                 className="rounded-full border border-border-gold bg-bg-2 px-3 py-1.5"
               >
-                <Mono gold>+ Turno già fatto</Mono>
+                <Text className="text-sm font-sans-semibold text-gold">+ Turno già fatto</Text>
               </Pressable>
             ) : undefined
           }
@@ -590,8 +592,8 @@ export default function VenueHoursScreen() {
                 <Card className="rounded-3xl border-border-2 px-5 py-4">
                   <Mono>{selection ? "Riepilogo delle persone scelte" : "Riepilogo del periodo"}</Mono>
                   <View className="mt-3 flex-row flex-wrap gap-4">
-                    <View><Text className="text-xs text-t3">Ore Lavorate Effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
-                    <View><Text className="text-xs text-t3">Ore di Assenza Giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
+                    <View><Text className="text-xs text-t3">Ore lavorate effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
+                    <View><Text className="text-xs text-t3">Ore di assenza giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
                     <View><Text className="text-xs text-t3">Totale ore coperte</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalCoveredHours)}</Text></View>
                   </View>
                   <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
@@ -601,7 +603,7 @@ export default function VenueHoursScreen() {
                   ))}
                   {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo: le trovi in «{HOURS_TO_FIX_TITLE}».</Text> : null}
                   <Text className="text-xs text-t3">
-                    {totalShifts} turni · {report.length}{" "}
+                    {totalShifts} {totalShifts === 1 ? "turno" : "turni"} · {report.length}{" "}
                     {report.length === 1 ? "persona" : "persone"}
                   </Text>
                 </Card>
@@ -615,7 +617,11 @@ export default function VenueHoursScreen() {
                             {p.person_name}
                           </Text>
                           <Text className="text-xs text-t3">
-                            {p.roles ?? "—"} · {p.shifts_count} turni
+                            {/* Senza ruolo si dice solo il conto: «— · 10 turni»
+                                aveva un trattino appeso davanti. */}
+                            {[p.roles, `${p.shifts_count} ${p.shifts_count === 1 ? "turno" : "turni"}`]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </Text>
                         </View>
                         <Text className="text-sm font-sans-bold text-gold">
@@ -624,7 +630,7 @@ export default function VenueHoursScreen() {
                       </View>
                       {breakSummaryText(p, formatHours) ? (
                         <Text className="text-xs text-t3">
-                          Ore lavorate: {breakSummaryText(p, formatHours)}
+                          {capitalize(breakSummaryText(p, formatHours) ?? "")}
                         </Text>
                       ) : null}
                       {surchargeSummary(surchargeRows, p.person_id).length > 0 ? (

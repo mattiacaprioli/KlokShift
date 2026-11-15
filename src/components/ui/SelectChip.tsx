@@ -10,8 +10,8 @@ type Props = {
 
 /**
  * Selectable pill for the shift form — role / day / badge filters.
- * Flat gold fill when active, hairline outline otherwise (mono uppercase,
- * matching the Aura prototype).
+ * Flat gold fill when active, hairline outline otherwise. Testo normale dal
+ * 15/11, come le altre chip.
  */
 export function SelectChip({ label, active, onPress, className }: Props) {
   return (
@@ -25,10 +25,9 @@ export function SelectChip({ label, active, onPress, className }: Props) {
     >
       <Text
         className={cn(
-          "font-mono text-[11px] uppercase",
+          "text-sm font-sans-medium",
           active ? "text-gold-ink" : "text-t2"
         )}
-        style={{ letterSpacing: 1.4 }}
       >
         {label}
       </Text>
