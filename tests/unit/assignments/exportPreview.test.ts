@@ -11,6 +11,7 @@ import {
   EXPORT_ISSUE_LINKS,
   buildExportPreview,
   issueLinks,
+  hiddenColumnsLabel,
   moreRowsLabel,
   nextFormat,
   toFixInSelection,
@@ -103,8 +104,13 @@ describe("anteprima dell'export", () => {
     const p = preview("daily");
     const table = buildDailyTable(daily, codes, surcharges);
     expect(PREVIEW_ROWS).toBe(5);
-    expect(p.table?.header).toEqual(table.header);
-    expect(p.table?.rows).toEqual(table.rows.slice(0, 5));
+    expect(p.table?.rows).toHaveLength(5);
+    // Ogni cella mostrata è quella del file, nella sua colonna.
+    const cols = (p.table?.header ?? []).map((h) => table.header.indexOf(h));
+    expect(cols.every((c) => c >= 0)).toBe(true);
+    p.table?.rows.forEach((r, i) => {
+      expect(r).toEqual(cols.map((c) => table.rows[i][c]));
+    });
     expect(p.table?.more).toBe(table.rows.length - 5);
   });
 
@@ -264,5 +270,33 @@ describe("anteprima dell'export", () => {
     expect(nextFormat("absences", -1, onlyAbsences)).toBe("absences");
     const noMonthly = { daily: on, monthly: off, absences: on, pdf: on };
     expect(nextFormat("daily", 1, noMonthly)).toBe("absences");
+  });
+
+  it("l'anteprima nasconde le colonne vuote in tutto il file e lo dice", () => {
+    // Senza codici: Codice azienda e Codice causale vuote; senza note: Note vuota.
+    const quiet: ExportCodes = { codes: {}, matricole: new Map() };
+    const p = preview("daily", { codes: quiet, surcharges: [] });
+    const full = buildDailyTable(daily, quiet, []);
+    expect(p.table?.header).not.toContain("Codice azienda");
+    expect(p.table?.header).not.toContain("Codice causale");
+    expect(p.table?.header).toContain("Ore");
+    expect(p.table?.hiddenColumns).toBe(full.header.length - (p.table?.header.length ?? 0));
+    // Le righe hanno le stesse colonne dell'intestazione, con i valori del file.
+    expect(p.table?.rows[0]).toHaveLength(p.table?.header.length ?? 0);
+    expect(p.table?.rows[0]).toContain("7,5");
+  });
+
+  it("una colonna piena anche solo in una riga del file resta", () => {
+    // La matricola c'è solo per una persona, che sta oltre le prime 5 righe.
+    const later: ExportCodes = { codes: {}, matricole: new Map([["z", "0099"]]) };
+    const rows = [...daily, row({ person_id: "z", person_name: "Zeno", date: "2026-11-25" })];
+    const p = preview("daily", { codes: later, daily: rows, surcharges: [] });
+    expect(p.table?.header).toContain("Matricola");
+  });
+
+  it("hiddenColumnsLabel", () => {
+    expect(hiddenColumnsLabel(0)).toBe("");
+    expect(hiddenColumnsLabel(1)).toBe("1 colonna vuota non mostrata");
+    expect(hiddenColumnsLabel(3)).toBe("3 colonne vuote non mostrate");
   });
 });

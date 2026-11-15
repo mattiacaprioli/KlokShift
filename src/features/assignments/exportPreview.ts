@@ -67,12 +67,30 @@ export function issueLinks(can: {
 export type ExportPreview = {
   totals: { label: string; value: string }[];
   issues: ExportIssue[];
-  table: { header: string[]; rows: string[][]; more: number } | null;
+  /** `hiddenColumns`: colonne vuote in tutto il file, tolte dall'anteprima (il file le ha). */
+  table: { header: string[]; rows: string[][]; more: number; hiddenColumns: number } | null;
   available: boolean;
   unavailableReason: string | null;
 };
 
 export const PREVIEW_ROWS = 5;
+
+/** «3 colonne vuote non mostrate»; vuoto se non ne manca nessuna. */
+export function hiddenColumnsLabel(n: number): string {
+  if (n <= 0) return "";
+  return n === 1 ? "1 colonna vuota non mostrata" : `${n} colonne vuote non mostrate`;
+}
+
+/**
+ * Le colonne da mostrare: quelle con almeno un valore **in tutto il file**.
+ * Senza codici il giornaliero comincia con tre colonne vuote che spingerebbero
+ * causale e ore fuori dal riquadro; il file resta com'è.
+ */
+function filledColumns(table: CsvTable): number[] {
+  const all = table.header.map((_, i) => i);
+  if (table.rows.length === 0) return all;
+  return all.filter((i) => table.rows.some((r) => (r[i] ?? "") !== ""));
+}
 
 /** «e altre 183 righe nel file»; vuoto se il file sta tutto nell'anteprima. */
 export function moreRowsLabel(more: number): string {
@@ -128,6 +146,16 @@ export function nextFormat(
     if (previews[key].available) return key;
   }
   return current;
+}
+
+function previewTable(table: CsvTable): NonNullable<ExportPreview["table"]> {
+  const cols = filledColumns(table);
+  return {
+    header: cols.map((i) => table.header[i]),
+    rows: table.rows.slice(0, PREVIEW_ROWS).map((r) => cols.map((i) => r[i] ?? "")),
+    more: Math.max(0, table.rows.length - PREVIEW_ROWS),
+    hiddenColumns: table.header.length - cols.length,
+  };
 }
 
 export function buildExportPreview(input: {
@@ -238,13 +266,7 @@ export function buildExportPreview(input: {
   return {
     totals,
     issues,
-    table: table
-      ? {
-          header: table.header,
-          rows: table.rows.slice(0, PREVIEW_ROWS),
-          more: Math.max(0, table.rows.length - PREVIEW_ROWS),
-        }
-      : null,
+    table: table ? previewTable(table) : null,
     available,
     unavailableReason,
   };

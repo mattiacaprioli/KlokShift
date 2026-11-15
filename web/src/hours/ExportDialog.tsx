@@ -5,6 +5,7 @@ import {
   EXPORT_FORMATS,
   EXPORT_ISSUES_TITLE,
   EXPORT_ISSUE_LINKS,
+  hiddenColumnsLabel,
   moreRowsLabel,
   nextFormat,
   unavailableNote,
@@ -81,7 +82,7 @@ export function ExportDialog({
         role="dialog"
         aria-modal
         aria-label={EXPORT_BUTTON_LABEL}
-        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-card"
+        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-card"
       >
         <div className="px-6 pt-6">
           <h2 className="font-serif text-lg text-t1">{EXPORT_BUTTON_LABEL}</h2>
@@ -103,7 +104,7 @@ export function ExportDialog({
                   onKeyDown={onRadioKey}
                   disabled={off || busy}
                   onClick={() => onFormat(f.key)}
-                  className={`rounded-xl border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                  className={`focus-gold rounded-xl border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                     on ? "border-gold bg-gold/10 text-t1" : "border-border-2 text-t2 hover:border-border-gold"
                   }`}
                 >
@@ -184,8 +185,12 @@ export function ExportDialog({
                       ))}
                     </tbody>
                   </table>
-                  {current.table.more > 0 ? (
-                    <p className="px-3 py-2 text-xs text-t3">{moreRowsLabel(current.table.more)}</p>
+                  {current.table.more > 0 || current.table.hiddenColumns > 0 ? (
+                    <p className="px-3 py-2 text-xs text-t3">
+                      {[moreRowsLabel(current.table.more), hiddenColumnsLabel(current.table.hiddenColumns)]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   ) : null}
                 </div>
               ) : null}
