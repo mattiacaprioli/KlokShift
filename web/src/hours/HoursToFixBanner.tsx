@@ -8,6 +8,7 @@ import {
 } from "@/features/assignments/hoursToFix";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
+import { noticeClass } from "../ui/primitives";
 
 /**
  * L'avviso in Home: «Ore da sistemare · 3 turni · 24 h che non contano
@@ -34,7 +35,7 @@ export function HoursToFixBanner({
       type="button"
       onClick={() => onOpen(month)}
       className={cn(
-        "focus-gold mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-left transition hover:bg-warning/15 print:hidden",
+        noticeClass("warning", "focus-gold flex w-full items-center justify-between gap-3 text-left transition hover:bg-warning/15 print:hidden"),
         className,
       )}
     >

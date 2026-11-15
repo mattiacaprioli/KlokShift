@@ -34,7 +34,7 @@ import {
   toDateString,
 } from "@/lib/format";
 import { useCallback, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FirstStepsCard } from "../onboarding/FirstStepsCard";
 import { useFirstSteps } from "@/features/onboarding/useFirstSteps";
 import { DraftsBanner } from "../shifts/DraftsBanner";
@@ -46,11 +46,13 @@ import { ShiftPanel } from "../shifts/ShiftPanel";
 import { UnplannedClockDialog } from "../shifts/UnplannedClockDialog";
 import {
   Button,
+  ButtonLink,
   Card,
   PageHeader,
   Pill,
   Placeholder,
   QueryError,
+  Segmented,
 } from "../ui/primitives";
 import { EMPTY_SHIFTS_HINT } from "@/features/shifts/drafts";
 import { ListSkeleton, LoadingRegion, Skeleton } from "../ui/Skeleton";
@@ -238,22 +240,13 @@ export function HomePage() {
         <p className="text-xs font-semibold uppercase tracking-wider text-t3">
           {periodLabel(period)}
         </p>
-        <div className="flex overflow-hidden rounded-xl border border-border-2 print:hidden">
-          {STATS_PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={cn(
-                "focus-gold px-3 py-1.5 text-xs font-semibold transition",
-                period === p.value
-                  ? "bg-gold text-gold-ink"
-                  : "bg-bg-2 text-t2 hover:bg-bg-3",
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Periodo"
+          options={STATS_PERIODS}
+          value={period}
+          onChange={setPeriod}
+          className="print:hidden"
+        />
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3">
@@ -261,7 +254,10 @@ export function HomePage() {
           loading={periodQuery.isPending}
           value={statsReady ? stats.shortCount : "—"}
           label="turni da coprire"
-          hint="manca ancora qualcuno"
+          // Contano solo i turni non ancora finiti (`computeHomeStats`): di
+          // domenica «Questa settimana» con zero accanto a turni scoperti già
+          // passati sembrava un errore.
+          hint="da oggi in poi"
           tone={stats.shortCount > 0 ? "warning" : "normal"}
           onClick={() => navigate("/planning")}
         />
@@ -386,12 +382,9 @@ export function HomePage() {
                 ? EMPTY_SHIFTS_HINT
                 : "Qui compaiono i prossimi turni delle tue sedi."}
               action={canCreateShift && !otherStepFirst ? (
-                <Link
-                  to="/planning?nuovo=oggi"
-                  className="focus-gold rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-                >
+                <ButtonLink variant="gold" to="/planning?nuovo=oggi">
                   Crea un turno
-                </Link>
+                </ButtonLink>
               ) : undefined}
             />
           ) : (

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import { ButtonLink, noticeClass } from "../ui/primitives";
 
 /** Pagine che spiegano già lo stato dell'azienda da sé. */
 const HIDDEN_ON = ["/piano", "/aiuto", "/impostazioni"];
@@ -34,10 +35,10 @@ export function AccessBanner() {
         : null;
   if (!text) return null;
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-gold bg-gold/10 px-4 py-3 print:hidden" role="status">
+    <div className={noticeClass("gold", "flex flex-wrap items-center justify-between gap-3 print:hidden")} role="status">
       <p className="text-sm text-t1">{text}</p>
       {isOwner && access.state === "setup" && (access.usage?.venues ?? 0) > 0 ? (
-        <Link className="focus-gold rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light" to="/prova">Avvia la prova</Link>
+        <ButtonLink variant="gold" to="/prova">Avvia la prova</ButtonLink>
       ) : isOwner ? (
         <Link className="focus-gold text-sm font-medium text-gold underline" to="/piano">Vai a Piano e accesso</Link>
       ) : null}

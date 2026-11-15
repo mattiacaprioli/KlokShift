@@ -90,6 +90,9 @@ import {
   PageHeader,
   Placeholder,
   QueryError,
+  Segmented,
+  STEP_CLASS,
+  StepGroup,
   StickyHeader,
 } from "../ui/primitives";
 import { FullExportCard } from "../export/FullExportCard";
@@ -114,6 +117,12 @@ import { NoVenues } from "../venues/NoVenues";
  */
 /** Righe di «Ore da sistemare» visibili prima di «Mostra tutti». */
 const TO_FIX_PREVIEW = 8;
+
+/** Mese (il caso di tutti i mesi) o due date libere, per una quindicina. */
+const PERIOD_MODES = [
+  { value: "month", label: "Mese" },
+  { value: "range", label: "Date" },
+] as const;
 
 /**
  * Quello che il pannello d'export fotografa e legge all'apertura, e con cui
@@ -419,7 +428,9 @@ export function OrePage() {
           subtitle={`${label} · ${formatHours(totalHours)} lavorate effettive${toFix.length > 0 ? ` · ${toFix.length} ${toFix.length === 1 ? "turno" : "turni"} da sistemare` : ""}`}
           actions={
             canRecord ? (
-              <Button variant="gold" onClick={() => setRecording(true)}>
+              // Secondario: in Ore il pulsante principale è l'export, e due
+              // dorati nella stessa intestazione si contendevano l'occhio.
+              <Button onClick={() => setRecording(true)}>
                 {RECORD_ACTION}
               </Button>
             ) : undefined
@@ -438,60 +449,45 @@ export function OrePage() {
           <div className="flex flex-wrap gap-2">
             {/* Mese (il caso di tutti i mesi) o due date libere, per mandare
                 al consulente anche una quindicina o un periodo a cavallo. */}
-            <div
-              role="group"
-              aria-label="Periodo"
-              className="flex rounded-xl border border-border-2 bg-bg-2 p-0.5"
-            >
-              {(
-                [
-                  ["month", "Mese"],
-                  ["range", "Date"],
-                ] as const
-              ).map(([id, text]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={mode === id}
-                  onClick={() => {
-                    // Si entra in «Date» dal mese che si stava guardando.
-                    if (id === "range" && mode === "month") editRange(monthAsRange(month));
-                    setMode(id);
-                  }}
-                  className={cn(
-                    "focus-gold rounded-[10px] px-3 text-sm font-semibold transition",
-                    mode === id ? "bg-bg-card text-t1 shadow-sm" : "text-t3 hover:text-t1"
-                  )}
-                >
-                  {text}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              label="Periodo"
+              options={PERIOD_MODES}
+              value={mode}
+              onChange={(id) => {
+                // Si entra in «Date» dal mese che si stava guardando.
+                if (id === "range" && mode === "month") editRange(monthAsRange(month));
+                setMode(id);
+              }}
+            />
 
             {mode === "month" ? (
-              <div className="flex gap-2">
-                <Button
+              <StepGroup>
+                <button
+                  type="button"
                   aria-label="Mese precedente"
                   onClick={() => setMonth(adjacentMonth(-1))}
+                  className={STEP_CLASS}
                 >
                   ←
-                </Button>
+                </button>
                 <input
                   type="month"
                   aria-label="Mese"
                   value={month}
                   max={monthKey(new Date())}
                   onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) setMonth(e.target.value); }}
-                  className="rounded-xl border border-border-2 bg-bg-card px-3 text-sm text-t1"
+                  className={cn(STEP_CLASS, "font-normal")}
                 />
-                <Button
+                <button
+                  type="button"
                   aria-label="Mese successivo"
                   onClick={() => setMonth(adjacentMonth(1))}
                   disabled={month >= monthKey(new Date())}
+                  className={STEP_CLASS}
                 >
                   →
-                </Button>
-              </div>
+                </button>
+              </StepGroup>
             ) : (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
@@ -643,8 +639,8 @@ export function OrePage() {
       {report.length > 0 && !isPending && !absenceQuery.isPending && !isError && !absenceQuery.isError ? (
         <>
         <Card className="mb-4 grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
-          <div><p className="text-xs text-t3">Ore Lavorate Effettive</p><p className="font-mono text-xl text-t1">{formatHours(totalHours)}</p></div>
-          <div><p className="text-xs text-t3">Ore di Assenza Giustificata</p><p className="font-mono text-xl text-t1">{formatHours(totalJustified)}</p></div>
+          <div><p className="text-xs text-t3">Ore lavorate effettive</p><p className="font-mono text-xl text-t1">{formatHours(totalHours)}</p></div>
+          <div><p className="text-xs text-t3">Ore di assenza giustificata</p><p className="font-mono text-xl text-t1">{formatHours(totalJustified)}</p></div>
           <div><p className="text-xs text-t3">Totale ore coperte</p><p className="font-mono text-xl text-gold">{formatHours(totalCoveredHours)}</p></div>
           <p className="text-xs text-t4 sm:col-span-3">Senza timbratura, le ore del turno concluso entrano automaticamente e si possono correggere dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</p>
           {totalConflicts > 0 ? <p className="text-xs text-warning sm:col-span-3">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</p> : null}
@@ -662,8 +658,8 @@ export function OrePage() {
                 <th className="px-5 py-3 font-semibold">Nome</th>
                 <th className="px-5 py-3 font-semibold">Ruolo</th>
                 <th className="px-5 py-3 text-right font-semibold">Turni</th>
-                <th className="px-5 py-3 text-right font-semibold">Ore Lavorate Effettive</th>
-                <th className="px-5 py-3 text-right font-semibold">Ore di Assenza Giustificata</th>
+                <th className="px-5 py-3 text-right font-semibold">Ore lavorate effettive</th>
+                <th className="px-5 py-3 text-right font-semibold">Ore di assenza giustificata</th>
                 <th className="px-5 py-3 text-right font-semibold">Totale ore coperte</th>
                 <th className="px-5 py-3 text-right font-semibold">Da verificare</th>
               </tr>

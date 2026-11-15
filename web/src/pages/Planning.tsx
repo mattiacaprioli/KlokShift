@@ -121,7 +121,10 @@ import {
   PageHeader,
   Pill,
   QueryError,
+  Segmented,
   Select,
+  STEP_CLASS,
+  StepGroup,
 } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 import { NoVenues } from "../venues/NoVenues";
@@ -701,26 +704,16 @@ export function PlanningPage() {
                 ))}
               </Select>
             ) : null}
-            <div className="flex overflow-hidden rounded-xl border border-border-2">
-              {VIEWS.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={cn(
-                    "focus-gold px-3 py-2 text-sm font-semibold capitalize transition",
-                    view === v
-                      ? "bg-gold text-gold-ink"
-                      : "bg-bg-2 text-t2 hover:bg-bg-3",
-                  )}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              label="Vista"
+              options={VIEWS.map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }))}
+              value={view}
+              onChange={setView}
+            />
             {/* Indietro, oggi, avanti: un gruppo solo, come la scelta della
                 vista accanto. Tre pulsanti sciolti erano tre cose in più da
                 leggere in una barra già piena. */}
-            <div className="flex overflow-hidden rounded-xl border border-border-2">
+            <StepGroup>
               <button
                 type="button"
                 aria-label={isWeekly ? "Settimana precedente" : "Mese precedente"}
@@ -729,14 +722,14 @@ export function PlanningPage() {
                     ? setMonday((m) => addDays(m, -7))
                     : setMonth((m) => addMonths(m, -1))
                 }
-                className="focus-gold bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3"
+                className={STEP_CLASS}
               >
                 ←
               </button>
               <button
                 type="button"
                 onClick={goToday}
-                className="focus-gold border-x border-border-2 bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3"
+                className={STEP_CLASS}
               >
                 Oggi
               </button>
@@ -748,11 +741,11 @@ export function PlanningPage() {
                     ? setMonday((m) => addDays(m, 7))
                     : setMonth((m) => addMonths(m, 1))
                 }
-                className="focus-gold bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3"
+                className={STEP_CLASS}
               >
                 →
               </button>
-            </div>
+            </StepGroup>
             {/* Le azioni di ogni tanto. Si duplica il periodo che si ha davanti
                 (settimana o mese): il dialogo dice quanti turni prima di
                 procedere. La stampa la fa il browser sulla vista aperta, con i
@@ -1159,7 +1152,7 @@ function WeekGrid({
                 <span className="font-mono text-sm text-t2">{num}</span>
               </header>
               {closedText ? (
-                <p className="mb-2 rounded-lg border border-border-2 bg-bg-3 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-t1">
+                <p className="mb-2 rounded-lg border border-border-2 bg-bg-3 px-2 py-1 text-xs leading-snug text-t2">
                   {closedText}
                 </p>
               ) : null}
@@ -1304,7 +1297,7 @@ function MonthGrid({
                 </button>
               </header>
               {closedText ? (
-                <p className="mb-1 truncate rounded bg-bg-3 px-1 text-[10px] font-semibold uppercase tracking-wide text-t1">
+                <p className="mb-1 truncate rounded bg-bg-3 px-1 text-[11px] text-t2">
                   {closedText}
                 </p>
               ) : null}

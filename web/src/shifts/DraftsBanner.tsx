@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useOwnerDrafts } from "@/features/shifts/hooks";
 import { draftsBannerText, summarizeDrafts } from "@/features/shifts/drafts";
 import { cn } from "@/lib/cn";
+import { noticeClass } from "../ui/primitives";
 
 /**
  * L'avviso delle bozze dimenticate: «12 turni in bozza (dicembre)». Sparisce da
@@ -35,7 +36,7 @@ export function DraftsBanner({
       type="button"
       onClick={() => onOpen(target)}
       className={cn(
-        "focus-gold mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3 text-left transition hover:bg-gold/15 print:hidden",
+        noticeClass("gold", "focus-gold flex w-full items-center justify-between gap-3 text-left transition hover:bg-gold/15 print:hidden"),
         className,
       )}
     >

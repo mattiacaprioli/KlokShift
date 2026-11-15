@@ -63,6 +63,19 @@
     background: var(--color-gold);
     color: var(--color-gold-ink);
   }
+  /*
+   * L'icona del calendario di mese e data: col tema scuro Chrome la disegna
+   * bianca piena, più accesa del testo accanto. Smorzata come le altre icone,
+   * piena al passaggio del mouse.
+   */
+  input::-webkit-calendar-picker-indicator {
+    opacity: 0.45;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  input:hover::-webkit-calendar-picker-indicator {
+    opacity: 0.9;
+  }
 }
 
 @layer components {

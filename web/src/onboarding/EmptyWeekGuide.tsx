@@ -1,6 +1,5 @@
-import { Link } from "react-router-dom";
 import type { EmptyWeekGuide as Guide } from "@/features/onboarding/firstWeek";
-import { Button } from "../ui/primitives";
+import { Button, ButtonLink, noticeClass } from "../ui/primitives";
 
 /*
  * La guida della settimana vuota: il passo che manca prima del primo turno, in
@@ -28,7 +27,7 @@ const COPY: Record<Guide, { text: string; cta: string; to?: string }> = {
 export function EmptyWeekGuide({ guide, onCreate }: { guide: Guide; onCreate: () => void }) {
   const copy = COPY[guide];
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border-gold bg-gold/[0.06] px-5 py-4">
+    <div className={noticeClass("gold", "flex flex-wrap items-center justify-between gap-4")}>
       <div className="min-w-0 max-w-2xl">
         <p className="font-serif text-lg text-t1">La tua prima settimana</p>
         <p className="mt-1 text-sm leading-6 text-t2">{copy.text}</p>
@@ -43,12 +42,9 @@ export function EmptyWeekGuide({ guide, onCreate }: { guide: Guide; onCreate: ()
             >
               Crea comunque un turno
             </button>
-            <Link
-              to={copy.to}
-              className="focus-gold inline-flex items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-            >
+            <ButtonLink variant="gold" to={copy.to}>
               {copy.cta}
-            </Link>
+            </ButtonLink>
           </>
         ) : (
           <Button variant="gold" onClick={onCreate}>

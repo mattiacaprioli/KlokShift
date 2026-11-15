@@ -15,6 +15,7 @@ import {
 } from "react";
 import type {
   ButtonHTMLAttributes,
+  ComponentProps,
   InputHTMLAttributes,
   KeyboardEvent,
   OptionHTMLAttributes,
@@ -24,6 +25,29 @@ import type {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
+import { Link } from "react-router-dom";
+
+type ButtonVariant = "gold" | "ghost" | "danger";
+
+/**
+ * Le classi del pulsante, per chi deve sembrarlo senza esserlo (un `Link`).
+ * Fino al 15/11 cinque link dorati ricopiavano la ricetta a mano, ciascuno con
+ * spazi suoi.
+ */
+export function buttonClass(variant: ButtonVariant = "ghost", className?: string) {
+  return cn(
+    "focus-gold inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed",
+    // Il dorato spento al 40% sul fondo scuro diventava un marrone che
+    // sembrava rotto: spento è grigio, come nei pulsanti principali di
+    // Planday e Deputy. Le altre varianti si spengono sbiadendo.
+    variant === "gold" &&
+      "bg-gold text-gold-ink hover:bg-gold-light active:bg-gold-dark disabled:bg-bg-3 disabled:text-t3 disabled:hover:bg-bg-3",
+    variant !== "gold" && "disabled:opacity-40",
+    variant === "ghost" && "border border-border-2 bg-bg-2 text-t1 hover:bg-bg-3",
+    variant === "danger" && "border border-error/40 bg-error/10 text-error hover:bg-error/20",
+    className
+  );
+}
 
 export function Button({
   variant = "ghost",
@@ -34,27 +58,81 @@ export function Button({
   type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "gold" | "ghost" | "danger";
+  variant?: ButtonVariant;
+}) {
+  return <button type={type} className={buttonClass(variant, className)} {...props} />;
+}
+
+/** Un link che ha l'aspetto di un pulsante: stessa ricetta di `Button`. */
+export function ButtonLink({
+  variant = "ghost",
+  className,
+  ...props
+}: ComponentProps<typeof Link> & { variant?: ButtonVariant }) {
+  return <Link className={buttonClass(variant, className)} {...props} />;
+}
+
+/**
+ * La scelta fra poche viste (Settimana/Mese, Mese/Date): una sola forma per
+ * Home, Turni e Ore, dorata sull'opzione attiva. Prima erano tre, di misure e
+ * colori diversi.
+ */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+  className,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  label: string;
+  className?: string;
 }) {
   return (
-    <button
-      type={type}
-      className={cn(
-        "focus-gold inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed",
-        // Il dorato spento al 40% sul fondo scuro diventava un marrone che
-        // sembrava rotto: spento è grigio, come nei pulsanti principali di
-        // Planday e Deputy. Le altre varianti si spengono sbiadendo.
-        variant === "gold" &&
-          "bg-gold text-gold-ink enabled:hover:bg-gold-light enabled:active:bg-gold-dark disabled:bg-bg-3 disabled:text-t3",
-        variant !== "gold" && "disabled:opacity-40",
-        variant === "ghost" &&
-          "border border-border-2 bg-bg-2 text-t1 hover:bg-bg-3",
-        variant === "danger" &&
-          "border border-error/40 bg-error/10 text-error hover:bg-error/20",
-        className
-      )}
-      {...props}
-    />
+    <div role="group" aria-label={label} className={cn("flex overflow-hidden rounded-xl border border-border-2", className)}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "focus-gold px-3 py-2 text-sm font-semibold transition",
+            value === o.value ? "bg-gold text-gold-ink" : "bg-bg-2 text-t2 hover:bg-bg-3"
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Indietro · periodo · avanti, uniti in un blocco: Turni e Ore. */
+export function StepGroup({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("flex overflow-hidden rounded-xl border border-border-2 [&>*+*]:border-l [&>*+*]:border-border-2", className)}>
+      {children}
+    </div>
+  );
+}
+
+/** Un pezzo di `StepGroup`. */
+export const STEP_CLASS =
+  "focus-gold bg-bg-2 px-3 py-2 text-sm font-semibold text-t1 transition hover:bg-bg-3 disabled:cursor-not-allowed disabled:text-t4 disabled:hover:bg-bg-2";
+
+/**
+ * La forma degli avvisi in cima alle pagine (prova, bozze, ore da sistemare,
+ * timbrature, prima settimana): stessi angoli, spazi e intensità. Dorato per
+ * le informazioni, arancione per le cose da fare.
+ */
+export function noticeClass(tone: "gold" | "warning", className?: string) {
+  return cn(
+    "mb-4 rounded-2xl border px-4 py-3",
+    tone === "gold" ? "border-border-gold bg-gold/10" : "border-warning/40 bg-warning/10",
+    className
   );
 }
 

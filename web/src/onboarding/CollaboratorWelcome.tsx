@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { ButtonLink } from "../ui/primitives";
 import {
   collaboratorSummary,
   type CollaboratorSummary,
@@ -65,13 +65,9 @@ export function CollaboratorWelcome() {
       <PermissionsGrid s={s} />
 
       {s.start ? (
-        <Link
-          to={s.start.path}
-          onClick={close}
-          className="focus-gold mt-5 inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-        >
+        <ButtonLink variant="gold" to={s.start.path} onClick={close} className="mt-5">
           {s.start.label}
-        </Link>
+        </ButtonLink>
       ) : null}
     </section>
   );

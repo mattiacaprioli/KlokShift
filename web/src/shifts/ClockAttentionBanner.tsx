@@ -1,3 +1,4 @@
+import { noticeClass } from "../ui/primitives";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import {
   CLOCK_ATTENTION_LABEL,
@@ -17,10 +18,10 @@ export function ClockAttentionBanner({
   if (items.length === 0) return null;
 
   return (
-    <section className="mb-4 rounded-2xl border border-warning/50 bg-warning/10 p-4 print:hidden">
+    <section className={noticeClass("warning", "print:hidden")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-warning">
+          <p className="text-sm font-semibold text-warning">
             Timbrature da controllare
           </p>
           <p className="mt-0.5 text-xs text-t2">{clockAttentionSummary(items)}</p>

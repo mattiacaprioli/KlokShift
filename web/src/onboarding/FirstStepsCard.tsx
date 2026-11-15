@@ -5,6 +5,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useFirstSteps } from "@/features/onboarding/useFirstSteps";
 import type { FirstStepId, FirstStepsMemory } from "@/features/onboarding/firstSteps";
 import { cn } from "@/lib/cn";
+import { ButtonLink } from "../ui/primitives";
 import { loadFirstStepsMemory, saveFirstStepsMemory } from "./firstStepsStorage";
 
 const ROUTES: Record<FirstStepId, string> = {
@@ -131,12 +132,9 @@ export function FirstStepsCard() {
 
       {steps.next ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link
-            to={ROUTES[steps.next.id]}
-            className="focus-gold inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
-          >
+          <ButtonLink variant="gold" to={ROUTES[steps.next.id]}>
             {steps.next.cta}
-          </Link>
+          </ButtonLink>
           {steps.next.id === "people" && !steps.hasSelfCard ? (
             <Link to="/staff?aggiungi=me" className="focus-gold text-sm text-gold underline">
               Lavori anche tu? Mettiti nel team

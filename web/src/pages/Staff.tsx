@@ -1,7 +1,7 @@
 import { ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { operationsGate } from "@/features/workspace/access";
 import { useOwnerPeople } from "@/features/staff/hooks";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/features/staff/teamFilters";
 import {
   Button,
+  ButtonLink,
   Card,
   PageHeader,
   Pill,
@@ -118,9 +119,7 @@ export function StaffPage() {
         actions={
           <div className="flex gap-2">
             {canVenue ? (
-              <Link to="/ruoli">
-                <Button>Ruoli</Button>
-              </Link>
+              <ButtonLink to="/ruoli">Ruoli</ButtonLink>
             ) : null}
             {/* Anche chi organizza i turni li lavora: finché non ha una scheda
                 le sue ore non entrano in nessun conto. Sparisce appena c'è. */}

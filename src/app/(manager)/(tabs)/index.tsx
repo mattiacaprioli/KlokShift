@@ -391,7 +391,7 @@ export default function ManagerHome() {
                   loading={periodQuery.isPending}
                   value={statsReady ? String(stats.shortCount) : "—"}
                   label="Turni da coprire"
-                  hint="manca ancora qualcuno"
+                  hint="da oggi in poi"
                   tone={stats.shortCount > 0 ? "warning" : "normal"}
                   onPress={() => router.push("/(manager)/(tabs)/turni")}
                 />
