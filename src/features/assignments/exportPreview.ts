@@ -6,7 +6,7 @@ import {
   type CsvTable,
 } from "@/lib/exportBuilders";
 import { formatSummaryDays, type AbsenceSummaryRow } from "@/features/absences/summary";
-import type { ExportCodes } from "./exportCodes";
+import { exportCodesWarning, usedExportKeys, type ExportCodes } from "./exportCodes";
 import type { HourToFix } from "./api";
 import type { HoursDailyRow } from "./hoursDaily";
 import type { PersonHours } from "./hoursSummary";
@@ -42,6 +42,27 @@ export const EXPORT_ISSUES_TITLE = "Resta fuori o va controllato";
 /** Dove si sistema una voce: la sezione «Ore da sistemare», i codici, le assenze, il team. */
 export type ExportIssueTarget = "to_fix" | "codes" | "absences" | "team";
 export type ExportIssue = { text: string; target: ExportIssueTarget };
+
+/** Il testo del collegamento di ogni voce: lo stesso in app e dashboard. */
+export const EXPORT_ISSUE_LINKS: Record<ExportIssueTarget, string> = {
+  to_fix: "Ore da sistemare",
+  codes: "Codici per il consulente",
+  absences: "Assenze",
+  team: "Team",
+};
+
+/**
+ * Quali voci portano un collegamento: solo verso una pagina che chi esporta può
+ * usare. Le assenze vogliono «Team» (come la pagina Assenze), le ore da
+ * contratto le scrive solo il titolare (`contractSectionMode`).
+ */
+export function issueLinks(can: {
+  canHours: boolean;
+  canStaff: boolean;
+  isOwner: boolean;
+}): Record<ExportIssueTarget, boolean> {
+  return { to_fix: true, codes: can.canHours, absences: can.canStaff, team: can.isOwner };
+}
 
 export type ExportPreview = {
   totals: { label: string; value: string }[];
@@ -101,7 +122,7 @@ export function buildExportPreview(input: {
   surcharges: SurchargeRow[];
   toFix: Pick<HourToFix, "hours">[];
   /** I testi delle funzioni d'avviso di sempre (`null` = niente da dire). */
-  warnings: { codes: string | null; certificates: string | null; contract: string | null };
+  warnings: { certificates: string | null; contract: string | null };
   availability: { monthly: boolean; absences: boolean };
 }): ExportPreview {
   const { format, people, absences, daily, codes, surcharges, warnings } = input;
@@ -168,7 +189,22 @@ export function buildExportPreview(input: {
       target: "to_fix",
     });
   }
-  if (csv && warnings.codes) issues.push({ text: warnings.codes, target: "codes" });
+  // I codici del file scelto: il CSV assenze porta solo la matricola, nessun
+  // codice di causale, quindi lì l'avviso parla solo di matricole.
+  const codesText = !csv
+    ? null
+    : format === "absences"
+      ? exportCodesWarning({
+          personIds: absences.map((a) => a.person_id),
+          usedKeys: [],
+          codes: { codes: {}, matricole: codes.matricole },
+        })
+      : exportCodesWarning({
+          personIds: monthlyReportRows(people, absences).map((r) => r.person_id),
+          usedKeys: usedExportKeys(monthlyReportRows(people, absences), absences, surcharges),
+          codes,
+        });
+  if (codesText) issues.push({ text: codesText, target: "codes" });
   // La colonna dei certificati c'è solo nel CSV delle assenze e nel PDF.
   if ((format === "absences" || format === "pdf") && warnings.certificates) {
     issues.push({ text: warnings.certificates, target: "absences" });

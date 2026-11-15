@@ -23,8 +23,6 @@ import {
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
-  exportCodesWarning,
-  usedExportKeys,
   type ExportCodes,
 } from "@/features/assignments/exportCodes";
 import { ExportCodesDialog } from "../hours/ExportCodesDialog";
@@ -33,6 +31,7 @@ import {
   EXPORT_BUTTON_LABEL,
   EXPORT_FORMATS,
   buildExportPreview,
+  issueLinks,
   toFixInSelection,
   type ExportFormat,
   type ExportIssueTarget,
@@ -141,7 +140,7 @@ type ExportData = {
 
 export function OrePage() {
   const { profile } = useAuth();
-  const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
+  const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue, isOwner } =
     useOwnerVenues();
   const navigate = useNavigate();
   // Il turno dimenticato si registra da qui: è una questione di ore, ed è qui
@@ -309,6 +308,13 @@ export function OrePage() {
     void loadExport();
   }
 
+  // I collegamenti delle voci, solo verso pagine che chi esporta può usare.
+  const exportLinks = issueLinks({
+    canHours: canAny("can_view_hours"),
+    canStaff: canAny("can_manage_staff"),
+    isOwner,
+  });
+
   function closeExport() {
     exportSeq.current++;
     setExportOpen(false);
@@ -327,11 +333,6 @@ export function OrePage() {
             surcharges: exportData.surcharges,
             toFix: exportData.toFix,
             warnings: {
-              codes: exportCodesWarning({
-                personIds: exportData.report.map((r) => r.person_id),
-                usedKeys: usedExportKeys(exportData.report, exportData.absences, exportData.surcharges),
-                codes: exportData.codes,
-              }),
               certificates: exportData.certificates,
               contract: exportData.contract,
             },
@@ -548,6 +549,7 @@ export function OrePage() {
           onFormat={setExportFormat}
           state={exportState}
           preview={exportPreviews}
+          links={exportLinks}
           busy={false}
           onRetry={() => void loadExport()}
           onDownload={downloadExport}

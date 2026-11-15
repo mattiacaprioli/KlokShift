@@ -1,4 +1,4 @@
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, ScrollView as RNScrollView, useWindowDimensions } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { GhostButton } from "@/components/ui/GhostButton";
@@ -9,6 +9,7 @@ import {
   EXPORT_BUTTON_LABEL,
   EXPORT_FORMATS,
   EXPORT_ISSUES_TITLE,
+  EXPORT_ISSUE_LINKS,
   unavailableNote,
   type ExportFormat,
   type ExportIssueTarget,
@@ -24,12 +25,6 @@ import {
  * li gestisce la pagina Ore.
  */
 
-const ISSUE_LINK: Record<ExportIssueTarget, string> = {
-  to_fix: "Ore da sistemare",
-  codes: "Codici",
-  absences: "Assenze",
-  team: "Team",
-};
 
 export function ExportSheet({
   visible,
@@ -38,6 +33,7 @@ export function ExportSheet({
   onFormat,
   state,
   preview,
+  links,
   busy,
   error,
   onRetry,
@@ -52,6 +48,8 @@ export function ExportSheet({
   state: "loading" | "error" | "ready";
   /** Un'anteprima per formato: serve a spegnere quelli non disponibili. */
   preview: Record<ExportFormat, ExportPreview> | null;
+  /** Quali voci portano un collegamento (`issueLinks`): le altre restano solo testo. */
+  links: Record<ExportIssueTarget, boolean>;
   busy: boolean;
   /** L'errore dello scarico, detto qui: un toast resterebbe sotto il `Modal`. */
   error?: string | null;
@@ -62,6 +60,9 @@ export function ExportSheet({
 }) {
   const current = preview?.[format] ?? null;
   const note = preview ? unavailableNote(preview) : null;
+  // Totali e avvisi scorrono; il pulsante resta sempre in vista, anche su un
+  // telefono piccolo con il testo ingrandito.
+  const { height } = useWindowDimensions();
 
   return (
     <BottomSheet visible={visible} onClose={onClose} dismissable={!busy}>
@@ -93,7 +94,10 @@ export function ExportSheet({
       </View>
       {note ? <Text className="mt-2 text-[12px] leading-4 text-t3">{note}</Text> : null}
 
-      <View className="mt-4 gap-3">
+      <RNScrollView
+        style={{ maxHeight: Math.round(height * 0.45), marginTop: 16 }}
+        contentContainerStyle={{ gap: 12 }}
+      >
         {state === "loading" ? (
           <View className="items-center py-6">
             <ActivityIndicator color="#EAB54C" />
@@ -132,16 +136,20 @@ export function ExportSheet({
                 {current.issues.map((issue) => (
                   <View key={issue.target} className="flex-row items-start justify-between gap-3">
                     <Text className="flex-1 text-[13px] leading-5 text-t2">{issue.text}</Text>
-                    <Pressable onPress={() => onIssue(issue.target)} accessibilityRole="link" hitSlop={8}>
-                      <Text className="text-[13px] font-sans-semibold text-gold">{ISSUE_LINK[issue.target]}</Text>
-                    </Pressable>
+                    {links[issue.target] ? (
+                      <Pressable onPress={() => onIssue(issue.target)} accessibilityRole="link" hitSlop={8}>
+                        <Text className="text-[13px] font-sans-semibold text-gold">{EXPORT_ISSUE_LINKS[issue.target]}</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 ))}
               </View>
             ) : null}
           </>
         ) : null}
+      </RNScrollView>
 
+      <View className="mt-3 gap-3">
         {error ? <Text className="text-[13px] text-error">{error}</Text> : null}
         <GoldButton
           label="Scarica e condividi"

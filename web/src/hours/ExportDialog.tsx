@@ -4,6 +4,7 @@ import {
   EXPORT_BUTTON_LABEL,
   EXPORT_FORMATS,
   EXPORT_ISSUES_TITLE,
+  EXPORT_ISSUE_LINKS,
   moreRowsLabel,
   unavailableNote,
   type ExportFormat,
@@ -20,12 +21,6 @@ import { Button, Spinner } from "../ui/primitives";
  * tutto una volta all'apertura. Gemello dell'app: `ExportSheet`.
  */
 
-const ISSUE_LINK: Record<ExportIssueTarget, string> = {
-  to_fix: "Ore da sistemare",
-  codes: "Codici per il consulente",
-  absences: "Assenze",
-  team: "Team",
-};
 
 export function ExportDialog({
   subtitle,
@@ -33,6 +28,7 @@ export function ExportDialog({
   onFormat,
   state,
   preview,
+  links,
   busy,
   onRetry,
   onDownload,
@@ -45,6 +41,8 @@ export function ExportDialog({
   state: "loading" | "error" | "ready";
   /** Un'anteprima per formato: serve a spegnere quelli non disponibili. */
   preview: Record<ExportFormat, ExportPreview> | null;
+  /** Quali voci portano un collegamento (`issueLinks`): le altre restano solo testo. */
+  links: Record<ExportIssueTarget, boolean>;
   busy: boolean;
   onRetry: () => void;
   onDownload: () => void;
@@ -128,13 +126,15 @@ export function ExportDialog({
                     {current.issues.map((issue) => (
                       <li key={issue.target} className="flex items-start justify-between gap-4 text-sm text-t2">
                         <span>{issue.text}</span>
-                        <button
-                          type="button"
-                          onClick={() => onIssue(issue.target)}
-                          className="shrink-0 text-gold hover:underline"
-                        >
-                          {ISSUE_LINK[issue.target]}
-                        </button>
+                        {links[issue.target] ? (
+                          <button
+                            type="button"
+                            onClick={() => onIssue(issue.target)}
+                            className="shrink-0 text-gold hover:underline"
+                          >
+                            {EXPORT_ISSUE_LINKS[issue.target]}
+                          </button>
+                        ) : null}
                       </li>
                     ))}
                   </ul>

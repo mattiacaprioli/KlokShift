@@ -8,7 +8,9 @@ import { buildDailyTable } from "@/lib/exportBuilders";
 import {
   EXPORT_FORMATS,
   PREVIEW_ROWS,
+  EXPORT_ISSUE_LINKS,
   buildExportPreview,
+  issueLinks,
   moreRowsLabel,
   toFixInSelection,
   unavailableNote,
@@ -45,7 +47,8 @@ function absence(extra: Partial<AbsenceSummaryRow> = {}): AbsenceSummaryRow {
   };
 }
 
-const codes: ExportCodes = { codes: {}, matricole: new Map() };
+// Un'azienda che usa codici e matricole, ma Anna («p») non ha la matricola.
+const codes: ExportCodes = { codes: { company: "AZ" }, matricole: new Map([["x", "0001"]]) };
 const surcharges: SurchargeRow[] = [
   {
     person_id: "p", person_name: "Anna", date: "2026-11-05", venue_name: "Centro", title: "Sala",
@@ -61,11 +64,10 @@ const daily: HoursDailyRow[] = [
 ];
 
 const allWarnings = {
-  codes: "1 persona senza matricola: nel file la colonna resta vuota.",
   certificates: "1 malattia senza certificato in questo periodo.",
   contract: "1 persona senza ore da contratto: lo straordinario non è calcolato.",
 };
-const noWarnings = { codes: null, certificates: null, contract: null };
+const noWarnings = { certificates: null, contract: null };
 
 function preview(format: ExportFormat, extra: Partial<Parameters<typeof buildExportPreview>[0]> = {}) {
   return buildExportPreview({
@@ -147,12 +149,47 @@ describe("anteprima dell'export", () => {
     expect(issue.text).toBe("2 turni · 10 h che non contano ancora: nel file restano «Da verificare».");
   });
 
-  it("gli altri avvisi riusano i testi di sempre", () => {
-    expect(preview("daily").issues[1].text).toBe(allWarnings.codes);
+  it("l'avviso dei codici dei CSV di ore riusa il testo di sempre", () => {
+    expect(preview("daily").issues[1].text).toBe(
+      "1 persona senza matricola: nel file la colonna resta vuota. Senza codice: Lavoro, Ferie, Malattia, Notturno."
+    );
+  });
+
+  it("nel CSV assenze l'avviso dei codici parla solo di matricole", () => {
+    // Quel file porta la matricola ma nessun codice di causale.
+    const issue = preview("absences").issues.find((i) => i.target === "codes");
+    expect(issue?.text).toBe("1 persona senza matricola: nel file la colonna resta vuota.");
   });
 
   it("senza avvisi la lista è vuota", () => {
-    expect(preview("daily", { toFix: [], warnings: noWarnings }).issues).toEqual([]);
+    const quiet: ExportCodes = { codes: {}, matricole: new Map() };
+    expect(preview("daily", { toFix: [], warnings: noWarnings, codes: quiet }).issues).toEqual([]);
+  });
+
+  it("le etichette dei collegamenti sono le stesse in app e dashboard", () => {
+    expect(EXPORT_ISSUE_LINKS).toEqual({
+      to_fix: "Ore da sistemare",
+      codes: "Codici per il consulente",
+      absences: "Assenze",
+      team: "Team",
+    });
+  });
+
+  it("un collegamento c'è solo per chi può aprire quella pagina", () => {
+    expect(issueLinks({ canHours: true, canStaff: false, isOwner: false })).toEqual({
+      to_fix: true,
+      codes: true,
+      absences: false,
+      team: false,
+    });
+    // Le ore da contratto le scrive solo il titolare.
+    expect(issueLinks({ canHours: true, canStaff: true, isOwner: false }).team).toBe(false);
+    expect(issueLinks({ canHours: true, canStaff: true, isOwner: true })).toEqual({
+      to_fix: true,
+      codes: true,
+      absences: true,
+      team: true,
+    });
   });
 
   it("il PDF non ha tabella", () => {

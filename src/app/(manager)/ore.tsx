@@ -51,14 +51,13 @@ import {
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
-  exportCodesWarning,
-  usedExportKeys,
   type ExportCodes,
 } from "@/features/assignments/exportCodes";
 import {
   EXPORT_BUTTON_LABEL,
   EXPORT_FORMATS,
   buildExportPreview,
+  issueLinks,
   toFixInSelection,
   type ExportFormat,
   type ExportIssueTarget,
@@ -156,7 +155,7 @@ export default function VenueHoursScreen() {
   const [exporting, setExporting] = useState(false);
   const { profile } = useAuth();
   const router = useRouter();
-  const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue } =
+  const { workspaceId, venues, historyVenues, canUseOperations, canAny, isMultiVenue, isOwner } =
     useOwnerVenues();
   // Il turno dimenticato si registra da qui: è una questione di ore, e qui si
   // accorge che mancano (come in 7shifts o Deputy, dal foglio ore).
@@ -308,6 +307,13 @@ export default function VenueHoursScreen() {
     void loadExport();
   }
 
+  // I collegamenti delle voci, solo verso pagine che chi esporta può usare.
+  const exportLinks = issueLinks({
+    canHours: canAny("can_view_hours"),
+    canStaff: canAny("can_manage_staff"),
+    isOwner,
+  });
+
   function closeExport() {
     exportSeq.current++;
     setExportOpen(false);
@@ -326,11 +332,6 @@ export default function VenueHoursScreen() {
             surcharges: exportData.surcharges,
             toFix: exportData.toFix,
             warnings: {
-              codes: exportCodesWarning({
-                personIds: exportData.report.map((r) => r.person_id),
-                usedKeys: usedExportKeys(exportData.report, exportData.absences, exportData.surcharges),
-                codes: exportData.codes,
-              }),
               certificates: exportData.certificates,
               contract: exportData.contract,
             },
@@ -715,6 +716,7 @@ export default function VenueHoursScreen() {
         onFormat={setExportFormat}
         state={exportState}
         preview={exportPreviews}
+        links={exportLinks}
         busy={exporting}
         error={exportError}
         onRetry={() => void loadExport()}
