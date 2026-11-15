@@ -320,7 +320,8 @@ export function OrePage() {
     setExportOpen(false);
   }
 
-  const exportPreviews: Record<ExportFormat, ExportPreview> | null = exportData
+  // Solo a pannello aperto: chiuso, niente tabelle ricostruite a ogni render.
+  const exportPreviews: Record<ExportFormat, ExportPreview> | null = exportOpen && exportData
     ? (Object.fromEntries(
         EXPORT_FORMATS.map((f) => [
           f.key,
@@ -337,6 +338,7 @@ export function OrePage() {
               contract: exportData.contract,
             },
             availability: exportData.availability,
+            codesEditable: canRecord,
           }),
         ])
       ) as Record<ExportFormat, ExportPreview>)

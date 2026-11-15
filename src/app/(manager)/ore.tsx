@@ -319,7 +319,8 @@ export default function VenueHoursScreen() {
     setExportOpen(false);
   }
 
-  const exportPreviews: Record<ExportFormat, ExportPreview> | null = exportData
+  // Solo a pannello aperto: chiuso, niente tabelle ricostruite a ogni render.
+  const exportPreviews: Record<ExportFormat, ExportPreview> | null = exportOpen && exportData
     ? (Object.fromEntries(
         EXPORT_FORMATS.map((f) => [
           f.key,
@@ -336,6 +337,7 @@ export default function VenueHoursScreen() {
               contract: exportData.contract,
             },
             availability: exportData.availability,
+            codesEditable: canRecord,
           }),
         ])
       ) as Record<ExportFormat, ExportPreview>)
@@ -375,12 +377,21 @@ export default function VenueHoursScreen() {
   // «Ore da sistemare» è in cima alla pagina: il pannello ci riporta lì.
   const scrollRef = useRef<RNScrollView>(null);
   const [toFixY, setToFixY] = useState(0);
+  // Dove andare dopo il pannello: si naviga solo a pannello chiuso del tutto
+  // (`onClosed`), perché su iOS una schermata aperta mentre un `Modal` si sta
+  // chiudendo a volte non compare (come in `(tabs)/turni.tsx`).
+  const afterExportClose = useRef<ExportIssueTarget | null>(null);
   function onExportIssue(target: ExportIssueTarget) {
+    afterExportClose.current = target;
     closeExport();
+  }
+  function onExportClosed() {
+    const target = afterExportClose.current;
+    afterExportClose.current = null;
     if (target === "to_fix") scrollRef.current?.scrollTo({ y: toFixY, animated: true });
     else if (target === "codes") router.push("/codici-consulente");
     else if (target === "absences") router.push("/(manager)/assenze");
-    else router.push("/(manager)/(tabs)/staff");
+    else if (target === "team") router.push("/(manager)/(tabs)/staff");
   }
 
   return (
@@ -723,6 +734,7 @@ export default function VenueHoursScreen() {
         onDownload={() => void downloadExport()}
         onIssue={onExportIssue}
         onClose={closeExport}
+        onClosed={onExportClosed}
       />
     </View>
   );

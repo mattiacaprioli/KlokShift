@@ -112,6 +112,24 @@ export function unavailableNote(previews: Record<ExportFormat, ExportPreview>): 
     .join(" ");
 }
 
+/**
+ * Il formato dopo (`1`) o prima (`-1`) con le frecce, in giro e saltando quelli
+ * non disponibili; se non ce n'è un altro resta quello di ora.
+ */
+export function nextFormat(
+  current: ExportFormat,
+  dir: 1 | -1,
+  previews: Record<ExportFormat, ExportPreview>
+): ExportFormat {
+  const keys = EXPORT_FORMATS.map((f) => f.key);
+  const start = keys.indexOf(current);
+  for (let step = 1; step < keys.length; step++) {
+    const key = keys[(start + dir * step + keys.length) % keys.length];
+    if (previews[key].available) return key;
+  }
+  return current;
+}
+
 export function buildExportPreview(input: {
   format: ExportFormat;
   people: PersonHours[];
@@ -124,6 +142,11 @@ export function buildExportPreview(input: {
   /** I testi delle funzioni d'avviso di sempre (`null` = niente da dire). */
   warnings: { certificates: string | null; contract: string | null };
   availability: { monthly: boolean; absences: boolean };
+  /**
+   * Se chi esporta può scrivere i codici: altrimenti (archivio, niente «Ore»)
+   * l'avviso dei codici tace, come faceva sopra la tabella prima del pannello.
+   */
+  codesEditable: boolean;
 }): ExportPreview {
   const { format, people, absences, daily, codes, surcharges, warnings } = input;
   // Giornaliero, mensile e PDF si scaricano solo con le ore lette all'apertura
@@ -191,7 +214,7 @@ export function buildExportPreview(input: {
   }
   // I codici del file scelto: il CSV assenze porta solo la matricola, nessun
   // codice di causale, quindi lì l'avviso parla solo di matricole.
-  const codesText = !csv
+  const codesText = !csv || !input.codesEditable
     ? null
     : format === "absences"
       ? exportCodesWarning({

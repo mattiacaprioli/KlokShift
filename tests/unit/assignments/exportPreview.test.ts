@@ -12,6 +12,7 @@ import {
   buildExportPreview,
   issueLinks,
   moreRowsLabel,
+  nextFormat,
   toFixInSelection,
   unavailableNote,
   type ExportFormat,
@@ -80,6 +81,7 @@ function preview(format: ExportFormat, extra: Partial<Parameters<typeof buildExp
     toFix: [{ hours: 4 }, { hours: 6 }],
     warnings: allWarnings,
     availability: { monthly: true, absences: true },
+    codesEditable: true,
     ...extra,
   });
 }
@@ -243,5 +245,24 @@ describe("anteprima dell'export", () => {
     expect(moreRowsLabel(0)).toBe("");
     expect(moreRowsLabel(1)).toBe("e un'altra riga nel file");
     expect(moreRowsLabel(183)).toBe("e altre 183 righe nel file");
+  });
+
+  it("se i codici non si possono modificare (archivio) l'avviso dei codici tace", () => {
+    // Come prima del pannello: l'avviso compariva solo a chi può scrivere i codici.
+    expect(preview("daily", { codesEditable: false }).issues.map((i) => i.target)).toEqual(["to_fix", "team"]);
+  });
+
+  it("le frecce passano al formato dopo o prima, saltando quelli spenti", () => {
+    const on = { totals: [], issues: [], table: null, available: true, unavailableReason: null };
+    const off = { ...on, available: false, unavailableReason: "Nessuna ora in questo periodo." };
+    const all = { daily: on, monthly: on, absences: on, pdf: on };
+    expect(nextFormat("daily", 1, all)).toBe("monthly");
+    expect(nextFormat("pdf", 1, all)).toBe("daily");
+    expect(nextFormat("daily", -1, all)).toBe("pdf");
+    const onlyAbsences = { daily: off, monthly: off, absences: on, pdf: off };
+    expect(nextFormat("absences", 1, onlyAbsences)).toBe("absences");
+    expect(nextFormat("absences", -1, onlyAbsences)).toBe("absences");
+    const noMonthly = { daily: on, monthly: off, absences: on, pdf: on };
+    expect(nextFormat("daily", 1, noMonthly)).toBe("absences");
   });
 });

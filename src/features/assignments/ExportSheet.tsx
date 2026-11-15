@@ -40,6 +40,7 @@ export function ExportSheet({
   onDownload,
   onIssue,
   onClose,
+  onClosed,
 }: {
   visible: boolean;
   subtitle: string;
@@ -57,6 +58,8 @@ export function ExportSheet({
   onDownload: () => void;
   onIssue: (t: ExportIssueTarget) => void;
   onClose: () => void;
+  /** A pannello chiuso del tutto: il momento giusto per navigare altrove. */
+  onClosed?: () => void;
 }) {
   const current = preview?.[format] ?? null;
   const note = preview ? unavailableNote(preview) : null;
@@ -65,7 +68,7 @@ export function ExportSheet({
   const { height } = useWindowDimensions();
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} dismissable={!busy}>
+    <BottomSheet visible={visible} onClose={onClose} onClosed={onClosed} dismissable={!busy}>
       <Text className="font-serif text-[22px] text-t1">{EXPORT_BUTTON_LABEL}</Text>
       <Text className="mt-1 text-[13px] text-t3">{subtitle}</Text>
 

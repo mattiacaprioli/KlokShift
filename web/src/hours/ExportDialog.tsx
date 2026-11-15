@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import {
   EXPORT_BUTTON_LABEL,
@@ -6,6 +6,7 @@ import {
   EXPORT_ISSUES_TITLE,
   EXPORT_ISSUE_LINKS,
   moreRowsLabel,
+  nextFormat,
   unavailableNote,
   type ExportFormat,
   type ExportIssueTarget,
@@ -60,6 +61,19 @@ export function ExportDialog({
   const current = preview?.[format] ?? null;
   const note = preview ? unavailableNote(preview) : null;
 
+  // Un gruppo di scelte come i radio del browser: un solo punto di tabulazione,
+  // e le frecce cambiano formato (saltando quelli spenti).
+  const radios = useRef<Partial<Record<ExportFormat, HTMLButtonElement | null>>>({});
+  function onRadioKey(e: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!preview || busy) return;
+    const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (dir === 0) return;
+    e.preventDefault();
+    const next = nextFormat(format, dir, preview);
+    onFormat(next);
+    radios.current[next]?.focus();
+  }
+
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-black/60" onClick={busy ? undefined : onClose} aria-hidden />
@@ -79,9 +93,14 @@ export function ExportDialog({
               return (
                 <button
                   key={f.key}
+                  ref={(el) => {
+                    radios.current[f.key] = el;
+                  }}
                   type="button"
                   role="radio"
                   aria-checked={on}
+                  tabIndex={on ? 0 : -1}
+                  onKeyDown={onRadioKey}
                   disabled={off || busy}
                   onClick={() => onFormat(f.key)}
                   className={`rounded-xl border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
