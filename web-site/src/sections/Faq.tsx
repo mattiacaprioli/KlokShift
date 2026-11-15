@@ -9,7 +9,7 @@ import { t } from "../content";
  */
 export function Faq() {
   return (
-    <Section id="faq" eyebrow={t.faq.eyebrow} title={t.faq.title}>
+    <Section id="faq" title={t.faq.title}>
       <div className="mt-10 max-w-3xl divide-y divide-border border-y border-border sm:mt-14">
         {t.faq.items.map((item, i) => (
           <Reveal key={item.q} delay={i * 50}>

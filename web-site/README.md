@@ -102,14 +102,27 @@ ricostruiti in HTML (`src/mock/`) con i token veri e le etichette vere
 
 Il file va in `public/shots/`, e il mock corrispondente si cancella.
 
+### La settimana viva (2026-11-15)
+
+La home gira attorno a **una sola settimana finta** (`src/mock/week.ts`):
+l'apertura la fa cadere al suo posto una volta (`WeekBoard` con `intro`), la
+storia di «Come funziona» la trasforma in quattro passi (`src/story/`, la
+cornice è un layout di **Motion**, che il sito importa da solo: app e dashboard
+no, lo verifica `tests/unit/web/motionScope.test.ts`), la chiusura la mostra
+tutta confermata. Il «wow» sta lì; il resto della pagina non si muove apposta.
+Niente eyebrow sopra i titoli e niente stringhe a puntini nel copy della home
+(`tests/unit/web/siteCopy.test.ts`). Con reduced motion si vedono solo gli
+stati finali (`MotionConfig reducedMotion="user"` in `App.tsx`). Decisione e
+motivi: `docs/superpowers/specs/2026-11-15-sito-vetrina-wow-design.md`.
+
 ## Responsive
 
 Mobile-first: le classi senza prefisso sono il telefono, `sm:`/`lg:` aggiungono.
 Due punti che si rompono facilmente e vanno ricontrollati a ogni modifica:
 
-- **`PlanningMock` è largo per natura** (una colonna per giorno): ha una
-  larghezza minima e scorre **dentro** il proprio `overflow-x-auto`. La pagina
-  non deve mai scorrere in orizzontale — si verifica con
+- **`WeekBoard` è largo per natura** (una colonna per giorno): sotto `sm`
+  mostra solo tre giorni (`mobileFrom`). La pagina non deve mai scorrere in
+  orizzontale — si verifica con
   `document.documentElement.scrollWidth === document.documentElement.clientWidth`.
 - **La CTA compare due volte su mobile** se si sbaglia: quella della nav è
   nascosta sotto `sm` da un `<span className="hidden sm:block">` *attorno* al

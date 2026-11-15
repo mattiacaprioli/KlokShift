@@ -56,114 +56,75 @@ export const it: Content = {
   },
 
   hero: {
-    eyebrow: "Turni e ore del tuo team",
     title: "I turni della settimana in dieci minuti, non in una serata.",
     lead: "Tu pianifichi, il team conferma e timbra dal telefono, le ore si contano da sole.",
     ctaPrimary: "Prova gratis 30 giorni",
     ctaSecondary: "Guarda come funziona",
-    note: "In beta · senza carta · nessun rinnovo automatico",
-    shotAlt: "L'agenda dei turni della settimana",
+    note: "In beta. Senza carta, e nessun rinnovo automatico alla fine della prova.",
+    boardLabel: "La settimana dei turni di cinque persone, che si riempie e viene confermata",
+    toast: "Sara ha confermato venerdì",
   },
 
-  problem: {
-    eyebrow: "Prima e dopo",
-    title: "Il turno è deciso. Chi lo copre, no.",
-    items: [
+  story: {
+    title: "Una settimana, dall'inizio alla fine.",
+    steps: [
       {
-        title: "Il gruppo su WhatsApp",
-        body: "Scrivi il turno e aspetti le risposte.",
-        after: "Ognuno conferma con un tocco. Vedi subito chi manca.",
+        before: "Prima: il turno scritto nel gruppo, sperando che lo leggano.",
+        title: "Prepari in bozza, poi pubblichi.",
+        body: "Il team non vede niente finché non sei pronto. Quando pubblichi arriva una notifica a testa.",
       },
       {
-        title: "Il foglio Excel",
-        body: "Cambi un turno e rifai tutto.",
-        after: "Lo sposti, e chi è coinvolto viene avvisato.",
+        before: "Prima: «hai visto il messaggio?»",
+        title: "Il team conferma con un tocco.",
+        body: "Dall'app per i dipendenti, gratuita. Vedi subito chi ha risposto e chi manca.",
       },
       {
-        title: "Le ore a fine mese",
-        body: "Contate a memoria, la sera prima.",
-        after: "Il team timbra dall'app. Esporti in un clic.",
+        before: "Prima: le ore contate a memoria a fine mese.",
+        title: "Si timbra dal telefono.",
+        body: "Entrata, uscita e pausa. Le ore del mese si sommano da sole.",
+      },
+      {
+        before: "Prima: il foglio da ricopiare per il consulente.",
+        title: "Tutto pronto per il consulente.",
+        body: "Ore, pause e assenze in PDF o CSV, pronti da mandare.",
       },
     ],
   },
 
-  venue: {
-    eyebrow: "Funzioni",
-    title: "Turni, presenze e ore. Niente moduli da attivare.",
-    features: [
+  rest: {
+    title: "E poi, tutto il resto.",
+    items: [
       {
-        title: "Il tuo team, su più sedi",
-        body: "Una scheda per persona, con ruoli e ore da contratto.",
+        title: "Più sedi, una persona sola",
+        body: "Chi lavora in due sedi ha una scheda sola, e conta una volta.",
       },
       {
-        title: "Copertura sotto controllo",
-        body: "Vedi subito i buchi e chi è in ferie.",
+        title: "Ferie, permessi e malattia",
+        body: "Si chiedono dall'app, li approvi tu, e la settimana te li mostra.",
       },
       {
-        title: "Turni da scrivania",
-        body: "Trascini i turni, duplichi la settimana, stampi.",
-      },
-      {
-        title: "Timbratura dall'app",
-        body: "Entrata, uscita e pausa dal telefono.",
+        title: "Cambio turno",
+        body: "Chi non può chiede il cambio, tu approvi.",
       },
       {
         title: "Documenti con le scadenze",
-        body: "Sai cosa scade prima che scada.",
+        body: "Contratti e attestati, e vedi cosa sta per scadere.",
       },
       {
-        title: "Pronto per il consulente",
-        body: "Ore, pause e assenze in PDF o CSV.",
-      },
-    ],
-    shotPlanningAlt: "La settimana dei turni, persona per persona",
-    shotHoursAlt: "Il riepilogo mensile delle ore per persona",
-  },
-
-  pro: {
-    eyebrow: "Per il tuo team",
-    title: "Il team sa quando lavora. Senza chiederlo a te.",
-    lead: "L'app per i dipendenti è gratuita.",
-    features: [
-      {
-        title: "Conferma con un tocco",
-        body: "Tu assegni, loro rispondono.",
+        title: "Giorni di chiusura",
+        body: "Ferragosto, ferie della sede, chiuso il lunedì: tutto sul calendario.",
       },
       {
-        title: "Timbra dal telefono",
-        body: "E le ore del mese si aggiornano da sole.",
+        title: "Il team entra con la sua email",
+        body: "Aggiungi l'indirizzo: chi si registra con quello trova già la sua sede.",
       },
       {
-        title: "Cambi turno e assenze dall'app",
-        body: "Sostituzioni e ferie si chiedono dall'app.",
+        title: "Modelli di turno",
+        body: "Salvi un turno tipo e lo riusi in un tocco.",
       },
       {
         title: "I turni dei colleghi",
         body: "Se vuoi, ognuno vede con chi lavora.",
-      },
-    ],
-    shotAlt: "Una conversazione tra la sede e un dipendente",
-  },
-
-  how: {
-    eyebrow: "Come funziona",
-    title: "Si parte in un pomeriggio.",
-    steps: [
-      {
-        title: "Crea la sede e avvia la prova",
-        body: "Account, sede e 30 giorni senza carta, in pochi minuti.",
-      },
-      {
-        title: "Aggiungi il team",
-        body: "Con l'email di ognuno: chi si registra con quella trova già la sua sede.",
-      },
-      {
-        title: "Pianifica la settimana",
-        body: "Dal telefono o dal browser: prepari in bozza, poi pubblichi.",
-      },
-      {
-        title: "Il team conferma",
-        body: "Ricevono la notifica e rispondono.",
       },
     ],
   },
@@ -185,9 +146,8 @@ export const it: Content = {
   },
 
   plans: {
-    eyebrow: "Listino previsto al lancio",
     title: "Un prezzo per l'azienda, non per ogni dipendente.",
-    lead: "Stesse funzioni in entrambi. In beta si prova gratis: gli acquisti non sono ancora attivi.",
+    lead: "Listino previsto al lancio, stesse funzioni in entrambi. In beta si prova gratis: gli acquisti non sono ancora attivi.",
     billing: {
       label: "Periodo di fatturazione",
       monthly: "Mensile",
@@ -243,7 +203,6 @@ export const it: Content = {
   },
 
   faq: {
-    eyebrow: "Domande",
     title: "Prima di iniziare.",
     items: [
       {
@@ -283,6 +242,7 @@ export const it: Content = {
   },
 
   finalCta: {
+    boardLabel: "La stessa settimana, con tutti i turni confermati e il sabato coperto",
     title: "La prossima settimana, pianificata in dieci minuti.",
     lead: "30 giorni gratis, senza carta. In beta.",
     cta: "Prova gratis 30 giorni",

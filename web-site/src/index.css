@@ -130,6 +130,18 @@
   }
 
   /*
+   * La barra in alto che si toglie di mezzo scendendo (`Nav.tsx`). Quando il
+   * focus entra nella barra, `Nav` la riporta giù (`focusin`), e `navHidden` non
+   * la nasconde mai con il focus da tastiera dentro.
+   */
+  header[data-nav-hidden] {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  header[data-nav-hidden="true"] {
+    transform: translateY(-100%);
+  }
+
+  /*
    * Ingresso delle sezioni. `IntersectionObserver` mette `data-in="true"`;
    * senza JS (o con JS lento) il contenuto è comunque visibile, perché lo stato
    * di partenza è opaco al 100% finché `data-reveal` non viene armato.
@@ -158,7 +170,8 @@
   }
   /* Il menu resta funzionante: appare e sparisce, senza corsa del cerchio. */
   [data-menu-circle],
-  [data-menu-panel] {
+  [data-menu-panel],
+  header[data-nav-hidden] {
     transition: none;
   }
 }

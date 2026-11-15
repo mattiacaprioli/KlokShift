@@ -7,8 +7,6 @@
 export type Link = { href: string; label: string };
 export type Feature = { title: string; body: string };
 export type Faq = { q: string; a: string };
-/** Una riga del «prima e dopo»: il problema di oggi e come lo risolve KlokShift. */
-export type BeforeAfter = Feature & { after: string };
 export type BillingCycle = "monthly" | "annual";
 export type BillingPrice = {
   amount: string;
@@ -37,43 +35,30 @@ export type Content = {
   };
 
   hero: {
-    eyebrow: string;
     title: string;
     lead: string;
     ctaPrimary: string;
     ctaSecondary: string;
     note: string;
-    shotAlt: string;
+    /** Descrizione della settimana animata, per chi non la vede. */
+    boardLabel: string;
+    /** L'avviso che compare quando l'ultima persona conferma. */
+    toast: string;
   };
 
-  problem: {
-    eyebrow: string;
+  /*
+   * La storia che scende con chi legge: quattro passi in ordine, ognuno con il
+   * suo «prima» in una riga. È la sezione «Come funziona» (`#come-funziona`).
+   */
+  story: {
     title: string;
-    lead?: string;
-    items: BeforeAfter[];
+    steps: { before: string; title: string; body: string }[];
   };
 
-  venue: {
-    eyebrow: string;
+  /** Le altre funzioni, in righe brevi: niente card tutte uguali. */
+  rest: {
     title: string;
-    lead?: string;
-    features: Feature[];
-    shotPlanningAlt: string;
-    shotHoursAlt: string;
-  };
-
-  pro: {
-    eyebrow: string;
-    title: string;
-    lead?: string;
-    features: Feature[];
-    shotAlt: string;
-  };
-
-  how: {
-    eyebrow: string;
-    title: string;
-    steps: Feature[];
+    items: Feature[];
   };
 
   sectors: {
@@ -82,7 +67,6 @@ export type Content = {
   };
 
   plans: {
-    eyebrow: string;
     title: string;
     lead: string;
     billing: {
@@ -100,12 +84,13 @@ export type Content = {
   };
 
   faq: {
-    eyebrow: string;
     title: string;
     items: Faq[];
   };
 
   finalCta: {
+    /** La settimana dell'apertura, ora tutta confermata, per chi non la vede. */
+    boardLabel: string;
     title: string;
     lead: string;
     cta: string;

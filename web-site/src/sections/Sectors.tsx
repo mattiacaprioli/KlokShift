@@ -19,7 +19,7 @@ export function Sectors() {
         <Reveal className="flex flex-col items-center gap-5 text-center">
           <h2
             id="settori-title"
-            className="font-mono text-xs tracking-[0.18em] text-t3 uppercase"
+            className="font-sans text-sm text-t3"
           >
             {t.sectors.title}
           </h2>

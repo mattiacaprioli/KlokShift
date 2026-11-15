@@ -3,6 +3,7 @@ import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
 import { Logo } from "../ui/Logo";
 import { cn } from "../ui/cn";
+import { navHidden } from "../ui/navScroll";
 import { t } from "../content";
 import { SIGNUP_URL } from "../config";
 
@@ -32,6 +33,16 @@ import { SIGNUP_URL } from "../config";
  * X, per tornare al bottone del menu alla chiusura: senza, chi naviga da
  * tastiera riparte dall'inizio del documento ogni volta.
  */
+/**
+ * Focus da tastiera dentro la barra. Solo `:focus-visible`: in Chrome anche un
+ * clic su una voce le lascia il focus, e con `activeElement` la barra resterebbe
+ * inchiodata in vista fino al primo clic altrove.
+ */
+function focusVisibleInside(header: HTMLElement | null): boolean {
+  const el = document.activeElement;
+  return !!header && !!el && header.contains(el) && el.matches(":focus-visible");
+}
+
 export function Nav() {
   const [open, setOpen] = useState(false);
   const openerRef = useRef<HTMLButtonElement>(null);
@@ -60,9 +71,50 @@ export function Nav() {
 
   }, [open]);
 
+  // La barra si toglie di mezzo scendendo e torna risalendo (regole in
+  // `navScroll.ts`). Un frame per volta: lo scroll spara molti eventi.
+  const headerRef = useRef<HTMLElement>(null);
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let prevY = window.scrollY;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const y = window.scrollY;
+        setHidden((wasHidden) =>
+          navHidden({
+            prevY,
+            y,
+            wasHidden,
+            menuOpen: document.body.dataset.menuOpen === "true",
+            focusInside: focusVisibleInside(headerRef.current),
+          })
+        );
+        prevY = y;
+      });
+    };
+    // Chi ci arriva con il Tab la trova nascosta: il focus su una barra fissa
+    // non fa scorrere la pagina, quindi va riportata giù qui.
+    const header = headerRef.current;
+    const onFocus = () => setHidden(false);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    header?.addEventListener("focusin", onFocus);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      header?.removeEventListener("focusin", onFocus);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-bg-0/85 backdrop-blur-md">
+      <header
+        ref={headerRef}
+        data-nav-hidden={hidden && !open ? "true" : "false"}
+        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-bg-0/85 backdrop-blur-md"
+      >
         <Container className="flex h-16 items-center justify-between gap-4">
           {/* Il logotipo è già testo: un `sr-only` col nome lo farebbe leggere
               due volte a chi usa lo screen reader. */}

@@ -12,7 +12,6 @@ import { cn } from "./cn";
  */
 export function Section({
   id,
-  eyebrow,
   title,
   lead,
   tone = "base",
@@ -20,7 +19,6 @@ export function Section({
   headingClassName,
 }: {
   id: string;
-  eyebrow?: string;
   title?: string;
   lead?: string;
   tone?: "base" | "raised";
@@ -38,14 +36,13 @@ export function Section({
       )}
     >
       <Container>
-        {(eyebrow || title || lead) && (
+        {(title || lead) && (
           <Reveal className="max-w-3xl">
-            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
             {title && (
               <h2
                 id={headingId}
                 className={cn(
-                  "mt-3 text-[length:var(--text-fluid-h2)] font-semibold",
+                  "text-[length:var(--text-fluid-h2)] font-semibold",
                   headingClassName
                 )}
               >
@@ -65,6 +62,7 @@ export function Section({
   );
 }
 
+/** L'etichetta sopra il titolo: ormai solo nella pagina d'invito. */
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
     <p className="font-mono text-xs tracking-[0.18em] text-gold uppercase">

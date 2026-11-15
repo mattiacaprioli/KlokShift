@@ -85,7 +85,6 @@ export function Plans() {
     <Section
       id="prezzi"
       tone="raised"
-      eyebrow={t.plans.eyebrow}
       title={t.plans.title}
       lead={t.plans.lead}
     >
