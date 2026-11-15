@@ -1,6 +1,7 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
+import { Pill } from "@/components/ui/Pill";
+import { Segmented } from "@/components/ui/Segmented";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { GhostButton } from "@/components/ui/GhostButton";
@@ -127,10 +128,9 @@ function EmployerVenueRow({
         <View className="flex-1">
           <Text className="text-base font-sans-bold text-t1">{venueName}</Text>
         </View>
-        <Chip
+        <Pill
           label={employer.employment_type === "fisso" ? "Fisso" : "A chiamata"}
-          active
-          gold={employer.employment_type === "fisso"}
+          variant="neutral"
         />
       </View>
 
@@ -355,17 +355,12 @@ export default function WaiterProfiloScreen() {
         <View className="gap-3">
           <View className="flex-row items-center justify-between gap-3">
             <Mono className="flex-1">{periodLabel(period)}</Mono>
-            <View className="flex-row gap-1.5">
-              {STATS_PERIODS.map((p) => (
-                <Chip
-                  key={p.value}
-                  label={p.label}
-                  gold
-                  active={period === p.value}
-                  onPress={() => setPeriod(p.value)}
-                />
-              ))}
-            </View>
+            <Segmented
+              compact
+              options={STATS_PERIODS.map((p) => ({ id: p.value, label: p.label }))}
+              value={period}
+              onChange={setPeriod}
+            />
           </View>
           <View className="flex-row gap-2.5">
             <StatCard

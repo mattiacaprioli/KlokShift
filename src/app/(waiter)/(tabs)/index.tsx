@@ -7,7 +7,6 @@ import { ScrollView, View } from "@/tw";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Mono } from "@/components/ui/Mono";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { QueryError } from "@/components/ui/QueryError";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -141,8 +140,7 @@ export default function WaiterHomeScreen() {
         style={{ paddingTop: insets.top + 12 }}
       >
         <View className="flex-1">
-          <Mono gold>La tua area</Mono>
-          <Display className="mt-1 text-4xl leading-[46px]">
+          <Display className="text-4xl leading-[46px]">
             {firstName ? `Ciao, ${firstName}` : "Ciao"}
           </Display>
         </View>

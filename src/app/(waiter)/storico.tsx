@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
+import { Segmented } from "@/components/ui/Segmented";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
@@ -99,17 +99,12 @@ export default function WaiterHistoryScreen() {
       </View>
 
       <View className="gap-3 px-5 pb-2">
-        <View className="flex-row gap-1.5">
-          {FILTERS.map((f) => (
-            <Chip
-              key={f.value}
-              label={f.label}
-              gold
-              active={filter === f.value}
-              onPress={() => selectFilter(f.value)}
-            />
-          ))}
-        </View>
+        <Segmented
+          compact
+          options={FILTERS.map((f) => ({ id: f.value, label: f.label }))}
+          value={filter}
+          onChange={selectFilter}
+        />
         <View className="flex-row items-center justify-between gap-3">
           {filter === "all" ? (
             <Mono className="flex-1">Da sempre · tutte le aziende</Mono>

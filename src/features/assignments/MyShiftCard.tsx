@@ -7,6 +7,7 @@ import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
 import {
+  capitalize,
   formatDayLabel,
   formatShiftHours,
   formatTime,
@@ -104,14 +105,18 @@ export function MyShiftCard({
         onPress={onPress}
       >
         <View className={cn("h-8 w-1 rounded-full", s.bar)} />
-        <View className="items-start">
+        {/* Larghezza fissa, come in `ManagerShiftCard`: «Mar 17 nov» e
+            «Domani» non spostano più la colonna dei nomi. */}
+        <View className="w-[76px] items-start">
           <Text
             className={cn("text-[15px] font-sans-bold text-t1", cancelled && "line-through")}
             style={{ fontVariant: ["tabular-nums"] }}
           >
             {formatTime(shift.start_time)}
           </Text>
-          <Mono>{formatDayLabel(shift.date)}</Mono>
+          <Text className="text-xs text-t3" numberOfLines={1}>
+            {capitalize(formatDayLabel(shift.date))}
+          </Text>
         </View>
         <View className="flex-1">
           <Text
@@ -162,7 +167,7 @@ export function MyShiftCard({
                 legge come un turno che finisce diciotto ore prima di iniziare. */}
             {overnight ? <Mono gold={!cancelled}>+1</Mono> : null}
           </View>
-          <Mono className="mt-1">{duration}</Mono>
+          <Text className="mt-1 text-xs text-t3">{duration}</Text>
         </View>
 
         <View className="flex-1">
