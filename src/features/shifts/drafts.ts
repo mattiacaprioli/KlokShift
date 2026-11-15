@@ -19,6 +19,9 @@ export const DRAFT_SILENT_LINE =
   "È una bozza: nessuno viene avvisato finché non la pubblichi.";
 export const DUPLICATE_AS_DRAFT =
   "Le copie restano in bozza finché non le pubblichi.";
+/** La stessa cosa detta da chi la riceve, sotto il pulsante «Copia» dell'app. */
+export const DUPLICATE_AS_DRAFT_SHORT =
+  "Il team non vede niente finché non pubblichi.";
 
 /** Il vuoto dell'agenda di chi può creare turni: la notifica parte alla pubblicazione. */
 export const EMPTY_SHIFTS_HINT =

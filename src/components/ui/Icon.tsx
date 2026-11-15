@@ -34,7 +34,8 @@ export type IconName =
   | "upload"
   | "lock"
   | "eye"
-  | "eyeOff";
+  | "eyeOff"
+  | "more";
 
 type Props = {
   name: IconName;
@@ -241,6 +242,13 @@ export function Icon({
           />
           <Path {...p} d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
           <Path {...p} d="M3 3l18 18" />
+        </>
+      )}
+      {name === "more" && (
+        <>
+          <Circle cx={5.5} cy={12} r={1.6} fill={color} />
+          <Circle cx={12} cy={12} r={1.6} fill={color} />
+          <Circle cx={18.5} cy={12} r={1.6} fill={color} />
         </>
       )}
     </Svg>

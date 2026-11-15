@@ -11,9 +11,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Icon } from "@/components/ui/Icon";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
+import { Segmented } from "@/components/ui/Segmented";
 import { monthGridStart, WeekCalendar } from "@/components/ui/WeekCalendar";
 import { type DaySection, groupByDay, withClosedDays } from "@/features/assignments/agenda";
 import { ClosedDayBadge } from "@/features/venues/ClosedDayBadge";
@@ -38,6 +40,7 @@ import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { ClockAttentionBanner } from "@/features/clock/ClockAttentionBanner";
 import { RECORD_ACTION } from "@/features/shifts/recorded";
 import { DuplicateWeekModal } from "@/features/shifts/DuplicateWeekModal";
+import { weekRangeLabel } from "@/features/shifts/duplicate";
 import { PublishBar } from "@/features/shifts/PublishBar";
 import { PublishModal } from "@/features/shifts/PublishModal";
 import { EMPTY_SHIFTS_HINT, isDraft, isExpiredDraft } from "@/features/shifts/drafts";
@@ -52,6 +55,11 @@ import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/c
 const SYNC_SETTLE_MS = 400;
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 20 };
+
+const VIEW_OPTIONS = [
+  { id: "days", label: "Giorni" },
+  { id: "people", label: "Persone" },
+] as const;
 
 type ShiftSection = DaySection<ShiftWithCount>;
 
@@ -172,6 +180,9 @@ export default function ManagerShiftsScreen() {
    */
   const [hiddenVenues, setHiddenVenues] = useState<Set<string>>(new Set());
   const [duplicating, setDuplicating] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  /** Cosa aprire quando il pannello «Altre azioni» ha finito di chiudersi. */
+  const afterMore = useRef<"duplicate" | "history" | null>(null);
   const [publishing, setPublishing] = useState(false);
   // L'avviso della Home porta qui con il giorno della prima bozza.
   const { date: dateParam, n: nonce } = useLocalSearchParams<{ date?: string; n?: string }>();
@@ -528,55 +539,26 @@ export default function ManagerShiftsScreen() {
         {/* L'interruttore fra le due viste. Sta sopra il calendario perché
             decide *cosa* si legge sotto, mentre il calendario e i chip di sede
             valgono per entrambe. */}
-        <View className="mt-4 flex-row flex-wrap items-center gap-2">
-          {(["days", "people"] as const).map((m) => {
-            const on = mode === m;
-            return (
-              <Pressable
-                key={m}
-                onPress={() => setMode(m)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                className={cn(
-                  "rounded-full border px-3.5 py-1.5",
-                  on ? "border-border-gold bg-bg-2" : "border-border"
-                )}
-              >
-                <Mono gold={on}>{m === "days" ? "Giorni" : "Persone"}</Mono>
-              </Pressable>
-            );
-          })}
-          {/* Duplica e Storico come pill, nello stile di Giorni e Persone ma
-              con un'icona. Scritte sciolte una accanto all'altra si leggevano
-              come una frase sola («Duplica Storico ›»). */}
-          <View className="ml-auto flex-row items-center gap-2">
-            {/* La settimana che si sta guardando, copiata su quella dopo: dal
-                27/10/2026 anche dal telefono. Le copie nascono in bozza. */}
-            {canCreateShift ? (
-              <Pressable
-                onPress={() => setDuplicating(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Duplica la settimana"
-                className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5"
-                hitSlop={6}
-              >
-                <Icon name="clipboard" size={13} color="#8C8579" />
-                <Mono>Duplica</Mono>
-              </Pressable>
-            ) : null}
-            {/* I turni già fatti si sfogliano dal calendario; lo Storico resta
-                per cercarli con i filtri (sede, persona, stato) su tutto il
-                passato. */}
-            <Pressable
-              onPress={() => router.push("/(manager)/storico")}
-              accessibilityRole="button"
-              className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5"
-              hitSlop={6}
-            >
-              <Icon name="clock" size={13} color="#8C8579" />
-              <Mono>Storico</Mono>
-            </Pressable>
-          </View>
+        {/* Le viste a sinistra, le azioni dietro «⋯» (15/11): quattro pill
+            uguali mescolavano due cose diverse — come guardare i turni e cosa
+            farne — e sui telefoni stretti andavano a capo. Il selettore occupa
+            la riga, così non va mai a capo. */}
+        <View className="mt-4 flex-row items-center gap-2">
+          <Segmented
+            className="flex-1"
+            options={VIEW_OPTIONS}
+            value={mode}
+            onChange={setMode}
+          />
+          <Pressable
+            onPress={() => setMoreOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Altre azioni"
+            className="h-12 w-12 items-center justify-center rounded-2xl border border-border bg-bg-card"
+            hitSlop={4}
+          >
+            <Icon name="more" size={20} color="#8C8579" />
+          </Pressable>
         </View>
 
         <WeekCalendar
@@ -695,6 +677,48 @@ export default function ManagerShiftsScreen() {
           />
         )}
       </View>
+
+      <BottomSheet
+        visible={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onClosed={() => {
+          // A pannello chiuso: un secondo Modal aperto mentre il primo esce, su
+          // iOS, a volte non compare.
+          const next = afterMore.current;
+          afterMore.current = null;
+          if (next === "duplicate") setDuplicating(true);
+          else if (next === "history") router.push("/(manager)/storico");
+        }}
+      >
+        <Text className="text-lg font-sans-bold text-t1">Altre azioni</Text>
+        <View className="gap-2 pt-5">
+          {/* La settimana che si sta guardando, copiata su quella dopo: dal
+              27/10/2026 anche dal telefono. Le copie nascono in bozza. */}
+          {canCreateShift ? (
+            <MoreRow
+              icon="clipboard"
+              title="Duplica la settimana"
+              subtitle={`Copia i turni della settimana ${weekRangeLabel(startOfWeek(visibleDay))} su un'altra.`}
+              onPress={() => {
+                afterMore.current = "duplicate";
+                setMoreOpen(false);
+              }}
+            />
+          ) : null}
+          {/* I turni già fatti si sfogliano dal calendario; lo Storico resta
+              per cercarli con i filtri (sede, persona, stato) su tutto il
+              passato. */}
+          <MoreRow
+            icon="clock"
+            title="Storico"
+            subtitle="Cerca fra i turni passati per sede, persona o stato."
+            onPress={() => {
+              afterMore.current = "history";
+              setMoreOpen(false);
+            }}
+          />
+        </View>
+      </BottomSheet>
 
       {duplicating ? (
         <DuplicateWeekModal
@@ -905,5 +929,33 @@ export default function ManagerShiftsScreen() {
         />
       )}
     </View>
+  );
+}
+
+/** Una riga del pannello «Altre azioni». */
+function MoreRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="flex-row items-center gap-3.5 rounded-2xl border border-border bg-bg-2 px-4 py-3.5"
+    >
+      <Icon name={icon} size={20} color="#8C8579" />
+      <View className="flex-1">
+        <Text className="text-[15px] font-sans-semibold text-t1">{title}</Text>
+        <Text className="mt-0.5 text-[13px] leading-[18px] text-t3">{subtitle}</Text>
+      </View>
+      <Icon name="chevR" size={16} color="#8C8579" />
+    </Pressable>
   );
 }

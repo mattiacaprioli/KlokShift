@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Modal, useWindowDimensions } from "react-native";
 import {
   Easing,
@@ -16,6 +16,12 @@ type Props = {
   onClose: () => void;
   /** Falso mentre un'azione è in corso: tocco fuori e «indietro» non chiudono. */
   dismissable?: boolean;
+  /**
+   * A uscita finita, quando il `Modal` è smontato. Serve per aprire un'altra
+   * finestra dopo il pannello: su iOS un `Modal` presentato mentre un altro si
+   * sta chiudendo a volte non compare.
+   */
+  onClosed?: () => void;
   children: ReactNode;
 };
 
@@ -31,12 +37,22 @@ export function BottomSheet({
   visible,
   onClose,
   dismissable = true,
+  onClosed,
   children,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
   if (visible && !mounted) setMounted(true);
+  const onClosedRef = useRef(onClosed);
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  });
+  const wasMounted = useRef(mounted);
+  useEffect(() => {
+    if (wasMounted.current && !mounted) onClosedRef.current?.();
+    wasMounted.current = mounted;
+  }, [mounted]);
 
   const progress = useSharedValue(0);
   const sheetHeight = useSharedValue(0);

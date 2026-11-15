@@ -108,7 +108,92 @@ export function classifyDuplicate<S extends DuplicateSource>(
   };
 }
 
-export const DUPLICATE_WITH_STAFF_LABEL = "Copia anche le persone assegnate";
+/** I campi che fanno di due turni lo stesso turno. */
+export type DuplicateKeyFields = {
+  venue_id: string;
+  title: string | null;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+};
+
+function duplicateKey(
+  s: Omit<DuplicateKeyFields, "status">,
+  date: string
+): string {
+  return [
+    s.venue_id,
+    date,
+    s.start_time.slice(0, 5),
+    s.end_time.slice(0, 5),
+    (s.title ?? "").trim().toLowerCase(),
+  ].join("|");
+}
+
+/**
+ * Le copie che nel periodo di arrivo **ci sono già**: stessa sede, giorno,
+ * orario e nome. Si contano per numero, non per presenza — due «Sala 9-18»
+ * nella settimana di partenza e uno in quella d'arrivo fanno un doppione e una
+ * copia che manca. Gli annullati d'arrivo non contano: non sono lì.
+ *
+ * Serve a chiedere prima di raddoppiare la settimana (15/11/2026): la copia
+ * aggiunge e non sostituisce mai, perché i turni d'arrivo possono essere già
+ * pubblicati e confermati, e cancellarli avviserebbe le persone.
+ */
+export function splitAlreadyThere<S extends Omit<DuplicateKeyFields, "status">>(
+  copyable: S[],
+  dateMap: Record<string, string>,
+  existing: DuplicateKeyFields[]
+): { missing: S[]; alreadyThere: S[] } {
+  const left = new Map<string, number>();
+  for (const e of existing) {
+    if (e.status === "cancelled") continue;
+    const k = duplicateKey(e, e.date);
+    left.set(k, (left.get(k) ?? 0) + 1);
+  }
+  const missing: S[] = [];
+  const alreadyThere: S[] = [];
+  for (const s of copyable) {
+    const k = duplicateKey(s, dateMap[s.date]);
+    const n = left.get(k) ?? 0;
+    if (n > 0) {
+      left.set(k, n - 1);
+      alreadyThere.push(s);
+    } else {
+      missing.push(s);
+    }
+  }
+  return { missing, alreadyThere };
+}
+
+/** Il titolo del passo che si ferma sui doppioni. */
+export function duplicateAlreadyThereTitle(count: number): string {
+  return count === 1 ? "1 turno c'è già" : `${count} turni ci sono già`;
+}
+
+export function duplicateAlreadyThereText(
+  count: number,
+  targetLabel: string,
+  isMonth = false
+): string {
+  return `${isMonth ? "In" : "Nella settimana"} ${targetLabel} ${
+    count === 1 ? "c'è già un turno uguale" : `ci sono già ${count} turni uguali`
+  } a quelli da copiare: stessa sede, giorno e orario.`;
+}
+
+export function duplicateOnlyMissingLabel(count: number): string {
+  return count === 1 ? "Copia solo quello che manca" : `Copia solo i ${count} che mancano`;
+}
+
+export function duplicateAllAnywayLabel(count: number): string {
+  return count === 1 ? "Copialo lo stesso, anche doppio" : `Copia tutti i ${count}, anche doppi`;
+}
+
+export const DUPLICATE_NOTHING_MISSING =
+  "Ci sono già tutti: non c'è niente da copiare.";
+
+export const DUPLICATE_WITH_STAFF_LABEL ="Copia anche le persone assegnate";
 
 export function duplicateWithStaffHint(withStaff: boolean): string {
   return withStaff
@@ -129,13 +214,6 @@ export const DUPLICATE_NOTHING_PAST =
 /** «Partiranno 34 notifiche…». */
 export function duplicateNotificationsWarning(count: number): string {
   return `Partiranno ${count} notifiche a chi è assegnato. Togli la copia delle persone per copiare solo la griglia e assegnarle dopo.`;
-}
-
-/** «La settimana di destinazione ha già 3 turni: questi si aggiungono…». */
-export function duplicateTargetExistingText(count: number, isMonth: boolean): string {
-  return `${isMonth ? "Il mese" : "La settimana"} di destinazione ha già ${count} ${
-    count === 1 ? "turno" : "turni"
-  }: questi si aggiungono, non li sostituiscono.`;
 }
 
 export function duplicateCreatedToast(count: number, targetLabel: string): string {

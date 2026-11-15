@@ -1,36 +1,50 @@
 import { useState } from "react";
-import { ActivityIndicator, Modal, Switch } from "react-native";
+import { ActivityIndicator, Modal } from "react-native";
 import { Pressable, ScrollView, Text, View } from "@/tw";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
-import { Mono } from "@/components/ui/Mono";
 import { useCopyInternalShifts } from "@/features/assignments/hooks";
+import { cn } from "@/lib/cn";
 import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
 import { userErrorMessage } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
 import { useToast } from "@/providers/Toast";
 import {
+  DUPLICATE_NOTHING_MISSING,
   DUPLICATE_NOTHING_PAST,
-  DUPLICATE_WITH_STAFF_LABEL,
   classifyDuplicate,
+  duplicateAllAnywayLabel,
+  duplicateAlreadyThereText,
+  duplicateAlreadyThereTitle,
   duplicateCreatedToast,
+  duplicateOnlyMissingLabel,
   duplicateSkippedPastText,
-  duplicateTargetExistingText,
   duplicateWithStaffHint,
+  splitAlreadyThere,
   weekDateMap,
   weekRangeLabel,
 } from "./duplicate";
-import { DUPLICATE_AS_DRAFT } from "./drafts";
+import { DUPLICATE_AS_DRAFT_SHORT } from "./drafts";
 import { useOwnerShiftsRange } from "./hooks";
 
-/** Righe di anteprima: la settimana intera può essere lunga. */
+/** Righe di «Vedi i turni»: la settimana intera può essere lunga. */
 const PREVIEW_ROWS = 12;
 
+const turni = (n: number) => `${n} ${n === 1 ? "turno" : "turni"}`;
+
 /**
- * «Duplica la settimana» dall'agenda dell'app: la settimana che si sta
- * guardando, copiata su quella dopo (o più avanti). Gemello del dialogo della
- * dashboard, con le stesse regole e frasi (`duplicate.ts`); qui solo la
- * settimana — il mese resta sulla dashboard, dove si pianifica in grande.
+ * «Copia la settimana» dall'agenda dell'app: la settimana che si sta
+ * guardando, copiata su quella dopo (o più avanti). Stesse regole e frasi della
+ * dashboard (`duplicate.ts`); qui solo la settimana — il mese resta sulla
+ * dashboard, dove si pianifica in grande.
+ *
+ * Rifatta il 15/11/2026 per chi non legge le finestre: una frase «da → a», due
+ * pulsanti per le persone e l'elenco dei turni chiuso. Il secondo passo compare
+ * **solo** se nella settimana d'arrivo ci sono già turni uguali (come Skello e
+ * When I Work, che chiedono solo davanti a un conflitto): copiare solo quelli
+ * che mancano o tutto lo stesso. Niente «Sostituisci»: i turni d'arrivo possono
+ * essere pubblicati e confermati.
  *
  * ⚠️ Ogni copia resta nella sede del turno che l'ha generata: ci pensa
  * `getInternalShiftPlans`, che porta il `venue_id` per piano.
@@ -50,6 +64,8 @@ export function DuplicateWeekModal({
   const copy = useCopyInternalShifts();
   const [weeks, setWeeks] = useState(1);
   const [withStaff, setWithStaff] = useState(true);
+  const [showList, setShowList] = useState(false);
+  const [step, setStep] = useState<"main" | "already">("main");
 
   const sourceQuery = useOwnerShiftsRange(monday, addDaysToDate(monday, 6), venueIds);
   const target = addDaysToDate(monday, weeks * 7);
@@ -58,22 +74,24 @@ export function DuplicateWeekModal({
   const now = useNow();
   const shifts = sourceQuery.data ?? [];
   const dateMap = weekDateMap(shifts, weeks);
-  const {
+  const { copyable, skippedCancelled, skippedUnplanned, skippedPast } =
+    classifyDuplicate(shifts, dateMap, now);
+  const { missing, alreadyThere } = splitAlreadyThere(
     copyable,
-    skippedCancelled,
-    skippedUnplanned,
-    skippedPast,
-  } = classifyDuplicate(shifts, dateMap, now);
-  // La copia aggiunge, non sostituisce: va detto prima.
-  const targetExisting = (targetQuery.data ?? []).filter(
-    (s) => s.status !== "cancelled"
-  ).length;
+    dateMap,
+    targetQuery.data ?? []
+  );
+  const sourceLabel = weekRangeLabel(monday);
   const targetLabel = weekRangeLabel(target);
   const preview = copyable.slice(0, PREVIEW_ROWS);
+  const excluded = [
+    skippedCancelled > 0 ? `${skippedCancelled} annullati` : null,
+    skippedUnplanned > 0 ? `${skippedUnplanned} fuori turno` : null,
+  ].filter(Boolean);
 
-  function submit() {
+  function submit(list: typeof copyable) {
     copy.mutate(
-      { sourceIds: copyable.map((s) => s.id), dateMap, withStaff },
+      { sourceIds: list.map((s) => s.id), dateMap, withStaff },
       {
         onSuccess: (created) => {
           toast.show(duplicateCreatedToast(created.length, targetLabel));
@@ -85,153 +103,248 @@ export function DuplicateWeekModal({
     );
   }
 
+  function onCopy() {
+    if (alreadyThere.length > 0) setStep("already");
+    else submit(copyable);
+  }
+
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <Pressable
-        onPress={copy.isPending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
-        className="items-center justify-center px-5"
+      {/* Lo sfondo che chiude è un fratello della scheda, non il suo
+          contenitore: una scheda dentro un `Pressable` si prendeva il tocco e
+          l'elenco dei turni non scorreva più. */}
+      <View
+        className="flex-1 items-center justify-center px-5"
+        style={{ backgroundColor: "rgba(0,0,0,0.66)" }}
       >
         <Pressable
-          onPress={() => {}}
-          className="max-h-[88%] w-full rounded-3xl border border-border-2 bg-bg-card p-6"
-        >
-          <Text className="text-lg font-sans-bold text-t1">Duplica la settimana</Text>
-          <Text className="mt-1 text-xs text-t3">
-            Da {weekRangeLabel(monday)} — {copyable.length}{" "}
-            {copyable.length === 1 ? "turno" : "turni"}
-          </Text>
-
-          {sourceQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-6" />
-          ) : copyable.length === 0 ? (
-            <Text className="mt-5 text-sm leading-5 text-t3">
-              {skippedPast > 0
-                ? DUPLICATE_NOTHING_PAST
-                : "Questa settimana non ha turni da copiare."}
-            </Text>
-          ) : (
-            <ScrollView className="mt-5" showsVerticalScrollIndicator={false}>
-              <Mono>Copia su</Mono>
-              <View className="mt-2 flex-row items-center gap-2">
-                <Pressable
-                  disabled={weeks <= 1}
-                  onPress={() => setWeeks((w) => Math.max(1, w - 1))}
-                  accessibilityRole="button"
-                  accessibilityLabel="Settimana precedente"
-                  className="h-10 w-10 items-center justify-center rounded-full border border-border-2"
-                  style={weeks <= 1 ? { opacity: 0.35 } : undefined}
-                >
-                  <Icon name="chevL" size={16} color="#EAB54C" />
-                </Pressable>
-                <Text className="flex-1 text-center text-sm font-sans-semibold text-t1">
-                  {targetLabel}
+          className="absolute inset-0"
+          onPress={copy.isPending ? undefined : onClose}
+          accessibilityLabel="Chiudi"
+        />
+        <View className="max-h-[88%] w-full rounded-3xl border border-border-2 bg-bg-card p-6">
+          {step === "already" ? (
+            <View>
+              {/* Sfondo inline: `bg-warning/15` passerebbe da `color-mix`, che
+                  react-native-css non regge. */}
+              <View
+                className="h-12 w-12 items-center justify-center rounded-full"
+                style={{ backgroundColor: "rgba(226,146,47,0.15)" }}
+              >
+                <Icon name="alert" size={24} color="#E2922F" />
+              </View>
+              <Text className="mt-4 text-xl font-sans-bold text-t1">
+                {duplicateAlreadyThereTitle(alreadyThere.length)}
+              </Text>
+              <Text className="mt-2 text-base leading-6 text-t2">
+                {duplicateAlreadyThereText(alreadyThere.length, targetLabel)}
+              </Text>
+              {missing.length === 0 ? (
+                <Text className="mt-3 text-base leading-6 text-t1">
+                  {DUPLICATE_NOTHING_MISSING}
                 </Text>
+              ) : null}
+
+              <View className="mt-6 gap-2.5">
+                {missing.length > 0 ? (
+                  <GoldButton
+                    label={copy.isPending ? "Copia in corso…" : duplicateOnlyMissingLabel(missing.length)}
+                    disabled={copy.isPending}
+                    onPress={() => submit(missing)}
+                  />
+                ) : null}
+                <GhostButton
+                  label={duplicateAllAnywayLabel(copyable.length)}
+                  disabled={copy.isPending}
+                  onPress={() => submit(copyable)}
+                />
                 <Pressable
-                  onPress={() => setWeeks((w) => w + 1)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Settimana successiva"
-                  className="h-10 w-10 items-center justify-center rounded-full border border-border-2"
+                  disabled={copy.isPending}
+                  onPress={() => setStep("main")}
+                  className="items-center py-2"
                 >
-                  <Icon name="chevR" size={16} color="#EAB54C" />
+                  <Text className="text-[15px] text-t3">Indietro</Text>
                 </Pressable>
               </View>
-              <Text className="mt-1.5 text-xs text-t3">
-                {weeks === 1 ? "La settimana subito dopo." : `${weeks} settimane dopo.`}
-              </Text>
+            </View>
+          ) : (
+            <>
+              <Text className="text-xl font-sans-bold text-t1">Copia la settimana</Text>
 
-              <View className="mt-5 flex-row items-center justify-between gap-3">
-                <View className="flex-1">
-                  <Text className="text-[15px] font-sans-semibold text-t1">
-                    {DUPLICATE_WITH_STAFF_LABEL}
+              {sourceQuery.isLoading ? (
+                <ActivityIndicator color="#EAB54C" className="mt-6" />
+              ) : copyable.length === 0 ? (
+                <Text className="mt-4 text-base leading-6 text-t2">
+                  {skippedPast > 0
+                    ? DUPLICATE_NOTHING_PAST
+                    : "Questa settimana non ha turni da copiare."}
+                </Text>
+              ) : (
+                <ScrollView
+                  className="mt-5"
+                  style={{ flexGrow: 0, flexShrink: 1 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Due frasi, non «Da» e «A»: si leggono come si direbbero
+                      (15/11/2026, la freccia in mezzo non diceva niente). */}
+                  <Text className="text-base text-t2">Copia i turni di questa settimana</Text>
+                  <View className="mt-2 flex-row items-center justify-between gap-3 rounded-2xl border border-border-2 bg-bg-1 px-4 py-3.5">
+                    <Text className="text-lg font-sans-semibold text-t1">{sourceLabel}</Text>
+                    <Text className="text-[15px] text-t2">{turni(copyable.length)}</Text>
+                  </View>
+
+                  <Text className="mt-5 text-base text-t2">sulla settimana</Text>
+                  <View className="mt-2 rounded-2xl border border-gold px-2 py-2">
+                    <View className="flex-row items-center gap-2">
+                      <Pressable
+                        disabled={weeks <= 1 || copy.isPending}
+                        onPress={() => setWeeks((w) => Math.max(1, w - 1))}
+                        accessibilityRole="button"
+                        accessibilityLabel="Settimana prima"
+                        className="h-11 w-11 items-center justify-center rounded-full"
+                        style={weeks <= 1 ? { opacity: 0.3 } : undefined}
+                      >
+                        <Icon name="chevL" size={20} color="#EAB54C" />
+                      </Pressable>
+                      <View className="flex-1 items-center">
+                        <Text className="text-lg font-sans-semibold text-t1">{targetLabel}</Text>
+                        <Text className="text-[13px] text-t3">
+                          {weeks === 1 ? "la settimana dopo" : `fra ${weeks} settimane`}
+                        </Text>
+                      </View>
+                      <Pressable
+                        disabled={copy.isPending}
+                        onPress={() => setWeeks((w) => w + 1)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Settimana dopo"
+                        className="h-11 w-11 items-center justify-center rounded-full"
+                      >
+                        <Icon name="chevR" size={20} color="#EAB54C" />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <Text className="mt-6 text-base font-sans-semibold text-t1">
+                    Con le stesse persone?
                   </Text>
-                  <Text className="mt-0.5 text-[13px] text-t3">
+                  <View className="mt-2.5 flex-row gap-2.5">
+                    {([true, false] as const).map((v) => {
+                      const on = withStaff === v;
+                      return (
+                        <Pressable
+                          key={String(v)}
+                          onPress={() => setWithStaff(v)}
+                          disabled={copy.isPending}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: on }}
+                          className={cn(
+                            "flex-1 items-center rounded-2xl border py-3.5",
+                            on ? "border-gold" : "border-border-2"
+                          )}
+                          style={on ? { backgroundColor: "rgba(234,181,76,0.10)" } : undefined}
+                        >
+                          <Text
+                            className={cn(
+                              "text-base",
+                              on ? "font-sans-semibold text-t1" : "text-t2"
+                            )}
+                          >
+                            {v ? "Sì" : "No, solo i turni"}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text className="mt-2 text-[13px] leading-[18px] text-t3">
                     {duplicateWithStaffHint(withStaff)}
                   </Text>
-                </View>
-                <Switch
-                  value={withStaff}
-                  onValueChange={setWithStaff}
-                  disabled={copy.isPending}
-                  trackColor={{ false: "#2a241b", true: "#eab54c" }}
-                  thumbColor="#f8f4ed"
-                  ios_backgroundColor="#2a241b"
-                />
-              </View>
 
-              {/* Le copie nascono bozze: nessun avviso parte alla creazione. */}
-              <Text className="mt-4 text-xs leading-4 text-t3">
-                {DUPLICATE_AS_DRAFT}
-              </Text>
-              {skippedPast > 0 ? (
-                <Text className="mt-4 text-xs leading-4 text-t3">
-                  {duplicateSkippedPastText(skippedPast)}
-                </Text>
-              ) : null}
-              {targetExisting > 0 ? (
-                <Text className="mt-4 text-xs leading-4 text-warning">
-                  {duplicateTargetExistingText(targetExisting, false)}
-                </Text>
-              ) : null}
+                  {skippedPast > 0 ? (
+                    <Text className="mt-4 text-[13px] leading-[18px] text-t3">
+                      {duplicateSkippedPastText(skippedPast)}
+                    </Text>
+                  ) : null}
 
-              <Mono className="mt-5">Cosa verrà creato</Mono>
-              <View className="mt-2 gap-1.5">
-                {preview.map((s) => (
-                  <View
-                    key={s.id}
-                    className="flex-row items-center gap-2 rounded-xl border border-border-2 bg-bg-1 px-3 py-2"
+                  {/* L'elenco c'è per chi lo vuole, chiuso: il numero basta. */}
+                  <Pressable
+                    onPress={() => setShowList((v) => !v)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: showList }}
+                    className="mt-5 flex-row items-center gap-1.5 py-1"
                   >
-                    <Text className="flex-1 text-sm text-t1" numberOfLines={1}>
-                      {s.title}
+                    <Text className="text-[15px] font-sans-semibold text-gold">
+                      {showList ? "Nascondi i turni" : `Vedi i ${turni(copyable.length)}`}
                     </Text>
-                    <Text className="font-mono text-xs text-t3">
-                      {formatShiftRange(s.start_time, s.end_time)}
-                    </Text>
-                    <Text className="w-24 text-right text-xs text-t2">
-                      {formatDate(dateMap[s.date])}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              {copyable.length > preview.length ? (
-                <Text className="mt-2 text-xs text-t3">
-                  e altri {copyable.length - preview.length} turni.
-                </Text>
-              ) : null}
-              {skippedCancelled > 0 || skippedUnplanned > 0 ? (
-                <Text className="mt-2 text-xs text-t3">
-                  Esclusi:{" "}
-                  {[
-                    skippedCancelled > 0 ? `${skippedCancelled} annullati` : null,
-                    skippedUnplanned > 0 ? `${skippedUnplanned} fuori turno` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </Text>
-              ) : null}
-            </ScrollView>
-          )}
+                    <Icon
+                      name="chevR"
+                      size={16}
+                      color="#EAB54C"
+                      style={{ transform: [{ rotate: showList ? "-90deg" : "90deg" }] }}
+                    />
+                  </Pressable>
+                  {showList ? (
+                    <View className="mt-2 gap-1.5">
+                      {preview.map((s) => (
+                        <View
+                          key={s.id}
+                          className="flex-row items-center gap-2 rounded-xl border border-border-2 bg-bg-1 px-3 py-2"
+                        >
+                          <Text className="flex-1 text-sm text-t1" numberOfLines={1}>
+                            {s.title}
+                          </Text>
+                          <Text className="font-mono text-xs text-t3">
+                            {formatShiftRange(s.start_time, s.end_time)}
+                          </Text>
+                          <Text className="w-24 text-right text-xs text-t2">
+                            {formatDate(dateMap[s.date])}
+                          </Text>
+                        </View>
+                      ))}
+                      {copyable.length > preview.length ? (
+                        <Text className="mt-1 text-xs text-t3">
+                          e altri {copyable.length - preview.length} turni.
+                        </Text>
+                      ) : null}
+                      {excluded.length > 0 ? (
+                        <Text className="mt-1 text-xs text-t3">
+                          Non si copiano: {excluded.join(", ")}.
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </ScrollView>
+              )}
 
-          <View className="mt-6 gap-2.5">
-            {copyable.length > 0 ? (
-              <GoldButton
-                label={
-                  copy.isPending
-                    ? "Copia in corso…"
-                    : `Crea ${copyable.length} ${copyable.length === 1 ? "turno" : "turni"}`
-                }
-                disabled={copy.isPending}
-                onPress={submit}
-              />
-            ) : null}
-            <Pressable disabled={copy.isPending} onPress={onClose} className="items-center py-2">
-              <Text className="text-sm text-t3">
-                {copyable.length > 0 ? "Annulla" : "Chiudi"}
-              </Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
+              <View className="mt-6 gap-2">
+                {copyable.length > 0 ? (
+                  <>
+                    <GoldButton
+                      label={
+                        copy.isPending
+                          ? "Copia in corso…"
+                          : targetQuery.isLoading
+                            ? "Un momento…"
+                            : `Copia ${turni(copyable.length)}`
+                      }
+                      // Senza la settimana d'arrivo non si sa se ci sono doppioni.
+                      disabled={copy.isPending || targetQuery.isLoading}
+                      onPress={onCopy}
+                    />
+                    <Text className="text-center text-[13px] text-t3">
+                      {DUPLICATE_AS_DRAFT_SHORT}
+                    </Text>
+                  </>
+                ) : null}
+                <Pressable disabled={copy.isPending} onPress={onClose} className="items-center py-2">
+                  <Text className="text-[15px] text-t3">
+                    {copyable.length > 0 ? "Annulla" : "Chiudi"}
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
     </Modal>
   );
 }

@@ -5,13 +5,19 @@ import type { AssignmentStatus } from "@/features/assignments/status";
 import { useOwnerShiftsRange } from "@/features/shifts/hooks";
 import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
 import {
+  DUPLICATE_NOTHING_MISSING,
   DUPLICATE_NOTHING_PAST,
   DUPLICATE_WITH_STAFF_LABEL,
   classifyDuplicate,
+  duplicateAllAnywayLabel,
+  duplicateAlreadyThereText,
+  duplicateAlreadyThereTitle,
   duplicateCreatedToast,
   duplicateDateMap,
+  duplicateOnlyMissingLabel,
   duplicateSkippedPastText,
   duplicateWithStaffHint,
+  splitAlreadyThere,
 } from "@/features/shifts/duplicate";
 import type { Shift } from "@/features/shifts/api";
 import { DUPLICATE_AS_DRAFT } from "@/features/shifts/drafts";
@@ -34,7 +40,7 @@ import { useToast } from "../ui/Toast";
  */
 type SourceShift = Pick<
   Shift,
-  "id" | "title" | "date" | "start_time" | "end_time" | "status" | "unplanned"
+  "id" | "venue_id" | "title" | "date" | "start_time" | "end_time" | "status" | "unplanned"
 > & {
   /** Se c'è, serve solo a contare quante notifiche partiranno. */
   shift_assignments?: { status: AssignmentStatus }[];
@@ -86,6 +92,8 @@ export function DuplicatePeriodDialog({
   const isMonth = period === "month";
   const [offset, setOffset] = useState(1);
   const [withStaff, setWithStaff] = useState(true);
+  /** Davanti ai doppioni: di norma si copia solo quello che manca. */
+  const [copyAll, setCopyAll] = useState(false);
 
   // L'istante, non l'oggetto: `anchor` può essere una `Date` nuova a ogni render
   // del Planning, e finirebbe per rifare tutti i conti di sotto per niente.
@@ -112,25 +120,28 @@ export function DuplicatePeriodDialog({
     skippedPast,
   } = useMemo(() => classifyDuplicate(shifts, dateMap), [shifts, dateMap]);
 
-  // Quanti turni ci sono già nel periodo di destinazione: la copia **aggiunge**,
-  // non sostituisce, quindi va detto prima e non dopo. Gli annullati non
-  // contano: non sono doppioni di cui preoccuparsi.
+  // La copia **aggiunge**, non sostituisce: i turni d'arrivo possono essere
+  // pubblicati e confermati. Quelli uguali a una copia (stessa sede, giorno,
+  // orario e nome) si dicono prima, e di norma non si ricopiano (15/11/2026,
+  // come la finestra dell'app).
   const targetRange = isMonth ? monthDays(target) : weekDays(target);
   const targetShifts = useOwnerShiftsRange(
     targetRange[0],
     targetRange[targetRange.length - 1],
     venueIds
-  ).data;
-  const targetExisting = (targetShifts ?? []).filter(
-    (s) => s.status !== "cancelled"
-  ).length;
+  );
+  const { missing, alreadyThere } = useMemo(
+    () => splitAlreadyThere(copyable, dateMap, targetShifts.data ?? []),
+    [copyable, dateMap, targetShifts.data]
+  );
+  const toCopy = alreadyThere.length > 0 && !copyAll ? missing : copyable;
 
   const preview = copyable.slice(0, PREVIEW_ROWS);
   const previewHidden = copyable.length - preview.length;
 
   function submit() {
     copy.mutate(
-      { sourceIds: copyable.map((s) => s.id), dateMap, withStaff },
+      { sourceIds: toCopy.map((s) => s.id), dateMap, withStaff },
       {
         onSuccess: (created) => {
           toast.show(duplicateCreatedToast(created.length, targetLabel));
@@ -255,12 +266,41 @@ export function DuplicatePeriodDialog({
               </p>
             ) : null}
 
-            {targetExisting > 0 ? (
-              <p className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
-                {isMonth ? "Il mese" : "La settimana"} di destinazione ha già{" "}
-                {targetExisting} {targetExisting === 1 ? "turno" : "turni"}:
-                questi <b>si aggiungono</b>, non li sostituiscono.
-              </p>
+            {alreadyThere.length > 0 ? (
+              <section className="mb-4 rounded-xl border border-warning/40 bg-warning/10 p-3">
+                <p className="text-sm font-semibold text-warning">
+                  {duplicateAlreadyThereTitle(alreadyThere.length)}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-t2">
+                  {duplicateAlreadyThereText(alreadyThere.length, targetLabel, isMonth)}
+                </p>
+                <div className="mt-3 flex flex-col gap-2">
+                  {missing.length > 0 ? (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-t1">
+                      <input
+                        type="radio"
+                        name="duplicate-already"
+                        checked={!copyAll}
+                        onChange={() => setCopyAll(false)}
+                        className="accent-gold"
+                      />
+                      {duplicateOnlyMissingLabel(missing.length)}
+                    </label>
+                  ) : (
+                    <p className="text-sm text-t1">{DUPLICATE_NOTHING_MISSING}</p>
+                  )}
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-t1">
+                    <input
+                      type="radio"
+                      name="duplicate-already"
+                      checked={copyAll}
+                      onChange={() => setCopyAll(true)}
+                      className="accent-gold"
+                    />
+                    {duplicateAllAnywayLabel(copyable.length)}
+                  </label>
+                </div>
+              </section>
             ) : null}
 
             <section className="mb-5">
@@ -313,10 +353,15 @@ export function DuplicatePeriodDialog({
             ) : null}
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="gold" onClick={submit} disabled={copy.isPending}>
+              <Button
+                variant="gold"
+                onClick={submit}
+                // Senza il periodo d'arrivo non si sa se ci sono doppioni.
+                disabled={copy.isPending || targetShifts.isLoading || toCopy.length === 0}
+              >
                 {copy.isPending
                   ? "Copia in corso…"
-                  : `Crea ${copyable.length} ${copyable.length === 1 ? "turno" : "turni"}`}
+                  : `Crea ${toCopy.length} ${toCopy.length === 1 ? "turno" : "turni"}`}
               </Button>
               <Button onClick={onClose} disabled={copy.isPending}>
                 Annulla

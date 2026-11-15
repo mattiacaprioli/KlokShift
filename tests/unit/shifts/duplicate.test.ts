@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyDuplicate,
+  duplicateAllAnywayLabel,
+  duplicateAlreadyThereTitle,
   duplicateDateMap,
+  duplicateOnlyMissingLabel,
+  splitAlreadyThere,
   duplicateSkippedPastText,
   weekDateMap,
   weekRangeLabel,
@@ -71,5 +75,67 @@ describe("duplica settimana", () => {
 
   it("dice la settimana dal lunedì alla domenica", () => {
     expect(weekRangeLabel("2026-10-26")).toBe("26 ott – 1 nov");
+  });
+});
+
+describe("doppioni nella settimana d'arrivo", () => {
+  const src = (id: string, extra: Partial<{ venue_id: string; title: string; start_time: string }> = {}) => ({
+    id,
+    venue_id: "v1",
+    title: "Sala",
+    date: "2026-11-16",
+    start_time: "09:00:00",
+    end_time: "18:00:00",
+    ...extra,
+  });
+  const there = (extra: Partial<{ venue_id: string; title: string | null; status: string; start_time: string }> = {}) => ({
+    venue_id: "v1",
+    title: "Sala",
+    date: "2026-11-23",
+    start_time: "09:00:00",
+    end_time: "18:00:00",
+    status: "open",
+    ...extra,
+  });
+  const map = { "2026-11-16": "2026-11-23" };
+
+  it("riconosce lo stesso turno una settimana dopo", () => {
+    const r = splitAlreadyThere([src("a")], map, [there()]);
+    expect(r.alreadyThere.map((s) => s.id)).toEqual(["a"]);
+    expect(r.missing).toEqual([]);
+  });
+
+  it("conta per numero: due da copiare, uno già lì", () => {
+    const r = splitAlreadyThere([src("a"), src("b")], map, [there()]);
+    expect(r.alreadyThere.map((s) => s.id)).toEqual(["a"]);
+    expect(r.missing.map((s) => s.id)).toEqual(["b"]);
+  });
+
+  it("sede, orario o nome diversi non sono doppioni", () => {
+    const r = splitAlreadyThere(
+      [src("a", { venue_id: "v2" }), src("b", { start_time: "10:00:00" }), src("c", { title: "Cucina" })],
+      map,
+      [there()]
+    );
+    expect(r.alreadyThere).toEqual([]);
+    expect(r.missing).toHaveLength(3);
+  });
+
+  it("nome senza maiuscole né spazi in più; secondi ignorati", () => {
+    const r = splitAlreadyThere([src("a", { title: " sala " })], map, [
+      there({ start_time: "09:00" }),
+    ]);
+    expect(r.alreadyThere).toHaveLength(1);
+  });
+
+  it("un annullato d'arrivo non c'è", () => {
+    const r = splitAlreadyThere([src("a")], map, [there({ status: "cancelled" })]);
+    expect(r.missing).toHaveLength(1);
+  });
+
+  it("le frasi dicono il numero", () => {
+    expect(duplicateAlreadyThereTitle(10)).toBe("10 turni ci sono già");
+    expect(duplicateOnlyMissingLabel(2)).toBe("Copia solo i 2 che mancano");
+    expect(duplicateAllAnywayLabel(12)).toBe("Copia tutti i 12, anche doppi");
   });
 });
