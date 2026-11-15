@@ -9,6 +9,8 @@ import { useChatUnreadCount } from "@/features/chat/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { cn } from "@/lib/cn";
+import { useNow } from "@/lib/useNow";
+import { trialLeftLabel } from "@/features/workspace/trialCopy";
 import { QueryError } from "./ui/primitives";
 import { Avatar } from "./ui/Avatar";
 import { PersonAvatarProvider } from "./ui/PersonAvatar";
@@ -61,8 +63,10 @@ const NAV: NavItem[] = [
 
 export function AppLayout() {
   const { session, profile, signOut } = useAuth();
-  const { venues, isPending, isError, error, isOwner, canAny } =
+  const { venues, isPending, isError, error, isOwner, canAny, access } =
     useOwnerVenues();
+  // I giorni di prova si contano a ore: un tick all'ora basta.
+  const trialLeft = trialLeftLabel(access, useNow(60 * 60 * 1000).getTime());
   // Aggiornati in tempo reale da RealtimeSync (invalida chat.unreadAll) e dal
   // canale notifications.
   const chatUnread = useChatUnreadCount(session!.user.id).data ?? 0;
@@ -123,9 +127,17 @@ export function AppLayout() {
             <div className="overflow-hidden">
               <div className="w-48 pt-2">
                 <p className="break-words font-serif text-xl leading-tight text-t1">{company}</p>
-                <p className="mt-2 text-xs text-t2">
-                  {venues.length > 1 ? `${venues.length} sedi` : "Gestione turni"}
-                </p>
+                {/* Durante la prova la riga dice quanto ne resta, al posto del
+                    motto: una riga in più spingeva fuori l'ultima voce del menu. */}
+                {trialLeft && isOwner ? (
+                  <NavLink to="/piano" className="focus-gold mt-2 inline-block rounded text-xs text-gold hover:underline">
+                    {trialLeft}
+                  </NavLink>
+                ) : (
+                  <p className={cn("mt-2 text-xs", trialLeft ? "text-gold" : "text-t2")}>
+                    {trialLeft ?? (venues.length > 1 ? `${venues.length} sedi` : "Gestione turni")}
+                  </p>
+                )}
               </div>
             </div>
           </div>

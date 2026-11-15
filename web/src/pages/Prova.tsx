@@ -4,7 +4,7 @@ import { useStartWorkspaceTrial } from "@/features/workspace/hooks";
 import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "../ui/Toast";
-import { SupportLine } from "../ui/SupportLine";
+import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { Button } from "../ui/primitives";
 
 /**
@@ -19,7 +19,7 @@ import { Button } from "../ui/primitives";
 export function ProvaPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { workspaceId, workspaceName, access, accessPending, isOwner } = useOwnerVenues();
+  const { workspaceId, access, accessPending, isOwner } = useOwnerVenues();
   const trial = useStartWorkspaceTrial();
 
   const home = () => navigate("/", { replace: true });
@@ -39,54 +39,54 @@ export function ProvaPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-lg">
-        <div className="mb-4 h-1 w-12 rounded-full bg-gold" />
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold">
-          {TRIAL_COPY.eyebrow}{workspaceName ? ` · ${workspaceName}` : ""}
-        </p>
-        <h1 className="mt-2 font-serif text-3xl text-t1">{TRIAL_COPY.title}</h1>
-        <p className="mt-3 text-sm leading-6 text-t2">
-          {alreadyActive ? TRIAL_COPY.alreadyActive : TRIAL_COPY.lead}
-        </p>
-
-        {!alreadyActive ? (
-          <ul className="mt-6 space-y-3 rounded-2xl border border-border-2 bg-bg-card p-5">
+    <AuthShell
+      title={TRIAL_COPY.title}
+      subtitle={alreadyActive ? TRIAL_COPY.alreadyActive : TRIAL_COPY.lead}
+    >
+      {!alreadyActive ? (
+        <AuthPanel>
+          <ul className="flex flex-col gap-3">
             {TRIAL_COPY.points.map((point) => (
-              <li key={point} className="flex gap-3 text-sm text-t1">
-                <span aria-hidden className="font-bold text-gold">✓</span>
+              <li key={point} className="flex gap-3 text-sm leading-6 text-t1">
+                <span
+                  aria-hidden
+                  className="mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-gold/15 text-gold"
+                >
+                  <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none">
+                    <path d="M2.5 6.2 5 8.5l4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
                 <span>{point}</span>
               </li>
             ))}
           </ul>
-        ) : null}
+        </AuthPanel>
+      ) : null}
 
-        {trial.error ? (
-          <p className="mt-4 rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error" role="alert">
-            {userErrorMessage(trial.error)}
-          </p>
-        ) : null}
-        {!alreadyActive && !accessPending && !canStart ? (
-          <p className="mt-4 text-sm text-t3">
-            {isOwner ? "Per avviare la prova serve una sede aperta." : "La prova la avvia il titolare dell’azienda."}
-          </p>
-        ) : null}
+      {trial.error ? (
+        <p className="mt-4 rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error" role="alert">
+          {userErrorMessage(trial.error)}
+        </p>
+      ) : null}
+      {!alreadyActive && !accessPending && !canStart ? (
+        <p className="mt-4 text-center text-sm text-t3">
+          {isOwner ? "Per avviare la prova serve una sede aperta." : "La prova la avvia il titolare dell’azienda."}
+        </p>
+      ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          {alreadyActive ? (
-            <Button variant="gold" onClick={home}>Vai alla Home</Button>
-          ) : (
-            <>
-              <Button variant="gold" disabled={!canStart || trial.isPending} onClick={() => void start()}>
-                {trial.isPending ? TRIAL_COPY.pending : TRIAL_COPY.cta}
-              </Button>
-              <Button disabled={trial.isPending} onClick={home}>{TRIAL_COPY.later}</Button>
-              <span className="text-xs text-t4">{TRIAL_COPY.laterNote}</span>
-            </>
-          )}
-        </div>
-        <SupportLine className="mt-10" />
+      <div className="mt-6 flex flex-col gap-2">
+        {alreadyActive ? (
+          <Button variant="gold" onClick={home}>Vai alla Home</Button>
+        ) : (
+          <>
+            <Button variant="gold" disabled={!canStart || trial.isPending} onClick={() => void start()}>
+              {trial.isPending ? TRIAL_COPY.pending : TRIAL_COPY.cta}
+            </Button>
+            <Button disabled={trial.isPending} onClick={home}>{TRIAL_COPY.later}</Button>
+            <p className="mt-1 text-center text-xs text-t4">{TRIAL_COPY.laterNote}</p>
+          </>
+        )}
       </div>
-    </main>
+    </AuthShell>
   );
 }

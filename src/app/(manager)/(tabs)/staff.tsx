@@ -208,7 +208,7 @@ export default function ManagerStaffScreen() {
                   </View>
                   <View className="flex-1">
                     <Text className="text-base font-sans-bold text-t1">
-                      Metti te stesso nel team
+                      Aggiungi anche te al team
                     </Text>
                     <Text className="text-xs text-t3">
                       Per assegnarti i turni e contare le tue ore

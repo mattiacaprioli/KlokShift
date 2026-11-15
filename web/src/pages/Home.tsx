@@ -36,6 +36,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FirstStepsCard } from "../onboarding/FirstStepsCard";
+import { useFirstSteps } from "@/features/onboarding/useFirstSteps";
 import { DraftsBanner } from "../shifts/DraftsBanner";
 import { CollaboratorWelcome } from "../onboarding/CollaboratorWelcome";
 import { AbsencesToHandle } from "../absences/AbsencesToHandle";
@@ -83,6 +84,13 @@ type Worker = {
 export function HomePage() {
   const { venues, isMultiVenue, can, canAny, workspaceId, canUseOperations } = useOwnerVenues();
   const canCreateShift = canUseOperations && canAny("can_manage_shifts");
+  // Un'azienda appena nata: «0 turni da coprire» non dice niente, e il «Crea un
+  // turno» dei prossimi turni faceva concorrenza al passo dei «Primi passi».
+  const firstSteps = useFirstSteps(true);
+  const firstStepsKnown = firstSteps.visible && firstSteps.ready;
+  const noShiftsYet =
+    firstStepsKnown && firstSteps.steps.find((s) => s.id === "shift")?.status !== "done";
+  const otherStepFirst = firstStepsKnown && !!firstSteps.next && firstSteps.next.id !== "shift";
   const self = useSelfStaff();
   // L'etichetta «In ritardo» scatta a un'ora precisa: basta un tick al minuto,
   // le timbrature arrivano già col realtime.
@@ -225,6 +233,7 @@ export function HomePage() {
       {/* Il periodo sta **sopra i numeri che qualifica**: senza, "31 turni" non
           dice su quanto tempo, e la prima domanda di chi guarda è "in base a
           cosa?". */}
+      {noShiftsYet ? null : (<>
       <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-t3">
           {periodLabel(period)}
@@ -265,6 +274,7 @@ export function HomePage() {
           onClick={() => navigate("/planning")}
         />
       </div>
+      </>)}
 
       {periodQuery.isError ? (
         <div className="mb-6"><QueryError error={periodQuery.error} /></div>
@@ -375,7 +385,7 @@ export function HomePage() {
               detail={canCreateShift
                 ? EMPTY_SHIFTS_HINT
                 : "Qui compaiono i prossimi turni delle tue sedi."}
-              action={canCreateShift ? (
+              action={canCreateShift && !otherStepFirst ? (
                 <Link
                   to="/planning?nuovo=oggi"
                   className="focus-gold rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"

@@ -10,7 +10,7 @@ import {
 import { signupIntent } from "@/features/team/viewModeLogic";
 import { collaboratorInviteText } from "@/features/team/collaboratorSummary";
 import { Button, Field, Input } from "../ui/primitives";
-import { SupportLine } from "../ui/SupportLine";
+import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { LegalCheckbox } from "../legal/LegalCheckbox";
 
 /**
@@ -44,81 +44,76 @@ export function NotForWaitersPage() {
 
   if (worker) {
     return (
-      <main className="flex min-h-dvh items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold" />
-          <h1 className="font-serif text-2xl text-t1">
-            {firstName ? `Ciao ${firstName}, i tuoi turni sono nell'app` : "I tuoi turni sono nell'app"}
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-t2">
-            Questa è la dashboard per chi gestisce un&apos;azienda. Turni, ore e
-            messaggi li trovi nell&apos;app KlokShift sul telefono, con lo stesso account.
+      <AuthShell
+        title={firstName ? `Ciao ${firstName}, i tuoi turni sono nell'app` : "I tuoi turni sono nell'app"}
+        subtitle="Questa è la dashboard per chi gestisce un'azienda. Turni, ore e messaggi li trovi nell'app KlokShift sul telefono, con lo stesso account."
+      >
+        <AuthPanel>
+          <p className="text-sm font-semibold text-t1">Non vedi ancora la tua sede?</p>
+          <p className="mt-1 text-sm leading-6 text-t2">
+            Chiedi a chi organizza i turni di aggiungerti con questa email:
           </p>
-          <div className="mt-6 rounded-2xl border border-border-2 bg-bg-1 p-5 text-left">
-            <p className="text-sm font-semibold text-t1">Non vedi ancora la tua sede?</p>
-            <p className="mt-1 text-sm leading-6 text-t2">
-              Chiedi a chi organizza i turni di aggiungerti con questa email:
-            </p>
-            <p className="mt-3 select-all rounded-xl bg-bg-2 px-3 py-2 text-center text-sm font-semibold text-t1">
-              {session?.user.email}
-            </p>
-            <p className="mt-3 text-xs leading-5 text-t3">
-              Appena ti aggiunge trovi la sede e i tuoi turni nell&apos;app: non c&apos;è
-              niente da accettare.
-            </p>
-          </div>
+          <p className="mt-3 select-all rounded-xl bg-bg-2 px-3 py-2 text-center text-sm font-semibold text-t1">
+            {session?.user.email}
+          </p>
+          <p className="mt-3 text-xs leading-5 text-t3">
+            Appena ti aggiunge trovi la sede e i tuoi turni nell&apos;app: non c&apos;è
+            niente da accettare.
+          </p>
+        </AuthPanel>
 
-          {openOwn ? (
+        {openOwn ? (
+          <div className="mt-6">
             <OpenWorkspaceCard />
-          ) : (
+          </div>
+        ) : (
+          <p className="mt-6 text-center">
             <button
               type="button"
               onClick={() => setOpenOwn(true)}
-              className="focus-gold mt-6 text-sm text-gold underline"
+              className="focus-gold rounded text-sm text-gold underline"
             >
               Vuoi aprire un&apos;azienda tua?
             </button>
-          )}
+          </p>
+        )}
 
-          <div className="mt-6">
-            <Button onClick={() => void signOut()}>Esci</Button>
-          </div>
-          <SupportLine className="mt-8" />
-        </div>
-      </main>
+        <SignOutLink onClick={() => void signOut()} />
+      </AuthShell>
     );
   }
 
   // Il caso normale è chi si è appena registrato per gestire un'azienda: la
   // creazione viene prima, la nota per il dipendente capitato qui dopo.
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold" />
-        <h1 className="font-serif text-2xl text-t1">
-          {invited
-            ? "Hai un invito da un'azienda"
-            : firstName ? `Ciao ${firstName}, iniziamo` : "Iniziamo"}
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-t2">
-          {invited
-            ? "Accetta l'invito per entrare nell'azienda che ti ha aggiunto."
-            : "Per iniziare crea la tua azienda: insieme nasce anche la prima sede. Poi scegli tu quando avviare la prova di 30 giorni, senza carta."}
-        </p>
+    <AuthShell
+      title={invited ? "Hai un invito da un'azienda" : firstName ? `Ciao ${firstName}, iniziamo` : "Iniziamo"}
+      subtitle={
+        invited
+          ? "Accetta l'invito per entrare nell'azienda che ti ha aggiunto."
+          : "Crea la tua azienda: insieme nasce la prima sede. La prova di 30 giorni, senza carta, la avvii tu quando vuoi."
+      }
+    >
+      {invited ? <PendingInvites /> : <OpenWorkspaceCard />}
 
-        {invited ? <PendingInvites /> : <OpenWorkspaceCard />}
+      <p className="mt-6 text-center text-xs leading-5 text-t4">
+        Lavori in un&apos;azienda che usa già KlokShift? Turni e messaggi li
+        trovi nell&apos;app sul telefono: chiedi alla sede di aggiungerti con
+        l&apos;email di questo account.
+      </p>
+      <SignOutLink onClick={() => void signOut()} />
+    </AuthShell>
+  );
+}
 
-        <p className="mt-6 text-xs leading-5 text-t3">
-          Lavori in un&apos;azienda che usa già KlokShift? Turni e messaggi li
-          trovi nell&apos;app sul telefono: chiedi alla sede di aggiungerti con
-          l&apos;email di questo account.
-        </p>
-        <Button className="mt-4" onClick={() => void signOut()}>
-          Esci
-        </Button>
-        <SupportLine className="mt-8" />
-      </div>
-    </main>
+/** «Esci» discreto: qui la strada è creare l'azienda, non andarsene. */
+function SignOutLink({ onClick }: { onClick: () => void }) {
+  return (
+    <p className="mt-4 text-center">
+      <button type="button" onClick={onClick} className="focus-gold rounded text-sm text-t3 underline hover:text-t1">
+        Esci
+      </button>
+    </p>
   );
 }
 
@@ -163,7 +158,7 @@ function OpenWorkspaceCard() {
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-border-2 bg-bg-1 p-5 text-left">
+    <AuthPanel>
       <form
         className="flex flex-col gap-3"
         onSubmit={(e) => {
@@ -178,7 +173,7 @@ function OpenWorkspaceCard() {
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Trattoria da Mario"
+            placeholder="Bottega Rossi"
             autoFocus
           />
         </Field>
@@ -196,7 +191,7 @@ function OpenWorkspaceCard() {
           {create.isPending ? "Creazione…" : "Crea l'azienda"}
         </Button>
       </form>
-    </div>
+    </AuthPanel>
   );
 }
 
@@ -221,7 +216,7 @@ function PendingInvites() {
   }
 
   return (
-    <div className="mt-6 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       {pendingInvites.map((invite) => (
         <div
           key={invite.member_id}

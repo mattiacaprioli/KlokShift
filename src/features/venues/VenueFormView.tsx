@@ -247,7 +247,7 @@ export function VenueFormView({
                 control={control}
                 name="name"
                 label="Nome della sede"
-                placeholder="Trattoria da Mario"
+                placeholder="Bottega Rossi"
               />
               <ControlledInput
                 control={control}

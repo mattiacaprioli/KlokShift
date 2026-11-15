@@ -15,6 +15,9 @@ export function AccessBanner() {
   const { pathname } = useLocation();
   const { access, accessError, isOwner } = useOwnerVenues();
   if (accessError || !access || HIDDEN_ON.includes(pathname)) return null;
+  // In Home la prova la propone già la card «Primi passi», col suo pulsante: tre
+  // «Avvia la prova» nella stessa schermata erano troppi (15/11).
+  if (access.state === "setup" && isOwner && pathname === "/") return null;
 
   const text = access.state === "setup"
     ? isOwner

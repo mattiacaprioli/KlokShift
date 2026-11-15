@@ -88,6 +88,9 @@ import {
   weekLabel,
 } from "../lib/week";
 import { ClockAttentionBanner } from "../shifts/ClockAttentionBanner";
+import { useFirstSteps } from "@/features/onboarding/useFirstSteps";
+import { emptyWeekGuide, firstWeekStart } from "@/features/onboarding/firstWeek";
+import { EmptyWeekGuide } from "../onboarding/EmptyWeekGuide";
 import {
   CoverageLegend,
   DRAG_HINT_DAYS,
@@ -219,6 +222,14 @@ export function PlanningPage() {
     [venueCalendar, venues, scopedIds]
   );
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
+  // Senza nessun turno la prima settimana è quella da preparare, con dentro il
+  // passo che manca (`firstWeek.ts`): si decide una volta, quando i dati ci sono.
+  const firstSteps = useFirstSteps(true);
+  const firstStepsKnown = firstSteps.visible && firstSteps.ready;
+  const noShiftsYet =
+    firstStepsKnown && firstSteps.steps.find((s) => s.id === "shift")?.status !== "done";
+  const weekGuide = firstStepsKnown ? emptyWeekGuide(firstSteps.steps) : null;
+  const [firstWeekSet, setFirstWeekSet] = useState(false);
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [panel, setPanel] = useState<{
     date: string;
@@ -794,6 +805,19 @@ export function PlanningPage() {
           setPanel({ date: item.shift.date, shift: item.shift })
         }
       />
+
+      {noShiftsYet && !firstWeekSet && !jumpDay && !deepLinkId ? (
+        <RunOnMount
+          run={() => {
+            setMonday(new Date(`${firstWeekStart(todayString())}T00:00:00`));
+            setFirstWeekSet(true);
+          }}
+        />
+      ) : null}
+
+      {weekGuide && !isPending ? (
+        <EmptyWeekGuide guide={weekGuide} onCreate={() => openCreate(createDay)} />
+      ) : null}
 
       {isPending ? (
         <PlanningSkeleton view={view} days={days.length} />

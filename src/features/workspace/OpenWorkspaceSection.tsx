@@ -25,7 +25,7 @@ import { useCreateFirstVenue } from "./hooks";
  * le aggiunge da lì, dove c'è il modulo completo e il controllo sul piano.
  *
  * Un campo solo. Il nome vale per l'azienda **e** per la prima sede — nella
- * stragrande maggioranza dei casi sono la stessa cosa («Trattoria da Mario»), e
+ * stragrande maggioranza dei casi sono la stessa cosa («Bottega Rossi»), e
  * chiedere due nomi a chi ne ha uno solo è il modo più veloce per far
  * abbandonare il modulo. Chi ne aprirà una seconda troverà i due livelli
  * distinti, già con un esempio davanti.
@@ -78,7 +78,7 @@ export function OpenWorkspaceSection() {
               label="Come si chiama"
               value={name}
               onChangeText={setName}
-              placeholder="Trattoria da Mario"
+              placeholder="Bottega Rossi"
               autoFocus
             />
             <Text className="text-[12px] leading-4 text-t4">

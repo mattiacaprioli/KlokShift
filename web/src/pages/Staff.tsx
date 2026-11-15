@@ -131,7 +131,7 @@ export function StaffPage() {
                   setAdding(true);
                 }}
               >
-                + Metti te stesso
+                + Aggiungi anche te
               </Button>
             ) : null}
             {canStaff && canUseOperations ? (

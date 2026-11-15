@@ -161,7 +161,7 @@ export function VenueFormCard({
           className="flex flex-col gap-4"
         >
           <Field label="Nome della sede" error={errors.name?.message}>
-            <Input {...register("name")} placeholder="Trattoria da Mario" />
+            <Input {...register("name")} placeholder="Bottega Rossi" />
           </Field>
 
           <div className="grid grid-cols-2 gap-4">
