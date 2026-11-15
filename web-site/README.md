@@ -110,6 +110,12 @@ storia di «Come funziona» la trasforma in quattro passi (`src/story/`, la
 cornice è un layout di **Motion**, che il sito importa da solo: app e dashboard
 no, lo verifica `tests/unit/web/motionScope.test.ts`), la chiusura la mostra
 tutta confermata. Il «wow» sta lì; il resto della pagina non si muove apposta.
+Motion si usa con `LazyMotion` e i componenti `m.*` (`App.tsx`,
+`motionFeatures.ts`): le funzioni di animazione arrivano in un file a parte,
+dopo il primo schermo. Non importare `motion.*` né `animate`: riporterebbero la
+libreria intera nel caricamento iniziale (`strict` lo segnala). I numeri finti
+dei mock raccontano la stessa settimana in tutti i passi: se ne cambi uno,
+ricontrolla gli altri (commenti in `ExportMock` e `HoursMock`).
 Niente eyebrow sopra i titoli e niente stringhe a puntini nel copy della home
 (`tests/unit/web/siteCopy.test.ts`). Con reduced motion si vedono solo gli
 stati finali (`MotionConfig reducedMotion="user"` in `App.tsx`). Decisione e

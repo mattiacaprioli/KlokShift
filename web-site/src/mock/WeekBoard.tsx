@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { Shot } from "./Shot";
 import { cn } from "../ui/cn";
 import { WEEK_DAYS, WEEK_PEOPLE, type WeekShift } from "./week";
@@ -135,7 +135,7 @@ export function WeekBoard({
 
       <AnimatePresence>
         {toast && toastOn && (
-          <motion.div
+          <m.div
             aria-hidden="true"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -145,7 +145,7 @@ export function WeekBoard({
           >
             <span className="h-2 w-2 rounded-full bg-success" />
             {toast}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -220,7 +220,7 @@ function Block({ shift, animate }: { shift: WeekShift; animate: boolean }) {
   const isOpen = shift.state === "open";
 
   return (
-    <motion.div
+    <m.div
       initial={animate ? { opacity: 0, y: -12, scale: 0.96 } : false}
       animate={
         animate && isOpen
@@ -243,7 +243,7 @@ function Block({ shift, animate }: { shift: WeekShift; animate: boolean }) {
       <p className="font-semibold whitespace-nowrap tabular-nums">{shift.time}</p>
       <p className={cn("truncate text-[0.85em]", isOpen ? "text-error/70" : "text-t3")}>{shift.role}</p>
       {(shift.state === "confirmed" || shift.state === "pending") && (
-        <motion.span
+        <m.span
           initial={animate ? { opacity: 0, scale: 0.3 } : false}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: animate ? delay + 0.9 : 0, duration: 0.3 }}
@@ -253,6 +253,6 @@ function Block({ shift, animate }: { shift: WeekShift; animate: boolean }) {
           )}
         />
       )}
-    </motion.div>
+    </m.div>
   );
 }

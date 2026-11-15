@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { animate, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 
 /*
  * La timbratura dal telefono: entrata, pausa e uscita del venerdì di Sara, e
@@ -17,8 +17,13 @@ const STEPS = [
 const FROM = 61 * 60 + 15;
 const TO = 69 * 60 + 50;
 
-const hhmm = (minutes: number) =>
-  `${Math.floor(minutes / 60)}:${String(Math.round(minutes) % 60).padStart(2, "0")}`;
+const hhmm = (minutes: number) => {
+  const whole = Math.round(minutes);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+};
+
+/** Quanto dura il conteggio delle ore, dopo l'uscita. */
+const COUNT_MS = 1200;
 
 export function ClockMock({ still = false }: { still?: boolean }) {
   const reduce = useReducedMotion() ?? false;
@@ -31,15 +36,23 @@ export function ClockMock({ still = false }: { still?: boolean }) {
   useEffect(() => {
     if (!live) return;
     const timers = STEPS.map((_, i) => setTimeout(() => setDone(i + 1), 450 + i * 550));
-    const counter = animate(FROM, TO, {
-      delay: 0.45 + STEPS.length * 0.55,
-      duration: 1.2,
-      ease: "easeOut",
-      onUpdate: setMinutes,
-    });
+    // Il conteggio delle ore, a mano: per un numero che sale non serve il
+    // motore di animazione di Motion (che peserebbe sul primo schermo).
+    let frame = 0;
+    const start = setTimeout(() => {
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - t0) / COUNT_MS);
+        const eased = 1 - (1 - p) ** 3;
+        setMinutes(FROM + (TO - FROM) * eased);
+        if (p < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    }, 450 + STEPS.length * 550);
     return () => {
       timers.forEach(clearTimeout);
-      counter.stop();
+      clearTimeout(start);
+      cancelAnimationFrame(frame);
     };
   }, [live]);
 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { MotionConfig } from "motion/react";
+import { LazyMotion, MotionConfig } from "motion/react";
 import { Nav } from "./sections/Nav";
 import { Hero } from "./sections/Hero";
 import { Rest } from "./sections/Rest";
@@ -11,6 +11,9 @@ import { FinalCta } from "./sections/FinalCta";
 import { Footer } from "./sections/Footer";
 import { MobileCta } from "./sections/MobileCta";
 import { t } from "./content";
+
+// Le funzioni di animazione arrivano in un file a parte, dopo il primo schermo.
+const loadMotionFeatures = () => import("./motionFeatures").then((mod) => mod.default);
 
 /*
  * L'ordine delle sezioni è l'argomentazione: la settimana che prende vita →
@@ -28,6 +31,7 @@ export function App() {
   // `reducedMotion="user"`: chi ha chiesto meno movimento non vede né morph né
   // spostamenti, solo cambi di stato.
   return (
+    <LazyMotion features={loadMotionFeatures} strict>
     <MotionConfig reducedMotion="user">
       <a
         href="#contenuto"
@@ -48,5 +52,6 @@ export function App() {
       <Footer />
       <MobileCta />
     </MotionConfig>
+    </LazyMotion>
   );
 }

@@ -1,13 +1,14 @@
 /*
  * Il riepilogo mensile delle ore: una riga per persona, il totale in fondo e i
  * due export. Nessuna cifra in euro — KlokShift conta ore, non paghe (vedi il
- * commento in cima a `content/it.ts`). Le persone sono quelle di `week.ts`.
+ * commento in cima a `content/it.ts`). Le persone sono quelle di `week.ts`; le
+ * ore di Sara sono quelle dopo il venerdì timbrato in `ClockMock` (61:15 → 69:50).
  */
 
 const PEOPLE = [
   { name: "Giulia Rinaldi", initials: "GR", role: "Reception", shifts: 18, hours: "96:30" },
   { name: "Marco Tessari", initials: "MT", role: "Magazzino", shifts: 16, hours: "88:00" },
-  { name: "Sara Pisani", initials: "SP", role: "Cassa", shifts: 12, hours: "61:15" },
+  { name: "Sara Pisani", initials: "SP", role: "Cassa", shifts: 13, hours: "69:50" },
   { name: "Luca Ferro", initials: "LF", role: "Sala", shifts: 9, hours: "44:45" },
   { name: "Anna Bruni", initials: "AB", role: "Pulizie", shifts: 13, hours: "52:00" },
 ];
@@ -46,7 +47,7 @@ export function HoursMock({ highlight }: { highlight?: string }) {
             <span className="flex-1 font-mono text-[0.85em] tracking-wider text-t3 uppercase">
               Totale mese
             </span>
-            <span className="text-[1.1em] font-bold text-gold tabular-nums">342:30</span>
+            <span className="text-[1.1em] font-bold text-gold tabular-nums">351:05</span>
           </div>
         </div>
 

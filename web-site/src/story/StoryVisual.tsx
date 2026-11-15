@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { WeekBoard } from "../mock/WeekBoard";
 import { ConfirmMock } from "../mock/ConfirmMock";
 import { ClockMock } from "../mock/ClockMock";
@@ -44,7 +44,7 @@ export function StoryVisual({ step, still = false }: { step: number; still?: boo
   const phone = frame === "phone";
 
   return (
-    <motion.div
+    <m.div
       aria-hidden="true"
       layout
       transition={{ layout: { duration: 0.7, ease: EASE } }}
@@ -54,7 +54,7 @@ export function StoryVisual({ step, still = false }: { step: number; still?: boo
         phone ? "max-w-[19rem] p-2" : "max-w-3xl"
       )}
     >
-      <motion.div layout="position" className={cn(phone && "absolute top-2.5 left-1/2 -translate-x-1/2")}>
+      <m.div layout="position" className={cn(phone && "absolute top-2.5 left-1/2 -translate-x-1/2")}>
         {phone ? (
           <span className="block h-1.5 w-20 rounded-full bg-bg-3" />
         ) : (
@@ -64,10 +64,10 @@ export function StoryVisual({ step, still = false }: { step: number; still?: boo
             <span className="h-2.5 w-2.5 rounded-full bg-bg-3" />
           </span>
         )}
-      </motion.div>
+      </m.div>
 
       <AnimatePresence mode="popLayout" initial={false}>
-        <motion.div
+        <m.div
           key={shown}
           layout
           initial={reduce ? false : { opacity: 0 }}
@@ -76,9 +76,9 @@ export function StoryVisual({ step, still = false }: { step: number; still?: boo
           className={cn("bg-bg-0", phone && "overflow-hidden rounded-[1.6rem] pt-6")}
         >
           <StepContent step={shown} mode={mode} />
-        </motion.div>
+        </m.div>
       </AnimatePresence>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -138,14 +138,14 @@ function Export({ mode }: { mode: Mode }) {
       <div className={cn("transition-opacity duration-500", ready && "opacity-40")}>
         <HoursMock highlight="SP" />
       </div>
-      <motion.div
+      <m.div
         initial={false}
         animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
         transition={mode === "final" ? { duration: 0 } : { duration: 0.6, ease: EASE }}
         className="absolute inset-x-6 bottom-4 overflow-hidden rounded-xl border border-border-gold bg-bg-card shadow-2xl shadow-black/60"
       >
         <ExportMock />
-      </motion.div>
+      </m.div>
     </div>
   );
 }

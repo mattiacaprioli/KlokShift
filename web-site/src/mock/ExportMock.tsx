@@ -2,14 +2,19 @@
  * L'ultimo passo della storia: il file per il consulente, una riga per
  * persona, giorno e voce (come l'export giornaliero della pagina Ore). Solo
  * ore, mai importi.
+ *
+ * Gli stessi fatti della storia: il venerdì di Sara è quello timbrato in
+ * `ClockMock` (9:58–19:03 meno mezz'ora di pausa = 8 h 35 = 8,58), e in ferie
+ * il sabato 21 c'è Anna, che quel giorno non ha turni (`week.ts`), non Luca, che
+ * copre il buco del sabato.
  */
 
 const ROWS = [
   { code: "0012", name: "Rinaldi Giulia", day: "16/11", kind: "Lavoro", hours: "8,00" },
   { code: "0012", name: "Rinaldi Giulia", day: "17/11", kind: "Lavoro", hours: "8,00" },
   { code: "0019", name: "Tessari Marco", day: "17/11", kind: "Lavoro", hours: "7,50" },
-  { code: "0027", name: "Pisani Sara", day: "20/11", kind: "Lavoro", hours: "8,50" },
-  { code: "0031", name: "Ferro Luca", day: "21/11", kind: "Ferie", hours: "6,00" },
+  { code: "0027", name: "Pisani Sara", day: "20/11", kind: "Lavoro", hours: "8,58" },
+  { code: "0034", name: "Bruni Anna", day: "21/11", kind: "Ferie", hours: "6,00" },
 ];
 
 export function ExportMock() {
