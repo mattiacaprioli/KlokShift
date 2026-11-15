@@ -6,7 +6,7 @@ import { navHidden } from "../../../web-site/src/ui/navScroll";
  * risale. Non si nasconde mai con il menu aperto o con il focus dentro (chi
  * naviga da tastiera perderebbe di vista dove si trova), né in cima alla pagina.
  */
-const base = { prevY: 500, y: 500, wasHidden: false, menuOpen: false, focusInside: false };
+const base = { prevY: 500, y: 500, wasHidden: false, menuOpen: false, focusInside: false, anchoring: false };
 
 describe("barra che si nasconde scorrendo", () => {
   it("in cima alla pagina resta visibile anche scendendo", () => {
@@ -32,5 +32,10 @@ describe("barra che si nasconde scorrendo", () => {
 
   it("con il focus dentro non si nasconde", () => {
     expect(navHidden({ ...base, prevY: 500, y: 600, focusInside: true })).toBe(false);
+  });
+
+  it("mentre la pagina scorre verso un link interno resta visibile", () => {
+    // Dopo «Prezzi» la sezione deve cominciare sotto la barra, non sotto il vuoto.
+    expect(navHidden({ ...base, prevY: 500, y: 900, anchoring: true })).toBe(false);
   });
 });

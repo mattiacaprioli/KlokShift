@@ -39,7 +39,7 @@ export function Story() {
     <section
       id="come-funziona"
       aria-labelledby="come-funziona-title"
-      className="scroll-mt-20 pt-16 pb-8 sm:pt-24 lg:pt-0 lg:pb-0"
+      className="pt-16 pb-8 sm:pt-24 lg:pt-0 lg:pb-0"
     >
       <Container>
         {/* Il titolo sta nella colonna dei passi: così, da `lg`, la colonna

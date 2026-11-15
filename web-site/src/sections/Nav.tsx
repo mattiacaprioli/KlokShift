@@ -33,6 +33,9 @@ import { SIGNUP_URL } from "../config";
  * X, per tornare al bottone del menu alla chiusura: senza, chi naviga da
  * tastiera riparte dall'inizio del documento ogni volta.
  */
+/** Quanto dura lo scorrimento morbido verso un'ancora, con un margine. */
+const ANCHOR_SCROLL_MS = 1500;
+
 /**
  * Focus da tastiera dentro la barra. Solo `:focus-visible`: in Chrome anche un
  * clic su una voce le lascia il focus, e con `activeElement` la barra resterebbe
@@ -78,6 +81,15 @@ export function Nav() {
   useEffect(() => {
     let prevY = window.scrollY;
     let frame = 0;
+    // Un clic su un link interno (barra, menu, apertura): per lo scorrimento
+    // che segue la barra resta giù, così la sezione comincia sotto di lei.
+    let anchoringUntil = 0;
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as Element | null)?.closest?.('a[href^="#"]');
+      if (!link) return;
+      anchoringUntil = performance.now() + ANCHOR_SCROLL_MS;
+      setHidden(false);
+    };
     const onScroll = () => {
       if (frame) return;
       frame = requestAnimationFrame(() => {
@@ -90,6 +102,7 @@ export function Nav() {
             wasHidden,
             menuOpen: document.body.dataset.menuOpen === "true",
             focusInside: focusVisibleInside(headerRef.current),
+            anchoring: performance.now() < anchoringUntil,
           })
         );
         prevY = y;
@@ -100,9 +113,11 @@ export function Nav() {
     const header = headerRef.current;
     const onFocus = () => setHidden(false);
     window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick);
     header?.addEventListener("focusin", onFocus);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick);
       header?.removeEventListener("focusin", onFocus);
       cancelAnimationFrame(frame);
     };

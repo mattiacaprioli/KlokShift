@@ -52,8 +52,12 @@
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
-    /* La nav è fissa: le ancore non devono finire sotto di lei. */
-    scroll-padding-top: 5rem;
+    /*
+     * La nav è fissa (h-16 + bordo): le ancore si fermano proprio sotto di lei.
+     * È l'unico margine per i salti: le sezioni non hanno `scroll-mt-*`, che si
+     * sommerebbe a questo (fino al 15/11 si fermavano 160px sotto il bordo).
+     */
+    scroll-padding-top: calc(4rem + 1px);
   }
   body {
     background: var(--color-bg-0);

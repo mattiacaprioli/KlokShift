@@ -5,7 +5,9 @@ const JITTER = 4;
 
 /**
  * Se la barra in alto va nascosta: sì quando si scende, no appena si risale.
- * Mai con il menu aperto, con il focus da tastiera dentro o in cima alla pagina.
+ * Mai con il menu aperto, con il focus da tastiera dentro, in cima alla pagina o
+ * mentre la pagina scorre verso un link interno (`anchoring`): lì la sezione
+ * deve cominciare proprio sotto la barra.
  */
 export function navHidden(s: {
   prevY: number;
@@ -13,8 +15,9 @@ export function navHidden(s: {
   wasHidden: boolean;
   menuOpen: boolean;
   focusInside: boolean;
+  anchoring: boolean;
 }): boolean {
-  if (s.menuOpen || s.focusInside || s.y <= TOP) return false;
+  if (s.menuOpen || s.focusInside || s.anchoring || s.y <= TOP) return false;
   if (s.y - s.prevY > JITTER) return true;
   if (s.prevY - s.y > JITTER) return false;
   return s.wasHidden;

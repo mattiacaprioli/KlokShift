@@ -17,7 +17,7 @@ const DONE = confirmedWeek(WEEK_SHIFTS);
  */
 export function FinalCta() {
   return (
-    <section id="inizia" className="scroll-mt-20 py-20 sm:py-28">
+    <section id="inizia" className="py-20 sm:py-28">
       <Container>
         <Reveal className="relative overflow-hidden rounded-3xl border border-border-gold bg-bg-card px-6 py-14 text-center sm:px-12 sm:py-20">
           <div
