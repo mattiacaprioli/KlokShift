@@ -93,6 +93,10 @@ export default function Login() {
               placeholder="nome@email.com"
               autoCapitalize="none"
               autoComplete="email"
+              // iOS propone le password salvate solo se il campo prima della
+              // password è un «username»: con `emailAddress` (quello che dà
+              // `autoComplete="email"`) la coppia non la riconosce.
+              textContentType="username"
               keyboardType="email-address"
               inputMode="email"
             />
@@ -103,6 +107,7 @@ export default function Login() {
               placeholder="••••••••"
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="current-password"
             />
 
             <Pressable className="self-end" onPress={onForgot}>

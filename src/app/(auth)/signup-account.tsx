@@ -134,6 +134,7 @@ export default function SignupAccount() {
               placeholder="Crea una password sicura"
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="new-password"
             />
             <ControlledInput
               control={control}
@@ -142,6 +143,7 @@ export default function SignupAccount() {
               placeholder="La stessa password"
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="new-password"
             />
             <PasswordChecklist value={password} />
 
