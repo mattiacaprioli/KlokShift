@@ -82,7 +82,7 @@ export function ExportDialog({
         role="dialog"
         aria-modal
         aria-label={EXPORT_BUTTON_LABEL}
-        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-card"
+        className="relative flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-card"
       >
         <div className="px-6 pt-6">
           <h2 className="font-serif text-lg text-t1">{EXPORT_BUTTON_LABEL}</h2>
@@ -163,11 +163,11 @@ export function ExportDialog({
 
               {current.table ? (
                 <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-                  <table className="w-full font-mono text-xs">
+                  <table className="w-full font-mono text-[11px]">
                     <thead>
                       <tr>
                         {current.table.header.map((h, i) => (
-                          <th key={i} className="whitespace-nowrap border-b border-border bg-bg-0 px-3 py-2 text-left font-medium text-t3">
+                          <th key={i} className="whitespace-nowrap border-b border-border bg-bg-0 px-2.5 py-2 text-left font-medium text-t3">
                             {h}
                           </th>
                         ))}
@@ -177,7 +177,7 @@ export function ExportDialog({
                       {current.table.rows.map((r, i) => (
                         <tr key={i}>
                           {r.map((cell, j) => (
-                            <td key={j} className="whitespace-nowrap border-b border-border px-3 py-1.5 text-t1">
+                            <td key={j} className="whitespace-nowrap border-b border-border px-2.5 py-1.5 text-t1">
                               {cell}
                             </td>
                           ))}
