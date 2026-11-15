@@ -94,21 +94,26 @@ export default function SignupAccount() {
       style={{ flex: 1 }}
       behavior="padding"
     >
-      <View className="flex-1 bg-bg-0">
+      <View
+        className="flex-1 bg-bg-0"
+        style={{ paddingBottom: insets.bottom }}
+      >
         <View className="shrink-0 px-6 pb-3" style={{ paddingTop: insets.top + 8 }}>
           <ScreenHeader eyebrow={intentLabel} title="Crea il tuo account" titleClassName="text-[28px]" />
-        </View>
-
-        <ScrollView
-          className="flex-1 bg-bg-0"
-          contentContainerClassName="flex-grow px-6 pb-10"
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text className="font-sans text-[13.5px] text-t3">
+          <Text className="mt-3 font-sans text-[13.5px] text-t3">
             Bastano pochi dati per iniziare.
           </Text>
+        </View>
 
-          <View className="mt-7 gap-4">
+        {/* Il modulo al centro dello spazio sotto il titolo, come nella scelta
+            del ruolo; con la tastiera aperta si scorre. ⚠️ Solo classi sul
+            contentContainer: un `contentContainerStyle` le sostituirebbe. */}
+        <ScrollView
+          className="flex-1 bg-bg-0"
+          contentContainerClassName="flex-grow justify-center px-6 pb-10"
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="gap-4">
             <ControlledInput
               control={control}
               name="fullName"

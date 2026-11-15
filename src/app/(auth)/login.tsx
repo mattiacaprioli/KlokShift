@@ -72,19 +72,27 @@ export default function Login() {
       style={{ flex: 1 }}
       behavior="padding"
     >
-      <View className="flex-1 bg-bg-0">
-        <View className="shrink-0 items-center px-6 pb-6" style={{ paddingTop: insets.top + 24 }}>
-          <LogoBadge size={72} />
-          <Display className="mt-5 text-[26px]">Bentornato</Display>
-          <Text className="mt-1.5 font-sans text-sm text-t3">
-            Accedi al tuo account
-          </Text>
-        </View>
+      <View
+        className="flex-1 bg-bg-0"
+        style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+      >
+        {/* Tutto nello scroll e centrato: sui telefoni alti il modulo non
+            resta in cima sopra mezzo schermo vuoto, e con la tastiera aperta
+            si scorre come prima. ⚠️ Niente `contentContainerStyle` accanto a
+            `contentContainerClassName`: lo style sostituisce le classi e si
+            perdono margini e centratura (per questo la safe area sta fuori). */}
         <ScrollView
           className="flex-1 bg-bg-0"
-          contentContainerClassName="flex-grow px-6 pb-6"
+          contentContainerClassName="flex-grow justify-center px-6 py-6"
           keyboardShouldPersistTaps="handled"
         >
+          <View className="items-center pb-6">
+            <LogoBadge size={72} />
+            <Display className="mt-5 text-[26px]">Bentornato</Display>
+            <Text className="mt-1.5 font-sans text-sm text-t3">
+              Accedi al tuo account
+            </Text>
+          </View>
           <View className="gap-4">
             <ControlledInput
               control={control}

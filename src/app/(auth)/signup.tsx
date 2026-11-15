@@ -41,21 +41,27 @@ export default function SignupRole() {
     router.push({ pathname: "/(auth)/signup-account", params: { intent } });
 
   return (
-    <View className="flex-1 bg-bg-0">
+    <View
+      className="flex-1 bg-bg-0"
+      style={{ paddingBottom: insets.bottom }}
+    >
       <View className="shrink-0 px-6 pb-3" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Registrazione" title="Come userai KlokShift?" titleClassName="text-[28px]" />
+        <ScreenHeader eyebrow="Registrazione" title="Come inizi?" titleClassName="text-[28px]" />
+        {/* Il testo sta col titolo, non con le card: centrato insieme a loro
+            restava staccato dal titolo da mezzo schermo vuoto. */}
+        <Text className="mt-3 font-sans text-[13.5px] text-t3">
+          Con lo stesso account potrai anche lavorare per una sede e gestirne una tua.
+        </Text>
       </View>
 
+      {/* Le scelte al centro dello spazio sotto il titolo. ⚠️ Solo classi sul
+          contentContainer: un `contentContainerStyle` le sostituirebbe. */}
       <ScrollView
         className="flex-1 bg-bg-0"
-        contentContainerClassName="flex-grow px-6 pb-10"
+        contentContainerClassName="flex-grow justify-center px-6 pb-10"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="font-sans text-[13.5px] text-t3">
-          Scegli come vuoi iniziare: con lo stesso account potrai anche lavorare per una sede e gestirne una tua.
-        </Text>
-
-        <View className="mt-7 gap-3.5">
+        <View className="gap-3.5">
           {ROLES.map((r) => (
             <Pressable
               key={r.value}
