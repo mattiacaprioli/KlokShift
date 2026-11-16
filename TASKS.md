@@ -437,12 +437,24 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 > 20/09 lo schema riparte da una baseline e la CI applica le migration a ogni
 > rilascio su `main`.
 
+> **2026-11-16 — rilascio ricontrollato sul remoto.** Tutte le migration locali,
+> fino a `20261104000500_surcharges_polish`, risultano applicate: le voci qui
+> sotto che dicevano «da rilasciare» per il database sono chiuse. Lavori pg_cron
+> attivi: `archive-reminders`, `billing-scheduled-changes`, `clock-reminders`,
+> `cron-history-cleanup`, `draft-reminders`. Edge Function confrontate col
+> codice: in linea tutte; **`push`** e **`delete-account`** erano vecchie e sono state ripubblicate lo stesso giorno (voce qui sotto).
+> I segreti delle funzioni non si leggono dal MCP: `supabase secrets list` resta
+> da fare a mano.
+
 ### Prima dei primi clienti paganti
+- [x] ✅ **Due Edge Function ripubblicate il 16/11** (via MCP: `push` v12 senza JWT, `delete-account` v10 con JWT). Prova senza credenziali: entrambe 401, il preflight di `delete-account` ora ammette `apikey` e `x-client-info`. Resta la prova vera: cancellare un account di prova dall'app e dal web e controllare che l'avatar sparisca dal bucket. Erano vecchie così:
+  - **`delete-account`** è ancora la versione del **09/09** (prima di A13 del 23/09): non svuota gli avatar da Storage (`account_file_cleanup`, oggi vuota) e non ha `apikey`/`x-client-info` fra gli header CORS, quindi **dalla dashboard web la cancellazione dell'account non parte** (preflight ok, POST annullata). È il requisito store della cancellazione. `supabase functions deploy delete-account --project-ref rmlobxjlqlpixkvrzmfg` (con JWT, **senza** `--no-verify-jwt`), poi prova: cancellare un account di prova dall'app e dal web, controllare che l'avatar sparisca dal bucket.
+  - **`push`** è la v11 del 27/10: manca la modifica del 31/10 (DPA) che manda `absence_request` al posto di `absence_sick` nel tipo della push, così Expo, Apple e Google non vedono la malattia. Sul remoto non è mai partita una notifica `absence_sick` (verificato il 16/11), quindi non è uscito nulla. `supabase functions deploy push --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg`.
 - [ ] ⚠️ **Backup (verificato il 27/10): oggi non ce n'è nessuno.** Supabase è sul piano **free**, che non fa backup automatici (solo Pro e superiori), e i backup di Supabase non contengono mai i file di Storage. Dati al 27/10: database 18 MB, 4 file. Decisioni dell'utente:
   - **Supabase Pro solo dopo il primo cliente pagante** (25 $/mese: backup giornalieri 7 giorni, niente pausa per inattività, 100 GB di file). Al passaggio sparisce anche il tetto di 1 GB di file del free, che oggi contrasta con i 2 GiB di documenti per azienda del listino.
   - **Copia notturna nostra: rimandata** («la vedremo in futuro», 27/10). Proposta pronta: workflow GitHub notturno che esporta database (ruoli, schema, dati) e file (Storage via chiavi S3), prova il ripristino su un Postgres usa e getta confrontando i conteggi, cifra con `age` verso una chiave pubblica dell'utente (repo pubblico: senza cifratura chiunque scaricherebbe i dati) e conserva l'artifact 30 giorni. All'utente: creare la chiave `age` (la privata resta a lui) e le chiavi S3 di Storage come secret GitHub; `SUPABASE_ACCESS_TOKEN`/`SUPABASE_DB_PASSWORD` ci sono già.
 - [ ] **Paddle live** (l'utente, dal mese prossimo): commercialista, account Paddle live, prezzi live. Poi i casi `manual_review` nell'area fondatore; le riduzioni e il cambio di ciclo al rinnovo sono nel codice dal 31/10 (voce qui sotto), da riprovare una volta sul live. Stato e prove sandbox nel [piano M01–M11](plans/MONETIZATION-AND-FOUNDER-DASHBOARD.md) (§M08/M09).
-- [ ] **Cambio di piano al rinnovo (31/10) ✅ nel codice, da rilasciare**: dalla pagina Piano il titolare programma da solo riduzioni (Team→Base, meno sedi) e mensile↔annuale; partono per Paddle nelle 24 ore prima del rinnovo, il fondatore riceve un'email e una push se qualcosa non va (anche `renewal_overdue`: due ore dopo la data nessun rinnovo). Operazioni del fondatore, in ordine:
+- [ ] **Cambio di piano al rinnovo (31/10) ✅ rilasciato (verificato il 16/11: passi 1, 2, 3 e 5 fatti; restano 4, 7 e la prova manuale)**: dalla pagina Piano il titolare programma da solo riduzioni (Team→Base, meno sedi) e mensile↔annuale; partono per Paddle nelle 24 ore prima del rinnovo, il fondatore riceve un'email e una push se qualcosa non va (anche `renewal_overdue`: due ore dopo la data nessun rinnovo). Operazioni del fondatore, in ordine:
   1. push su `main`: la CI applica le migration `20261101000000`…`20261101000500`;
   2. `supabase functions deploy billing-scheduled --no-verify-jwt --project-ref rmlobxjlqlpixkvrzmfg` (nuova: la chiama il database, senza JWT);
   3. `supabase functions deploy billing-manage --project-ref rmlobxjlqlpixkvrzmfg` (cambiata; con JWT, quindi **senza** `--no-verify-jwt`);
@@ -451,7 +463,8 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
   6. portale Paddle: niente da spegnere. Il cambio di piano dal portale è una funzione in early access su richiesta e non è attiva; non aderire al programma.
   7. sull'app del telefono, entrare con l'account del fondatore e lasciare attive le notifiche: gli allarmi arrivano anche come push (`billing_admin_alert`), indipendenti da `billing-scheduled`.
   Poi la prova manuale descritta in fondo a [TEST-BILLING-SCHEDULED.md](docs/TEST-BILLING-SCHEDULED.md).
-  - [ ] **`renewal_overdue` durante i ritentativi di pagamento (31/10)**: corretto in `20261101000600_scheduled_overdue_dunning.sql` (un cambio inviato con l'abbonamento `past_due` non si chiude più a due ore dalla data, si conferma al recupero); da rilasciare con un push su `main`.
+  - [x] ✅ **`renewal_overdue` durante i ritentativi di pagamento (31/10)**: corretto in `20261101000600_scheduled_overdue_dunning.sql` (un cambio inviato con l'abbonamento `past_due` non si chiude più a due ore dalla data, si conferma al recupero); applicata sul remoto (verificato il 16/11).
+  - Stato del 16/11: migration `20261101000000`…`000600` applicate; `billing-scheduled` v2 e `billing-manage` v5 pubblicate il 31/10 dopo l'ultimo commit; `billing-scheduled-changes` attivo ogni 10 minuti.
   - [x] ✅ **Avvisi delle PATCH del 31/10 verificati sul remoto (31/10/2026)**: per `sub_01m5fbkta79re52mncw1frpn0z` dalle 09:30Z, `subscription.updated` 17 `applied` e 1 `stale`, `transaction.completed` 5 `ignored`, nessun `rejected`. `billing_apply_event` non va cambiato per i cambi di ciclo.
   - Nota: la PATCH della data (`next_billed_at`) parte a **secondi interi**, come gli unici valori provati con Paddle; frazioni troncate (31/10).
   - Nota: **DA CARLOTTA** è rimasta in sandbox su Base annuale fino al 31/10/2027, per scelta del fondatore; in KlokShift (avvisi del 31/10 `applied`, verificato) ha 2 sedi aperte su un piano da una sede. Finché resta così non può programmare cambi (le sedi aperte devono stare nel nuovo numero) e non può aprire altre sedi.
@@ -462,7 +475,7 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 
 ### Da chiudere del lavoro recente
 - [x] **Revisione esperienza dipendente (27/10)**: E01–E12 fatti e rilasciati ([plans/EMPLOYEE-REVIEW-2026-10-27.md](plans/EMPLOYEE-REVIEW-2026-10-27.md)). Verificato sul remoto il 27/10: `clock-reminders` ogni 10 minuti, 62 esecuzioni senza errori, 46 ms in media; un promemoria vero partito e chiuso dalla timbratura. Restano la push qui sotto e le prove a mano.
-- [x] ✅ **Edge Function `push` pubblicata (v10, 27/10)** con `ttl` di un'ora e priorità alta per i promemoria di timbratura; `verify_jwt` invariato (false). Prova: senza segreto risponde 401.
+- [x] ✅ **Edge Function `push` pubblicata (v10, 27/10)** con `ttl` di un'ora e priorità alta per i promemoria di timbratura; `verify_jwt` invariato (false). Prova: senza segreto risponde 401. La modifica del 31/10 (malattia fuori dal tipo) è pubblicata dal 16/11 (v12).
 
 ### Prove a mano (mai fatte dal vivo)
 - [ ] **Aggancio automatico** ora che le email partono: registrarsi con l'indirizzo dell'invito di prova (`+invito`), confermare l'email, verificare che la scheda preparata dalla sede si colleghi (`private.link_member_invites`). Anche: registrazione non confermata (resta scollegata).
@@ -479,7 +492,8 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 - [x] **Collaboratore**: `CollaboratorPermissionsCard` (Home finché la chiude, sempre in Impostazioni) e tab «I tuoi permessi» nelle Impostazioni della dashboard; il riepilogo dice anche cosa **non** può fare; `missingPermission()` al posto delle pagine vuote (Turni/Assenze in app, `RequirePermission` su `/ore` e `/staff`, Ruoli e Assenze sul web); dopo «Accetta» su un invito da collaboratore si passa alla gestione; «Passa ai tuoi turni» anche nel Profilo del lato gestione; permessi e sedi nell'invito in app/dashboard (`collaboratorInviteText`) e nell'email (`invite-staff`, `teamAccessLines`, gemello di `TEAM_PERMISSION_LABEL` con test); due FAQ nuove.
 - [x] **Titolare**: in Turni resta il «+» tondo (la scritta era troppo, 30/10); «Nuovo turno» e «Ore del mese» in Home (unica strada all'Ore per chi ha solo quel permesso); «?» per l'Aiuto accanto alla campanella; guida «Il tuo primo turno in 2 minuti» (`shifts/tutorialContent.ts`, app e web); email «consigliata» e spiegazione di Fisso/A chiamata (`staff/employment.ts`); titolo del turno facoltativo anche sul web; «Planning» → «Turni» ovunque (glossario + test).
 - [x] **Misurare**: `admin_list_activation` (migration `20261030000100`, test SQL 142) e sezione «Attivazione» nella Panoramica del fondatore; scheda [docs/TEST-RAGAZZO.md](docs/TEST-RAGAZZO.md).
-- [ ] **Rilascio**: push su `main` (la CI applica `20261030000100`), poi `invite-staff` a mano. Prova a video dei tre percorsi e il test del ragazzo con persone vere.
+- [x] ✅ **Rilascio** (verificato il 16/11): `20261030000100` applicata, `invite-staff` v11 pubblicata il 30/10.
+- [ ] Prova a video dei tre percorsi e il test del ragazzo con persone vere.
 
 ### Approvazione delle timbrature (30/10) ✅ nel codice
 - [x] «Approva N timbrature in orario» nella pagina Ore (app e dashboard), per tutto il periodo; interruttore della sede «Approva da sole le timbrature in orario» (spento di default) accanto al metodo di timbratura; «Approvato in automatico» nelle presenze e colonna nell'export completo. Migration `20261030000200`, test SQL 043. Scelta fatta guardando 7shifts/Deputy (automatico con tolleranza) e Homebase/Planday (approvazione in blocco).
@@ -498,9 +512,9 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 
 ### Export ore per il consulente (03/11) — da fare in quest'ordine
 Confronto con i concorrenti (Skello, Factorial, Fluida, Planday, Shiftbase): la base CSV/PDF è alla pari, mancano i dati che il consulente importa nel gestionale paghe.
-- [x] ✅ **1. CSV giornaliero nella pagina Ore (03/11/2026)** (app e dashboard): una riga per persona e giorno con data, sede, turno, entrata, uscita, pausa, ore e causale (lavoro, ferie, permesso, malattia). Oggi il dettaglio per giorno esiste solo in `presenze.csv` dell'export completo. Fatto: anche cartellino nel PDF; migration `20261103000600`/`000700` da rilasciare.
-- [x] **2. Matricola e causali** (04/11/2026): campo «Matricola» nella scheda della persona (unica nell'azienda) e «Codici per il consulente» nella pagina Ore (codice azienda e un codice per causale), riportati nei CSV giornaliero, mensile, assenze e nell'export completo, con un avviso che non blocca. Migration `20261104000000`…`000200` da rilasciare. Prova a mano da fare.
-- [x] **3. Maggiorazioni** (04/11/2026): notturno, domenica, festivi e straordinario calcolati in automatico con regole per mese (pagina Ore → «Maggiorazioni»), «di cui» nella pagina Ore, nei CSV mensile e giornaliero e nel PDF, con i codici per il consulente; quantità e percentuale, mai importi. Migration `20261104000300`…`000500` (rilascio automatico al push). Prova a mano da fare.
+- [x] ✅ **1. CSV giornaliero nella pagina Ore (03/11/2026)** (app e dashboard): una riga per persona e giorno con data, sede, turno, entrata, uscita, pausa, ore e causale (lavoro, ferie, permesso, malattia). Oggi il dettaglio per giorno esiste solo in `presenze.csv` dell'export completo. Fatto: anche cartellino nel PDF; migration `20261103000600`/`000700` applicate (verificato il 16/11).
+- [x] **2. Matricola e causali** (04/11/2026): campo «Matricola» nella scheda della persona (unica nell'azienda) e «Codici per il consulente» nella pagina Ore (codice azienda e un codice per causale), riportati nei CSV giornaliero, mensile, assenze e nell'export completo, con un avviso che non blocca. Migration `20261104000000`…`000200` applicate (verificato il 16/11). Prova a mano da fare.
+- [x] **3. Maggiorazioni** (04/11/2026): notturno, domenica, festivi e straordinario calcolati in automatico con regole per mese (pagina Ore → «Maggiorazioni»), «di cui» nella pagina Ore, nei CSV mensile e giornaliero e nel PDF, con i codici per il consulente; quantità e percentuale, mai importi. Migration `20261104000300`…`000500` applicate (verificato il 16/11). Prova a mano da fare.
 - [ ] **4. Tracciato Zucchetti/TeamSystem**: solo quando un cliente lo chiede, perché il formato lo decide il consulente.
 
 ### Pubblicazione sugli store (M8)
@@ -510,7 +524,7 @@ Confronto con i concorrenti (Skello, Factorial, Fluida, Planday, Shiftbase): la 
 - [ ] Dopo il rebrand, da verificare con una build: chiave FCM su EAS per `com.klokshift.app` (il `google-services.json` c'è già), `npx expo prebuild --clean` + nuovi dev client, `EXPO_PUBLIC_SITE_URL` su EAS.
 
 ### Debito tecnico
-- [x] ✅ Tolta `get_my_work_history(integer, integer)` (paginazione a offset, nessuna schermata la usava dal 22/09): migration `20261027000700`, da applicare via CI. Non si è aspettato il giro delle build vecchie perché l'app non è ancora sugli store.
+- [x] ✅ Tolta `get_my_work_history(integer, integer)` (paginazione a offset, nessuna schermata la usava dal 22/09): migration `20261027000700`, applicata (verificato il 16/11). Non si è aspettato il giro delle build vecchie perché l'app non è ancora sugli store.
 - [ ] Residui dell'audit del 12/10: CSP della dashboard (C17, prova nel browser), protezione del ramo `main` (repository pubblico). Dettagli in [AUDIT-2026-10-12.md](plans/AUDIT-2026-10-12.md) §3.
 
 ### Chiuse dalla verifica del 27/10 (erano ancora aperte qui)
