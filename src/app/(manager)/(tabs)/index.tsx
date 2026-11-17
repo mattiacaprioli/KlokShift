@@ -73,6 +73,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { HelpButton } from "@/components/ui/HelpButton";
+import { useColors } from "@/lib/theme";
 
 const PREVIEW_COUNT = 3;
 
@@ -99,6 +100,7 @@ type TodayWorker = {
 };
 
 export default function ManagerHome() {
+  const colors = useColors();
   const { profile, session } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -320,7 +322,7 @@ export default function ManagerHome() {
               className="mt-1 flex-row items-center gap-1"
             >
               <Text className="text-sm text-t3">{venues.length} sedi</Text>
-              <Icon name="chevR" size={14} color="#8C8579" />
+              <Icon name="chevR" size={14} color={colors.t3} />
             </Pressable>
           ) : (
             <Text className="mt-1 text-sm text-t3">{venues[0].name}</Text>
@@ -344,7 +346,7 @@ export default function ManagerHome() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={refreshing}
             onRefresh={onRefresh}
           />
@@ -565,7 +567,7 @@ export default function ManagerHome() {
                         {w.start && w.end ? (
                           <View className="items-end gap-1">
                             <View className="flex-row items-center gap-1.5">
-                              <Icon name="clock" size={14} color="#8c857a" />
+                              <Icon name="clock" size={14} color={colors.t3} />
                               <Text className="text-sm text-t2">
                                 {formatShiftRange(w.start, w.end)}
                               </Text>

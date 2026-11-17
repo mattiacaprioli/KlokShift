@@ -11,6 +11,8 @@ import { TimeField } from "@/features/shifts/TimeField";
 import { useRequestShiftChange } from "./hooks";
 import type { ChangeRequestKind } from "./api";
 import { HOURS_WITH_CONFIRM_LABEL, REQUEST_CHANGE_LABEL } from "./labels";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 const KINDS = [
   { id: "substitution" as const, label: "Non posso venire" },
@@ -59,6 +61,7 @@ export function RequestChangeModal({
   onSent?: () => void;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const [kind, setKind] = useState<ChangeRequestKind>(
     withConfirm ? "hours" : "substitution"
@@ -109,7 +112,7 @@ export function RequestChangeModal({
     >
       <Pressable
         onPress={request.isPending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
         className="items-center justify-center px-6"
       >
         <Pressable

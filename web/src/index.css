@@ -32,6 +32,9 @@
   --color-border-2: rgba(255, 240, 220, 0.12);
   --color-border-gold: rgba(234, 181, 76, 0.4);
 
+  /* Velatura: sempre con l'opacità (bg-wash/10). Nel tema chiaro diventerà scura. */
+  --color-wash: #fff0dc;
+
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-serif: "Fraunces Variable", "Fraunces", ui-serif, Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;

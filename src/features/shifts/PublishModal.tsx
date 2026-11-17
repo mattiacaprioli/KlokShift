@@ -20,6 +20,8 @@ import {
   publishTitle,
   publishedToast,
 } from "./drafts";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * «Pubblica» per la settimana: carica l'anteprima (cosa si pubblica e chi viene
@@ -43,6 +45,7 @@ export function PublishModal({
   visible: boolean;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const preview = usePublishPreview(venueIds, from, to, visible);
   const publish = usePublishShifts();
@@ -78,7 +81,7 @@ export function PublishModal({
     >
       <Pressable
         onPress={pending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.66) }}
         className="items-center justify-center px-5"
       >
         <Pressable
@@ -93,7 +96,7 @@ export function PublishModal({
           </Text>
 
           {preview.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-6" />
+            <ActivityIndicator color={colors.gold} className="mt-6" />
           ) : preview.isError ? (
             <Text className="mt-5 text-sm leading-5 text-error">
               {userErrorMessage(preview.error, PUBLISH_PREVIEW_ERROR)}
@@ -123,9 +126,9 @@ export function PublishModal({
                     value={notify}
                     onValueChange={setNotify}
                     disabled={pending}
-                    trackColor={{ false: "#2a241b", true: "#eab54c" }}
-                    thumbColor="#f8f4ed"
-                    ios_backgroundColor="#2a241b"
+                    trackColor={{ false: colors.bg2, true: colors.gold }}
+                    thumbColor={colors.t1}
+                    ios_backgroundColor={colors.bg2}
                   />
                 </View>
               ) : (

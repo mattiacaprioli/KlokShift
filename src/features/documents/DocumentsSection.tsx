@@ -18,6 +18,7 @@ import {
 } from "./hooks";
 import { documentQuotaNotice } from "./quota";
 import type { StaffDocument } from "./api";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   /** Il **membro** (`workspace_members.id`): i documenti valgono in tutte le sue sedi. */
@@ -43,6 +44,7 @@ export function DocumentsSection({
   onAdd,
   title = "Documenti",
 }: Props) {
+  const colors = useColors();
   const toast = useToast();
   const query = useStaffDocuments(memberId);
   const docs = query.data ?? [];
@@ -91,7 +93,7 @@ export function DocumentsSection({
       ) : null}
 
       {query.isLoading ? (
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       ) : query.isError ? (
         <QueryError onRetry={() => query.refetch()} />
       ) : docs.length === 0 ? (
@@ -114,7 +116,7 @@ export function DocumentsSection({
                   onPress={() => onOpen(doc)}
                 >
                   <View className="h-10 w-10 items-center justify-center rounded-xl border border-border-2 bg-bg-1">
-                    <Icon name="clipboard" size={18} color="#EAB54C" />
+                    <Icon name="clipboard" size={18} color={colors.gold} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-[15px] font-sans-semibold text-t1">
@@ -143,7 +145,7 @@ export function DocumentsSection({
                     hitSlop={8}
                     className="p-1"
                   >
-                    <Icon name="close" size={18} color="#8c857a" />
+                    <Icon name="close" size={18} color={colors.t3} />
                   </Pressable>
                 ) : null}
               </View>

@@ -1,12 +1,14 @@
 import { Stack } from "expo-router";
+import { useColors } from "@/lib/theme";
 
 export default function WaiterLayout() {
+  const colors = useColors();
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: "#0C0907" },
-        headerTintColor: "#F8F4ED",
-        contentStyle: { backgroundColor: "#0C0907" },
+        headerStyle: { backgroundColor: colors.bg0 },
+        headerTintColor: colors.t1,
+        contentStyle: { backgroundColor: colors.bg0 },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

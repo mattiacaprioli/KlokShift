@@ -6,8 +6,10 @@ import { LegalAcceptanceScreen, LegalExitActions } from "@/features/legal/LegalA
 import { usePendingLegalAcceptances } from "@/features/legal/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { View } from "@/tw";
+import { useColors } from "@/lib/theme";
 
 export default function ManagerLayout() {
+  const colors = useColors();
   const { session } = useAuth();
   const { workspaceId } = useOwnerVenues();
   const pending = usePendingLegalAcceptances(session?.user.id);
@@ -29,10 +31,10 @@ export default function ManagerLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: "#0C0907" },
-        headerTintColor: "#F8F4ED",
-        headerTitleStyle: { color: "#F8F4ED" },
-        contentStyle: { backgroundColor: "#0C0907" },
+        headerStyle: { backgroundColor: colors.bg0 },
+        headerTintColor: colors.t1,
+        headerTitleStyle: { color: colors.t1 },
+        contentStyle: { backgroundColor: colors.bg0 },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

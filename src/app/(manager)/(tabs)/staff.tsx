@@ -36,6 +36,7 @@ import {
   teamRoleOptions,
   type TeamFilters,
 } from "@/features/staff/teamFilters";
+import { useColors } from "@/lib/theme";
 
 /**
  * Una riga del team: **una persona**, non una sua scheda di sede.
@@ -58,6 +59,7 @@ function PersonRow({
   isMe?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const linked = !!person.waiter_id;
   const avatarUri = person.waiter?.avatar_url ?? undefined;
   // Basta un invito in sospeso in una sede qualunque: è una cosa da fare.
@@ -73,7 +75,7 @@ function PersonRow({
               {person.full_name}
             </Text>
             {linked ? (
-              <Icon name="verified" size={15} color="#EAB54C" />
+              <Icon name="verified" size={15} color={colors.gold} />
             ) : null}
             {isMe ? <Pill label="Tu" variant="tag" /> : null}
           </View>
@@ -109,13 +111,14 @@ function PersonRow({
         {employment ? (
           <Pill label={employment === "fisso" ? "Fisso" : "A chiamata"} variant="neutral" />
         ) : null}
-        <Icon name="chevR" size={18} color="#8c857a" />
+        <Icon name="chevR" size={18} color={colors.t3} />
       </View>
     </Card>
   );
 }
 
 export default function ManagerStaffScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -169,7 +172,7 @@ export default function ManagerStaffScreen() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={pull.refreshing}
             onRefresh={pull.onRefresh}
           />
@@ -202,7 +205,7 @@ export default function ManagerStaffScreen() {
               >
                 <View className="flex-row items-center gap-3">
                   <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-                    <Icon name="user" size={18} color="#EAB54C" />
+                    <Icon name="user" size={18} color={colors.gold} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-base font-sans-bold text-t1">
@@ -212,7 +215,7 @@ export default function ManagerStaffScreen() {
                       Per assegnarti i turni e contare le tue ore
                     </Text>
                   </View>
-                  <Icon name="chevR" size={18} color="#8c857a" />
+                  <Icon name="chevR" size={18} color={colors.t3} />
                 </View>
               </Card>
             ) : null}

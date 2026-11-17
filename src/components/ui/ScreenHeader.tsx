@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { Display } from "./Display";
 import { Icon } from "./Icon";
 import { Mono } from "./Mono";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   /** Mono uppercase eyebrow (e.g. "3 turni" or "Profilo"). */
@@ -35,6 +36,7 @@ export function ScreenHeader({
   titleClassName,
   onBack,
 }: Props) {
+  const colors = useColors();
   const router = useRouter();
   return (
     <View className="flex-row items-center gap-3.5">
@@ -43,7 +45,7 @@ export function ScreenHeader({
         hitSlop={8}
         className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
       >
-        <Icon name={icon === "close" ? "close" : "chevL"} size={22} color="#F8F4ED" />
+        <Icon name={icon === "close" ? "close" : "chevL"} size={22} color={colors.t1} />
       </Pressable>
       <View className="flex-1">
         <Mono gold={goldEyebrow}>{eyebrow}</Mono>

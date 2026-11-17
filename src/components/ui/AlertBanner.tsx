@@ -1,6 +1,7 @@
 import { Icon, type IconName } from "./Icon";
 import { cn } from "@/lib/cn";
 import { Pressable, Text, View } from "@/tw";
+import { useColors } from "@/lib/theme";
 
 /**
  * Avviso su cui c'è qualcosa da fare: inviti in sospeso, turni da confermare.
@@ -22,6 +23,7 @@ export function AlertBanner({
   onPress: () => void;
   className?: string;
 }) {
+  const colors = useColors();
   return (
     <Pressable onPress={onPress} accessibilityRole="button">
       <View
@@ -30,14 +32,14 @@ export function AlertBanner({
           className
         )}
       >
-        <Icon name={icon} size={20} color="#EAB54C" />
+        <Icon name={icon} size={20} color={colors.gold} />
         <View className="flex-1">
           <Text className="text-sm font-sans-bold text-t1">{title}</Text>
           {subtitle ? (
             <Text className="text-[13px] text-t2">{subtitle}</Text>
           ) : null}
         </View>
-        <Icon name="chevR" size={18} color="#8c857a" />
+        <Icon name="chevR" size={18} color={colors.t3} />
       </View>
     </Pressable>
   );

@@ -13,6 +13,8 @@ import {
 } from "./hooks";
 import type { Absence } from "./api";
 import { ABSENCE_KIND_LABEL, formatAbsenceRange } from "./labels";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * La decisione su una richiesta di ferie o permesso.
@@ -32,6 +34,7 @@ export function ResolveAbsenceModal({
   personName?: string | null;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const resolve = useResolveAbsence();
   const remove = useRemoveFromShifts();
@@ -86,7 +89,7 @@ export function ResolveAbsenceModal({
     >
       <Pressable
         onPress={busy ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
         className="items-center justify-center px-6"
       >
         <Pressable

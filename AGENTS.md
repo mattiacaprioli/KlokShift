@@ -532,7 +532,8 @@ resta da validare. Vedi `web-site/README.md` e `docs/MONETIZATION.md`.
 
 ## Convenzioni UI (vedi anche `.claude/skills/new-component`)
 - Importare i componenti con `className` da **`@/tw`**, non da `react-native`. Comporre le classi con `cn()`.
-- **Niente Tamagui.** `style`/`StyleSheet` solo per valori dinamici (eccezione: `Pill` usa `rgba` inline per il workaround color-mix).
+- **Niente Tamagui.** `style`/`StyleSheet` solo per valori dinamici.
+- **Colori solo dai token** (2026-11-17, preparazione al tema chiaro): classi del tema (`text-gold`, `bg-bg-card`, `bg-wash/10`…) o, nei prop JS, `const colors = useColors()` (`@/lib/theme`) e `withAlpha(colors.x, 0.15)` per le trasparenze. Mai un `#hex` o un `rgba(` scritto a mano in `src/`: lo blocca `tests/unit/theme/colorTokens.test.ts`, che tiene anche `darkColors` (`src/constants/colors.ts`) gemello dei `@theme` di `src/global.css` e `web/src/index.css`.
 - ⚠️ **Gotcha**: NON usare `<Link className=...>` da `@/tw` per testo tappabile (testo invisibile/non tappabile). Usare `Pressable` + `useRouter().push()` con `Text` stilizzato.
 - Named export per le primitive; `export default` per le schermate Expo Router.
 - Nessun `console.log` committato. Nessun `babel.config.js` (Tailwind v4 CSS-first; config in `metro.config.js`).

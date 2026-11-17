@@ -85,9 +85,11 @@ import {
 import { effectiveClockMethod } from "@/features/clock/methods";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
+import { useColors } from "@/lib/theme";
 
 /** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
 function GuardScreen({ children }: { children: ReactNode }) {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   return (
@@ -98,7 +100,7 @@ function GuardScreen({ children }: { children: ReactNode }) {
           hitSlop={8}
           className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
-          <Icon name="chevL" size={22} color="#F8F4ED" />
+          <Icon name="chevL" size={22} color={colors.t1} />
         </Pressable>
       </View>
       <View className="flex-1 items-center justify-center px-6">{children}</View>
@@ -128,6 +130,7 @@ function AssignedRow({
   /** La timbratura dal vivo, a turno in corso. */
   live?: LiveClockStatus | null;
 }) {
+  const colors = useColors();
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Persona";
   return (
@@ -138,7 +141,7 @@ function AssignedRow({
           <View className="flex-row items-center gap-1.5">
             <Text className="text-base font-sans-bold text-t1">{name}</Text>
             {sm?.waiter_id ? (
-              <Icon name="verified" size={15} color="#EAB54C" />
+              <Icon name="verified" size={15} color={colors.gold} />
             ) : null}
           </View>
           <Text className="text-xs text-t3">
@@ -170,10 +173,10 @@ function AssignedRow({
             onPress={onMessage}
             className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
           >
-            <Icon name="message" size={16} color="#EAB54C" />
+            <Icon name="message" size={16} color={colors.gold} />
           </Pressable>
         ) : null}
-        {onPress ? <Icon name="chevR" size={18} color="#8c857a" /> : null}
+        {onPress ? <Icon name="chevR" size={18} color={colors.t3} /> : null}
       </View>
     </Card>
   );
@@ -216,6 +219,7 @@ function PresenceRow({
   /** Turno nato da una timbratura senza turno. */
   unplanned?: boolean;
 }) {
+  const colors = useColors();
   const presence = useSetAssignmentPresence(shiftId);
   const toast = useToast();
   const sm = assignment.staff_member;
@@ -298,7 +302,7 @@ function PresenceRow({
           >
             <Text
               className="text-xs font-sans-semibold"
-              style={{ color: !present ? "#FFFFFF" : "#8c857a" }}
+              style={{ color: !present ? colors.white : colors.t3 }}
             >
               Assente
             </Text>
@@ -322,7 +326,7 @@ function PresenceRow({
       {locked ? (
         <View className="mt-3 border-t border-border pt-3">
           <View className="flex-row items-center gap-2">
-            <Icon name="clock" size={15} color="#8c857a" />
+            <Icon name="clock" size={15} color={colors.t3} />
             <Text className="text-sm text-t2">{assignment.worked_hours == null ? "Ore del turno" : "Ore corrette"}: {formatHours(effective)}</Text>
           </View>
           <Text className="mt-1.5 text-xs leading-4 text-t3">
@@ -343,7 +347,7 @@ function PresenceRow({
               className="flex-row items-center justify-between"
             >
               <View className="flex-row items-center gap-2">
-                <Icon name="clock" size={15} color="#8c857a" />
+                <Icon name="clock" size={15} color={colors.t3} />
                 <Text className="text-sm text-t2">{assignment.worked_hours == null ? "Ore del turno" : "Ore corrette"}: {formatHours(effective)}</Text>
                 {assignment.worked_hours != null ? (
                   <Text className="text-[11px] text-t4">· modificate</Text>
@@ -404,6 +408,7 @@ function PresenceRow({
 }
 
 export default function ShiftDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
   const router = useRouter();
@@ -526,7 +531,7 @@ export default function ShiftDetailScreen() {
   if (shiftQuery.isLoading) {
     return (
       <GuardScreen>
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       </GuardScreen>
     );
   }

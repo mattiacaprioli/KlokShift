@@ -13,6 +13,7 @@ import {
   type NotificationCategory,
   type NotificationPrefs,
 } from "./preferences";
+import { useColors } from "@/lib/theme";
 
 /**
  * Sezione "Notifiche push" delle Impostazioni: uno switch per categoria
@@ -20,6 +21,7 @@ import {
  * in-app resta visibile nella campanella. Condivisa tra cameriere e ristoratore.
  */
 export function NotificationSettings() {
+  const colors = useColors();
   const { session, profile, refreshProfile } = useAuth();
   const toast = useToast();
   const userId = session!.user.id;
@@ -67,9 +69,9 @@ export function NotificationSettings() {
               value={prefs[c.id] ?? true}
               onValueChange={(v) => toggle(c.id, v)}
               disabled={saving}
-              trackColor={{ false: "#2a241b", true: "#eab54c" }}
-              thumbColor="#f8f4ed"
-              ios_backgroundColor="#2a241b"
+              trackColor={{ false: colors.bg2, true: colors.gold }}
+              thumbColor={colors.t1}
+              ios_backgroundColor={colors.bg2}
             />
           </View>
         ))}

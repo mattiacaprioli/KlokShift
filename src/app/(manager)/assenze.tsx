@@ -28,6 +28,7 @@ import {
 import { useCompanyAbsences } from "@/features/absences/hooks";
 import { ABSENCE_KINDS, groupCompanyAbsences } from "@/features/absences/labels";
 import { missingPermission } from "@/features/workspace/permissions";
+import { useColors } from "@/lib/theme";
 
 /**
  * Ferie, permessi e malattie di tutta l'azienda: da decidere, in corso e
@@ -41,6 +42,7 @@ import { missingPermission } from "@/features/workspace/permissions";
  * ⚠️ Gemello web in `web/src/pages/Assenze.tsx`.
  */
 export default function ManagerAbsencesScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { canAny, ownerId, venues, isMultiVenue } = useOwnerVenues();
   // Con il solo permesso Turni la RLS non restituisce nessuna riga: meglio dirlo
@@ -94,7 +96,7 @@ export default function ManagerAbsencesScreen() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={pull.refreshing}
             onRefresh={pull.onRefresh}
           />
@@ -131,7 +133,7 @@ export default function ManagerAbsencesScreen() {
                       : "border-border bg-transparent"
                   )}
                 >
-                  <Icon name="search" size={14} color="#EAB54C" />
+                  <Icon name="search" size={14} color={colors.gold} />
                   <Text className="text-[13px] font-sans-semibold text-t1">
                     {activeCount > 0 ? `Filtri (${activeCount})` : "Filtri"}
                   </Text>

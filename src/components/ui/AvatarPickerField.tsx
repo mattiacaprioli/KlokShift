@@ -2,6 +2,8 @@ import { ActivityIndicator } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * Foto scelta dall'utente: anteprima tonda in anello dorato, pastiglia con la
@@ -34,12 +36,13 @@ export function AvatarPickerField({
   addLabel?: string;
   changeLabel?: string;
 }) {
+  const colors = useColors();
   return (
     <View className="items-center gap-2">
       <View
         style={{
           borderWidth: 2,
-          borderColor: "rgba(234,181,76,0.5)",
+          borderColor: withAlpha(colors.gold, 0.5),
           borderRadius: 999,
           padding: 3,
         }}
@@ -54,9 +57,9 @@ export function AvatarPickerField({
             accessibilityLabel={uri ? changeLabel : addLabel}
           >
             {busy ? (
-              <ActivityIndicator size="small" color="#EAB54C" />
+              <ActivityIndicator size="small" color={colors.gold} />
             ) : (
-              <Icon name="camera" size={16} color="#EAB54C" />
+              <Icon name="camera" size={16} color={colors.gold} />
             )}
           </Pressable>
         </View>

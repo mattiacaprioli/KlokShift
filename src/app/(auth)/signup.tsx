@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import type { ViewMode } from "@/features/team/viewModeStorage";
+import { useColors } from "@/lib/theme";
 
 /** Come si vuole iniziare: un suggerimento per la prima schermata, non un ruolo. */
 type Intent = ViewMode;
@@ -34,6 +35,7 @@ const ROLES: {
 ];
 
 export default function SignupRole() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -71,7 +73,7 @@ export default function SignupRole() {
               <View className="flex-row items-center gap-3.5">
                 <View className="overflow-hidden rounded-[14px] border border-border-2">
                   <LinearGradient
-                    colors={["#362E24", "#1F1A13"]}
+                    colors={[colors.bg3, colors.bg1]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={{
@@ -81,13 +83,13 @@ export default function SignupRole() {
                       justifyContent: "center",
                     }}
                   >
-                    <Icon name={r.icon} size={24} color="#EAB54C" />
+                    <Icon name={r.icon} size={24} color={colors.gold} />
                   </LinearGradient>
                 </View>
                 <Text className="flex-1 font-sans-semibold text-[17px] text-t1">
                   {r.title}
                 </Text>
-                <Icon name="chevR" size={18} color="#8C857A" />
+                <Icon name="chevR" size={18} color={colors.t3} />
               </View>
               <Text className="font-sans text-[12.5px] leading-5 text-t3">
                 {r.sub}

@@ -18,6 +18,8 @@ import {
   startOfWeek,
 } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
+import { useColors } from "@/lib/theme";
+import { withAlpha, type ThemeColors } from "@/constants/colors";
 import type { ShiftWithVenue } from "@/features/shifts/types";
 import type { AgendaItem } from "./agenda";
 import { daySegments, initialScrollHour, type GridSegment } from "./timeGrid";
@@ -36,12 +38,23 @@ export const HOUR_GUTTER = 32;
  * arancio c'è da rispondere, spento fuori gioco. Qui il colore è tutto il
  * blocco e non una barra, perché in una colonna da 40pt la barra non si vede.
  */
-const NEUTRAL_TONE = { bg: "rgba(106, 99, 88, 0.25)", edge: "#6A6358" };
-const TONE: Record<AgendaItem["status"], { bg: string; edge: string }> = {
-  confirmed: { bg: "rgba(79, 201, 125, 0.20)", edge: "#4FC97D" },
-  assigned: { bg: "rgba(226, 146, 47, 0.24)", edge: "#E2922F" },
-  declined: NEUTRAL_TONE,
-  no_show: NEUTRAL_TONE,
+type Tone = { bg: string; edge: string };
+const neutralTone = (colors: ThemeColors): Tone => ({
+  bg: withAlpha(colors.t4, 0.25),
+  edge: colors.t4,
+});
+const statusTone = (
+  colors: ThemeColors,
+  status: AgendaItem["status"],
+): Tone => {
+  switch (status) {
+    case "confirmed":
+      return { bg: withAlpha(colors.success, 0.2), edge: colors.success };
+    case "assigned":
+      return { bg: withAlpha(colors.warning, 0.24), edge: colors.warning };
+    default:
+      return neutralTone(colors);
+  }
 };
 
 function weekDays(monday: string): string[] {
@@ -61,9 +74,10 @@ function ShiftBlock({
   now: Date;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const { item, startMin, endMin, lane, lanes, continued } = segment;
   const cancelled = item.shift.status === "cancelled";
-  const tone = cancelled ? NEUTRAL_TONE : TONE[item.status];
+  const tone = cancelled ? neutralTone(colors) : statusTone(colors, item.status);
   const top = (startMin / 60) * HOUR_H;
   const height = Math.max(((endMin - startMin) / 60) * HOUR_H, MIN_BLOCK_H);
   const laneWidth = columnWidth / lanes;
@@ -87,7 +101,7 @@ function ShiftBlock({
         // Un turno che cade nelle proprie ferie si vede subito anche qui: il
         // turno resta (lo toglie la sede), ma non deve sembrare un turno qualunque.
         ...(absent && !cancelled
-          ? { borderWidth: 1, borderStyle: "dashed", borderColor: "#E2922F" }
+          ? { borderWidth: 1, borderStyle: "dashed", borderColor: colors.warning }
           : null),
         opacity: cancelled || over || item.status === "no_show" ? 0.5 : 1,
       }}
@@ -153,6 +167,7 @@ export function WeekTimeGrid({
   refreshControl?: ReactElement<RefreshControlProps>;
   paddingBottom: number;
 }) {
+  const colors = useColors();
   const now = useNow();
   const verticalRef = useRef<RNScrollView>(null);
   const pagerRef = useRef<RNScrollView>(null);
@@ -257,7 +272,7 @@ export function WeekTimeGrid({
                         // rgba e non `bg-gold/5`: l'opacità di NativeWind passa da
                         // color-mix, che qui non arriva (vedi `Pill`).
                         backgroundColor:
-                          date === today ? "rgba(234, 181, 76, 0.06)" : undefined,
+                          date === today ? withAlpha(colors.gold, 0.06) : undefined,
                       }}
                     >
                       {(byDay.get(date) ?? []).map((seg) => (

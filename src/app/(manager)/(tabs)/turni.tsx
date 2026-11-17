@@ -50,6 +50,8 @@ import {
 } from "@/features/clock/attention";
 import { useVenueCalendar } from "@/features/venues/hooks";
 import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -109,6 +111,7 @@ function isShort(shift: ShiftWithCount): boolean {
  * buchi e dei «miei turni» restano sui turni in programma: sono cose da fare.
  */
 export default function ManagerShiftsScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -532,7 +535,7 @@ export default function ManagerShiftsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={pastDay ? RECORD_ACTION : "Nuovo turno"}
               >
-                <Icon name="close" size={24} color="#1a1206" style={{ transform: [{ rotate: "45deg" }] }} />
+                <Icon name="close" size={24} color={colors.goldInk} style={{ transform: [{ rotate: "45deg" }] }} />
               </Pressable>
             ) : null}
           </View>
@@ -559,7 +562,7 @@ export default function ManagerShiftsScreen() {
             className="h-12 w-12 items-center justify-center rounded-2xl border border-border bg-bg-card"
             hitSlop={4}
           >
-            <Icon name="more" size={20} color="#8C8579" />
+            <Icon name="more" size={20} color={colors.t3} />
           </Pressable>
         </View>
 
@@ -628,7 +631,7 @@ export default function ManagerShiftsScreen() {
                     style={{
                       backgroundColor: on ? venueAccent(i) : "transparent",
                       borderWidth: on ? 0 : 1,
-                      borderColor: "#8C8579",
+                      borderColor: colors.t3,
                     }}
                   />
                   <Text
@@ -776,7 +779,7 @@ export default function ManagerShiftsScreen() {
           }}
           refreshControl={
             <RefreshControl
-              tintColor="#EAB54C"
+              tintColor={colors.gold}
               refreshing={pull.refreshing}
               onRefresh={pull.onRefresh}
             />
@@ -788,7 +791,7 @@ export default function ManagerShiftsScreen() {
           onEndReachedThreshold={0.6}
           ListFooterComponent={
             upcomingQuery.isFetchingNextPage ? (
-              <ActivityIndicator color="#EAB54C" style={{ paddingVertical: 24 }} />
+              <ActivityIndicator color={colors.gold} style={{ paddingVertical: 24 }} />
             ) : null
           }
           ListHeaderComponent={
@@ -802,7 +805,7 @@ export default function ManagerShiftsScreen() {
                 // `color-mix`, che react-native-css non regge.
                 style={
                   filtering
-                    ? { backgroundColor: "rgba(226,146,47,0.15)" }
+                    ? { backgroundColor: withAlpha(colors.warning, 0.15) }
                     : undefined
                 }
                 className={cn(
@@ -817,7 +820,7 @@ export default function ManagerShiftsScreen() {
                     : `Mostra solo i turni da coprire, ${shortCount}`
                 }
               >
-                <Icon name="alert" size={13} color="#E2922F" strokeWidth={2.4} />
+                <Icon name="alert" size={13} color={colors.warning} strokeWidth={2.4} />
                 <Text className="text-[13px] font-sans-semibold text-warning">
                   {filtering
                     ? "Mostra tutti i turni"
@@ -833,7 +836,7 @@ export default function ManagerShiftsScreen() {
                 onPress={toggleMine}
                 style={
                   filteringMine
-                    ? { backgroundColor: "rgba(234,181,76,0.15)" }
+                    ? { backgroundColor: withAlpha(colors.gold, 0.15) }
                     : undefined
                 }
                 className={cn(
@@ -848,7 +851,7 @@ export default function ManagerShiftsScreen() {
                     : `Mostra solo i tuoi turni, ${mineCount}`
                 }
               >
-                <Icon name="user" size={13} color="#EAB54C" strokeWidth={2.4} />
+                <Icon name="user" size={13} color={colors.gold} strokeWidth={2.4} />
                 <Text className="text-[13px] font-sans-semibold text-gold">
                   {filteringMine
                     ? "Turni di tutti"
@@ -946,18 +949,19 @@ function MoreRow({
   subtitle: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       className="flex-row items-center gap-3.5 rounded-2xl border border-border bg-bg-2 px-4 py-3.5"
     >
-      <Icon name={icon} size={20} color="#8C8579" />
+      <Icon name={icon} size={20} color={colors.t3} />
       <View className="flex-1">
         <Text className="text-[15px] font-sans-semibold text-t1">{title}</Text>
         <Text className="mt-0.5 text-[13px] leading-[18px] text-t3">{subtitle}</Text>
       </View>
-      <Icon name="chevR" size={16} color="#8C8579" />
+      <Icon name="chevR" size={16} color={colors.t3} />
     </Pressable>
   );
 }

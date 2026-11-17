@@ -6,6 +6,7 @@ import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import type { Venue } from "@/features/venues/api";
 import { useSetVenueSeesPlanning } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 /**
  * «Turni di tutti visibili al team», sulla scheda della sede.
@@ -25,6 +26,7 @@ export function VenuePlanningToggle({
   /** @deprecated Non serve più: si scrive per id di sede. Ignorato. */
   ownerId?: string;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const save = useSetVenueSeesPlanning();
 
@@ -60,9 +62,9 @@ export function VenuePlanningToggle({
           value={venue.staff_sees_planning}
           onValueChange={toggle}
           disabled={save.isPending}
-          trackColor={{ false: "#2a241b", true: "#eab54c" }}
-          thumbColor="#f8f4ed"
-          ios_backgroundColor="#2a241b"
+          trackColor={{ false: colors.bg2, true: colors.gold }}
+          thumbColor={colors.t1}
+          ios_backgroundColor={colors.bg2}
         />
       </Card>
       <Text className="px-1 text-[12px] text-t4">

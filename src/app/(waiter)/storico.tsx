@@ -35,6 +35,7 @@ import {
   STATS_PERIODS,
   type StatsPeriod,
 } from "@/features/shifts/homeStats";
+import { useColors } from "@/lib/theme";
 
 type Filter = StatsPeriod | "all";
 
@@ -44,6 +45,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 ];
 
 export default function WaiterHistoryScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session } = useAuth();
@@ -115,7 +117,7 @@ export default function WaiterHistoryScreen() {
                 accessibilityLabel="Periodo precedente"
                 onPress={() => setOffset((o) => o - 1)}
               >
-                <Icon name="chevL" size={20} color="#F8F4ED" />
+                <Icon name="chevL" size={20} color={colors.t1} />
               </Pressable>
               <Mono className="flex-1 text-center">
                 {periodLabel(period, anchor, offset)}
@@ -127,7 +129,7 @@ export default function WaiterHistoryScreen() {
                 onPress={() => setOffset((o) => Math.min(o + 1, 0))}
                 className={offset === 0 ? "opacity-30" : undefined}
               >
-                <Icon name="chevR" size={20} color="#F8F4ED" />
+                <Icon name="chevR" size={20} color={colors.t1} />
               </Pressable>
             </>
           )}
@@ -184,7 +186,7 @@ export default function WaiterHistoryScreen() {
           }}
           ListFooterComponent={
             filter === "all" && all.isFetchingNextPage ? (
-              <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
+              <ActivityIndicator color={colors.gold} style={{ marginTop: 12 }} />
             ) : null
           }
         />
@@ -204,6 +206,7 @@ function HistoryCard({
   item: WorkHistoryItem;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const detail = [i.title, i.roleName].filter(Boolean).join(" · ");
   const pending = i.counts === false;
   // Lo scarto si dice solo su ore definitive: una proposta da approvare o
@@ -253,7 +256,7 @@ function HistoryCard({
         {line ? (
           <View className="mt-3 flex-row items-center justify-between gap-3 border-t border-border pt-3">
             <View className="flex-1 flex-row items-center gap-2">
-              <Icon name="clock" size={14} color="#8c857a" />
+              <Icon name="clock" size={14} color={colors.t3} />
               <Text className="flex-1 text-xs text-t3" numberOfLines={3}>
                 {line.text}
               </Text>

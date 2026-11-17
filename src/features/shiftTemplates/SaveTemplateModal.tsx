@@ -11,6 +11,8 @@ import {
   findTemplateByName,
   type ShiftTemplateInput,
 } from "./template";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * Dà un nome al modello e lo salva. Si monta solo quando serve (il chiamante
@@ -32,6 +34,7 @@ export function SaveTemplateModal({
   onSaved?: (saved: { id: string; name: string }) => void;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const [name, setName] = useState(template.name);
   const templates = useVenueShiftTemplates(venueId);
@@ -69,7 +72,7 @@ export function SaveTemplateModal({
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <Pressable
           onPress={save.isPending ? undefined : onClose}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+          style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
           className="items-center justify-center px-6"
         >
           <Pressable

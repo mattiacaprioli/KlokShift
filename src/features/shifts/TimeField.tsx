@@ -5,6 +5,8 @@ import { Pressable, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import { toTimeString } from "@/lib/format";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type Props = {
   label: string;
@@ -16,6 +18,7 @@ type Props = {
 /** Big tappable time field (prototype's "Dalle"/"Alle"). iOS opens a bottom
  * spinner sheet; Android the native time dialog. Always 24h. */
 export function TimeField({ label, value, onChange, className }: Props) {
+  const colors = useColors();
   const [show, setShow] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -57,7 +60,7 @@ export function TimeField({ label, value, onChange, className }: Props) {
         >
           <Pressable
             onPress={() => setShow(false)}
-            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+            style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
             className="justify-end"
           >
             <Pressable

@@ -17,6 +17,7 @@ import { useAvatarUpload } from "@/features/account/useAvatarUpload";
 import { useAuth } from "@/lib/auth";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
+import { useColors } from "@/lib/theme";
 
 /**
  * Il proprio account, lato gestore: nome e foto della **persona**, non del
@@ -33,6 +34,7 @@ import { useToast } from "@/providers/Toast";
  * `waiter_profiles`.
  */
 export default function ManagerAccountEditScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -126,7 +128,7 @@ export default function ManagerAccountEditScreen() {
           </View>
 
           <View className="flex-row gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
-            <Icon name="shield" size={20} color="#4FC97D" />
+            <Icon name="shield" size={20} color={colors.success} />
             <Text className="flex-1 text-sm leading-5 text-t3">
               Nome e foto sono i tuoi, non della sede: è così che ti vede chi
               lavora con te, in chat e sui turni. La sede si modifica da

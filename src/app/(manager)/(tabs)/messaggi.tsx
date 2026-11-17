@@ -6,8 +6,10 @@ import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { ConversationList } from "@/features/chat/ConversationList";
 import { useAuth } from "@/lib/auth";
+import { useColors } from "@/lib/theme";
 
 export default function ManagerMessaggiScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session } = useAuth();
@@ -27,7 +29,7 @@ export default function ManagerMessaggiScreen() {
           accessibilityLabel="Nuovo messaggio"
           className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
-          <Icon name="plus" size={20} color="#F8F4ED" />
+          <Icon name="plus" size={20} color={colors.t1} />
         </Pressable>
       </View>
       <ConversationList

@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { KeyboardAvoidingView, Modal } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { GoldButton } from "./GoldButton";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type Props = {
   visible: boolean;
@@ -31,6 +33,7 @@ export function ConfirmModal({
   onCancel,
   children,
 }: Props) {
+  const colors = useColors();
   return (
     <Modal
       visible={visible}
@@ -43,7 +46,7 @@ export function ConfirmModal({
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <Pressable
           onPress={pending ? undefined : onCancel}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+          style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
           className="items-center justify-center px-8"
         >
           {/* Blocca la propagazione del tap sulla card */}
@@ -66,7 +69,7 @@ export function ConfirmModal({
                 >
                   <Text
                     className="text-sm font-sans-bold"
-                    style={{ color: "#FFFFFF" }}
+                    style={{ color: colors.white }}
                   >
                     {pending ? "Attendere…" : confirmLabel}
                   </Text>

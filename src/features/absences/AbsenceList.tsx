@@ -31,6 +31,8 @@ import {
 } from "./labels";
 import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceModal } from "./ResolveAbsenceModal";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type Props = {
   absences: Absence[];
@@ -193,6 +195,7 @@ export function AbsenceList({ absences, mode, subtitleFor, titleFor }: Props) {
  * ⚠️ Gemello web: `web/src/absences/AbsenceHourCredits.tsx`.
  */
 function CreditModal({ absence, onClose }: { absence: Absence; onClose: () => void }) {
+  const colors = useColors();
   const toast = useToast();
   const query = useAbsenceHourCredits(absence.id);
   const save = useSetAbsenceHourCredits();
@@ -217,14 +220,14 @@ function CreditModal({ absence, onClose }: { absence: Absence; onClose: () => vo
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-        <Pressable onPress={save.isPending ? undefined : onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }} className="items-center justify-center px-6">
+        <Pressable onPress={save.isPending ? undefined : onClose} style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }} className="items-center justify-center px-6">
           <Pressable onPress={() => {}} className="w-full rounded-3xl border border-border-2 bg-bg-card p-6">
             <Text className="text-lg font-sans-bold text-t1">Ore di assenza riconosciute</Text>
             <Text className="mt-1 text-xs leading-4 text-t3">
               {ABSENCE_KIND_LABEL[absence.kind]} · {formatAbsenceRange(absence)}. Un giorno lasciato vuoto non viene convertito in ore.
             </Text>
             {!form ? (
-              <ActivityIndicator color="#EAB54C" className="mt-6" />
+              <ActivityIndicator color={colors.gold} className="mt-6" />
             ) : (
               <>
                 {dates.length > 1 ? (
@@ -289,6 +292,7 @@ function RowAction({
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
@@ -302,7 +306,7 @@ function RowAction({
     >
       <Text
         className={gold ? "text-[13px] font-sans-bold" : "text-[13px] font-sans-semibold text-t2"}
-        style={gold ? { color: "#1A1206" } : undefined}
+        style={gold ? { color: colors.goldInk } : undefined}
       >
         {label}
       </Text>
@@ -318,6 +322,7 @@ function ProtocolModal({
   absence: Absence;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const save = useSetAbsenceInpsProtocol();
   const [protocol, setProtocol] = useState(absence.inps_protocol ?? "");
@@ -346,7 +351,7 @@ function ProtocolModal({
     >
       <Pressable
         onPress={save.isPending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
         className="items-center justify-center px-6"
       >
         <Pressable

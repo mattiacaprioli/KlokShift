@@ -19,6 +19,8 @@ import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { IBMPlexMono_400Regular } from "@expo-google-fonts/ibm-plex-mono/400Regular";
 import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
 import { useAuth } from "@/lib/auth";
+import { useColors } from "@/lib/theme";
+import { darkColors, type ThemeColors } from "@/constants/colors";
 import { AppProviders } from "@/providers/AppProviders";
 import { NotificationsListener } from "@/features/notifications/NotificationsListener";
 import { PushRegistrar } from "@/features/push/PushRegistrar";
@@ -27,7 +29,8 @@ import { useViewMode } from "@/features/team/ViewMode";
 import { IntroOverlay } from "@/features/onboarding/IntroOverlay";
 
 SplashScreen.preventAutoHideAsync();
-SystemUI.setBackgroundColorAsync("#0C0907");
+// Fuori da React: il tema chiaro, quando arriverà, lo riallineerà da un effetto.
+SystemUI.setBackgroundColorAsync(darkColors.bg0);
 
 // No-op until EXPO_PUBLIC_SENTRY_DSN is set (e.g. in a dev/production build).
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -35,13 +38,12 @@ if (SENTRY_DSN) {
   Sentry.init({ dsn: SENTRY_DSN, sendDefaultPii: false });
 }
 
-const BG = "#0C0907";
-
-const screenOptions = {
-  headerStyle: { backgroundColor: BG },
-  headerTintColor: "#F8F4ED",
-  contentStyle: { backgroundColor: BG },
-} as const;
+const screenOptions = (colors: ThemeColors) =>
+  ({
+    headerStyle: { backgroundColor: colors.bg0 },
+    headerTintColor: colors.t1,
+    contentStyle: { backgroundColor: colors.bg0 },
+  }) as const;
 
 function ProfileError() {
   const { retryProfile, signOut } = useAuth();
@@ -58,6 +60,7 @@ function ProfileError() {
 }
 
 function RootNavigator() {
+  const colors = useColors();
   const { session, profile, loading, error } = useAuth();
   // Il cappello con cui si usa l'app (gestione / lavoro): si ricava dalle
   // appartenenze, non da un ruolo sul profilo. Vedi `features/team/ViewMode.tsx`.
@@ -113,7 +116,7 @@ function RootNavigator() {
           <PushRegistrar role={activeRole} />
         </>
       ) : null}
-      <Stack screenOptions={screenOptions}>
+      <Stack screenOptions={screenOptions(colors)}>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>

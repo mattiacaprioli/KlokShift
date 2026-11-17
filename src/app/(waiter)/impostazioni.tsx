@@ -12,8 +12,10 @@ import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColors } from "@/lib/theme";
 
 export default function WaiterSettingsScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { signOut } = useAuth();
@@ -42,7 +44,7 @@ export default function WaiterSettingsScreen() {
               className="flex-row items-center gap-3 px-4 py-3.5"
             >
               <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                <Icon name="pencil" size={18} color="#EAB54C" />
+                <Icon name="pencil" size={18} color={colors.gold} />
               </View>
               <View className="flex-1">
                 <Text className="text-[15px] font-sans-semibold text-t1">
@@ -52,7 +54,7 @@ export default function WaiterSettingsScreen() {
                   Foto e dati personali
                 </Text>
               </View>
-              <Icon name="chevR" size={18} color="#6A6358" />
+              <Icon name="chevR" size={18} color={colors.t4} />
             </Pressable>
             <Pressable
               onPress={() => router.push("/(waiter)/cambia-password")}
@@ -60,7 +62,7 @@ export default function WaiterSettingsScreen() {
               className="flex-row items-center gap-3 border-t border-border-1 px-4 py-3.5"
             >
               <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                <Icon name="lock" size={18} color="#EAB54C" />
+                <Icon name="lock" size={18} color={colors.gold} />
               </View>
               <View className="flex-1">
                 <Text className="text-[15px] font-sans-semibold text-t1">
@@ -70,7 +72,7 @@ export default function WaiterSettingsScreen() {
                   Vale anche per la dashboard web
                 </Text>
               </View>
-              <Icon name="chevR" size={18} color="#6A6358" />
+              <Icon name="chevR" size={18} color={colors.t4} />
             </Pressable>
           </Card>
         </View>
@@ -83,7 +85,7 @@ export default function WaiterSettingsScreen() {
               className="flex-row items-center gap-3 px-4 py-3.5"
             >
               <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-                <Icon name="bell" size={18} color="#EAB54C" />
+                <Icon name="bell" size={18} color={colors.gold} />
               </View>
               <View className="flex-1">
                 <Text className="text-[15px] font-sans-semibold text-t1">
@@ -93,7 +95,7 @@ export default function WaiterSettingsScreen() {
                   Scegli quali notifiche push ricevere
                 </Text>
               </View>
-              <Icon name="chevR" size={18} color="#6A6358" />
+              <Icon name="chevR" size={18} color={colors.t4} />
             </Pressable>
           </Card>
         </View>

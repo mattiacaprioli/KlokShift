@@ -33,6 +33,8 @@ import {
 } from "./hours";
 import { UNPLANNED_VOID_NOTICE } from "./unplanned";
 import { AUTO_APPROVED_LABEL } from "./autoApprove";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type EditMode = "correct" | "void" | null;
 
@@ -85,6 +87,7 @@ export function ManagerClockReview({
   /** Senza timbratura: l'altra risposta a «è venuto?». */
   onMarkAbsent?: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const router = useRouter();
   const approve = useApproveClockRecord();
@@ -276,7 +279,7 @@ export function ManagerClockReview({
         <View className="flex-row items-start justify-between gap-3">
           <View className="flex-1 flex-row items-center gap-2">
             <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-              <Icon name="clock" size={17} color="#EAB54C" />
+              <Icon name="clock" size={17} color={colors.gold} />
             </View>
             <View className="flex-1">
               <Text className="text-xs font-sans-semibold uppercase tracking-wider text-t3">
@@ -416,7 +419,7 @@ export function ManagerClockReview({
       >
         <Pressable
           onPress={pending ? undefined : closeEditor}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
+          style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.66) }}
           className="items-center justify-center px-6"
         >
           <Pressable
@@ -556,6 +559,7 @@ function EnterTimesModal({
   defaultOut: Date;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const enter = useEnterClockRecord();
   const [inAt, setInAt] = useState(() => defaultIn);
@@ -590,7 +594,7 @@ function EnterTimesModal({
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <Pressable
         onPress={enter.isPending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.66) }}
         className="items-center justify-center px-6"
       >
         <Pressable

@@ -36,6 +36,7 @@ import { venueAccent } from "@/features/venues/venueColor";
 import { cn } from "@/lib/cn";
 import { formatPastDayLabel } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
+import { useColors } from "@/lib/theme";
 
 /** Quanto si aspetta prima di interrogare il server mentre si digita. */
 const SEARCH_DEBOUNCE_MS = 350;
@@ -59,6 +60,7 @@ const STATUS_OPTIONS: { id: PastShiftStatus; label: string }[] = [
  * cima è il totale di ciò che si sta cercando, non di quanto è a schermo.
  */
 export default function ManagerHistoryScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { ownerId, historyVenues: venues, can } = useOwnerVenues();
@@ -147,7 +149,7 @@ export default function ManagerHistoryScreen() {
                 : "border-border bg-transparent"
             )}
           >
-            <Icon name="search" size={14} color="#EAB54C" />
+            <Icon name="search" size={14} color={colors.gold} />
             <Text className="text-[13px] font-sans-semibold text-t1">
               {activeCount > 0 ? `Filtri (${activeCount})` : "Filtri"}
             </Text>
@@ -282,7 +284,7 @@ export default function ManagerHistoryScreen() {
           }}
           refreshControl={
             <RefreshControl
-              tintColor="#EAB54C"
+              tintColor={colors.gold}
               refreshing={pull.refreshing}
               onRefresh={pull.onRefresh}
             />
@@ -334,7 +336,7 @@ export default function ManagerHistoryScreen() {
           }
           ListFooterComponent={
             listQuery.isFetchingNextPage ? (
-              <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
+              <ActivityIndicator color={colors.gold} style={{ marginTop: 12 }} />
             ) : null
           }
         />

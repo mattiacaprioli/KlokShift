@@ -3,6 +3,7 @@ import { Card } from "./Card";
 import { Icon, type IconName } from "./Icon";
 import { cn } from "@/lib/cn";
 import { Text, View } from "@/tw";
+import { useColors } from "@/lib/theme";
 
 /**
  * Riga che porta altrove: bolla icona, titolo, sottotitolo, chevron.
@@ -27,6 +28,7 @@ export function NavRow({
   right?: React.ReactNode;
   className?: string;
 }) {
+  const colors = useColors();
   return (
     <Card
       className={cn("rounded-3xl border-border-2 p-4", className)}
@@ -34,7 +36,7 @@ export function NavRow({
     >
       <View className="flex-row items-center gap-3">
         <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
-          <Icon name={icon} size={18} color="#EAB54C" />
+          <Icon name={icon} size={18} color={colors.gold} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-sans-bold text-t1" numberOfLines={1}>
@@ -46,7 +48,7 @@ export function NavRow({
             </Text>
           ) : null}
         </View>
-        {right ?? <Icon name="chevR" size={18} color="#8c857a" />}
+        {right ?? <Icon name="chevR" size={18} color={colors.t3} />}
       </View>
     </Card>
   );

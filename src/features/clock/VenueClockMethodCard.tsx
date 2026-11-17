@@ -7,9 +7,11 @@ import { useToast } from "@/providers/Toast";
 import { Text, View } from "@/tw";
 import { useSetVenueClockAutoApprove, useSetVenueClockMethod } from "./hooks";
 import { AUTO_APPROVE_TITLE, autoApproveHint } from "./autoApprove";
+import { useColors } from "@/lib/theme";
 
 /** Metodo predefinito di una singola sede, per chi ha il permesso Ore. */
 export function VenueClockMethodCard({ venue }: { venue: Venue }) {
+  const colors = useColors();
   const toast = useToast();
   const save = useSetVenueClockMethod();
   const saveAuto = useSetVenueClockAutoApprove();
@@ -69,9 +71,9 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
           onValueChange={toggle}
           disabled={save.isPending}
           accessibilityLabel={`Timbratura dall’app per ${venue.name}`}
-          trackColor={{ false: "#2a241b", true: "#eab54c" }}
-          thumbColor="#f8f4ed"
-          ios_backgroundColor="#2a241b"
+          trackColor={{ false: colors.bg2, true: colors.gold }}
+          thumbColor={colors.t1}
+          ios_backgroundColor={colors.bg2}
         />
       </Card>
       {/* Conta solo per chi timbra dall'app: senza timbratura le ore del turno
@@ -91,9 +93,9 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
             onValueChange={toggleAuto}
             disabled={saveAuto.isPending}
             accessibilityLabel={`${AUTO_APPROVE_TITLE} a ${venue.name}`}
-            trackColor={{ false: "#2a241b", true: "#eab54c" }}
-            thumbColor="#f8f4ed"
-            ios_backgroundColor="#2a241b"
+            trackColor={{ false: colors.bg2, true: colors.gold }}
+            thumbColor={colors.t1}
+            ios_backgroundColor={colors.bg2}
           />
         </Card>
       ) : null}

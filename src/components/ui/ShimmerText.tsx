@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   children: string;
@@ -21,6 +22,7 @@ type Props = {
 const SHINE_WIDTH = 120;
 
 export function ShimmerText({ children, className, fontSize = 28 }: Props) {
+  const colors = useColors();
   const translateX = useSharedValue(-SHINE_WIDTH);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function ShimmerText({ children, className, fontSize = 28 }: Props) {
       <View style={StyleSheet.absoluteFill} className="bg-gold" />
       <Animated.View style={[StyleSheet.absoluteFill, animStyle]}>
         <LinearGradient
-          colors={["transparent", "#FFFFFF", "transparent"]}
+          colors={["transparent", colors.white, "transparent"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ width: SHINE_WIDTH, height: "100%" }}

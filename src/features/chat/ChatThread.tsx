@@ -15,6 +15,7 @@ import { useToast } from "@/providers/Toast";
 import { ChangeRequestCard } from "@/features/changeRequests/ChangeRequestCard";
 import type { Message } from "./api";
 import { useChatThread } from "./useChatThread";
+import { useColors } from "@/lib/theme";
 
 function MessageBubble({ message, own }: { message: Message; own: boolean }) {
   return (
@@ -48,6 +49,7 @@ type Props = {
 
 /** Thread di chat 1:1, condiviso tra le schermate cameriere e ristoratore. */
 export function ChatThread({ conversationId, userId }: Props) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
@@ -80,7 +82,7 @@ export function ChatThread({ conversationId, userId }: Props) {
             hitSlop={8}
             className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
           >
-            <Icon name="chevL" size={22} color="#F8F4ED" />
+            <Icon name="chevL" size={22} color={colors.t1} />
           </Pressable>
         </View>
         <View className="flex-1 items-center justify-center px-6">
@@ -105,7 +107,7 @@ export function ChatThread({ conversationId, userId }: Props) {
             hitSlop={8}
             className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
           >
-            <Icon name="chevL" size={18} color="#F8F4ED" />
+            <Icon name="chevL" size={18} color={colors.t1} />
           </Pressable>
           {other ? (
             <>
@@ -180,7 +182,7 @@ export function ChatThread({ conversationId, userId }: Props) {
             ListFooterComponent={
               query.isFetchingNextPage ? (
                 <ActivityIndicator
-                  color="#EAB54C"
+                  color={colors.gold}
                   style={{ marginVertical: 16 }}
                 />
               ) : null
@@ -209,7 +211,7 @@ export function ChatThread({ conversationId, userId }: Props) {
           <TextInput
             className="max-h-28 flex-1 rounded-[14px] border border-border bg-bg-1 px-4 py-3 font-sans text-[16px] text-t1"
             placeholder="Scrivi un messaggio…"
-            placeholderTextColor="#6A6358"
+            placeholderTextColor={colors.t4}
             multiline
             value={text}
             onChangeText={setText}
@@ -222,7 +224,7 @@ export function ChatThread({ conversationId, userId }: Props) {
               canSend ? "bg-gold" : "border border-border-2 bg-bg-2"
             )}
           >
-            <Icon name="send" size={20} color={canSend ? "#1A1206" : "#6A6358"} />
+            <Icon name="send" size={20} color={canSend ? colors.goldInk : colors.t4} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>

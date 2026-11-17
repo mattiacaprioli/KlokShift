@@ -21,6 +21,7 @@ import {
   type SupportFaq,
   type SupportMailContext,
 } from "./supportContent";
+import { useColors } from "@/lib/theme";
 
 export type SupportGuide = {
   icon: IconName;
@@ -99,6 +100,7 @@ export function SupportView({
 }
 
 function FaqRow({ item, divider }: { item: SupportFaq; divider: boolean }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   return (
     <Pressable
@@ -114,7 +116,7 @@ function FaqRow({ item, divider }: { item: SupportFaq; divider: boolean }) {
         <Icon
           name="chevR"
           size={18}
-          color="#6A6358"
+          color={colors.t4}
           style={{ transform: [{ rotate: open ? "90deg" : "0deg" }] }}
         />
       </View>

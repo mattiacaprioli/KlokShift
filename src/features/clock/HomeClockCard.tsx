@@ -14,6 +14,7 @@ import { homeClockState, punchConfirmMessage } from "./availability";
 import { ClockBreakButton } from "./ClockBreakButton";
 import { usePunchClock } from "./hooks";
 import { effectiveClockTimes, formatClockTime, openClockBreak } from "./hours";
+import { useColors } from "@/lib/theme";
 
 /**
  * `inBlocked` lo decide la Home (`blocksPlannedClockIn`): con un'entrata senza
@@ -34,6 +35,7 @@ export function HomeClockCard({
   inBlocked?: boolean;
   onPress?: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const punch = usePunchClock();
   const [confirming, setConfirming] = useState<"in" | "out" | null>(null);
@@ -86,7 +88,7 @@ export function HomeClockCard({
               )}
             </Text>
           </View>
-          {onPress ? <Icon name="chevR" size={18} color="#8C857A" /> : null}
+          {onPress ? <Icon name="chevR" size={18} color={colors.t3} /> : null}
         </View>
 
         {times ? (

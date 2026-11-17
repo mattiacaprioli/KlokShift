@@ -60,9 +60,12 @@ import {
   openClockBreak,
 } from "@/features/clock/hours";
 import type { Enums } from "@/types/database";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
 function GuardScreen({ children }: { children: ReactNode }) {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   return (
@@ -73,7 +76,7 @@ function GuardScreen({ children }: { children: ReactNode }) {
           hitSlop={8}
           className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
-          <Icon name="chevL" size={22} color="#F8F4ED" />
+          <Icon name="chevL" size={22} color={colors.t1} />
         </Pressable>
       </View>
       <View className="flex-1 items-center justify-center px-6">{children}</View>
@@ -89,6 +92,7 @@ const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
 };
 
 export default function WaiterShiftDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -221,7 +225,7 @@ export default function WaiterShiftDetailScreen() {
   if (shiftQuery.isLoading || myAssignmentQuery.isLoading) {
     return (
       <GuardScreen>
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       </GuardScreen>
     );
   }
@@ -279,12 +283,12 @@ export default function WaiterShiftDetailScreen() {
           hitSlop={8}
           className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
-          <Icon name="chevL" size={22} color="#F8F4ED" />
+          <Icon name="chevL" size={22} color={colors.t1} />
         </Pressable>
         <View
           style={{
             borderWidth: 2,
-            borderColor: "rgba(234,181,76,0.5)",
+            borderColor: withAlpha(colors.gold, 0.5),
             borderRadius: 999,
             padding: 2,
           }}

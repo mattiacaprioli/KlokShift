@@ -17,6 +17,7 @@ import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColors } from "@/lib/theme";
 
 /**
  * Tu e le regole dell'azienda, nelle stesse sezioni di Impostazioni sul web
@@ -27,6 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
  * schermate, e non si capiva quale fosse quella giusta.
  */
 export default function ManagerSettingsScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
@@ -70,7 +72,7 @@ export default function ManagerSettingsScreen() {
                   {session?.user.email ?? "Nome e foto"}
                 </Text>
               </View>
-              <Icon name="chevR" size={18} color="#6A6358" />
+              <Icon name="chevR" size={18} color={colors.t4} />
             </Pressable>
           </Card>
         </View>

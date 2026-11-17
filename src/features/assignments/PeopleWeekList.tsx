@@ -42,6 +42,7 @@ import { absenceCellLabel, formatAbsenceRange } from "@/features/absences/labels
 import { actualChipText } from "@/features/clock/hours";
 import { computeWeekLoad, type PersonLoad } from "./weekLoad";
 import { ASSIGNMENT_STATUS_LABEL, isActiveAssignment } from "./status";
+import { useColors } from "@/lib/theme";
 
 /** Iniziali dei giorni da lunedì, come nel `WeekCalendar`. */
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
@@ -89,6 +90,7 @@ export function PeopleWeekList({
   onOpenShift: (shiftId: string) => void;
   paddingBottom: number;
 }) {
+  const colors = useColors();
   const { workspaceId, venues, isMultiVenue, can } = useOwnerVenues();
   const shiftsQuery = useOwnerShiftsRange(from, to, scope);
   const peopleQuery = useOwnerPeople(workspaceId);
@@ -204,7 +206,7 @@ export function PeopleWeekList({
       }}
       refreshControl={
         <RefreshControl
-          tintColor="#EAB54C"
+          tintColor={colors.gold}
           refreshing={pull.refreshing}
           onRefresh={pull.onRefresh}
         />
@@ -286,6 +288,7 @@ function PersonWeekCard({
   onOpenShift: (shiftId: string) => void;
   isMe?: boolean;
 }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
 
   const target = weeklyTarget(person.contract, person.daysWorked);
@@ -402,7 +405,7 @@ function PersonWeekCard({
             <Icon
               name="chevR"
               size={16}
-              color="#8C857A"
+              color={colors.t3}
               style={{ transform: [{ rotate: open ? "-90deg" : "90deg" }] }}
             />
           ) : null}
@@ -471,7 +474,7 @@ function PersonWeekCard({
                     </Text>
                   ) : null}
                 </View>
-                <Icon name="chevR" size={14} color="#8C857A" />
+                <Icon name="chevR" size={14} color={colors.t3} />
               </Pressable>
             );
           })}

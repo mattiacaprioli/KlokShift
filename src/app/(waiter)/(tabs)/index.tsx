@@ -38,11 +38,13 @@ import { isShiftOver } from "@/lib/format";
 import { JoinWorkspaceCard } from "@/features/onboarding/JoinWorkspaceCard";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { HelpButton } from "@/components/ui/HelpButton";
+import { useColors } from "@/lib/theme";
 
 /** Quanti turni seguono il primo, prima di mandare all'agenda. */
 const PREVIEW_COUNT = 3;
 
 export default function WaiterHomeScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -162,7 +164,7 @@ export default function WaiterHomeScreen() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={pull.refreshing}
             onRefresh={pull.onRefresh}
           />

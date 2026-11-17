@@ -7,6 +7,7 @@ import {
   useSetStaffCanChat,
   useStaffCanChat,
 } from "@/features/workspace/hooks";
+import { useColors } from "@/lib/theme";
 
 /**
  * «Chat fra colleghi», nelle impostazioni dell'azienda.
@@ -21,6 +22,7 @@ import {
  * collaboratori si scrive sempre.
  */
 export function StaffChatToggle({ workspaceId }: { workspaceId: string }) {
+  const colors = useColors();
   const toast = useToast();
   const { data: enabled, isLoading } = useStaffCanChat(workspaceId);
   const save = useSetStaffCanChat();
@@ -59,9 +61,9 @@ export function StaffChatToggle({ workspaceId }: { workspaceId: string }) {
         value={enabled ?? true}
         onValueChange={toggle}
         disabled={isLoading || save.isPending}
-        trackColor={{ false: "#2a241b", true: "#eab54c" }}
-        thumbColor="#f8f4ed"
-        ios_backgroundColor="#2a241b"
+        trackColor={{ false: colors.bg2, true: colors.gold }}
+        thumbColor={colors.t1}
+        ios_backgroundColor={colors.bg2}
       />
     </Card>
   );

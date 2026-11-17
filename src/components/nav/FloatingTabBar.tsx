@@ -1,13 +1,11 @@
 import { CountBadge } from "@/components/ui/CountBadge";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { palette } from "@/constants/colors";
+import { withAlpha } from "@/constants/colors";
 import { FontFamily } from "@/constants/fonts";
 import { Pressable, Text, View } from "@/tw";
 import { Tabs } from "expo-router";
 import type { ComponentProps } from "react";
-
-const GOLD = palette.gold;
-const INACTIVE = palette.textMuted;
+import { useColors } from "@/lib/theme";
 
 export type TabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
@@ -29,6 +27,7 @@ export function FloatingTabBar({
   icons: Record<string, IconName>;
   badges?: Record<string, number>;
 }) {
+  const colors = useColors();
   return (
     <View
       style={{
@@ -40,10 +39,10 @@ export function FloatingTabBar({
         flexDirection: "row",
         borderRadius: 20,
         borderCurve: "continuous",
-        backgroundColor: palette.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: palette.hairline,
-        boxShadow: "0 12px 30px rgba(0,0,0,0.5)",
+        borderColor: withAlpha(colors.wash, 0.08),
+        boxShadow: `0 12px 30px ${withAlpha(colors.scrim, 0.5)}`,
       }}
     >
       {state.routes.map((route, index) => {
@@ -76,13 +75,13 @@ export function FloatingTabBar({
             }}
           >
             <View>
-              <Icon name={iconName} size={22} color={focused ? GOLD : INACTIVE} />
+              <Icon name={iconName} size={22} color={focused ? colors.gold : colors.t3} />
               <CountBadge count={badge} className="absolute -right-2.5 -top-1.5" />
             </View>
             <Text
               numberOfLines={1}
               style={{
-                color: focused ? GOLD : INACTIVE,
+                color: focused ? colors.gold : colors.t3,
                 // Come sito e dashboard: niente maiuscolo spaziato (15/11).
                 fontFamily: focused ? FontFamily.sansSemibold : FontFamily.sansMedium,
                 fontSize: 11,

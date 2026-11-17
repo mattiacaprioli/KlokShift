@@ -9,6 +9,7 @@ import { useToast } from "@/providers/Toast";
 import type { Message } from "@/features/chat/api";
 import { useChangeRequest, useWithdrawShiftChangeRequest } from "./hooks";
 import { ResolveRequestModal } from "./ResolveRequestModal";
+import { useColors } from "@/lib/theme";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "In attesa",
@@ -38,6 +39,7 @@ export function ChangeRequestCard({
   userId: string;
   own: boolean;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const query = useChangeRequest(message.request_id);
   const request = query.data ?? null;
@@ -88,7 +90,7 @@ export function ChangeRequestCard({
         )}
       >
         <View className="flex-row items-center gap-2">
-          <Icon name={isHours ? "clock" : "users"} size={16} color="#EAB54C" />
+          <Icon name={isHours ? "clock" : "users"} size={16} color={colors.gold} />
           <Text className="flex-1 text-[13px] font-sans-bold uppercase tracking-wider text-gold">
             {isResponse
               ? "Esito richiesta"
@@ -127,7 +129,7 @@ export function ChangeRequestCard({
           >
             <Text
               className="text-sm font-sans-bold"
-              style={{ color: "#1A1206" }}
+              style={{ color: colors.goldInk }}
             >
               Rispondi alla richiesta
             </Text>

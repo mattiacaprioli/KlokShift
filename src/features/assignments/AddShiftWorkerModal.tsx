@@ -11,6 +11,8 @@ import type { AssignmentWithStaff } from "./api";
 import { ADD_WORKER_HINT, ADD_WORKER_LABEL, shiftWorkerCandidates } from "./addWorker";
 import { useAddShiftWorker } from "./hooks";
 import { defaultRoleFor } from "./defaultRole";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * «Aggiungi chi ha lavorato» su un turno finito: si tocca la persona e risulta
@@ -29,6 +31,7 @@ export function AddShiftWorkerModal({
   assignments: AssignmentWithStaff[];
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const { isOwner } = useOwnerVenues();
   const self = useSelfStaff();
@@ -59,7 +62,7 @@ export function AddShiftWorkerModal({
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <Pressable
         onPress={add.isPending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.66) }}
         className="items-center justify-center px-6"
       >
         <Pressable
@@ -71,7 +74,7 @@ export function AddShiftWorkerModal({
 
           <ScrollView className="mt-5" showsVerticalScrollIndicator={false}>
             {staffQuery.isLoading ? (
-              <ActivityIndicator color="#EAB54C" />
+              <ActivityIndicator color={colors.gold} />
             ) : candidates.length === 0 ? (
               <Text className="text-sm text-t3">
                 In questa sede non c&apos;è nessun altro nel team da aggiungere.

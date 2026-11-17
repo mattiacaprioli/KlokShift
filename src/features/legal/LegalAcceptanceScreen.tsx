@@ -13,6 +13,7 @@ import { LEGAL_COPY, legalBody, legalWaiting } from "./copy";
 import type { LegalGate } from "./gate";
 import { useAcceptLegalTerms } from "./hooks";
 import { LegalDocLinks } from "./LegalCheckbox";
+import { useColors } from "@/lib/theme";
 
 /**
  * Il blocco della vista di gestione: al posto di tutto `(manager)` finché un
@@ -20,6 +21,7 @@ import { LegalDocLinks } from "./LegalCheckbox";
  * alla sua vista: il blocco è sulla gestione, mai sul lavoro.
  */
 export function LegalAcceptanceScreen({ gate }: { gate: LegalGate }) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { canSwitch, setMode } = useViewMode();
   const accept = useAcceptLegalTerms();
@@ -31,7 +33,7 @@ export function LegalAcceptanceScreen({ gate }: { gate: LegalGate }) {
     >
       <ScrollView contentContainerClassName="flex-grow gap-4 px-6 pb-6">
         <View className="h-16 w-16 items-center justify-center rounded-full bg-gold/15">
-          <Icon name="shield" size={28} color="#EAB54C" />
+          <Icon name="shield" size={28} color={colors.gold} />
         </View>
         <Display className="text-[28px]">{LEGAL_COPY.title}</Display>
 

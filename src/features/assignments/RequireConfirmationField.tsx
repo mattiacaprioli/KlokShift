@@ -2,6 +2,7 @@ import { Switch } from "react-native";
 import { Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
 import { Mono } from "@/components/ui/Mono";
+import { useColors } from "@/lib/theme";
 
 /**
  * «Chiedi la conferma a tutti», nel form del turno.
@@ -24,6 +25,7 @@ export function RequireConfirmationField({
   onChange: (value: boolean) => void;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-2">
       <Mono>Conferma</Mono>
@@ -41,9 +43,9 @@ export function RequireConfirmationField({
           value={value}
           onValueChange={onChange}
           disabled={disabled}
-          trackColor={{ false: "#2a241b", true: "#eab54c" }}
-          thumbColor="#f8f4ed"
-          ios_backgroundColor="#2a241b"
+          trackColor={{ false: colors.bg2, true: colors.gold }}
+          thumbColor={colors.t1}
+          ios_backgroundColor={colors.bg2}
         />
       </Card>
     </View>

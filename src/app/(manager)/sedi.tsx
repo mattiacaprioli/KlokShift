@@ -17,6 +17,7 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { venueAccent } from "@/features/venues/venueColor";
 import { VenueDetailsCard } from "@/features/venues/VenueDetailsCard";
 import type { Venue } from "@/features/venues/api";
+import { useColors } from "@/lib/theme";
 
 /**
  * Le sedi del titolare: l'elenco da cui si aprono, si modificano, se ne
@@ -40,6 +41,7 @@ function VenuesCard({
   onEdit: (id: string) => void;
   onAdd?: () => void;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
       <Mono>
@@ -69,7 +71,7 @@ function VenuesCard({
               style={{ backgroundColor: venueAccent(i) }}
             />
           ) : null}
-          <Icon name="chevR" size={18} color="#8C8579" />
+          <Icon name="chevR" size={18} color={colors.t3} />
         </Pressable>
       ))}
 
@@ -86,6 +88,7 @@ function VenuesCard({
 
 /** Barra + checklist dei campi mancanti della sede. Nascosta se la scheda è completa. */
 function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void }) {
+  const colors = useColors();
   const items = [
     { label: "Città", done: !!venue.city },
     { label: "Indirizzo", done: !!venue.address },
@@ -117,14 +120,14 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
                 item.done ? "border-gold" : "border-border-2",
               )}
             >
-              {item.done ? <Icon name="check" size={14} color="#EAB54C" /> : null}
+              {item.done ? <Icon name="check" size={14} color={colors.gold} /> : null}
             </View>
             <Text
               className={cn("flex-1 text-sm", item.done ? "text-t3" : "text-t1")}
             >
               {item.label}
             </Text>
-            {!item.done ? <Icon name="chevR" size={16} color="#5A5348" /> : null}
+            {!item.done ? <Icon name="chevR" size={16} color={colors.t4} /> : null}
           </Pressable>
         ))}
       </View>
@@ -133,6 +136,7 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
 }
 
 export default function ManagerVenuesScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -169,7 +173,7 @@ export default function ManagerVenuesScreen() {
         }}
       >
         {venueQuery.isLoading ? (
-          <ActivityIndicator color="#EAB54C" className="mt-16" />
+          <ActivityIndicator color={colors.gold} className="mt-16" />
         ) : venueQuery.isError ? (
           <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
         ) : venues.length === 0 ? (
@@ -194,9 +198,9 @@ export default function ManagerVenuesScreen() {
                 className="rounded-full"
                 style={{
                   borderWidth: 2.5,
-                  borderColor: "#EAB54C",
+                  borderColor: colors.gold,
                   padding: 5,
-                  shadowColor: "#EAB54C",
+                  shadowColor: colors.gold,
                   shadowOpacity: 0.2,
                   shadowRadius: 26,
                   shadowOffset: { width: 0, height: 6 },

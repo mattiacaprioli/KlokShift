@@ -7,8 +7,10 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useShift } from "@/features/shifts/hooks";
 import { InternalShiftEditForm } from "@/features/assignments/InternalShiftEditForm";
+import { useColors } from "@/lib/theme";
 
 export default function EditShiftScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
 
@@ -18,7 +20,7 @@ export default function EditShiftScreen() {
   if (shiftQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-0">
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       </View>
     );
   }

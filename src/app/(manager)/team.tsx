@@ -34,6 +34,7 @@ import {
 import type { VenueScope } from "@/features/workspace/types";
 import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
+import { useColors } from "@/lib/theme";
 
 /** Le aree accese, in due parole. "Nessun permesso" se nessuna. */
 function permissionSummary(p: TeamPermissions): string {
@@ -74,6 +75,7 @@ function MemberCard({
   venueName: (id: string) => string;
   onRevoke: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const { venues } = useOwnerVenues();
   const invite = useSendTeamInvite();
@@ -158,7 +160,7 @@ function MemberCard({
         <Icon
           name="chevR"
           size={16}
-          color="#6A6358"
+          color={colors.t4}
           style={open ? { transform: [{ rotate: "90deg" }] } : undefined}
         />
       </Pressable>
@@ -283,6 +285,7 @@ function MemberCard({
  * `set_member_access` il solo titolare e a ciascuno la propria riga.
  */
 export default function TeamScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
@@ -330,7 +333,7 @@ export default function TeamScreen() {
           <RefreshControl
             refreshing={team.isRefetching}
             onRefresh={team.refetch}
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
           />
         }
       >

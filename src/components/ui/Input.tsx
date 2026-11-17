@@ -3,6 +3,7 @@ import { Pressable, TextInput, View } from "@/tw";
 import { cn } from "@/lib/cn";
 import { Icon } from "./Icon";
 import { Mono } from "./Mono";
+import { useColors } from "@/lib/theme";
 
 type Props = React.ComponentProps<typeof TextInput> & {
   label?: string;
@@ -15,6 +16,7 @@ export function Input({
   secureTextEntry,
   ...props
 }: Props) {
+  const colors = useColors();
   // `secureTextEntry` diventa l'interruttore dell'occhio: ogni campo password
   // dell'app lo eredita senza che chi lo usa debba saperlo.
   const [revealed, setRevealed] = useState(false);
@@ -25,7 +27,7 @@ export function Input({
       {label ? <Mono>{label}</Mono> : null}
       <View className="justify-center">
         <TextInput
-          placeholderTextColor="#6A6358"
+          placeholderTextColor={colors.t4}
           secureTextEntry={isPassword && !revealed}
           className={cn(
             "rounded-[14px] border border-border bg-bg-1 px-4 py-3.5 font-sans text-[16px] text-t1",
@@ -48,7 +50,7 @@ export function Input({
             <Icon
               name={revealed ? "eyeOff" : "eye"}
               size={20}
-              color={revealed ? "#EAB54C" : "#8C857A"}
+              color={revealed ? colors.gold : colors.t3}
             />
           </Pressable>
         ) : null}

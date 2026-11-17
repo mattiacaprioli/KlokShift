@@ -53,6 +53,7 @@ import { isDraft } from "@/features/shifts/drafts";
 import type { Shift } from "@/features/shifts/types";
 import { useVenueCalendar } from "@/features/venues/hooks";
 import { closureWarning } from "@/features/venues/closures";
+import { useColors } from "@/lib/theme";
 
 type SeededProps = {
   shift: Shift;
@@ -389,13 +390,14 @@ function EditForm({
 
 /** Carica fabbisogno + assegnati e monta il form con i valori correnti. */
 export function InternalShiftEditForm({ shift }: { shift: Shift }) {
+  const colors = useColors();
   const reqsQuery = useShiftRoleRequirements(shift.id);
   const assignmentsQuery = useShiftAssignments(shift.id);
 
   if (reqsQuery.isLoading || assignmentsQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-0">
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       </View>
     );
   }

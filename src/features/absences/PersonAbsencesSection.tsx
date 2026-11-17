@@ -5,6 +5,7 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AbsenceList } from "./AbsenceList";
 import { usePersonAbsences } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 /**
  * Ferie, permessi e malattie di una persona, nella sua scheda.
@@ -20,6 +21,7 @@ export function PersonAbsencesSection({
   /** Dove si registra un'assenza (malattia al telefono, ferie concordate). */
   onRecord: () => void;
 }) {
+  const colors = useColors();
   const query = usePersonAbsences(personId);
   const absences = query.data ?? [];
 
@@ -31,7 +33,7 @@ export function PersonAbsencesSection({
         onAction={onRecord}
       />
       {query.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="my-6" />
+        <ActivityIndicator color={colors.gold} className="my-6" />
       ) : query.isError ? (
         <QueryError onRetry={() => query.refetch()} />
       ) : absences.length === 0 ? (

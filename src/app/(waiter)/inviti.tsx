@@ -16,6 +16,7 @@ import { useRespondToInvite } from "@/features/workspace/hooks";
 import { useViewMode } from "@/features/team/ViewMode";
 import type { Membership } from "@/features/workspace/types";
 import { collaboratorInviteText } from "@/features/team/collaboratorSummary";
+import { useColors } from "@/lib/theme";
 
 /**
  * Un invito ricevuto: entrare nel team di un'azienda, o collaborare alla
@@ -96,6 +97,7 @@ function InviteCard({ invite }: { invite: Membership }) {
 }
 
 export default function WaiterInvitesScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   // Gli inviti arrivano dal contesto, che il provider tiene già aggiornato: non
   // c'è una query in più da fare per questa schermata.
@@ -116,7 +118,7 @@ export default function WaiterInvitesScreen() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={pull.refreshing}
             onRefresh={pull.onRefresh}
           />

@@ -13,6 +13,7 @@ import { useViewMode } from "@/features/team/ViewMode";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
+import { useColors } from "@/lib/theme";
 
 type Row = {
   key: string;
@@ -54,6 +55,7 @@ function MenuGroup({ title, rows }: { title?: string; rows: Row[] }) {
  * difesa: è la RLS, come per la sidebar web.
  */
 export default function ManagerMenuScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
@@ -115,7 +117,7 @@ export default function ManagerMenuScreen() {
               Profilo e impostazioni
             </Text>
           </View>
-          <Icon name="chevR" size={18} color="#8C8579" />
+          <Icon name="chevR" size={18} color={colors.t3} />
         </Pressable>
 
         {/* L'altro cappello: il Profilo del dipendente ha «Passa alla

@@ -8,6 +8,7 @@ import {
   type TeamPermission,
   type TeamPermissions,
 } from "./api";
+import { useColors } from "@/lib/theme";
 
 /**
  * Le cinque aree di permesso, una riga per area.
@@ -28,6 +29,7 @@ export function PermissionSwitches({
   onChange: (perm: TeamPermission, next: boolean) => void;
   disabled?: boolean;
 }) {
+  const colors = useColors();
   return (
     <Card className="gap-0 p-0">
       {TEAM_PERMISSIONS.map((perm, i) => (
@@ -51,9 +53,9 @@ export function PermissionSwitches({
             value={value[perm]}
             onValueChange={(next) => onChange(perm, next)}
             disabled={disabled}
-            trackColor={{ false: "#2a241b", true: "#eab54c" }}
-            thumbColor="#f8f4ed"
-            ios_backgroundColor="#2a241b"
+            trackColor={{ false: colors.bg2, true: colors.gold }}
+            thumbColor={colors.t1}
+            ios_backgroundColor={colors.bg2}
           />
         </View>
       ))}

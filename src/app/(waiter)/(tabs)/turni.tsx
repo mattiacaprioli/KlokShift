@@ -71,6 +71,7 @@ import { useVenueCalendar } from "@/features/venues/hooks";
 import { calendarWindow, closedDates, dayClosureText } from "@/features/venues/closures";
 import { withClosedDays } from "@/features/assignments/agenda";
 import { ClosedDayBadge } from "@/features/venues/ClosedDayBadge";
+import { useColors } from "@/lib/theme";
 
 /** Quanto ignorare il ritorno dello scorrimento dopo aver scelto un giorno. */
 const SYNC_SETTLE_MS = 400;
@@ -154,6 +155,7 @@ type Mode = (typeof MODES)[number]["id"];
  * sui prossimi: sono cose da fare, non da ricordare.
  */
 export default function WaiterShiftsScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -502,7 +504,7 @@ export default function WaiterShiftsScreen() {
                   <Icon
                     name={layout === "week" ? "list" : "columns"}
                     size={18}
-                    color="#EAB54C"
+                    color={colors.gold}
                   />
                 </Pressable>
               ) : null}
@@ -582,7 +584,7 @@ export default function WaiterShiftsScreen() {
                 absenceNoteFor={absenceNoteFor}
                 refreshControl={
                   <RefreshControl
-                    tintColor="#EAB54C"
+                    tintColor={colors.gold}
                     refreshing={pull.refreshing}
                     onRefresh={pull.onRefresh}
                   />
@@ -617,7 +619,7 @@ export default function WaiterShiftsScreen() {
             }}
             refreshControl={
               <RefreshControl
-                tintColor="#EAB54C"
+                tintColor={colors.gold}
                 refreshing={pull.refreshing}
                 onRefresh={pull.onRefresh}
               />

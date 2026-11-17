@@ -24,8 +24,10 @@ import {
   waiterProfileSchema,
   type WaiterProfileForm,
 } from "@/features/waiterProfile/schema";
+import { useColors } from "@/lib/theme";
 
 export default function WaiterProfileEditScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -119,7 +121,7 @@ export default function WaiterProfileEditScreen() {
 
         {profileQuery.isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#EAB54C" />
+            <ActivityIndicator color={colors.gold} />
           </View>
         ) : profileQuery.isError ? (
           <View className="flex-1 justify-center px-6">

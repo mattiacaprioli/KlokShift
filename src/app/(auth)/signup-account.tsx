@@ -24,6 +24,7 @@ import {
   useResendConfirmation,
 } from "@/features/auth/useResendConfirmation";
 import type { ViewMode } from "@/features/team/viewModeStorage";
+import { useColors } from "@/lib/theme";
 
 type Intent = ViewMode;
 
@@ -206,6 +207,7 @@ export default function SignupAccount() {
  * è l'indirizzo a collegarlo alla scheda che la sede gli ha preparato.
  */
 function CheckYourMail({ email }: { email: string }) {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // `true`: l'email della registrazione è appena partita, quindi il contatore
@@ -217,7 +219,7 @@ function CheckYourMail({ email }: { email: string }) {
       <View className="shrink-0 items-center px-6 pb-6" style={{ paddingTop: insets.top + 24 }}>
         <View className="overflow-hidden rounded-[22px] border border-border-2">
           <LinearGradient
-            colors={["#362E24", "#1F1A13"]}
+            colors={[colors.bg3, colors.bg1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{
@@ -227,7 +229,7 @@ function CheckYourMail({ email }: { email: string }) {
               justifyContent: "center",
             }}
           >
-            <Icon name="send" size={30} color="#EAB54C" />
+            <Icon name="send" size={30} color={colors.gold} />
           </LinearGradient>
         </View>
         <Display className="mt-6 text-[26px]">Controlla la posta</Display>

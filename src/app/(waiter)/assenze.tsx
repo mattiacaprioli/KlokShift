@@ -15,6 +15,7 @@ import {
   useMyAbsenceEmployers,
   useMyAbsences,
 } from "@/features/absences/hooks";
+import { useColors } from "@/lib/theme";
 
 /**
  * Ferie, permessi e malattia del dipendente, presso tutti i datori di
@@ -22,6 +23,7 @@ import {
  * tutte le sedi dello stesso titolare.
  */
 export default function WaiterAbsencesScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
@@ -58,7 +60,7 @@ export default function WaiterAbsencesScreen() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={pull.refreshing}
             onRefresh={pull.onRefresh}
           />

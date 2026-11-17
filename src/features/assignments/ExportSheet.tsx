@@ -15,6 +15,8 @@ import {
   type ExportIssueTarget,
   type ExportPreview,
 } from "./exportPreview";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /*
  * «Esporta per il consulente» nell'app (spec 2026-11-15-anteprima-export-design.md):
@@ -61,6 +63,7 @@ export function ExportSheet({
   /** A pannello chiuso del tutto: il momento giusto per navigare altrove. */
   onClosed?: () => void;
 }) {
+  const colors = useColors();
   const current = preview?.[format] ?? null;
   const note = preview ? unavailableNote(preview) : null;
   // Totali e avvisi scorrono; il pulsante resta sempre in vista, anche su un
@@ -88,7 +91,7 @@ export function ExportSheet({
                 on ? "border-gold" : "border-border-2",
                 (off || busy) && "opacity-40"
               )}
-              style={on ? { backgroundColor: "rgba(234,181,76,0.12)" } : undefined}
+              style={on ? { backgroundColor: withAlpha(colors.gold, 0.12) } : undefined}
             >
               <Text className={cn("text-[13px]", on ? "text-t1" : "text-t2")}>{f.label}</Text>
             </Pressable>
@@ -103,11 +106,11 @@ export function ExportSheet({
       >
         {state === "loading" ? (
           <View className="items-center py-6">
-            <ActivityIndicator color="#EAB54C" />
+            <ActivityIndicator color={colors.gold} />
           </View>
         ) : null}
         {state === "error" ? (
-          <View className="gap-3 rounded-2xl border border-error px-4 py-3" style={{ backgroundColor: "rgba(229,91,69,0.08)" }}>
+          <View className="gap-3 rounded-2xl border border-error px-4 py-3" style={{ backgroundColor: withAlpha(colors.error, 0.08) }}>
             <Text className="text-[13px] text-t2">Export non riuscito. Riprova.</Text>
             <GhostButton label="Riprova" onPress={onRetry} />
           </View>
@@ -130,10 +133,10 @@ export function ExportSheet({
                 className="gap-2 rounded-2xl border border-warning px-4 py-3"
                 // Sfondo inline come nelle `Pill`: `bg-warning/10` passerebbe da
                 // `color-mix`, che react-native-css non regge.
-                style={{ backgroundColor: "rgba(226,146,47,0.08)" }}
+                style={{ backgroundColor: withAlpha(colors.warning, 0.08) }}
               >
                 <View className="flex-row items-center gap-2">
-                  <Icon name="alert" size={15} color="#E2922F" />
+                  <Icon name="alert" size={15} color={colors.warning} />
                   <Text className="text-[13px] font-sans-semibold text-warning">{EXPORT_ISSUES_TITLE}</Text>
                 </View>
                 {current.issues.map((issue) => (

@@ -13,6 +13,8 @@ import { isActiveAssignment } from "@/features/assignments/status";
 import { staffRoleNames } from "@/features/staff/api";
 import { useResolveShiftChangeRequest } from "./hooks";
 import type { ChangeRequest } from "./api";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * La decisione del titolare su una richiesta di sostituzione.
@@ -32,6 +34,7 @@ export function ResolveRequestModal({
   request: ChangeRequest;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   // Su una richiesta di orario non c'è nessun sostituto da scegliere: le tre
   // query del team non servono e non vanno fatte.
@@ -92,7 +95,7 @@ export function ResolveRequestModal({
     >
       <Pressable
         onPress={resolve.isPending ? undefined : onClose}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.6) }}
         className="items-center justify-center px-6"
       >
         <Pressable
@@ -109,7 +112,7 @@ export function ResolveRequestModal({
           </Text>
 
           {isHours ? null : loading ? (
-            <ActivityIndicator color="#EAB54C" className="my-8" />
+            <ActivityIndicator color={colors.gold} className="my-8" />
           ) : candidates.length === 0 ? (
             <Text className="mt-4 text-sm text-t3">
               Nessun altro disponibile in questa sede: puoi approvare lasciando

@@ -41,6 +41,7 @@ import {
   RECORD_NOT_FINISHED,
   canRecordShift,
 } from "@/features/shifts/recorded";
+import { useColors } from "@/lib/theme";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -70,6 +71,7 @@ type Props = {
  * turno» qui conta doppio: di solito vuol dire che quel turno c'è già.
  */
 export function RecordPastShiftForm({ initialDate, header }: Props) {
+  const colors = useColors();
   const router = useRouter();
   const toast = useToast();
   const { venuesWith, isOwner } = useOwnerVenues();
@@ -254,9 +256,9 @@ export function RecordPastShiftForm({ initialDate, header }: Props) {
             value={notify}
             onValueChange={setNotify}
             disabled={record.isPending}
-            trackColor={{ false: "#2a241b", true: "#eab54c" }}
-            thumbColor="#f8f4ed"
-            ios_backgroundColor="#2a241b"
+            trackColor={{ false: colors.bg2, true: colors.gold }}
+            thumbColor={colors.t1}
+            ios_backgroundColor={colors.bg2}
           />
         </Card>
 

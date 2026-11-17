@@ -20,6 +20,8 @@ import {
   unplannedOutAt,
   validateUnplannedOut,
 } from "./unplanned";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type Mode = "close" | "void";
 
@@ -36,6 +38,7 @@ export function UnplannedClockModal({
   clock: OpenUnplannedClock | null;
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const close = useCloseUnplannedClock();
   const voidClock = useVoidUnplannedClock();
@@ -113,7 +116,7 @@ export function UnplannedClockModal({
     >
       <Pressable
         onPress={pending ? undefined : dismiss}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)" }}
+        style={{ flex: 1, backgroundColor: withAlpha(colors.scrim, 0.66) }}
         className="items-center justify-center px-6"
       >
         <Pressable

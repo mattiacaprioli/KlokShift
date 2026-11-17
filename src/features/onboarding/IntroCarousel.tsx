@@ -6,6 +6,7 @@ import { Display } from "@/components/ui/Display";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import type { IntroSlide } from "./introContent";
+import { useColors } from "@/lib/theme";
 
 /**
  * Carosello di onboarding a schermo intero: una slide alla volta, skippabile.
@@ -19,6 +20,7 @@ export function IntroCarousel({
   slides: IntroSlide[];
   onDone: () => void;
 }) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
   const slide = slides[index];
@@ -41,7 +43,7 @@ export function IntroCarousel({
 
       <View className="flex-1 items-center justify-center gap-5 px-8">
         <View className="h-24 w-24 items-center justify-center rounded-full border border-border-gold bg-bg-2">
-          <Icon name={slide.icon} size={44} color="#EAB54C" />
+          <Icon name={slide.icon} size={44} color={colors.gold} />
         </View>
         <Display className="text-center text-[30px] leading-9">
           {slide.title}

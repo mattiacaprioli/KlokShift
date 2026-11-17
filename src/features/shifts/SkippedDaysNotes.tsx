@@ -1,6 +1,8 @@
 import { Pressable, Text, View } from "@/tw";
 import type { StaffMemberWithWaiter } from "@/features/staff/types";
 import { skippedNote } from "./repeat";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /**
  * Chi resta fuori da qualche giorno del turno ripetuto per un'assenza
@@ -19,13 +21,14 @@ export function SkippedDaysNotes({
   forced: Set<string>;
   onToggle: (id: string) => void;
 }) {
+  const colors = useColors();
   if (!staff.length) return null;
   return (
     // Sfondo inline come nelle `Pill`: `bg-warning/5` passerebbe da
     // `color-mix`, che react-native-css non regge.
     <View
       className="gap-2 rounded-2xl border border-warning px-3.5 py-3"
-      style={{ backgroundColor: "rgba(226,146,47,0.08)" }}
+      style={{ backgroundColor: withAlpha(colors.warning, 0.08) }}
     >
       {staff.map((m) => {
         const note = skippedNote(

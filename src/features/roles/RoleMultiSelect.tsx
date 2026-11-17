@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
 import { Mono } from "@/components/ui/Mono";
 import { useVenueRoles } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   venueId: string | undefined;
@@ -28,6 +29,7 @@ export function RoleMultiSelect({
   onChange,
   label = "Ruoli",
 }: Props) {
+  const colors = useColors();
   const router = useRouter();
   const rolesQuery = useVenueRoles(venueId);
   const roles = rolesQuery.data ?? [];
@@ -42,7 +44,7 @@ export function RoleMultiSelect({
     <View className="gap-2">
       <Mono>{label}</Mono>
       {rolesQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="self-start" />
+        <ActivityIndicator color={colors.gold} className="self-start" />
       ) : roles.length === 0 ? (
         <Pressable onPress={() => router.push("/(manager)/ruoli")} hitSlop={8}>
           <Text className="text-[13px] leading-5 text-t3">

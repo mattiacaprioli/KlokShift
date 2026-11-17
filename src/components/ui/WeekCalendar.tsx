@@ -17,6 +17,7 @@ import {
   todayString,
   toDateString,
 } from "@/lib/format";
+import { useColors } from "@/lib/theme";
 
 /** Iniziali dei giorni, da lunedì: l'intestazione fissa sopra la griglia. */
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
@@ -192,6 +193,7 @@ export function WeekCalendar({
   gutter?: number;
   className?: string;
 }) {
+  const colors = useColors();
   const scrollRef = useRef<RNScrollView>(null);
   // iOS può consegnare più `onMomentumScrollEnd` mentre, dopo uno swipe, le
   // tre pagine vengono ricostruite e ricentrate. Un tocco fisico apre un solo
@@ -260,7 +262,7 @@ export function WeekCalendar({
         <Icon
           name="chevR"
           size={14}
-          color="#EAB54C"
+          color={colors.gold}
           // Non c'è una chevron verso il basso nel set: è la stessa, ruotata.
           style={{ transform: [{ rotate: expanded ? "-90deg" : "90deg" }] }}
         />

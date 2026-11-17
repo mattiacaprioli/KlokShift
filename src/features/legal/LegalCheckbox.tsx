@@ -4,6 +4,7 @@ import { LEGAL_URLS } from "@/features/account/legal";
 import { cn } from "@/lib/cn";
 import { Pressable, Text, View } from "@/tw";
 import { LEGAL_COPY } from "./copy";
+import { useColors } from "@/lib/theme";
 
 /**
  * La casella dei form che aprono un'azienda: non preselezionata, e senza di
@@ -16,6 +17,7 @@ export function LegalCheckbox({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-2">
       <Pressable
@@ -30,7 +32,7 @@ export function LegalCheckbox({
             checked ? "border-gold bg-gold" : "border-border-2 bg-bg-2"
           )}
         >
-          {checked ? <Icon name="check" size={14} color="#0C0907" /> : null}
+          {checked ? <Icon name="check" size={14} color={colors.bg0} /> : null}
         </View>
         <Text className="flex-1 font-sans text-[13px] leading-5 text-t2">
           {LEGAL_COPY.checkbox}

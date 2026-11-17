@@ -2,6 +2,7 @@ import { CountBadge } from "./CountBadge";
 import { Icon, type IconName } from "./Icon";
 import { cn } from "@/lib/cn";
 import { Pressable, Text, View } from "@/tw";
+import { useColors } from "@/lib/theme";
 
 /**
  * Una riga dentro una `Card className="p-0"`: bolla icona, titolo, sottotitolo,
@@ -24,6 +25,7 @@ export function CardRow({
   badge?: number;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
@@ -34,7 +36,7 @@ export function CardRow({
       )}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-        <Icon name={icon} size={18} color="#EAB54C" />
+        <Icon name={icon} size={18} color={colors.gold} />
       </View>
       <View className="flex-1">
         <Text className="text-[15px] font-sans-semibold text-t1">{title}</Text>
@@ -43,7 +45,7 @@ export function CardRow({
         ) : null}
       </View>
       <CountBadge count={badge} />
-      <Icon name="chevR" size={18} color="#6A6358" />
+      <Icon name="chevR" size={18} color={colors.t4} />
     </Pressable>
   );
 }

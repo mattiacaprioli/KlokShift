@@ -1,4 +1,5 @@
 import Svg, { Circle, Path } from "react-native-svg";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   size?: number;
@@ -6,7 +7,9 @@ type Props = {
 };
 
 /** KlokShift mark — a filled dot with concentric arcs (ported from the prototype). */
-export function Logo({ size = 48, color = "#EAB54C" }: Props) {
+export function Logo({ size = 48, color }: Props) {
+  const colors = useColors();
+  color ??= colors.gold;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Circle cx={12} cy={12} r={3.5} fill={color} />

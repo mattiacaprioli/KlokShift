@@ -11,6 +11,7 @@ import { useStartWorkspaceTrial } from "@/features/workspace/hooks";
 import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
+import { useColors } from "@/lib/theme";
 
 /**
  * L'ultimo passo del setup: avviare la prova di 30 giorni.
@@ -23,6 +24,7 @@ import { useToast } from "@/providers/Toast";
  * ⚠️ App nativa: niente prezzi né acquisti (TRIAL_COPY è scritto per questo).
  */
 export default function TrialScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -52,7 +54,7 @@ export default function TrialScreen() {
     >
       <ScrollView contentContainerClassName="flex-grow px-6 pb-6">
         <View className="h-16 w-16 items-center justify-center rounded-full bg-gold/15">
-          <Icon name="sparkle" size={28} color="#EAB54C" />
+          <Icon name="sparkle" size={28} color={colors.gold} />
         </View>
         <Mono gold className="mt-6">
           {TRIAL_COPY.eyebrow}
@@ -66,7 +68,7 @@ export default function TrialScreen() {
           <View className="mt-7 gap-3.5 rounded-3xl border border-border-2 bg-bg-card p-5">
             {TRIAL_COPY.points.map((point) => (
               <View key={point} className="flex-row gap-3">
-                <Icon name="check" size={18} color="#EAB54C" />
+                <Icon name="check" size={18} color={colors.gold} />
                 <Text className="flex-1 font-sans text-[14px] leading-5 text-t1">
                   {point}
                 </Text>

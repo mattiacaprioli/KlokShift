@@ -10,6 +10,7 @@ import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import type { ChatContact } from "./api";
 import { useStartConversation, useWorkspaceContacts } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 /**
  * «Nuovo messaggio»: la rubrica dell'azienda.
@@ -33,6 +34,7 @@ export function ContactPicker({
   onOpened: (conversationId: string) => void;
   bottomInset?: number;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const [filter, setFilter] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function ContactPicker({
             </Text>
           </View>
           {openingId === item.memberId ? (
-            <ActivityIndicator color="#EAB54C" />
+            <ActivityIndicator color={colors.gold} />
           ) : null}
         </Pressable>
       )}

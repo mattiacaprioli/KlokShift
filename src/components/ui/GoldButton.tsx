@@ -8,6 +8,7 @@ import { Pressable, Text } from "@/tw";
 import { Animated } from "@/tw/animated";
 import { cn } from "@/lib/cn";
 import { FontFamily } from "@/constants/fonts";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   label: string;
@@ -24,6 +25,7 @@ export function GoldButton({
   size = "md",
   className,
 }: Props) {
+  const colors = useColors();
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -49,7 +51,7 @@ export function GoldButton({
         className={cn("overflow-hidden rounded-full", disabled && "opacity-50")}
       >
         <LinearGradient
-          colors={["#F5C765", "#D9A23F"]}
+          colors={[colors.goldLight, colors.goldDeep]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{

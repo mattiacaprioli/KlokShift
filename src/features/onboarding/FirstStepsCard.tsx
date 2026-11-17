@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import type { FirstStep, FirstStepId, FirstStepsMemory } from "./firstSteps";
 import { loadFirstStepsMemory, saveFirstStepsMemory } from "./firstStepsStorage";
 import { useFirstSteps } from "./useFirstSteps";
+import { useColors } from "@/lib/theme";
 
 const ROUTES: Record<FirstStepId, Href> = {
   trial: "/(manager)/prova",
@@ -26,6 +27,7 @@ const ROUTES: Record<FirstStepId, Href> = {
  * o quando la si chiude — e la chiusura c'è solo a prova avviata.
  */
 export function FirstStepsCard() {
+  const colors = useColors();
   const router = useRouter();
   /** `undefined` finché lo storage non ha risposto. */
   const [memory, setMemory] = useState<FirstStepsMemory | null | undefined>(undefined);
@@ -74,7 +76,7 @@ export function FirstStepsCard() {
             accessibilityRole="button"
             accessibilityLabel="Nascondi i primi passi"
           >
-            <Icon name="close" size={18} color="#8c857a" />
+            <Icon name="close" size={18} color={colors.t3} />
           </Pressable>
         ) : null}
       </View>
@@ -121,6 +123,7 @@ function StepRow({
   isNext: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const done = step.status === "done";
   const locked = step.status === "locked";
   return (
@@ -138,9 +141,9 @@ function StepRow({
         )}
       >
         {done ? (
-          <Icon name="check" size={14} color="#1A1206" />
+          <Icon name="check" size={14} color={colors.goldInk} />
         ) : locked ? (
-          <Icon name="lock" size={12} color="#6a6358" />
+          <Icon name="lock" size={12} color={colors.t4} />
         ) : (
           <Text className="text-xs font-sans-bold text-t2">{index + 1}</Text>
         )}

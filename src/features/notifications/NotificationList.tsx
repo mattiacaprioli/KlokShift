@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { timeAgo } from "@/lib/format";
 import type { Enums } from "@/types/database";
 import type { Notification, NotificationWithPerson } from "./api";
+import { useColors } from "@/lib/theme";
 
 const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   new_message: "message",
@@ -61,6 +62,7 @@ export function NotificationList({
   isFetchingNextPage,
   onLoadMore,
 }: Props) {
+  const colors = useColors();
   const header = hasUnread && onMarkAll ? (
     <Pressable onPress={onMarkAll} hitSlop={6} className="mb-2 self-end">
       <Text className="font-sans-semibold text-sm text-gold">
@@ -83,7 +85,7 @@ export function NotificationList({
       refreshControl={
         onRefresh ? (
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={!!refreshing}
             onRefresh={onRefresh}
           />
@@ -117,7 +119,7 @@ export function NotificationList({
               />
             ) : (
               <View className="h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-2">
-                <Icon name={TYPE_ICON[n.type]} size={18} color="#EAB54C" />
+                <Icon name={TYPE_ICON[n.type]} size={18} color={colors.gold} />
               </View>
             )}
             <View className="min-w-0 flex-1">
@@ -139,7 +141,7 @@ export function NotificationList({
       }}
       ListFooterComponent={
         isFetchingNextPage ? (
-          <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
+          <ActivityIndicator color={colors.gold} style={{ marginTop: 12 }} />
         ) : null
       }
     />

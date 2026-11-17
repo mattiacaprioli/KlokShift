@@ -6,6 +6,7 @@ import { useToast } from "@/providers/Toast";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import type { AbsenceWindow } from "./conflicts";
 import { useAbsenceConflicts, useRemoveFromShifts } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 export type ConflictShift = ReturnType<
   typeof useAbsenceConflicts
@@ -44,6 +45,7 @@ export function AbsenceConflictsBlock({
 }: {
   absence: AbsenceWindow & { member_id: string };
 }) {
+  const colors = useColors();
   const toast = useToast();
   const { conflicts, isLoading } = useAbsenceConflicts(
     absence,
@@ -52,7 +54,7 @@ export function AbsenceConflictsBlock({
   const remove = useRemoveFromShifts();
 
   if (absence.status !== "approved") return null;
-  if (isLoading) return <ActivityIndicator color="#EAB54C" className="mt-3" />;
+  if (isLoading) return <ActivityIndicator color={colors.gold} className="mt-3" />;
   if (conflicts.length === 0) return null;
 
   function onRemove() {

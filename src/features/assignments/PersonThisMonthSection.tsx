@@ -12,6 +12,7 @@ import {
 } from "@/features/assignments/hooks";
 import { personContract } from "@/features/staff/contract";
 import type { StaffPersonDetail } from "@/features/staff/api";
+import { useColors } from "@/lib/theme";
 
 /**
  * Il mese della persona in tre numeri, su **tutte** le sedi dell'azienda: sono
@@ -28,6 +29,7 @@ export function PersonThisMonthSection({
 }: {
   person: StaffPersonDetail;
 }) {
+  const colors = useColors();
   const perfQuery = usePersonPerformance(person.id);
   const lastQuery = usePersonWorkedShifts(person.id, 1);
 
@@ -40,7 +42,7 @@ export function PersonThisMonthSection({
     <View className="gap-4">
       <EditSectionHeader title="Questo mese" />
       {perfQuery.isLoading || lastQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="self-start" />
+        <ActivityIndicator color={colors.gold} className="self-start" />
       ) : (
         <ReadCard>
           <ReadField

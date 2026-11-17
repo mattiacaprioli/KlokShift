@@ -96,6 +96,7 @@ import {
   inheritedClockMethodHint,
   type ClockMethodChoice,
 } from "@/features/clock/methods";
+import { useColors } from "@/lib/theme";
 
 function ClockMethodPicker({
   value,
@@ -106,6 +107,7 @@ function ClockMethodPicker({
   venueMethod: Enums<"clock_method">;
   onChange: (value: ClockMethodChoice) => void;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-2">
       {CLOCK_METHOD_CHOICES.map((option) => {
@@ -134,7 +136,7 @@ function ClockMethodPicker({
                 active ? "border-gold bg-gold" : "border-border-2"
               )}
             >
-              {active ? <Icon name="check" size={14} color="#1A1206" /> : null}
+              {active ? <Icon name="check" size={14} color={colors.goldInk} /> : null}
             </View>
             <View className="min-w-0 flex-1">
               <Text
@@ -171,6 +173,7 @@ function BreakClockedPicker({
   venueClocked: boolean;
   onChange: (value: BreakClockedChoice) => void;
 }) {
+  const colors = useColors();
   return (
     <View className="gap-2">
       {BREAK_CLOCKED_CHOICES.map((id) => {
@@ -199,7 +202,7 @@ function BreakClockedPicker({
                 active ? "border-gold bg-gold" : "border-border-2"
               )}
             >
-              {active ? <Icon name="check" size={14} color="#1A1206" /> : null}
+              {active ? <Icon name="check" size={14} color={colors.goldInk} /> : null}
             </View>
             <View className="min-w-0 flex-1">
               <Text
@@ -229,6 +232,7 @@ function ClockUnplannedToggle({
   value: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -245,7 +249,7 @@ function ClockUnplannedToggle({
           value ? "border-gold bg-gold" : "border-border-2"
         )}
       >
-        {value ? <Icon name="check" size={14} color="#1A1206" /> : null}
+        {value ? <Icon name="check" size={14} color={colors.goldInk} /> : null}
       </View>
       <View className="min-w-0 flex-1">
         <Text
@@ -894,13 +898,14 @@ function PersonIdentityForm({
  * migrazione di dati — le si aggiunge un'email e il bottone compare.
  */
 function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
+  const colors = useColors();
   const toast = useToast();
   const send = useSendStaffInvite();
 
   if (person.waiter_id) {
     return (
       <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
-        <Icon name="check" size={18} color="#7BAE7F" />
+        <Icon name="check" size={18} color={colors.success} />
         <Text className="flex-1 text-[15px] font-sans-semibold text-t1">
           Account collegato
         </Text>
@@ -937,7 +942,7 @@ function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
   return (
     <View className="gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
       <View className="flex-row items-center gap-3">
-        <Icon name="sparkle" size={18} color="#EAB54C" />
+        <Icon name="sparkle" size={18} color={colors.gold} />
         <View className="flex-1">
           <Mono>Invito</Mono>
           <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
@@ -983,6 +988,7 @@ function PersonInviteRow({ person }: { person: StaffPersonDetail }) {
  * chiederlo, e chiederlo è precisamente ciò che questa colonna evita.
  */
 function PersonBirthdayRow({ person }: { person: StaffPersonDetail }) {
+  const colors = useColors();
   const label = formatBirthday(
     person.waiter?.birth_day ?? null,
     person.waiter?.birth_month ?? null
@@ -991,7 +997,7 @@ function PersonBirthdayRow({ person }: { person: StaffPersonDetail }) {
 
   return (
     <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
-      <Icon name="sparkle" size={18} color="#EAB54C" />
+      <Icon name="sparkle" size={18} color={colors.gold} />
       <View className="flex-1">
         <Mono>Compleanno</Mono>
         <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
@@ -1014,12 +1020,13 @@ function PersonBirthdayRow({ person }: { person: StaffPersonDetail }) {
  * perché è qui che il titolare guarda chi ha, non su una pagina a parte.
  */
 function PersonLanguagesRow({ person }: { person: StaffPersonDetail }) {
+  const colors = useColors();
   const languages = person.waiter?.languages ?? [];
   if (languages.length === 0) return null;
 
   return (
     <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-bg-card px-4 py-3">
-      <Icon name="message" size={18} color="#EAB54C" />
+      <Icon name="message" size={18} color={colors.gold} />
       <View className="flex-1">
         <Mono>Lingue</Mono>
         <Text className="mt-0.5 text-[15px] font-sans-semibold text-t1">
@@ -1222,6 +1229,7 @@ type PersonTab =
  * **collegata a un account**.
  */
 function StaffPersonView({ person }: { person: StaffPersonDetail }) {
+  const colors = useColors();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
@@ -1390,9 +1398,9 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                     className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
                   >
                     {startConversation.isPending ? (
-                      <ActivityIndicator color="#EAB54C" />
+                      <ActivityIndicator color={colors.gold} />
                     ) : (
-                      <Icon name="message" size={18} color="#EAB54C" />
+                      <Icon name="message" size={18} color={colors.gold} />
                     )}
                   </Pressable>
                 ) : null
@@ -1423,7 +1431,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
                 nella rubrica del titolare. */}
             {isMe ? (
               <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
-                <Icon name="user" size={18} color="#EAB54C" />
+                <Icon name="user" size={18} color={colors.gold} />
                 <View className="flex-1">
                   <Mono gold>Questo sei tu</Mono>
                   <Text className="mt-0.5 text-sm text-t2">
@@ -1433,7 +1441,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
               </View>
             ) : waiterId ? (
               <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
-                <Icon name="verified" size={18} color="#EAB54C" />
+                <Icon name="verified" size={18} color={colors.gold} />
                 <View className="flex-1">
                   <Mono gold>Account app collegato</Mono>
                   <Text className="mt-0.5 text-sm text-t2">
@@ -1563,6 +1571,7 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
 }
 
 export default function StaffPersonScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const personQuery = useStaffPerson(id);
   const person = personQuery.data ?? null;
@@ -1570,7 +1579,7 @@ export default function StaffPersonScreen() {
   if (personQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-0">
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       </View>
     );
   }

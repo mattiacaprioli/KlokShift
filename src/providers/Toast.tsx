@@ -10,6 +10,8 @@ import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View, Text } from "@/tw";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { useColors } from "@/lib/theme";
+import type { ThemeColors } from "@/constants/colors";
 
 type ToastVariant = "success" | "error" | "info";
 
@@ -23,14 +25,13 @@ export function useToast(): ToastApi {
   return ctx;
 }
 
-const VARIANT: Record<
-  ToastVariant,
-  { icon: IconName; iconColor: string; chip: string }
-> = {
-  success: { icon: "check", iconColor: "#1A1206", chip: "#EAB54C" },
-  error: { icon: "close", iconColor: "#F8F4ED", chip: "#E55B45" },
-  info: { icon: "alert", iconColor: "#1A1206", chip: "#EAB54C" },
-};
+const toastVariants = (
+  colors: ThemeColors,
+): Record<ToastVariant, { icon: IconName; iconColor: string; chip: string }> => ({
+  success: { icon: "check", iconColor: colors.goldInk, chip: colors.gold },
+  error: { icon: "close", iconColor: colors.t1, chip: colors.error },
+  info: { icon: "alert", iconColor: colors.goldInk, chip: colors.gold },
+});
 
 type ToastItem = { id: number; message: string; variant: ToastVariant };
 
@@ -38,6 +39,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
   const [toast, setToast] = useState<ToastItem | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const insets = useSafeAreaInsets();
+  const colors = useColors();
 
   const show = useCallback((message: string, variant: ToastVariant = "success") => {
     setToast({ id: Date.now(), message, variant });
@@ -45,7 +47,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
     timer.current = setTimeout(() => setToast(null), 2600);
   }, []);
 
-  const v = toast ? VARIANT[toast.variant] : null;
+  const v = toast ? toastVariants(colors)[toast.variant] : null;
 
   return (
     <ToastContext.Provider value={{ show }}>

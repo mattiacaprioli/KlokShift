@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Mono } from "@/components/ui/Mono";
 import { cn } from "@/lib/cn";
+import { useColors } from "@/lib/theme";
 
 /** Chip di filtro: acceso in oro, spento a filo di bordo. */
 export function FilterChip({
@@ -16,6 +17,7 @@ export function FilterChip({
   /** Il colore della sede, quando il chip ne rappresenta una. */
   accent?: string;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
@@ -37,7 +39,7 @@ export function FilterChip({
           style={{
             backgroundColor: active ? accent : "transparent",
             borderWidth: active ? 0 : 1,
-            borderColor: "#8C8579",
+            borderColor: colors.t3,
           }}
         />
       ) : null}

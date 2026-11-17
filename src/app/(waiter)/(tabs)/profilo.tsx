@@ -30,6 +30,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColors } from "@/lib/theme";
 
 /** Una sede in cui lavoro: la riga di organico, con l'azienda a cui appartiene. */
 type MyEmployer = {
@@ -248,6 +249,7 @@ function groupByEmployer(employers: MyEmployer[]): MyEmployer[][] {
 }
 
 export default function WaiterProfiloScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
@@ -285,7 +287,7 @@ export default function WaiterProfiloScreen() {
           hitSlop={8}
           className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
-          <Icon name="settings" size={19} color="#F8F4ED" />
+          <Icon name="settings" size={19} color={colors.t1} />
         </Pressable>
       </View>
 

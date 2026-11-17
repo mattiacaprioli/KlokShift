@@ -10,6 +10,8 @@ import { scheduleOnRN } from "react-native-worklets";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, View } from "@/tw";
 import { Animated } from "@/tw/animated";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type Props = {
   visible: boolean;
@@ -40,6 +42,7 @@ export function BottomSheet({
   onClosed,
   children,
 }: Props) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
@@ -102,7 +105,7 @@ export function BottomSheet({
         <Animated.View
           pointerEvents="none"
           className="absolute inset-0"
-          style={[{ backgroundColor: "rgba(0,0,0,0.6)" }, backdropStyle]}
+          style={[{ backgroundColor: withAlpha(colors.scrim, 0.6) }, backdropStyle]}
         />
         <Pressable className="absolute inset-0" onPress={close} />
         <Animated.View

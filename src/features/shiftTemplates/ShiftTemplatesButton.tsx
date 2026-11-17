@@ -8,6 +8,7 @@ import { formatShiftRange } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import type { ShiftTemplate } from "./api";
 import { useDeleteShiftTemplate, useVenueShiftTemplates } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 /**
  * «Modelli» in alto a destra nel form del nuovo turno: il tocco apre un pannello
@@ -27,6 +28,7 @@ export function ShiftTemplatesButton({
   activeId: string | null;
   onApply: (template: ShiftTemplate) => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const templates = useVenueShiftTemplates(venueId);
   const remove = useDeleteShiftTemplate();
@@ -69,7 +71,7 @@ export function ShiftTemplatesButton({
         <Icon
           name="chevR"
           size={16}
-          color="#8c857a"
+          color={colors.t3}
           style={{ transform: [{ rotate: "90deg" }] }}
         />
       </Pressable>
@@ -159,7 +161,7 @@ export function ShiftTemplatesButton({
                       </Text>
                     </View>
                     {t.id === activeId ? (
-                      <Icon name="check" size={18} color="#EAB54C" />
+                      <Icon name="check" size={18} color={colors.gold} />
                     ) : null}
                     <Pressable
                       onPress={() => setConfirming(t.id)}
@@ -168,7 +170,7 @@ export function ShiftTemplatesButton({
                       accessibilityLabel={`Elimina il modello ${t.name}`}
                       className="h-8 w-8 items-center justify-center rounded-full"
                     >
-                      <Icon name="close" size={16} color="#6A6358" />
+                      <Icon name="close" size={16} color={colors.t4} />
                     </Pressable>
                   </Pressable>
                 )

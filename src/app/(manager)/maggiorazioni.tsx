@@ -35,6 +35,7 @@ import {
 import { addMonthsToKey, formatMonthKey, monthKey } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { userErrorMessage } from "@/lib/errors";
+import { useColors } from "@/lib/theme";
 
 /**
  * Le regole delle maggiorazioni dell'azienda (versioni mensili) e il patrono
@@ -42,6 +43,7 @@ import { userErrorMessage } from "@/lib/errors";
  * `save_venue_patron`); le ore le calcola il database.
  */
 export default function SurchargesScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { workspaceId, venues, isOwner, can } = useOwnerVenues();
   const query = useSurchargeRules(workspaceId);
@@ -85,7 +87,7 @@ export default function SurchargesScreen() {
                     style={month <= minMonth ? { opacity: 0.3 } : undefined}
                     accessibilityLabel="Mese prima"
                   >
-                    <Icon name="chevL" size={18} color="#EAB54C" />
+                    <Icon name="chevL" size={18} color={colors.gold} />
                   </Pressable>
                   <Text className="text-center text-base font-sans-semibold text-t1" style={{ minWidth: 150 }}>
                     {formatMonthKey(month)}
@@ -98,7 +100,7 @@ export default function SurchargesScreen() {
                     style={month >= maxMonth ? { opacity: 0.3 } : undefined}
                     accessibilityLabel="Mese dopo"
                   >
-                    <Icon name="chevR" size={18} color="#EAB54C" />
+                    <Icon name="chevR" size={18} color={colors.gold} />
                   </Pressable>
                 </View>
                 {rulesChangeNote(query.data.versions, month, current) ? (

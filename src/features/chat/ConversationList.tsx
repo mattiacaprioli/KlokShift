@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import type { ConversationListItem } from "./api";
 import { useConversations } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 function ConversationRow({
   item,
@@ -72,6 +73,7 @@ type Props = {
 
 /** Lista conversazioni, condivisa tra il tab Messaggi cameriere e ristoratore. */
 export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
+  const colors = useColors();
   const query = useConversations(userId);
   const items = query.data ?? [];
   const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
@@ -116,7 +118,7 @@ export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
       }
       refreshControl={
         <RefreshControl
-          tintColor="#EAB54C"
+          tintColor={colors.gold}
           refreshing={refreshing}
           onRefresh={onRefresh}
         />
@@ -129,7 +131,7 @@ export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
       }}
       ListFooterComponent={
         query.isFetchingNextPage ? (
-          <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
+          <ActivityIndicator color={colors.gold} style={{ marginTop: 12 }} />
         ) : null
       }
     />

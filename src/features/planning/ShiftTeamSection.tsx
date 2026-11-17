@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { useStaffPlanning } from "./hooks";
 import { teamOfShift } from "./api";
 import { TeamRow } from "./TeamRow";
+import { useColors } from "@/lib/theme";
 
 /**
  * «Con chi lavori» — la squadra di un turno, nel suo dettaglio.
@@ -31,13 +32,14 @@ export function ShiftTeamSection({
   date: string;
   className?: string;
 }) {
+  const colors = useColors();
   const planning = useStaffPlanning(date, date);
   const team = planning.data ? teamOfShift(planning.data, shiftId) : null;
 
   if (planning.isLoading) {
     return (
       <View className={cn("items-center py-6", className)}>
-        <ActivityIndicator color="#EAB54C" />
+        <ActivityIndicator color={colors.gold} />
       </View>
     );
   }

@@ -27,6 +27,8 @@ import {
 } from "./duplicate";
 import { DUPLICATE_AS_DRAFT_SHORT } from "./drafts";
 import { useOwnerShiftsRange } from "./hooks";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /** Righe di «Vedi i turni»: la settimana intera può essere lunga. */
 const PREVIEW_ROWS = 12;
@@ -60,6 +62,7 @@ export function DuplicateWeekModal({
   venueIds: string[];
   onClose: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const copy = useCopyInternalShifts();
   const [weeks, setWeeks] = useState(1);
@@ -115,7 +118,7 @@ export function DuplicateWeekModal({
           l'elenco dei turni non scorreva più. */}
       <View
         className="flex-1 items-center justify-center px-5"
-        style={{ backgroundColor: "rgba(0,0,0,0.66)" }}
+        style={{ backgroundColor: withAlpha(colors.scrim, 0.66) }}
       >
         <Pressable
           className="absolute inset-0"
@@ -129,9 +132,9 @@ export function DuplicateWeekModal({
                   react-native-css non regge. */}
               <View
                 className="h-12 w-12 items-center justify-center rounded-full"
-                style={{ backgroundColor: "rgba(226,146,47,0.15)" }}
+                style={{ backgroundColor: withAlpha(colors.warning, 0.15) }}
               >
-                <Icon name="alert" size={24} color="#E2922F" />
+                <Icon name="alert" size={24} color={colors.warning} />
               </View>
               <Text className="mt-4 text-xl font-sans-bold text-t1">
                 {duplicateAlreadyThereTitle(alreadyThere.length)}
@@ -172,7 +175,7 @@ export function DuplicateWeekModal({
               <Text className="text-xl font-sans-bold text-t1">Copia la settimana</Text>
 
               {sourceQuery.isLoading ? (
-                <ActivityIndicator color="#EAB54C" className="mt-6" />
+                <ActivityIndicator color={colors.gold} className="mt-6" />
               ) : copyable.length === 0 ? (
                 <Text className="mt-4 text-base leading-6 text-t2">
                   {skippedPast > 0
@@ -204,7 +207,7 @@ export function DuplicateWeekModal({
                         className="h-11 w-11 items-center justify-center rounded-full"
                         style={weeks <= 1 ? { opacity: 0.3 } : undefined}
                       >
-                        <Icon name="chevL" size={20} color="#EAB54C" />
+                        <Icon name="chevL" size={20} color={colors.gold} />
                       </Pressable>
                       <View className="flex-1 items-center">
                         <Text className="text-lg font-sans-semibold text-t1">{targetLabel}</Text>
@@ -219,7 +222,7 @@ export function DuplicateWeekModal({
                         accessibilityLabel="Settimana dopo"
                         className="h-11 w-11 items-center justify-center rounded-full"
                       >
-                        <Icon name="chevR" size={20} color="#EAB54C" />
+                        <Icon name="chevR" size={20} color={colors.gold} />
                       </Pressable>
                     </View>
                   </View>
@@ -241,7 +244,7 @@ export function DuplicateWeekModal({
                             "flex-1 items-center rounded-2xl border py-3.5",
                             on ? "border-gold" : "border-border-2"
                           )}
-                          style={on ? { backgroundColor: "rgba(234,181,76,0.10)" } : undefined}
+                          style={on ? { backgroundColor: withAlpha(colors.gold, 0.1) } : undefined}
                         >
                           <Text
                             className={cn(
@@ -278,7 +281,7 @@ export function DuplicateWeekModal({
                     <Icon
                       name="chevR"
                       size={16}
-                      color="#EAB54C"
+                      color={colors.gold}
                       style={{ transform: [{ rotate: showList ? "-90deg" : "90deg" }] }}
                     />
                   </Pressable>

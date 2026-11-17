@@ -22,6 +22,7 @@ import {
   isActiveAssignment,
   type AssignmentStatus,
 } from "./status";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   staff: StaffMemberWithWaiter[];
@@ -57,6 +58,7 @@ export function StaffAssignPicker({
   statusFor,
   notesFor,
 }: Props) {
+  const colors = useColors();
   // Chi gestisce la sede può essere nel team: la propria riga si riconosce,
   // altrimenti in un elenco di nomi si cerca il proprio senza trovarlo.
   const self = useSelfStaff();
@@ -71,7 +73,7 @@ export function StaffAssignPicker({
     <View className="gap-3">
       <Mono>Chi chiami</Mono>
       {loading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-2" />
+        <ActivityIndicator color={colors.gold} className="mt-2" />
       ) : staff.length === 0 ? (
         <EmptyState
           title="Nessuno nel team"
@@ -156,9 +158,9 @@ export function StaffAssignPicker({
                   >
                     {active ? (
                       works ? (
-                        <Icon name="check" size={14} color="#1A1206" />
+                        <Icon name="check" size={14} color={colors.goldInk} />
                       ) : (
-                        <Icon name="close" size={14} color="#e55b45" />
+                        <Icon name="close" size={14} color={colors.error} />
                       )
                     ) : null}
                   </View>

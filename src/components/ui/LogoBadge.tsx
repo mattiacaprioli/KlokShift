@@ -1,6 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { View } from "@/tw";
 import { Logo } from "./Logo";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 type Props = {
   size?: number;
@@ -8,10 +10,11 @@ type Props = {
 
 /** Rounded gradient badge framing the KlokShift mark, with a soft gold glow. */
 export function LogoBadge({ size = 92 }: Props) {
+  const colors = useColors();
   return (
     <View
       style={{
-        shadowColor: "#EAB54C",
+        shadowColor: colors.gold,
         shadowOpacity: 0.12,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 0 },
@@ -24,11 +27,11 @@ export function LogoBadge({ size = 92 }: Props) {
           borderRadius: 26,
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: "rgba(255,240,220,0.12)",
+          borderColor: withAlpha(colors.wash, 0.12),
         }}
       >
         <LinearGradient
-          colors={["#362E24", "#1F1A13"]}
+          colors={[colors.bg3, colors.bg1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}

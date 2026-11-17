@@ -9,6 +9,7 @@ import type { DaySection } from "@/features/assignments/agenda";
 import { formatDayLabel } from "@/lib/format";
 import type { PlanningShift } from "./api";
 import { PlanningShiftCard } from "./PlanningShiftCard";
+import { useColors } from "@/lib/theme";
 
 export type PlanningSection = DaySection<PlanningShift>;
 
@@ -52,6 +53,7 @@ export function VenuePlanningList({
   anchorDay: string;
   paddingBottom: number;
 }) {
+  const colors = useColors();
   /**
    * Quale turno mostra l'elenco per esteso. Uno alla volta: aperti tutti, la
    * settimana diventa una parete di nomi e il calendario sopra perde il senso.
@@ -82,7 +84,7 @@ export function VenuePlanningList({
       }}
       refreshControl={
         <RefreshControl
-          tintColor="#EAB54C"
+          tintColor={colors.gold}
           refreshing={refreshing}
           onRefresh={onRefresh}
         />

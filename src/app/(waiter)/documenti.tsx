@@ -9,6 +9,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { DocumentsSection } from "@/features/documents/DocumentsSection";
+import { useColors } from "@/lib/theme";
 
 /**
  * I documenti del dipendente, **un elenco per azienda**.
@@ -19,6 +20,7 @@ import { DocumentsSection } from "@/features/documents/DocumentsSection";
  * tre sedi e lavoro in due, carico l'HACCP una volta e vale per entrambe.
  */
 export default function WaiterDocumentsScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { memberships, isPending, isError, refetch } = useOwnerVenues();
@@ -43,7 +45,7 @@ export default function WaiterDocumentsScreen() {
         }}
         refreshControl={
           <RefreshControl
-            tintColor="#EAB54C"
+            tintColor={colors.gold}
             refreshing={pull.refreshing}
             onRefresh={pull.onRefresh}
           />

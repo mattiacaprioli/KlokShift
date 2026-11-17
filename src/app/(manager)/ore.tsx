@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView as RNScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, Text, View } from "@/tw";
-import { palette } from "@/constants/colors";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
@@ -102,6 +101,8 @@ import {
 import { useApproveRegularClockRecords, useRegularClockCount } from "@/features/clock/hooks";
 import { approveRegularLabel, approvedRegularToast } from "@/features/clock/autoApprove";
 import { userErrorMessage } from "@/lib/errors";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 const PERIOD_MODES = [
   { id: "month", label: "Mese" },
@@ -150,6 +151,7 @@ type ExportData = {
 };
 
 export default function VenueHoursScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -421,7 +423,7 @@ export default function VenueHoursScreen() {
           «Ore da sistemare» dal pannello d'export (come `staff/[id]`). */}
       <RNScrollView
         ref={scrollRef}
-        style={{ flex: 1, backgroundColor: palette.bg }}
+        style={{ flex: 1, backgroundColor: colors.bg0 }}
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 48,
@@ -468,7 +470,7 @@ export default function VenueHoursScreen() {
             hitSlop={8}
             className="px-4 py-2.5"
           >
-            <Icon name="chevL" size={18} color="#EAB54C" />
+            <Icon name="chevL" size={18} color={colors.gold} />
           </Pressable>
           <Text
             className="text-center text-base font-sans-semibold text-t1"
@@ -483,7 +485,7 @@ export default function VenueHoursScreen() {
             className="px-4 py-2.5"
             style={atCurrentMonth ? { opacity: 0.3 } : undefined}
           >
-            <Icon name="chevR" size={18} color="#EAB54C" />
+            <Icon name="chevR" size={18} color={colors.gold} />
           </Pressable>
         </View>
         )}
@@ -517,7 +519,7 @@ export default function VenueHoursScreen() {
             className="rounded-3xl border border-warning px-5 py-4"
             // Sfondo inline come nelle `Pill`: `bg-warning/5` passerebbe da
             // `color-mix`, che react-native-css non regge.
-            style={{ backgroundColor: "rgba(226,146,47,0.06)" }}
+            style={{ backgroundColor: withAlpha(colors.warning, 0.06) }}
           >
             <Mono>{HOURS_TO_FIX_TITLE}</Mono>
             <Text className="mt-1 text-xs font-sans-semibold text-warning">
@@ -553,7 +555,7 @@ export default function VenueHoursScreen() {
                       {hourToFixLabel(item)}
                     </Text>
                   </View>
-                  <Icon name="chevR" size={16} color="#8C8579" />
+                  <Icon name="chevR" size={16} color={colors.t3} />
                 </Pressable>
               ))}
             </View>

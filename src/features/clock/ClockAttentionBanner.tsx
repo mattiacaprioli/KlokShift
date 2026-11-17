@@ -6,6 +6,8 @@ import {
   clockAttentionSummary,
   type ClockAttentionItem,
 } from "./attention";
+import { useColors } from "@/lib/theme";
+import { withAlpha } from "@/constants/colors";
 
 /** Riepilogo compatto del periodo: ogni anomalia porta al turno da sistemare. */
 export function ClockAttentionBanner({
@@ -17,17 +19,18 @@ export function ClockAttentionBanner({
   onOpen: (item: ClockAttentionItem) => void;
   className?: string;
 }) {
+  const colors = useColors();
   if (items.length === 0) return null;
   const summary = clockAttentionSummary(items);
 
   return (
     <View
       className={`rounded-2xl border border-warning p-3.5 ${className ?? ""}`}
-      style={{ backgroundColor: "rgba(226,146,47,0.10)" }}
+      style={{ backgroundColor: withAlpha(colors.warning, 0.1) }}
     >
       <View className="flex-row items-start gap-2.5">
         <View className="mt-0.5 h-8 w-8 items-center justify-center rounded-full bg-bg-2">
-          <Icon name="alert" size={16} color="#E2922F" strokeWidth={2.2} />
+          <Icon name="alert" size={16} color={colors.warning} strokeWidth={2.2} />
         </View>
         <View className="flex-1">
           <Text className="text-sm font-sans-bold text-warning">

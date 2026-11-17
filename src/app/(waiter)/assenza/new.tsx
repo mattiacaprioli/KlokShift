@@ -11,9 +11,11 @@ import {
   useMyAbsenceEmployers,
   useRequestAbsence,
 } from "@/features/absences/hooks";
+import { useColors } from "@/lib/theme";
 
 /** Nuova richiesta di ferie o permesso, o malattia comunicata. */
 export default function NewWaiterAbsenceScreen() {
+  const colors = useColors();
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
@@ -26,7 +28,7 @@ export default function NewWaiterAbsenceScreen() {
         <ScreenHeader eyebrow="Assenze" title="Nuova richiesta" />
       </View>
       {employersQuery.isLoading ? (
-        <ActivityIndicator color="#EAB54C" className="mt-10" />
+        <ActivityIndicator color={colors.gold} className="mt-10" />
       ) : employersQuery.isError ? (
         <View className="px-6">
           <QueryError onRetry={() => employersQuery.refetch()} />

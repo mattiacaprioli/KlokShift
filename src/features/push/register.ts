@@ -2,6 +2,7 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { darkColors } from "@/constants/colors";
 
 function getProjectId(): string | undefined {
   return (
@@ -28,7 +29,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       name: "default",
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#EAB54C",
+      lightColor: darkColors.gold, // il LED non segue il tema: è il colore del marchio
     });
   }
 

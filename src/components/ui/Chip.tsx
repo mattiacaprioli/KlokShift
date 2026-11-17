@@ -38,7 +38,7 @@ export function Chip({
         active
           ? gold
             ? "border-gold bg-gold"
-            : "border-border-2 bg-white/10"
+            : "border-border-2 bg-wash/10"
           : "border-border bg-transparent",
         className
       )}

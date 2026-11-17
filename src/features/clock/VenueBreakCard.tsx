@@ -17,6 +17,7 @@ import { formatBreakMinutes } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { Text, View } from "@/tw";
 import { useSetVenueBreakClocked, useSetVenueBreakPolicy } from "./hooks";
+import { useColors } from "@/lib/theme";
 
 type Policy = {
   paid: boolean;
@@ -29,6 +30,7 @@ type Policy = {
  * ha il permesso Ore, come il metodo di timbratura. Ogni tocco salva.
  */
 export function VenueBreakCard({ venue }: { venue: Venue }) {
+  const colors = useColors();
   const toast = useToast();
   const save = useSetVenueBreakPolicy();
   const saveClocked = useSetVenueBreakClocked();
@@ -121,9 +123,9 @@ export function VenueBreakCard({ venue }: { venue: Venue }) {
             }
             disabled={save.isPending}
             accessibilityLabel={`Proponi una pausa nei turni lunghi per ${venue.name}`}
-            trackColor={{ false: "#2a241b", true: "#eab54c" }}
-            thumbColor="#f8f4ed"
-            ios_backgroundColor="#2a241b"
+            trackColor={{ false: colors.bg2, true: colors.gold }}
+            thumbColor={colors.t1}
+            ios_backgroundColor={colors.bg2}
           />
         </View>
         {ruleOn ? (

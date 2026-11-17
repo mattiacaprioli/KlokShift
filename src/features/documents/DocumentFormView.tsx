@@ -13,6 +13,7 @@ import { useToast } from "@/providers/Toast";
 import { PickerField } from "@/components/form/ControlledPicker";
 import { pickDocument } from "./pickDocument";
 import type { DocumentFile } from "./api";
+import { useColors } from "@/lib/theme";
 
 type Props = {
   /** In modifica il file c'è già: si può sostituire, non è obbligatorio. */
@@ -43,6 +44,7 @@ export function DocumentFormView({
   pending,
   onSubmit,
 }: Props) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const toast = useToast();
 
@@ -102,7 +104,7 @@ export function DocumentFormView({
             <Icon
               name={file ? "check" : "upload"}
               size={20}
-              color={file ? "#EAB54C" : "#8C857A"}
+              color={file ? colors.gold : colors.t3}
             />
           </View>
           <View className="flex-1">
@@ -117,7 +119,7 @@ export function DocumentFormView({
                   : "Tocca per sostituire il file caricato"}
             </Text>
           </View>
-          {picking ? <ActivityIndicator color="#EAB54C" /> : null}
+          {picking ? <ActivityIndicator color={colors.gold} /> : null}
         </Pressable>
 
         <Input

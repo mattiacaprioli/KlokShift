@@ -25,6 +25,7 @@ import {
 } from "@/features/roles/hooks";
 import type { VenueRole } from "@/features/roles/api";
 import { SUGGESTED_ROLES } from "@/features/staff/roles";
+import { useColors } from "@/lib/theme";
 
 /** Una riga della lista: nome modificabile in linea + archivia. */
 function RoleRow({
@@ -34,6 +35,7 @@ function RoleRow({
   role: VenueRole;
   onArchive: () => void;
 }) {
+  const colors = useColors();
   const toast = useToast();
   const rename = useRenameVenueRole();
   const [editing, setEditing] = useState(false);
@@ -83,16 +85,17 @@ function RoleRow({
         <Text className="text-xs text-t3">Tocca per rinominare</Text>
       </Pressable>
       <Pressable onPress={() => setEditing(true)} hitSlop={8} className="p-1">
-        <Icon name="pencil" size={16} color="#8c857a" />
+        <Icon name="pencil" size={16} color={colors.t3} />
       </Pressable>
       <Pressable onPress={onArchive} hitSlop={8} className="p-1">
-        <Icon name="close" size={18} color="#8c857a" />
+        <Icon name="close" size={18} color={colors.t3} />
       </Pressable>
     </View>
   );
 }
 
 export default function VenueRolesScreen() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const venueQuery = useOwnerVenues();
@@ -161,7 +164,7 @@ export default function VenueRolesScreen() {
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
-              tintColor="#EAB54C"
+              tintColor={colors.gold}
               refreshing={pull.refreshing}
               onRefresh={pull.onRefresh}
             />
@@ -183,7 +186,7 @@ export default function VenueRolesScreen() {
           />
 
           {venueQuery.isLoading || rolesQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-10" />
+            <ActivityIndicator color={colors.gold} className="mt-10" />
           ) : rolesQuery.isError ? (
             <QueryError className="mt-6" onRetry={() => rolesQuery.refetch()} />
           ) : venues.length === 0 ? (

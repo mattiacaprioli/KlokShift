@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Pressable, Text, View } from "@/tw";
 import { LEGAL_URLS } from "./legal";
+import { useColors } from "@/lib/theme";
 
 type Row = { label: string; hint: string; url: string };
 
@@ -36,6 +37,7 @@ const ROWS: Row[] = [
  * dall'utente, non solo dichiarata nella scheda dello store.
  */
 export function LegalLinks() {
+  const colors = useColors();
   return (
     <View className="gap-2">
       <SectionHeader title="Legale" />
@@ -47,7 +49,7 @@ export function LegalLinks() {
             className={cnRow(i)}
           >
             <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-              <Icon name="shield" size={18} color="#EAB54C" />
+              <Icon name="shield" size={18} color={colors.gold} />
             </View>
             <View className="flex-1">
               <Text className="text-[15px] font-sans-semibold text-t1">
@@ -55,7 +57,7 @@ export function LegalLinks() {
               </Text>
               <Text className="mt-0.5 text-[13px] text-t3">{row.hint}</Text>
             </View>
-            <Icon name="chevR" size={18} color="#6A6358" />
+            <Icon name="chevR" size={18} color={colors.t4} />
           </Pressable>
         ))}
       </Card>
