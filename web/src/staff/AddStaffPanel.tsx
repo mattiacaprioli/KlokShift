@@ -53,7 +53,7 @@ function useVenueSelection() {
               className={cn(
                 "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
                 on
-                  ? "bg-gold text-gold-ink"
+                  ? "bg-gold-fill text-gold-ink"
                   : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
               )}
             >

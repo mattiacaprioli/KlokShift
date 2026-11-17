@@ -8,6 +8,9 @@
   --color-gold-light: #f5c765;
   --color-gold-dark: #c68a34;
   --color-gold-ink: #1a1206; /* text on gold */
+  /* Oro come FONDO (pulsanti, chip attivi, interruttori, bolle): resta acceso
+     anche nel tema chiaro, dove `gold` (testo, icone, indicatori) si scurisce. */
+  --color-gold-fill: #eab54c;
 
   /* Backgrounds — warm near-black */
   --color-bg-0: #0c0907;

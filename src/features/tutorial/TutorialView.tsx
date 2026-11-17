@@ -17,7 +17,7 @@ function Section({ section }: { section: TutorialSection }) {
       <Card className="gap-3">
         {section.steps?.map((step, i) => (
           <View key={step} className="flex-row gap-3">
-            <View className="h-6 w-6 items-center justify-center rounded-full bg-gold">
+            <View className="h-6 w-6 items-center justify-center rounded-full bg-gold-fill">
               <Text className="text-[12px] font-sans-bold text-bg-0">
                 {i + 1}
               </Text>

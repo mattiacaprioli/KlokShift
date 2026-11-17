@@ -49,7 +49,7 @@ export function AdminApp() {
   if (access.isError)
     return <AuthShell title="Accesso da verificare" subtitle="Area del fondatore"><AuthPanel><Placeholder title="Accesso da verificare" detail={errorMessage(access.error)} action={<div className="flex gap-2"><Button variant="gold" onClick={() => void access.refetch()}>Riprova</Button>{exit}</div>} /></AuthPanel></AuthShell>;
   if (!keepMounted && !access.data?.eligible)
-    return <AuthShell title="Area riservata al fondatore" subtitle="Questo account non dispone dell'accesso amministrativo."><AuthPanel><div className="flex flex-col items-center gap-4 text-center"><span className="grid size-12 place-items-center rounded-2xl bg-bg-2 text-t3"><SidebarIcon name="shield" className="size-6" /></span><div className="flex gap-2"><Link className="focus-gold inline-flex items-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink hover:bg-gold-light" to="/">Dashboard cliente</Link>{exit}</div></div></AuthPanel></AuthShell>;
+    return <AuthShell title="Area riservata al fondatore" subtitle="Questo account non dispone dell'accesso amministrativo."><AuthPanel><div className="flex flex-col items-center gap-4 text-center"><span className="grid size-12 place-items-center rounded-2xl bg-bg-2 text-t3"><SidebarIcon name="shield" className="size-6" /></span><div className="flex gap-2"><Link className="focus-gold inline-flex items-center rounded-xl bg-gold-fill px-4 py-2 text-sm font-semibold text-gold-ink hover:bg-gold-light" to="/">Dashboard cliente</Link>{exit}</div></div></AuthPanel></AuthShell>;
   if (!keepMounted)
     return <MfaForm onVerified={() => void access.refetch()} exit={exit} />;
   const navClass = ({ isActive }: { isActive: boolean }) => cn(
@@ -179,5 +179,5 @@ function MfaForm({ onVerified, exit }: {
   </AuthShell>;
 }
 function Step({ n, title }: { n: number; title: string }) {
-  return <p className="flex items-start gap-3 text-sm text-t2"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-gold text-xs font-bold text-gold-ink">{n}</span>{title}</p>;
+  return <p className="flex items-start gap-3 text-sm text-t2"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-gold-fill text-xs font-bold text-gold-ink">{n}</span>{title}</p>;
 }

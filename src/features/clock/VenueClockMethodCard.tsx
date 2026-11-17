@@ -71,7 +71,7 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
           onValueChange={toggle}
           disabled={save.isPending}
           accessibilityLabel={`Timbratura dall’app per ${venue.name}`}
-          trackColor={{ false: colors.bg2, true: colors.gold }}
+          trackColor={{ false: colors.bg2, true: colors.goldFill }}
           thumbColor={colors.t1}
           ios_backgroundColor={colors.bg2}
         />
@@ -93,7 +93,7 @@ export function VenueClockMethodCard({ venue }: { venue: Venue }) {
             onValueChange={toggleAuto}
             disabled={saveAuto.isPending}
             accessibilityLabel={`${AUTO_APPROVE_TITLE} a ${venue.name}`}
-            trackColor={{ false: colors.bg2, true: colors.gold }}
+            trackColor={{ false: colors.bg2, true: colors.goldFill }}
             thumbColor={colors.t1}
             ios_backgroundColor={colors.bg2}
           />

@@ -43,7 +43,7 @@ export function RequireConfirmationField({
           value={value}
           onValueChange={onChange}
           disabled={disabled}
-          trackColor={{ false: colors.bg2, true: colors.gold }}
+          trackColor={{ false: colors.bg2, true: colors.goldFill }}
           thumbColor={colors.t1}
           ios_backgroundColor={colors.bg2}
         />

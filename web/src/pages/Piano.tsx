@@ -79,7 +79,7 @@ export function PianoPage() {
                 {TRIAL_COPY.points.map((point) => <li key={point}>· {point}</li>)}
               </ul>
               {canStart
-                ? <Link className="focus-gold inline-flex rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light" to="/prova">Avvia la prova di 30 giorni</Link>
+                ? <Link className="focus-gold inline-flex rounded-xl bg-gold-fill px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light" to="/prova">Avvia la prova di 30 giorni</Link>
                 : <Link className="focus-gold text-sm text-gold underline" to="/sede/nuovo">Prepara la prima sede</Link>}
             </div>
           ) : null}

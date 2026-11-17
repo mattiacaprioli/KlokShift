@@ -35,7 +35,7 @@ export function TabPills<T extends string>({
             accessibilityState={{ selected }}
             className={cn(
               "rounded-full border px-4 py-2",
-              selected ? "border-gold bg-gold" : "border-border-2 bg-bg-2"
+              selected ? "border-gold bg-gold-fill" : "border-border-2 bg-bg-2"
             )}
           >
             <Text

@@ -41,7 +41,7 @@ export function buttonClass(variant: ButtonVariant = "ghost", className?: string
     // sembrava rotto: spento è grigio, come nei pulsanti principali di
     // Planday e Deputy. Le altre varianti si spengono sbiadendo.
     variant === "gold" &&
-      "bg-gold text-gold-ink hover:bg-gold-light active:bg-gold-dark disabled:bg-bg-3 disabled:text-t3 disabled:hover:bg-bg-3",
+      "bg-gold-fill text-gold-ink hover:bg-gold-light active:bg-gold-dark disabled:bg-bg-3 disabled:text-t3 disabled:hover:bg-bg-3",
     variant !== "gold" && "disabled:opacity-40",
     variant === "ghost" && "border border-border-2 bg-bg-2 text-t1 hover:bg-bg-3",
     variant === "danger" && "border border-error/40 bg-error/10 text-error hover:bg-error/20",
@@ -100,7 +100,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={cn(
             "focus-gold px-3 py-2 text-sm font-semibold transition",
-            value === o.value ? "bg-gold text-gold-ink" : "bg-bg-2 text-t2 hover:bg-bg-3"
+            value === o.value ? "bg-gold-fill text-gold-ink" : "bg-bg-2 text-t2 hover:bg-bg-3"
           )}
         >
           {o.label}

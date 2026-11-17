@@ -284,7 +284,7 @@ function PresenceRow({
           <Pressable
             disabled={presence.isPending}
             onPress={() => setPresent(true)}
-            className={cn("px-3 py-1.5", present && "bg-gold")}
+            className={cn("px-3 py-1.5", present && "bg-gold-fill")}
           >
             <Text
               className={cn(
@@ -392,7 +392,7 @@ function PresenceRow({
                 <Pressable
                   disabled={presence.isPending}
                   onPress={saveHours}
-                  className="flex-1 items-center rounded-2xl bg-gold py-2.5"
+                  className="flex-1 items-center rounded-2xl bg-gold-fill py-2.5"
                 >
                   <Text className="text-sm font-sans-semibold text-gold-ink">
                     Salva

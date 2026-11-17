@@ -46,7 +46,7 @@ export function ControlledMultiChips<T extends FieldValues>({
                     }
                     className={cn(
                       "rounded-full px-4 py-2",
-                      active ? "bg-gold" : "border border-border-2"
+                      active ? "bg-gold-fill" : "border border-border-2"
                     )}
                   >
                     <Text

@@ -96,7 +96,7 @@ export function FirstStepsCard() {
                 aria-hidden
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
-                  done ? "border-gold bg-gold text-gold-ink" : "border-border-2 bg-bg-1 text-t2"
+                  done ? "border-gold bg-gold-fill text-gold-ink" : "border-border-2 bg-bg-1 text-t2"
                 )}
               >
                 {done ? "✓" : locked ? "🔒" : i + 1}

@@ -528,7 +528,7 @@ function DayDot({
           active && (absent === "approved" || overlap)
             ? "border-warning bg-warning"
             : active
-              ? "border-gold bg-gold"
+              ? "border-gold bg-gold-fill"
               : inactive || absent
                 ? "border-warning bg-transparent"
                 : "border-border-2 bg-transparent"

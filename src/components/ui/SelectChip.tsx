@@ -19,7 +19,7 @@ export function SelectChip({ label, active, onPress, className }: Props) {
       onPress={onPress}
       className={cn(
         "rounded-full border px-5 py-3",
-        active ? "border-gold bg-gold" : "border-border-2 bg-transparent",
+        active ? "border-gold bg-gold-fill" : "border-border-2 bg-transparent",
         className
       )}
     >

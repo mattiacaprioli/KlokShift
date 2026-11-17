@@ -137,7 +137,7 @@ function StepRow({
       <View
         className={cn(
           "h-7 w-7 items-center justify-center rounded-full border",
-          done ? "border-gold bg-gold" : "border-border-2 bg-bg-1"
+          done ? "border-gold bg-gold-fill" : "border-border-2 bg-bg-1"
         )}
       >
         {done ? (

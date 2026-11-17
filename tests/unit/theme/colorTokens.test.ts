@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { darkColors, withAlpha } from "@/constants/colors";
+import { darkColors, lightColors, withAlpha, type ColorToken, type ThemeColors } from "@/constants/colors";
 
 /**
  * I colori hanno due fonti gemelle: i token `@theme` dei CSS (classi Tailwind)
@@ -67,6 +67,40 @@ describe("token di colore", () => {
     }
     expect(offenders, "usa useColors() / withAlpha o una classe del tema").toEqual([]);
   });
+
+  /** Contrasto WCAG fra due `#RRGGBB`. */
+  const contrast = (a: string, b: string) => {
+    const lum = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => {
+        const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  /** [testo, fondo, minimo]: 4,5 è il WCAG AA del testo normale. */
+  const READABLE: [ColorToken, ColorToken, number][] = [
+    ["t1", "bg0", 4.5], ["t1", "bgCard", 4.5],
+    ["t2", "bg0", 4.5], ["t2", "bgCard", 4.5],
+    ["t3", "bg0", 4.5], ["t3", "bgCard", 4.5],
+    ["t4", "bgCard", 3], // il grigio spento: uguale nei due temi
+    ["gold", "bg0", 4.5], ["gold", "bgCard", 4.5],
+    ["goldInk", "goldFill", 4.5], ["goldInk", "goldDeep", 4.5],
+    ["success", "bgCard", 4.5], ["warning", "bgCard", 4.5], ["error", "bgCard", 4.5],
+    ["white", "error", 3],
+  ];
+
+  for (const [name, theme] of [["scuro", darkColors], ["chiaro", lightColors]] as [string, ThemeColors][]) {
+    it(`tema ${name}: i testi si leggono`, () => {
+      const low = READABLE.filter(([fg, bg, min]) => contrast(theme[fg], theme[bg]) < min).map(
+        ([fg, bg, min]) => `${fg} su ${bg}: ${contrast(theme[fg], theme[bg]).toFixed(2)} < ${min}`,
+      );
+      expect(low).toEqual([]);
+    });
+  }
 
   it("withAlpha produce la trasparenza del token", () => {
     expect(withAlpha(darkColors.warning, 0.15)).toBe("rgba(226,146,47,0.15)");

@@ -66,7 +66,7 @@ export function PlanningVisibilityCard({
           onClick={toggle}
           className={cn(
             "focus-gold relative mt-1 h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50",
-            on ? "bg-gold" : "bg-bg-3"
+            on ? "bg-gold-fill" : "bg-bg-3"
           )}
         >
           <span

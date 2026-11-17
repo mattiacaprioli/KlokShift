@@ -133,7 +133,7 @@ function ClockMethodPicker({
             <View
               className={cn(
                 "h-6 w-6 shrink-0 items-center justify-center rounded-full border",
-                active ? "border-gold bg-gold" : "border-border-2"
+                active ? "border-gold bg-gold-fill" : "border-border-2"
               )}
             >
               {active ? <Icon name="check" size={14} color={colors.goldInk} /> : null}
@@ -199,7 +199,7 @@ function BreakClockedPicker({
             <View
               className={cn(
                 "h-6 w-6 shrink-0 items-center justify-center rounded-full border",
-                active ? "border-gold bg-gold" : "border-border-2"
+                active ? "border-gold bg-gold-fill" : "border-border-2"
               )}
             >
               {active ? <Icon name="check" size={14} color={colors.goldInk} /> : null}
@@ -246,7 +246,7 @@ function ClockUnplannedToggle({
       <View
         className={cn(
           "h-6 w-6 shrink-0 items-center justify-center rounded-md border",
-          value ? "border-gold bg-gold" : "border-border-2"
+          value ? "border-gold bg-gold-fill" : "border-border-2"
         )}
       >
         {value ? <Icon name="check" size={14} color={colors.goldInk} /> : null}

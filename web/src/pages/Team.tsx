@@ -92,7 +92,7 @@ export function PermissionChecks({
               sopra, che resta quella che legge lo screen reader. */}
           <span
             aria-hidden
-            className="relative h-5 w-9 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-t3 after:transition peer-checked:after:translate-x-4 peer-checked:after:bg-gold-ink"
+            className="relative h-5 w-9 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold-fill peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-t3 after:transition peer-checked:after:translate-x-4 peer-checked:after:bg-gold-ink"
           />
         </label>
       ))}
@@ -325,7 +325,7 @@ function AccessBlock({ member }: { member: TeamMember }) {
             className={cn(
               "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
               scope === "all"
-                ? "bg-gold text-gold-ink"
+                ? "bg-gold-fill text-gold-ink"
                 : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
             )}
           >
@@ -347,7 +347,7 @@ function AccessBlock({ member }: { member: TeamMember }) {
                     className={cn(
                       "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
                       on
-                        ? "bg-gold text-gold-ink"
+                        ? "bg-gold-fill text-gold-ink"
                         : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
                     )}
                   >
@@ -558,7 +558,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
                   className={cn(
                     "focus-gold rounded-full px-3 py-1.5 text-xs font-medium transition",
                     on
-                      ? "bg-gold text-gold-ink"
+                      ? "bg-gold-fill text-gold-ink"
                       : "border border-border-2 bg-bg-1 text-t2 hover:bg-bg-2"
                   )}
                 >

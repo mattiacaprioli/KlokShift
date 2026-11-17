@@ -61,7 +61,7 @@ export function AiutoPage() {
                           ? { id: workspaceId, name: workspaceName }
                           : null,
                       })}
-                      className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
+                      className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold-fill px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
                     >
                       Scrivici
                     </a>
@@ -215,7 +215,7 @@ function TutorialSection({
 
           <Link
             to={link.to}
-            className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
+            className="focus-gold inline-flex w-fit items-center justify-center rounded-xl bg-gold-fill px-4 py-2 text-sm font-semibold text-gold-ink transition hover:bg-gold-light"
           >
             {link.label}
           </Link>

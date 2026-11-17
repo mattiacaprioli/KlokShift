@@ -48,7 +48,7 @@ export function Segmented<T extends string>({
               // Dorata sull'opzione scelta, come sulla dashboard (15/11):
               // prima qui era grigia e la Home usava due chip dorate.
               compact ? "items-center rounded-[10px] px-2.5 py-1" : "flex-1 items-center rounded-xl py-2.5",
-              active && "bg-gold"
+              active && "bg-gold-fill"
             )}
           >
             <Text

@@ -13,7 +13,7 @@ export function CountBadge({ count, className }: Props) {
   return (
     <View
       className={cn(
-        "h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gold px-1",
+        "h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gold-fill px-1",
         className
       )}
     >

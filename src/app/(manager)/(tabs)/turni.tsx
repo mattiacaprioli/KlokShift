@@ -531,7 +531,7 @@ export default function ManagerShiftsScreen() {
             {canAdd ? (
               <Pressable
                 onPress={addShift}
-                className="h-12 w-12 items-center justify-center rounded-full bg-gold"
+                className="h-12 w-12 items-center justify-center rounded-full bg-gold-fill"
                 accessibilityRole="button"
                 accessibilityLabel={pastDay ? RECORD_ACTION : "Nuovo turno"}
               >

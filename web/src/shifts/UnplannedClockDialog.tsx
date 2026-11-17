@@ -128,7 +128,7 @@ export function UnplannedClockDialog({
               className={cn(
                 "focus-gold flex-1 px-3 py-1.5 text-xs font-semibold transition",
                 mode === m
-                  ? "bg-gold text-gold-ink"
+                  ? "bg-gold-fill text-gold-ink"
                   : "bg-bg-2 text-t2 hover:bg-bg-3"
               )}
             >

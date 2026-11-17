@@ -29,7 +29,7 @@ export function LegalCheckbox({
         <View
           className={cn(
             "mt-0.5 h-5 w-5 items-center justify-center rounded-md border",
-            checked ? "border-gold bg-gold" : "border-border-2 bg-bg-2"
+            checked ? "border-gold bg-gold-fill" : "border-border-2 bg-bg-2"
           )}
         >
           {checked ? <Icon name="check" size={14} color={colors.bg0} /> : null}

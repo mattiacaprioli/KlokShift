@@ -91,7 +91,7 @@ function DayCell({
           selected
             ? marked && alert
               ? "border-warning bg-warning"
-              : "border-gold bg-gold"
+              : "border-gold bg-gold-fill"
             : today
               ? "border-gold bg-transparent"
               : "border-transparent bg-transparent",

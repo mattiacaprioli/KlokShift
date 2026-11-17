@@ -152,7 +152,7 @@ export function StaffAssignPicker({
                     className={cn(
                       "h-6 w-6 items-center justify-center rounded-full border",
                       !active && "border-border",
-                      active && works && "border-gold bg-gold",
+                      active && works && "border-gold bg-gold-fill",
                       active && !works && "border-error"
                     )}
                   >

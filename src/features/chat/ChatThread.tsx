@@ -23,7 +23,7 @@ function MessageBubble({ message, own }: { message: Message; own: boolean }) {
       className={cn(
         "max-w-[80%] rounded-2xl px-3.5 py-2.5",
         own
-          ? "self-end rounded-br-md bg-gold"
+          ? "self-end rounded-br-md bg-gold-fill"
           : "self-start rounded-bl-md bg-bg-2"
       )}
     >
@@ -221,7 +221,7 @@ export function ChatThread({ conversationId, userId }: Props) {
             disabled={!canSend}
             className={cn(
               "h-12 w-12 items-center justify-center rounded-full",
-              canSend ? "bg-gold" : "border border-border-2 bg-bg-2"
+              canSend ? "bg-gold-fill" : "border border-border-2 bg-bg-2"
             )}
           >
             <Icon name="send" size={20} color={canSend ? colors.goldInk : colors.t4} />

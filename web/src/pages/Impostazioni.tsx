@@ -257,7 +257,7 @@ function StaffChatRow({ workspaceId }: { workspaceId: string }) {
               sopra, che resta quella che legge lo screen reader. */}
           <span
             aria-hidden
-            className="relative h-6 w-11 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-t1 after:transition-all peer-checked:after:translate-x-5"
+            className="relative h-6 w-11 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold-fill peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-t1 after:transition-all peer-checked:after:translate-x-5"
           />
         </label>
   );
@@ -672,7 +672,7 @@ function NotificationPrefsSection() {
               onClick={() => void toggle(c.id, !on)}
               className={cn(
                 "focus-gold relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50",
-                on ? "bg-gold" : "bg-bg-3"
+                on ? "bg-gold-fill" : "bg-bg-3"
               )}
             >
               <span

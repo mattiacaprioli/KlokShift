@@ -125,7 +125,7 @@ export function ChangeRequestCard({
         {!isResponse && pending && !isRequester ? (
           <Pressable
             onPress={() => setResolving(true)}
-            className="mt-3 items-center rounded-xl bg-gold py-2.5"
+            className="mt-3 items-center rounded-xl bg-gold-fill py-2.5"
           >
             <Text
               className="text-sm font-sans-bold"

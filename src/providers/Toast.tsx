@@ -28,9 +28,9 @@ export function useToast(): ToastApi {
 const toastVariants = (
   colors: ThemeColors,
 ): Record<ToastVariant, { icon: IconName; iconColor: string; chip: string }> => ({
-  success: { icon: "check", iconColor: colors.goldInk, chip: colors.gold },
+  success: { icon: "check", iconColor: colors.goldInk, chip: colors.goldFill },
   error: { icon: "close", iconColor: colors.t1, chip: colors.error },
-  info: { icon: "alert", iconColor: colors.goldInk, chip: colors.gold },
+  info: { icon: "alert", iconColor: colors.goldInk, chip: colors.goldFill },
 });
 
 type ToastItem = { id: number; message: string; variant: ToastVariant };

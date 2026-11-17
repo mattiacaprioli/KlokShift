@@ -300,7 +300,7 @@ function RowAction({
       style={disabled ? { opacity: 0.4 } : undefined}
       className={
         gold
-          ? "rounded-full bg-gold px-4 py-2"
+          ? "rounded-full bg-gold-fill px-4 py-2"
           : "rounded-full border border-border-2 px-4 py-2"
       }
     >

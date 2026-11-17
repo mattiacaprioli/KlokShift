@@ -16,7 +16,7 @@ type State = "confirmed" | "pending" | "open";
 const DAYS = ["Lun", "Mar", "Mer", "Gio", "Ven"];
 
 const PEOPLE = [
-  { name: "Giulia R.", initials: "GR", tone: "bg-gold" },
+  { name: "Giulia R.", initials: "GR", tone: "bg-gold-fill" },
   { name: "Marco T.", initials: "MT", tone: "bg-[#9ec7a8]" },
   { name: "Sara P.", initials: "SP", tone: "bg-[#c9a7e0]" },
   { name: "Anna B.", initials: "AB", tone: "bg-[#8fb6e8]" },
@@ -49,7 +49,7 @@ export function AuthWeek() {
     >
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="font-serif text-[1.25em] font-semibold text-t1">Turni</span>
-        <span className="rounded-full bg-gold px-2.5 py-1 text-[0.85em] font-medium text-gold-ink">Settimana</span>
+        <span className="rounded-full bg-gold-fill px-2.5 py-1 text-[0.85em] font-medium text-gold-ink">Settimana</span>
       </div>
       <div className="grid grid-cols-[7.25rem_repeat(5,minmax(0,1fr))] gap-1.5 p-3">
         <span />

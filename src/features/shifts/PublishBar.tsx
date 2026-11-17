@@ -51,7 +51,7 @@ export function PublishBar({
         <Pressable
           onPress={onPublish}
           accessibilityRole="button"
-          className="rounded-full bg-gold px-3.5 py-2"
+          className="rounded-full bg-gold-fill px-3.5 py-2"
         >
           <Text className="text-[13px] font-sans-bold text-gold-ink">
             {publishCta(periodCount)}

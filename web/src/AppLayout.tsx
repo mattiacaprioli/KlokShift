@@ -184,7 +184,7 @@ export function AppLayout() {
                           <>
                             <span
                               aria-label={countLabel}
-                              className={cn("flex min-w-5 items-center justify-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-4 text-gold-ink", fade)}
+                              className={cn("flex min-w-5 items-center justify-center rounded-full bg-gold-fill px-1.5 py-0.5 text-[10px] font-bold leading-4 text-gold-ink", fade)}
                             >
                               {count > 99 ? "99+" : count}
                             </span>

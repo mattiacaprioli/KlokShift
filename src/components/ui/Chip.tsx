@@ -37,7 +37,7 @@ export function Chip({
         "self-start rounded-full border px-2.5 py-1.5",
         active
           ? gold
-            ? "border-gold bg-gold"
+            ? "border-gold bg-gold-fill"
             : "border-border-2 bg-wash/10"
           : "border-border bg-transparent",
         className

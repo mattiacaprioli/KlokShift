@@ -87,7 +87,7 @@ export function ClosuresCard({ venue, canEdit }: { venue: Venue; canEdit: boolea
                 onClick={() => toggleRest(w.iso)}
                 className={cn(
                   "focus-gold size-9 rounded-full border text-sm font-semibold transition disabled:cursor-default",
-                  on ? "border-gold bg-gold text-gold-ink" : "border-border-2 bg-bg-2 text-t2 enabled:hover:text-t1"
+                  on ? "border-gold bg-gold-fill text-gold-ink" : "border-border-2 bg-bg-2 text-t2 enabled:hover:text-t1"
                 )}
               >
                 {w.short}

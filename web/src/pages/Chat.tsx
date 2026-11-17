@@ -128,7 +128,7 @@ export function ChatPage() {
                           : "Nessun messaggio"}
                       </span>
                       {c.unreadCount > 0 ? (
-                        <span className="shrink-0 rounded-full bg-gold px-1.5 text-[11px] font-bold text-gold-ink">
+                        <span className="shrink-0 rounded-full bg-gold-fill px-1.5 text-[11px] font-bold text-gold-ink">
                           {c.unreadCount > 9 ? "9+" : c.unreadCount}
                         </span>
                       ) : null}
@@ -396,7 +396,7 @@ function Thread({
                     className={cn(
                       "max-w-[70%] rounded-2xl px-3.5 py-2.5",
                       own
-                        ? "self-end rounded-br-md bg-gold text-gold-ink"
+                        ? "self-end rounded-br-md bg-gold-fill text-gold-ink"
                         : "self-start rounded-bl-md bg-bg-2 text-t1"
                     )}
                   >

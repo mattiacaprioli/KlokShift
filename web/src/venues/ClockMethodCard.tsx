@@ -100,7 +100,7 @@ export function ClockMethodCard({
             }
             className={cn(
               "focus-gold relative mt-1 h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50",
-              autoOn ? "bg-gold" : "bg-bg-3"
+              autoOn ? "bg-gold-fill" : "bg-bg-3"
             )}
           >
             <span
