@@ -8,6 +8,7 @@ import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
 import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { OpenWorkspaceSection } from "@/features/workspace/OpenWorkspaceSection";
+import { ThemeSection } from "@/features/appearance/ThemeSection";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
@@ -99,6 +100,8 @@ export default function WaiterSettingsScreen() {
             </Pressable>
           </Card>
         </View>
+
+        <ThemeSection />
 
         <View className="gap-2">
           <SectionHeader title="Aiuto" />

@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
     <title>KlokShift · Dashboard</title>
+    <!-- Il tema scelto in Impostazioni, prima del primo disegno: senza, chi ha
+         scelto «Scuro» con il sistema in chiaro vedrebbe un lampo. Gemello di
+         `src/lib/theme.ts` (stessa chiave). -->
+    <script>
+      try {
+        var t = localStorage.getItem("klokshift.theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -10,6 +10,7 @@ import { AuthProvider } from "@/lib/auth";
 import { OwnerVenuesProvider } from "@/features/venues/OwnerVenues";
 import { ViewModeProvider } from "@/features/team/ViewMode";
 import { ToastProvider } from "@/providers/Toast";
+import { ThemeProvider } from "@/providers/Theme";
 import { ErrorFallback } from "@/providers/ErrorFallback";
 
 /**
@@ -21,7 +22,8 @@ import { ErrorFallback } from "@/providers/ErrorFallback";
  * promosso dipende dai suoi accessi delegati (F3), e fuori dal navigatore
  * perché è lui a decidere quale gruppo di rotte è montato;
  * Toast wraps so any screen can fire toasts; ErrorBoundary is innermost so its
- * fallback can still use the providers above.
+ * fallback can still use the providers above. Theme sta fuori da tutto: Toast,
+ * il fallback d'errore e lo splash (`app/_layout.tsx`) leggono i suoi colori.
  */
 export function AppProviders({ children }: PropsWithChildren) {
   useEffect(() => {
@@ -31,23 +33,25 @@ export function AppProviders({ children }: PropsWithChildren) {
     return () => listener.remove();
   }, []);
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <OwnerVenuesProvider>
-            <ViewModeProvider>
-              <ToastProvider>
-                <ErrorBoundary
-                  FallbackComponent={ErrorFallback}
-                  onError={(error) => Sentry.captureException(error)}
-                >
-                  {children}
-                </ErrorBoundary>
-              </ToastProvider>
-            </ViewModeProvider>
-          </OwnerVenuesProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <OwnerVenuesProvider>
+              <ViewModeProvider>
+                <ToastProvider>
+                  <ErrorBoundary
+                    FallbackComponent={ErrorFallback}
+                    onError={(error) => Sentry.captureException(error)}
+                  >
+                    {children}
+                  </ErrorBoundary>
+                </ToastProvider>
+              </ViewModeProvider>
+            </OwnerVenuesProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }

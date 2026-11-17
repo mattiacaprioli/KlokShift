@@ -17,11 +17,12 @@ import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ThemeSection } from "@/features/appearance/ThemeSection";
 import { useColors } from "@/lib/theme";
 
 /**
  * Tu e le regole dell'azienda, nelle stesse sezioni di Impostazioni sul web
- * (Profilo · I tuoi permessi · Sicurezza · Notifiche · Azienda · Legale).
+ * (Profilo · I tuoi permessi · Sicurezza · Notifiche · Aspetto · Azienda · Legale).
  *
  * Dove si va per lavorare (Collaboratori, Aiuto, «Passa ai tuoi turni») sta
  * nel Menu, da cui si arriva qui: fino al 30/10 erano in tutte e due le
@@ -104,6 +105,8 @@ export default function ManagerSettingsScreen() {
             />
           </Card>
         </View>
+
+        <ThemeSection />
 
         {/* Le regole dell'azienda sono di chi la guida: stato e chat fra
             colleghi, come la sezione Azienda sul web. */}

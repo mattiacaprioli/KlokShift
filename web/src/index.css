@@ -2,50 +2,129 @@
 @import "../../shared/fonts.css";
 
 /*
- * Token AURA — stessi valori di src/global.css (app).
- * Differenza rispetto al mobile: qui i font sono famiglie web reali con i pesi
- * numerici, mentre in React Native il peso fa parte del nome della famiglia.
+ * Token AURA in due temi (2026-11-18): stessi valori di `src/global.css` e di
+ * `src/constants/colors.ts` (test `colorTokens`). La differenza col mobile:
+ * qui i font sono famiglie web reali con i pesi numerici, mentre in React
+ * Native il peso fa parte del nome della famiglia.
+ *
+ * `@theme` porta il chiaro; lo scuro vale con il sistema in scuro, salvo una
+ * scelta esplicita in Impostazioni, che mette `data-theme` su `<html>`
+ * (`src/lib/theme.ts`, e lo script in `index.html` per non avere un lampo).
  */
 @theme {
-  --color-gold: #eab54c;
+  /* Oro */
+  --color-gold: #8c600f;
   --color-gold-light: #f5c765;
   --color-gold-dark: #c68a34;
   --color-gold-ink: #1a1206;
-  /* Oro come FONDO (pulsanti, chip attivi, interruttori, bolle): resta acceso
-     anche nel tema chiaro, dove `gold` (testo, icone, indicatori) si scurisce. */
   --color-gold-fill: #eab54c;
 
-  --color-bg-0: #0c0907;
-  --color-bg-1: #1f1a13;
-  --color-bg-2: #2a241b;
-  --color-bg-3: #362e24;
-  --color-bg-card: #17120b;
+  /* Sfondi */
+  --color-bg-0: #f6f2eb;
+  --color-bg-1: #fdfbf7;
+  --color-bg-2: #efe9df;
+  --color-bg-3: #e5ddd0;
+  --color-bg-card: #ffffff;
 
-  --color-t1: #f8f4ed;
-  --color-t2: #c2bbb0;
-  --color-t3: #8c857a;
-  --color-t4: #6a6358;
+  /* Testo */
+  --color-t1: #1e1912;
+  --color-t2: #4a4237;
+  --color-t3: #6b6255;
+  --color-t4: #8a8174;
 
-  --color-success: #4fc97d;
-  --color-warning: #e2922f;
-  --color-error: #e55b45;
-  --color-info: #208aef;
+  /* Semantici */
+  --color-success: #1a7d44;
+  --color-warning: #a35607;
+  --color-error: #c63d28;
+  --color-info: #1a6fc4;
 
-  --color-border: rgba(255, 240, 220, 0.07);
-  --color-border-2: rgba(255, 240, 220, 0.12);
-  --color-border-gold: rgba(234, 181, 76, 0.4);
-
-  /* Velatura: sempre con l'opacità (bg-wash/10). Nel tema chiaro diventerà scura. */
-  --color-wash: #fff0dc;
+  /* Filetti e velature */
+  --color-border: rgba(58, 42, 20, 0.1);
+  --color-border-2: rgba(58, 42, 20, 0.16);
+  --color-border-gold: rgba(140, 96, 15, 0.4);
+  --color-wash: #3a2a14;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-serif: "Fraunces Variable", "Fraunces", ui-serif, Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    /* Oro */
+    --color-gold: #eab54c;
+    --color-gold-light: #f5c765;
+    --color-gold-dark: #c68a34;
+    --color-gold-ink: #1a1206;
+    --color-gold-fill: #eab54c;
+
+    /* Sfondi */
+    --color-bg-0: #0c0907;
+    --color-bg-1: #1f1a13;
+    --color-bg-2: #2a241b;
+    --color-bg-3: #362e24;
+    --color-bg-card: #17120b;
+
+    /* Testo */
+    --color-t1: #f8f4ed;
+    --color-t2: #c2bbb0;
+    --color-t3: #8c857a;
+    --color-t4: #6a6358;
+
+    /* Semantici */
+    --color-success: #4fc97d;
+    --color-warning: #e2922f;
+    --color-error: #e55b45;
+    --color-info: #208aef;
+
+    /* Filetti e velature */
+    --color-border: rgba(255, 240, 220, 0.07);
+    --color-border-2: rgba(255, 240, 220, 0.12);
+    --color-border-gold: rgba(234, 181, 76, 0.4);
+    --color-wash: #fff0dc;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Oro */
+  --color-gold: #eab54c;
+  --color-gold-light: #f5c765;
+  --color-gold-dark: #c68a34;
+  --color-gold-ink: #1a1206;
+  --color-gold-fill: #eab54c;
+
+  /* Sfondi */
+  --color-bg-0: #0c0907;
+  --color-bg-1: #1f1a13;
+  --color-bg-2: #2a241b;
+  --color-bg-3: #362e24;
+  --color-bg-card: #17120b;
+
+  /* Testo */
+  --color-t1: #f8f4ed;
+  --color-t2: #c2bbb0;
+  --color-t3: #8c857a;
+  --color-t4: #6a6358;
+
+  /* Semantici */
+  --color-success: #4fc97d;
+  --color-warning: #e2922f;
+  --color-error: #e55b45;
+  --color-info: #208aef;
+
+  /* Filetti e velature */
+  --color-border: rgba(255, 240, 220, 0.07);
+  --color-border-2: rgba(255, 240, 220, 0.12);
+  --color-border-gold: rgba(234, 181, 76, 0.4);
+  --color-wash: #fff0dc;
+}
+
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
     background: var(--color-bg-0);

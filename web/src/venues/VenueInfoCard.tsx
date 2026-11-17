@@ -174,7 +174,7 @@ function RuleTile({
             type="button"
             onClick={onEdit}
             aria-label={`Modifica ${label.toLowerCase()}`}
-            className="focus-gold rounded text-sm font-semibold text-gold transition hover:text-gold-light"
+            className="focus-gold rounded text-sm font-semibold text-gold transition hover:text-gold/80"
           >
             Modifica →
           </button>
@@ -201,7 +201,7 @@ function AddLink({
       type="button"
       onClick={onClick}
       className={cn(
-        "focus-gold rounded text-sm text-gold transition hover:text-gold-light",
+        "focus-gold rounded text-sm text-gold transition hover:text-gold/80",
         className,
       )}
     >

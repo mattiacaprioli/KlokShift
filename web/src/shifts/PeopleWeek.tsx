@@ -556,7 +556,7 @@ function renderLegend(legend: ReactNode, target?: HTMLElement | null) {
 function absenceCellStyle(a: Pick<AbsenceAvailability, "status">): CSSProperties {
   const alpha = a.status === "approved" ? 0.16 : 0.07;
   return {
-    backgroundImage: `repeating-linear-gradient(135deg, rgba(226,146,47,${alpha}) 0 6px, transparent 6px 12px)`,
+    backgroundImage: `repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-warning) ${alpha * 100}%, transparent) 0 6px, transparent 6px 12px)`,
   };
 }
 

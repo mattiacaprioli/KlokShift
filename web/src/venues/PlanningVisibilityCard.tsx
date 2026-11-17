@@ -71,7 +71,7 @@ export function PlanningVisibilityCard({
         >
           <span
             className={cn(
-              "absolute top-0.5 h-5 w-5 rounded-full bg-t1 transition-all",
+              "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all",
               on ? "left-[1.375rem]" : "left-0.5"
             )}
           />

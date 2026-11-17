@@ -30,6 +30,7 @@ import {
   Input,
   PageHeader,
   PasswordInput,
+  Segmented,
 } from "../ui/primitives";
 import { Avatar } from "../ui/Avatar";
 import { SidebarIcon, type SidebarIconName } from "../ui/SidebarIcon";
@@ -37,8 +38,10 @@ import { PasswordChecklist } from "../ui/PasswordChecklist";
 import { CollaboratorPermissionsSection } from "../onboarding/CollaboratorWelcome";
 import { useToast } from "../ui/Toast";
 import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
+import { useWebTheme } from "../lib/theme";
+import { THEME_OPTIONS, themeHint } from "@/features/appearance/themePreference";
 
-type SectionId = "profilo" | "permessi" | "sicurezza" | "notifiche" | "azienda" | "documenti" | "elimina";
+type SectionId = "profilo" | "permessi" | "sicurezza" | "notifiche" | "aspetto" | "azienda" | "documenti" | "elimina";
 
 /**
  * Impostazioni come quelle di Mac o GitHub: a sinistra l'elenco delle sezioni,
@@ -55,6 +58,7 @@ export function ImpostazioniPage() {
     ...(authority === "collaborator" ? [{ id: "permessi" as const, label: "I tuoi permessi", icon: "team" as const }] : []),
     { id: "sicurezza", label: "Sicurezza", icon: "shield" },
     { id: "notifiche", label: "Notifiche", icon: "notifications" },
+    { id: "aspetto", label: "Aspetto", icon: "theme" },
     ...(isOwner && workspaceId ? [{ id: "azienda" as const, label: "Azienda", icon: "venue" as const }] : []),
     { id: "documenti", label: "Documenti", icon: "file" },
     { id: "elimina", label: "Elimina account", icon: "trash", danger: true },
@@ -107,6 +111,7 @@ export function ImpostazioniPage() {
           {current === "permessi" ? <CollaboratorPermissionsSection /> : null}
           {current === "sicurezza" ? <PasswordSection /> : null}
           {current === "notifiche" ? <NotificationPrefsSection /> : null}
+          {current === "aspetto" ? <AppearanceSection /> : null}
           {current === "azienda" && workspaceId ? <CompanySection workspaceId={workspaceId} /> : null}
           {current === "documenti" ? (
             <SettingsCard icon="file" title="Documenti" description="Le pagine legali sul sito di KlokShift.">
@@ -257,7 +262,7 @@ function StaffChatRow({ workspaceId }: { workspaceId: string }) {
               sopra, che resta quella che legge lo screen reader. */}
           <span
             aria-hidden
-            className="relative h-6 w-11 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold-fill peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-t1 after:transition-all peer-checked:after:translate-x-5"
+            className="relative h-6 w-11 shrink-0 rounded-full bg-bg-3 transition peer-checked:bg-gold-fill peer-focus-visible:ring-2 peer-focus-visible:ring-gold/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card peer-disabled:opacity-60 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-all peer-checked:after:translate-x-5"
           />
         </label>
   );
@@ -677,7 +682,7 @@ function NotificationPrefsSection() {
             >
               <span
                 className={cn(
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-t1 transition-all",
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all",
                   on ? "left-[1.375rem]" : "left-0.5"
                 )}
               />
@@ -685,6 +690,31 @@ function NotificationPrefsSection() {
           </div>
         );
       })}
+    </SettingsCard>
+  );
+}
+
+/**
+ * Chiaro, scuro o come il sistema. Vale per questo computer: l'app sul
+ * telefono ha la sua scelta (`themePreference.ts`).
+ */
+function AppearanceSection() {
+  const { preference, scheme, setPreference } = useWebTheme();
+  return (
+    <SettingsCard
+      icon="theme"
+      title="Tema"
+      description="Vale per questo computer. Sul telefono si sceglie nelle impostazioni dell'app."
+    >
+      <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+        <p className="text-sm text-t2">{themeHint(preference, scheme)}</p>
+        <Segmented
+          label="Tema"
+          options={THEME_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
+          value={preference}
+          onChange={setPreference}
+        />
+      </div>
     </SettingsCard>
   );
 }

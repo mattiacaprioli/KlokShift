@@ -5,7 +5,7 @@ import { Pressable, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import { toTimeString } from "@/lib/format";
-import { useColors } from "@/lib/theme";
+import { useColors, useScheme } from "@/lib/theme";
 import { withAlpha } from "@/constants/colors";
 
 type Props = {
@@ -19,6 +19,7 @@ type Props = {
  * spinner sheet; Android the native time dialog. Always 24h. */
 export function TimeField({ label, value, onChange, className }: Props) {
   const colors = useColors();
+  const scheme = useScheme();
   const [show, setShow] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -72,7 +73,7 @@ export function TimeField({ label, value, onChange, className }: Props) {
                   value={draft}
                   mode="time"
                   display="spinner"
-                  themeVariant="dark"
+                  themeVariant={scheme}
                   is24Hour
                   onChange={(_, d) => d && setDraft(d)}
                 />

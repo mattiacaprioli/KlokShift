@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "klokshift",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.klokshift.app",
       "infoPlist": {
@@ -38,9 +38,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0C0907",
+          "backgroundColor": "#F6F2EB",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 76,
+          "dark": {
+            "backgroundColor": "#0C0907",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       [

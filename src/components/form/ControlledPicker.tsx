@@ -10,7 +10,7 @@ import {
 import { Pressable, Text, View } from "@/tw";
 import { Mono } from "@/components/ui/Mono";
 import { formatDate, formatTime, toDateString, toTimeString } from "@/lib/format";
-import { useColors } from "@/lib/theme";
+import { useColors, useScheme } from "@/lib/theme";
 
 type Props<T extends FieldValues> = {
   control: Control<T>;
@@ -54,6 +54,7 @@ export function PickerField({
   onChange: (d: Date) => void;
 }) {
   const colors = useColors();
+  const scheme = useScheme();
   const [show, setShow] = useState(false);
   const formatted =
     mode === "date"
@@ -68,7 +69,7 @@ export function PickerField({
           value={value}
           mode={mode}
           display="compact"
-          themeVariant="dark"
+          themeVariant={scheme}
           accentColor={colors.gold}
           onChange={(_, d) => d && onChange(d)}
         />

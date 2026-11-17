@@ -2,6 +2,7 @@ import { BlurView } from "expo-blur";
 import React from "react";
 import { View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { useScheme } from "@/lib/theme";
 
 type Props = {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function BlurCard({ children, className, intensity = 40 }: Props) {
+  const scheme = useScheme();
   return (
     <View
       className={cn(
@@ -17,7 +19,7 @@ export function BlurCard({ children, className, intensity = 40 }: Props) {
         className
       )}
     >
-      <BlurView intensity={intensity} tint="dark" style={{ padding: 16 }}>
+      <BlurView intensity={intensity} tint={scheme} style={{ padding: 16 }}>
         {children}
       </BlurView>
     </View>

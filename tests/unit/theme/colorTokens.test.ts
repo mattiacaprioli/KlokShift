@@ -4,22 +4,39 @@ import { describe, expect, it } from "vitest";
 import { darkColors, lightColors, withAlpha, type ColorToken, type ThemeColors } from "@/constants/colors";
 
 /**
- * I colori hanno due fonti gemelle: i token `@theme` dei CSS (classi Tailwind)
- * e `darkColors` (prop JS, letti con `useColors()`). Questo test le tiene
- * allineate e impedisce di riscrivere colori a mano nell'app: è ciò che rende
- * possibile il tema chiaro cambiando solo i token.
+ * I colori hanno due fonti gemelle: i token dei CSS (classi Tailwind) e
+ * `lightColors`/`darkColors` (prop JS, letti con `useColors()`). Nei CSS il
+ * chiaro sta in `@theme` e lo scuro nei blocchi `prefers-color-scheme: dark`
+ * (e `data-theme="dark"` sulla dashboard). Questo test le tiene allineate,
+ * controlla i contrasti e impedisce di riscrivere colori a mano nell'app.
  */
 const ROOT = resolve(__dirname, "../../..");
 
 const camel = (name: string) => name.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 const norm = (v: string) => v.toLowerCase().replace(/\s+/g, "");
 
-function themeColors(cssFile: string): Record<string, string> {
-  const css = readFileSync(join(ROOT, cssFile), "utf8");
-  const theme = /@theme\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+function colorDecls(block: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const m of theme.matchAll(/--color-([a-z0-9-]+):\s*([^;]+);/g)) out[camel(m[1])] = m[2].trim();
+  for (const m of block.matchAll(/--color-([a-z0-9-]+):\s*([^;]+);/g)) out[camel(m[1])] = m[2].trim();
   return out;
+}
+
+/** Il chiaro (`@theme`) e ogni blocco scuro del file. */
+function cssThemes(cssFile: string): { light: Record<string, string>; dark: Record<string, string>[] } {
+  const css = readFileSync(join(ROOT, cssFile), "utf8");
+  const light = colorDecls(/@theme\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "");
+  const dark = [...css.matchAll(/(?:prefers-color-scheme:\s*dark\)|\[data-theme="dark"\])\s*\{([\s\S]*?)\n\}/g)].map((m) =>
+    colorDecls(m[1]),
+  );
+  return { light, dark };
+}
+
+function expectSame(tokens: Record<string, string>, theme: ThemeColors, label: string) {
+  expect(Object.keys(tokens).length, label).toBeGreaterThan(10);
+  for (const [key, value] of Object.entries(tokens)) {
+    expect(theme, `${label}: --color-${key} manca`).toHaveProperty(key);
+    expect(norm(theme[key as ColorToken]), `${label}: --color-${key}`).toBe(norm(value));
+  }
 }
 
 /** File che possono contenere colori scritti: le fonti e ciò che non segue il tema. */
@@ -44,14 +61,14 @@ const stripComments = (code: string) =>
   code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 
 describe("token di colore", () => {
-  for (const css of ["src/global.css", "web/src/index.css"]) {
-    it(`${css} e darkColors hanno gli stessi valori`, () => {
-      const tokens = themeColors(css);
-      expect(Object.keys(tokens).length).toBeGreaterThan(10);
-      for (const [key, value] of Object.entries(tokens)) {
-        expect(darkColors, `--color-${key} manca in darkColors`).toHaveProperty(key);
-        expect(norm(darkColors[key as keyof typeof darkColors]), `--color-${key}`).toBe(norm(value));
-      }
+  for (const [css, darkBlocks] of [["src/global.css", 1], ["web/src/index.css", 2]] as const) {
+    it(`${css}: @theme = lightColors, i blocchi scuri = darkColors`, () => {
+      const { light, dark } = cssThemes(css);
+      expectSame(light, lightColors, "chiaro");
+      expect(dark).toHaveLength(darkBlocks);
+      dark.forEach((block, i) => expectSame(block, darkColors, `scuro ${i + 1}`));
+      // Ogni token del chiaro ha il suo scuro: nessuno resta uguale per dimenticanza.
+      for (const block of dark) expect(Object.keys(block).sort()).toEqual(Object.keys(light).sort());
     });
   }
 

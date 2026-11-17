@@ -2,8 +2,10 @@
 @import "../../shared/fonts.css";
 
 /*
- * Token AURA — stessi valori di `web/src/index.css` e `src/global.css`: la
- * vetrina e il prodotto devono sembrare lo stesso oggetto, non due progetti.
+ * Token AURA — stessi valori del tema SCURO di `web/src/index.css` e
+ * `src/global.css`: la vetrina e il prodotto devono sembrare lo stesso
+ * oggetto, non due progetti. Il sito resta solo scuro (decisione del
+ * 18/11/2026): app e dashboard hanno anche il chiaro, la vetrina no.
  * Qui i font sono famiglie web reali con i pesi numerici (in React Native il
  * peso fa parte del nome della famiglia).
  */

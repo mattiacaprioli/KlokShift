@@ -8,5 +8,5 @@ import type { CSSProperties } from "react";
  */
 export const CLOSED_DAY_STYLE: CSSProperties = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, rgba(248,244,237,0.05) 0 6px, transparent 6px 14px)",
+    "repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-t1) 5%, transparent) 0 6px, transparent 6px 14px)",
 };

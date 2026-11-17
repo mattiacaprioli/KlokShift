@@ -4,7 +4,6 @@ import { Stack, SplashScreen } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import * as Sentry from "@sentry/react-native";
-import * as SystemUI from "expo-system-ui";
 import { Text, View } from "@/tw";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
@@ -19,8 +18,9 @@ import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { IBMPlexMono_400Regular } from "@expo-google-fonts/ibm-plex-mono/400Regular";
 import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
 import { useAuth } from "@/lib/auth";
-import { useColors } from "@/lib/theme";
-import { darkColors, type ThemeColors } from "@/constants/colors";
+import { useColors, useScheme } from "@/lib/theme";
+import type { ThemeColors } from "@/constants/colors";
+import { useThemePreference } from "@/providers/Theme";
 import { AppProviders } from "@/providers/AppProviders";
 import { NotificationsListener } from "@/features/notifications/NotificationsListener";
 import { PushRegistrar } from "@/features/push/PushRegistrar";
@@ -29,8 +29,6 @@ import { useViewMode } from "@/features/team/ViewMode";
 import { IntroOverlay } from "@/features/onboarding/IntroOverlay";
 
 SplashScreen.preventAutoHideAsync();
-// Fuori da React: il tema chiaro, quando arriverà, lo riallineerà da un effetto.
-SystemUI.setBackgroundColorAsync(darkColors.bg0);
 
 // No-op until EXPO_PUBLIC_SENTRY_DSN is set (e.g. in a dev/production build).
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -65,6 +63,7 @@ function RootNavigator() {
   // Il cappello con cui si usa l'app (gestione / lavoro): si ricava dalle
   // appartenenze, non da un ruolo sul profilo. Vedi `features/team/ViewMode.tsx`.
   const view = useViewMode();
+  const theme = useThemePreference();
 
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_400Regular,
@@ -83,7 +82,10 @@ function RootNavigator() {
   // `view.ready` entra nel gate dello splash solo quando c'è una sessione: senza
   // login non c'è nessuna vista da risolvere, e aspettarla terrebbe lo splash su
   // per una lettura da disco che riguarda un altro utente.
-  const ready = !loading && fontsReady && (!session || !!error || view.ready);
+  // Anche il tema: lo splash resta su finché non si sa se disegnare chiaro o
+  // scuro, così chi ha scelto «Scuro» con il telefono in chiaro non vede un lampo.
+  const ready =
+    !loading && fontsReady && theme.ready && (!session || !!error || view.ready);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -144,10 +146,15 @@ function RootNavigator() {
   );
 }
 
+/** Testo della barra di stato chiaro sul tema scuro, scuro sul chiaro. */
+function ThemedStatusBar() {
+  return <StatusBar style={useScheme() === "dark" ? "light" : "dark"} />;
+}
+
 function RootLayout() {
   return (
     <AppProviders>
-      <StatusBar style="light" />
+      <ThemedStatusBar />
       <RootNavigator />
     </AppProviders>
   );
