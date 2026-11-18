@@ -26,6 +26,21 @@ describe("userErrorMessage", () => {
     expect(userErrorMessage(new Error("invalid_patron"))).toBe("Questa data del patrono non esiste.");
   });
 
+  it("spiega perché un messaggio non si modifica o non si elimina", () => {
+    expect(userErrorMessage(new Error("message_edit_expired"))).toBe(
+      "Puoi modificare un messaggio solo nei primi 15 minuti."
+    );
+    expect(userErrorMessage(new Error("message_delete_expired"))).toBe(
+      "Puoi eliminare un messaggio solo nelle prime 48 ore."
+    );
+    expect(userErrorMessage(new Error("message_deleted"))).toBe(
+      "Questo messaggio è stato eliminato."
+    );
+    expect(userErrorMessage(new Error("message_invalid"))).toBe(
+      "Scrivi un messaggio di al massimo 1000 caratteri."
+    );
+  });
+
   it("dice che un codice per il consulente è troppo lungo", () => {
     expect(userErrorMessage(new Error("invalid_code"))).toBe("Il codice è troppo lungo.");
   });

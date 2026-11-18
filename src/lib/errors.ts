@@ -113,6 +113,19 @@ const PATTERNS: { match: string[]; message: string }[] = [
     message: "La prova gratuita è disponibile solo per le nuove aziende.",
   },
   {
+    match: ["message_edit_expired"],
+    message: "Puoi modificare un messaggio solo nei primi 15 minuti.",
+  },
+  {
+    match: ["message_delete_expired"],
+    message: "Puoi eliminare un messaggio solo nelle prime 48 ore.",
+  },
+  { match: ["message_deleted"], message: "Questo messaggio è stato eliminato." },
+  {
+    match: ["message_invalid"],
+    message: "Scrivi un messaggio di al massimo 1000 caratteri.",
+  },
+  {
     match: ["chat_disabled"],
     message:
       "In questa azienda la chat fra colleghi è disattivata. Puoi comunque scrivere a chi gestisce.",

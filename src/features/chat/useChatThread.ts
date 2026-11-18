@@ -8,6 +8,8 @@ import {
   applyConversationUpdateToCache,
   applyMessageUpdateToCache,
   useConversation,
+  useDeleteMessage,
+  useEditMessage,
   useMarkConversationRead,
   useMessagesInfinite,
   useSendMessage,
@@ -17,6 +19,7 @@ import {
   otherDeliveredAt,
   type MessageStatus,
 } from "./messageStatus";
+import { changesPreview } from "./messageActions";
 import { messageSchema } from "./schema";
 
 /**
@@ -34,6 +37,8 @@ export function useChatThread(conversationId: string, userId: string) {
   const conversation = useConversation(conversationId, userId);
   const query = useMessagesInfinite(conversationId);
   const send = useSendMessage(conversationId, userId);
+  const edit = useEditMessage(conversationId);
+  const remove = useDeleteMessage(conversationId);
   const markRead = useMarkConversationRead(conversationId, userId);
   const markReadMutate = markRead.mutate;
 
@@ -95,7 +100,12 @@ export function useChatThread(conversationId: string, userId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          applyMessageUpdateToCache(qc, payload.new as Message);
+          const message = payload.new as Message;
+          applyMessageUpdateToCache(qc, message);
+          // Modifica o eliminazione: anche l'anteprima della lista cambia.
+          if (changesPreview(message)) {
+            qc.invalidateQueries({ queryKey: qk.chat.conversationsAll });
+          }
         }
       )
       .on(
@@ -151,7 +161,7 @@ export function useChatThread(conversationId: string, userId: string) {
     : null;
   const statusOf = useCallback(
     (m: Message): MessageStatus | null =>
-      m.sender_id === userId && m.kind === "text"
+      m.sender_id === userId && m.kind === "text" && m.deleted_at == null
         ? messageStatus(m, otherDelivered)
         : null,
     [userId, otherDelivered]
@@ -175,5 +185,7 @@ export function useChatThread(conversationId: string, userId: string) {
     markRead,
     statusOf,
     pending,
+    edit,
+    remove,
   };
 }

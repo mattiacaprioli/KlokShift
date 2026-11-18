@@ -9,6 +9,8 @@ import {
   workEventQueryKeys,
 } from "@/features/shifts/invalidation";
 import { requestChatDelivery } from "@/features/chat/requestChatDelivery";
+import { changesPreview } from "@/features/chat/messageActions";
+import type { Message } from "@/features/chat/api";
 import { watchRejoin } from "./rejoin";
 
 type Row = Record<string, unknown>;
@@ -295,6 +297,17 @@ export function RealtimeSync({
           }
         }
       )
+      // Un messaggio modificato o eliminato: la lista chat non deve
+      // continuare a mostrare il testo vecchio. Le letture si ignorano.
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          if (changesPreview(rowOf(payload) as Message)) {
+            invalidate(qk.chat.conversationsAll);
+          }
+        }
+      )
       .subscribe(rejoin.onStatus);
 
     return () => {
@@ -364,6 +377,17 @@ export function RealtimeSync({
           // Il messaggio dell'altro è arrivato fin qui: spunte «ricevuto».
           if (idOf(rowOf(payload), "sender_id") !== userId) {
             requestChatDelivery();
+          }
+        }
+      )
+      // Un messaggio modificato o eliminato: la lista chat non deve
+      // continuare a mostrare il testo vecchio. Le letture si ignorano.
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          if (changesPreview(rowOf(payload) as Message)) {
+            invalidate(qk.chat.conversationsAll);
           }
         }
       )

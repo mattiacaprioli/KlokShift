@@ -42,6 +42,23 @@ describe("applyMessageUpdateToCache", () => {
     expect(data.pages[1][1].read_at).toBeNull();
   });
 
+  it("un messaggio eliminato perde davvero il testo in cache", () => {
+    const qc = new QueryClient();
+    const key = qk.chat.messages("c1");
+    qc.setQueryData<InfiniteData<Message[]>>(key, {
+      pages: [[msg("a")]],
+      pageParams: [null],
+    });
+    applyMessageUpdateToCache(qc, {
+      ...msg("a"),
+      content: "",
+      deleted_at: "2026-11-18T10:05:00Z",
+    } as Message);
+    const m = qc.getQueryData<InfiniteData<Message[]>>(key)!.pages[0][0];
+    expect(m.content).toBe("");
+    expect(m.deleted_at).toBe("2026-11-18T10:05:00Z");
+  });
+
   it("senza cache non fa nulla", () => {
     const qc = new QueryClient();
     applyMessageUpdateToCache(qc, msg("a", "x"));

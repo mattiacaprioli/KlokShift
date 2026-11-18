@@ -11,6 +11,7 @@ import type { ConversationListItem } from "./api";
 import { useConversations } from "./hooks";
 import { MessageTicks } from "./MessageTicks";
 import { messageStatus, otherDeliveredAt } from "./messageStatus";
+import { previewText } from "./messageActions";
 import { useColors } from "@/lib/theme";
 
 function ConversationRow({
@@ -27,11 +28,11 @@ function ConversationRow({
   // Le spunte prendono il posto di «Tu:» sui miei messaggi di testo; le card
   // del cambio turno hanno il loro stato e restano col prefisso.
   const ticks =
-    last && mine && last.kind === "text"
+    last && mine && last.kind === "text" && last.deleted_at == null
       ? messageStatus(last, otherDeliveredAt(item, userId))
       : null;
   const preview = last
-    ? (mine && !ticks ? "Tu: " : "") + last.content
+    ? (mine && !ticks ? "Tu: " : "") + previewText(last)
     : "Nessun messaggio";
 
   return (

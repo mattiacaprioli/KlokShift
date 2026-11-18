@@ -19,6 +19,8 @@ import {
   openConversation,
   markConversationRead,
   sendMessage,
+  editMessage,
+  deleteMessage,
   type Conversation,
   type ConversationDetail,
   type Message,
@@ -106,15 +108,7 @@ export function appendMessageToCache(qc: QueryClient, message: Message) {
  * prende il posto della sua copia in cache. Spunte «visualizzato» in diretta.
  */
 export function applyMessageUpdateToCache(qc: QueryClient, message: Message) {
-  const key = qk.chat.messages(message.conversation_id);
-  const existing = qc.getQueryData<InfiniteData<Message[]>>(key);
-  if (!existing) return;
-  qc.setQueryData<InfiniteData<Message[]>>(key, {
-    ...existing,
-    pages: existing.pages.map((page) =>
-      page.map((m) => (m.id === message.id ? { ...m, ...message } : m))
-    ),
-  });
+  patchMessageInCache(qc, message.conversation_id, message.id, message);
 }
 
 /**
@@ -130,6 +124,56 @@ export function applyConversationUpdateToCache(
   const existing = qc.getQueryData<ConversationDetail | null>(key);
   if (!existing) return;
   qc.setQueryData<ConversationDetail>(key, { ...existing, ...row });
+}
+
+/**
+ * Cambia in cache un messaggio dopo una modifica o un'eliminazione andata a
+ * buon fine; l'altra persona lo riceve dal canale UPDATE del thread.
+ */
+function patchMessageInCache(
+  qc: QueryClient,
+  conversationId: string,
+  id: string,
+  patch: Partial<Message>
+) {
+  const key = qk.chat.messages(conversationId);
+  const existing = qc.getQueryData<InfiniteData<Message[]>>(key);
+  if (!existing) return;
+  qc.setQueryData<InfiniteData<Message[]>>(key, {
+    ...existing,
+    pages: existing.pages.map((page) =>
+      page.map((m) => (m.id === id ? { ...m, ...patch } : m))
+    ),
+  });
+}
+
+export function useEditMessage(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, content }: { id: string; content: string }) =>
+      editMessage(id, content),
+    onSuccess: (_data, { id, content }) => {
+      patchMessageInCache(qc, conversationId, id, {
+        content: content.trim(),
+        edited_at: new Date().toISOString(),
+      });
+      qc.invalidateQueries({ queryKey: qk.chat.conversationsAll });
+    },
+  });
+}
+
+export function useDeleteMessage(conversationId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteMessage(id),
+    onSuccess: (_data, id) => {
+      patchMessageInCache(qc, conversationId, id, {
+        content: "",
+        deleted_at: new Date().toISOString(),
+      });
+      qc.invalidateQueries({ queryKey: qk.chat.conversationsAll });
+    },
+  });
 }
 
 export function useSendMessage(conversationId: string, userId: string) {

@@ -13,6 +13,16 @@ import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { ChangeRequestCard } from "../chat/ChangeRequestCard";
 import { MessageTicks } from "../chat/MessageTicks";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { MoreMenu, type MoreMenuItem } from "../ui/MoreMenu";
+import {
+  DELETED_TEXT,
+  canDelete,
+  canEdit,
+  previewText,
+} from "@/features/chat/messageActions";
+import { messageSchema } from "@/features/chat/schema";
+import type { Message } from "@/features/chat/api";
 import {
   messageStatus,
   otherDeliveredAt,
@@ -100,7 +110,10 @@ export function ChatPage() {
               // Le spunte prendono il posto di «Tu:» sui miei messaggi di
               // testo; le card del cambio turno restano col prefisso.
               const ticks =
-                c.lastMessage && mine && c.lastMessage.kind === "text"
+                c.lastMessage &&
+                mine &&
+                c.lastMessage.kind === "text" &&
+                c.lastMessage.deleted_at == null
                   ? messageStatus(c.lastMessage, otherDeliveredAt(c, userId))
                   : null;
               return (
@@ -140,7 +153,7 @@ export function ChatPage() {
                         ) : null}
                         <span className="truncate text-xs text-t3">
                           {c.lastMessage
-                            ? `${mine && !ticks ? "Tu: " : ""}${c.lastMessage.content}`
+                            ? `${mine && !ticks ? "Tu: " : ""}${previewText(c.lastMessage)}`
                             : "Nessun messaggio"}
                         </span>
                       </span>
@@ -314,8 +327,41 @@ function Thread({
 
   // Messaggi deduplicati, canale realtime e mark-read vengono dall'hook
   // condiviso con l'app: qui c'è solo la UI.
-  const { query, messages, other, notFound, send, submit, statusOf, pending } =
-    useChatThread(conversationId, userId);
+  const {
+    query,
+    messages,
+    other,
+    notFound,
+    send,
+    submit,
+    statusOf,
+    pending,
+    edit,
+    remove,
+  } = useChatThread(conversationId, userId);
+  // Modifica ed elimina: il messaggio in modifica nel campo e quello da
+  // confermare per l'eliminazione.
+  const [editing, setEditing] = useState<Message | null>(null);
+  const [deleting, setDeleting] = useState<Message | null>(null);
+
+  function actionsFor(m: Message): MoreMenuItem[] {
+    const now = new Date();
+    const items: MoreMenuItem[] = [];
+    if (canEdit(m, userId, now)) {
+      items.push({
+        label: "Modifica",
+        onSelect: () => {
+          setEditing(m);
+          setText(m.content);
+          setSendError(null);
+        },
+      });
+    }
+    if (canDelete(m, userId, now)) {
+      items.push({ label: "Elimina", onSelect: () => setDeleting(m) });
+    }
+    return items;
+  }
 
   // I messaggi arrivano dal più recente: si mostrano invertiti, e si scende in
   // fondo a ogni nuovo arrivo.
@@ -336,6 +382,25 @@ function Thread({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (editing) {
+      const parsed = messageSchema.safeParse({ content: text });
+      if (!parsed.success) {
+        setSendError(parsed.error.issues[0].message);
+        return;
+      }
+      edit.mutate(
+        { id: editing.id, content: parsed.data.content },
+        {
+          onSuccess: () => {
+            setEditing(null);
+            setText("");
+            setSendError(null);
+          },
+          onError: (err) => setSendError(userErrorMessage(err)),
+        }
+      );
+      return;
+    }
     const draft = text;
     // Come su WhatsApp il testo lascia subito il campo e diventa la bolla con
     // l'orologio; se l'invio fallisce torna dov'era.
@@ -418,6 +483,9 @@ function Thread({
                     createdAt={new Date(m.created_at)}
                     own={own}
                     status={statusOf(m)}
+                    edited={m.edited_at != null}
+                    deleted={m.deleted_at != null}
+                    actions={own ? actionsFor(m) : []}
                   />
                 );
               })}
@@ -435,6 +503,26 @@ function Thread({
         )}
       </div>
 
+      {editing ? (
+        <div className="flex items-center gap-3 border-t border-border px-4 pt-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gold">Modifica messaggio</p>
+            <p className="truncate text-xs text-t3">{editing.content}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Annulla la modifica"
+            onClick={() => {
+              setEditing(null);
+              setText("");
+              setSendError(null);
+            }}
+            className="focus-gold rounded-lg px-2 py-1 text-sm text-t3 hover:bg-bg-2"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
       <form
         onSubmit={onSubmit}
         className="flex items-center gap-2 border-t border-border p-3"
@@ -447,13 +535,38 @@ function Thread({
         <Button
           type="submit"
           variant="gold"
-          disabled={!text.trim() || send.isPending}
+          disabled={!text.trim() || send.isPending || edit.isPending}
         >
-          Invia
+          {editing ? "Salva" : "Invia"}
         </Button>
       </form>
       {sendError ? (
         <p className="px-4 pb-3 text-xs text-error">{sendError}</p>
+      ) : null}
+      {deleting ? (
+        <ConfirmDialog
+          title="Eliminare il messaggio?"
+          message="Sparirà per tutti e due."
+          confirmLabel="Elimina"
+          destructive
+          pending={remove.isPending}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() =>
+            remove.mutate(deleting.id, {
+              onSuccess: () => {
+                if (editing?.id === deleting.id) {
+                  setEditing(null);
+                  setText("");
+                }
+                setDeleting(null);
+              },
+              onError: (err) => {
+                setDeleting(null);
+                setSendError(userErrorMessage(err));
+              },
+            })
+          }
+        />
       ) : null}
     </div>
   );
@@ -464,33 +577,60 @@ function TextBubble({
   createdAt,
   own,
   status,
+  edited = false,
+  deleted = false,
+  actions = [],
 }: {
   content: string;
   createdAt: Date;
   own: boolean;
   status: MessageStatus | null;
+  edited?: boolean;
+  deleted?: boolean;
+  actions?: MoreMenuItem[];
 }) {
   return (
     <div
       className={cn(
-        "max-w-[70%] rounded-2xl px-3.5 py-2.5",
-        own
-          ? "self-end rounded-br-md bg-gold-fill text-gold-ink"
-          : "self-start rounded-bl-md bg-bg-2 text-t1"
+        "group flex max-w-[70%] items-start gap-1",
+        own ? "flex-row-reverse self-end" : "self-start"
       )}
     >
-      <p className="text-sm whitespace-pre-wrap">{content}</p>
-      <div className="mt-1 flex items-center justify-end gap-1">
-        <span
+      <div
+        className={cn(
+          "min-w-0 rounded-2xl px-3.5 py-2.5",
+          own
+            ? "rounded-br-md bg-gold-fill text-gold-ink"
+            : "rounded-bl-md bg-bg-2 text-t1"
+        )}
+      >
+        <p
           className={cn(
-            "font-mono text-[10px] opacity-70",
-            own ? "text-gold-ink" : "text-t4"
+            "text-sm whitespace-pre-wrap",
+            deleted && "italic opacity-70"
           )}
         >
-          {toTimeString(createdAt)}
-        </span>
-        {status ? <MessageTicks status={status} /> : null}
+          {deleted ? DELETED_TEXT : content}
+        </p>
+        <div className="mt-1 flex items-center justify-end gap-1">
+          <span
+            className={cn(
+              "font-mono text-[10px] opacity-70",
+              own ? "text-gold-ink" : "text-t4"
+            )}
+          >
+            {edited && !deleted ? "Modificato · " : ""}
+            {toTimeString(createdAt)}
+          </span>
+          {status ? <MessageTicks status={status} /> : null}
+        </div>
       </div>
+      {actions.length > 0 ? (
+        // Il «⋯» compare al passaggio del mouse (o col focus da tastiera).
+        <div className="opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <MoreMenu items={actions} label="Azioni sul messaggio" />
+        </div>
+      ) : null}
     </div>
   );
 }

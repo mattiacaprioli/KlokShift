@@ -479,6 +479,8 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 
 - [ ] **Spunte della chat (18/11)** ✅ nel codice: inviato / ricevuto / visualizzato come WhatsApp, in app e dashboard ([spec](docs/superpowers/specs/2026-11-18-chat-spunte-design.md)). Da rilasciare: push su `main` (la CI applica `20261118000000_chat_delivery`, che mette anche `conversations` in realtime), poi build nativa. Prova a mano con due account: ✓ all'invio, ✓✓ grigie quando l'altro apre l'app, ✓✓ piene quando apre il thread, senza ricaricare; tema chiaro e scuro (se attenuato/pieno si distingue poco, un token dedicato).
 
+- [ ] **Modifica ed elimina messaggio (18/11)** ✅ nel codice, in app (pressione lunga) e dashboard («⋯» sulla bolla) ([spec](docs/superpowers/specs/2026-11-18-chat-modifica-elimina-design.md)). Da rilasciare: push su `main` (CI applica `20261118000100_chat_edit_delete`), poi build nativa. Prova a mano con due account: modifica entro 15 minuti («Modificato» compare all'altro senza ricaricare), elimina («Messaggio eliminato» anche nella lista e nella campanella), voci sparite oltre i limiti.
+
 ### Prove a mano (mai fatte dal vivo)
 - [ ] **Aggancio automatico** ora che le email partono: registrarsi con l'indirizzo dell'invito di prova (`+invito`), confermare l'email, verificare che la scheda preparata dalla sede si colleghi (`private.link_member_invites`). Anche: registrazione non confermata (resta scollegata).
 - [ ] **Dashboard con un account reale**: login, prova incrociata app↔web (realtime, notifiche, copertura), export ore.

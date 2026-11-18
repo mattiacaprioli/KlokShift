@@ -586,6 +586,8 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
+          edited_at: string | null
           id: string
           kind: Database["public"]["Enums"]["message_kind"]
           read_at: string | null
@@ -597,6 +599,8 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["message_kind"]
           read_at?: string | null
@@ -608,6 +612,8 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["message_kind"]
           read_at?: string | null
@@ -2518,12 +2524,17 @@ export type Database = {
         Returns: string
       }
       delete_account: { Args: { p_user: string }; Returns: undefined }
+      delete_message: { Args: { p_message: string }; Returns: undefined }
       delete_shift: { Args: { p_shift: string }; Returns: undefined }
       delete_shift_template: {
         Args: { p_template: string }
         Returns: undefined
       }
       delete_venue_closure: { Args: { p_closure: string }; Returns: undefined }
+      edit_message: {
+        Args: { p_content: string; p_message: string }
+        Returns: undefined
+      }
       enter_clock_record: {
         Args: {
           p_assignment: string

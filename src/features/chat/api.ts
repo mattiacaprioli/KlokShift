@@ -32,7 +32,7 @@ export type ConversationListItem = Conversation & {
   other: ChatCounterpart;
   lastMessage: Pick<
     Message,
-    "content" | "created_at" | "sender_id" | "read_at" | "kind"
+    "content" | "created_at" | "sender_id" | "read_at" | "kind" | "deleted_at"
   > | null;
   unreadCount: number;
 };
@@ -83,7 +83,7 @@ export async function getConversationsPage(
     // !inner: escludi le conversazioni senza messaggi (create al tap di
     // "Contatta" ma mai iniziate) — non devono comparire nella lista.
     .select(
-      "*, last:messages!inner(content, created_at, sender_id, read_at, kind), unread:messages(count)"
+      "*, last:messages!inner(content, created_at, sender_id, read_at, kind, deleted_at), unread:messages(count)"
     )
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
     .order("created_at", { ascending: false, referencedTable: "last" })
@@ -256,6 +256,29 @@ export async function markConversationRead(
 ): Promise<void> {
   const { error } = await supabase.rpc("mark_conversation_read", {
     p_conversation: conversationId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Modifica un mio messaggio di testo (entro 15 minuti). Il testo vecchio non
+ * resta da nessuna parte; lo controlla il database (`edit_message`).
+ */
+export async function editMessage(
+  messageId: string,
+  content: string
+): Promise<void> {
+  const { error } = await supabase.rpc("edit_message", {
+    p_message: messageId,
+    p_content: content,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Elimina per tutti un mio messaggio di testo (entro 48 ore). */
+export async function deleteMessage(messageId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_message", {
+    p_message: messageId,
   });
   if (error) throw new Error(error.message);
 }

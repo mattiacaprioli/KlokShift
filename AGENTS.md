@@ -72,6 +72,14 @@ dall'authority (`private.speaks_for_workspace`).
   messaggio (costo). La regola sta solo in `src/features/chat/messageStatus.ts`;
   le card non hanno spunte. Si segna ricevuto da `requestChatDelivery`
   (avvio, messaggio in arrivo su `RealtimeSync`, ritorno in primo piano).
+- **Modifica ed elimina** (2026-11-18, `20261118000100`): solo i propri
+  messaggi di testo, modifica entro **15 minuti**, eliminazione per tutti entro
+  **48 ore**, da `edit_message` / `delete_message` (i limiti li decide il
+  database; `messageActions.ts` è il gemello **manuale** che mostra le voci).
+  Il testo vecchio si cancella **davvero** (scelta del fondatore): l'eliminato
+  resta come riga con `content = ''` e `deleted_at` («Messaggio eliminato»), e
+  la notifica in-app nata da quel testo viene riscritta. Le push già arrivate
+  non si possono richiamare. Niente cronologia delle modifiche.
 
 ## Spostare un turno (2026-09-20)
 
