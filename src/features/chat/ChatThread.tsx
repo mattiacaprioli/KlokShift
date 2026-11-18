@@ -13,11 +13,22 @@ import { toTimeString } from "@/lib/format";
 import { useKeyboardVisible } from "@/lib/useKeyboardVisible";
 import { useToast } from "@/providers/Toast";
 import { ChangeRequestCard } from "@/features/changeRequests/ChangeRequestCard";
-import type { Message } from "./api";
+import { MessageTicks } from "./MessageTicks";
+import type { MessageStatus } from "./messageStatus";
 import { useChatThread } from "./useChatThread";
 import { useColors } from "@/lib/theme";
 
-function MessageBubble({ message, own }: { message: Message; own: boolean }) {
+function MessageBubble({
+  content,
+  createdAt,
+  own,
+  status,
+}: {
+  content: string;
+  createdAt: Date;
+  own: boolean;
+  status: MessageStatus | null;
+}) {
   return (
     <View
       className={cn(
@@ -28,16 +39,19 @@ function MessageBubble({ message, own }: { message: Message; own: boolean }) {
       )}
     >
       <Text className={cn("text-[15px]", own ? "text-gold-ink" : "text-t1")}>
-        {message.content}
+        {content}
       </Text>
-      <Text
-        className={cn(
-          "mt-1 self-end text-[10px] opacity-70",
-          own ? "text-gold-ink" : "text-t4"
-        )}
-      >
-        {toTimeString(new Date(message.created_at))}
-      </Text>
+      <View className="mt-1 flex-row items-center gap-1 self-end">
+        <Text
+          className={cn(
+            "text-[10px] opacity-70",
+            own ? "text-gold-ink" : "text-t4"
+          )}
+        >
+          {toTimeString(createdAt)}
+        </Text>
+        {status ? <MessageTicks status={status} /> : null}
+      </View>
     </View>
   );
 }
@@ -58,19 +72,32 @@ export function ChatThread({ conversationId, userId }: Props) {
 
   // Messaggi, realtime, mark-read e validazione dell'invio stanno nell'hook
   // condiviso con la dashboard web: qui resta solo la UI.
-  const { conversation, query, messages, other, notFound, send, submit } = useChatThread(
-    conversationId,
-    userId
-  );
+  const {
+    conversation,
+    query,
+    messages,
+    other,
+    notFound,
+    send,
+    submit,
+    statusOf,
+    pending,
+  } = useChatThread(conversationId, userId);
 
   const canSend = text.trim().length > 0 && !send.isPending;
 
   const onSend = () => {
-    const invalid = submit(text, {
-      onSuccess: () => setText(""),
-      onError: () => toast.show("Messaggio non inviato. Riprova.", "error"),
+    const draft = text;
+    // Come su WhatsApp il testo lascia subito il composer e diventa la bolla
+    // con l'orologio; se l'invio fallisce torna dov'era.
+    const invalid = submit(draft, {
+      onError: () => {
+        setText((current) => (current === "" ? draft : current));
+        toast.show("Messaggio non inviato. Riprova.", "error");
+      },
     });
     if (invalid) toast.show(invalid, "error");
+    else setText("");
   };
 
   if (notFound) {
@@ -157,7 +184,12 @@ export function ChatThread({ conversationId, userId }: Props) {
               // quello che la card mostra come motivo. Le assenze in chat non
               // ci sono più (31/10): una riga rimasta non si mostra.
               item.kind === "text" ? (
-                <MessageBubble message={item} own={item.sender_id === userId} />
+                <MessageBubble
+                  content={item.content}
+                  createdAt={new Date(item.created_at)}
+                  own={item.sender_id === userId}
+                  status={statusOf(item)}
+                />
               ) : item.kind === "absence_request" ||
                 item.kind === "absence_response" ? null : (
                 <ChangeRequestCard
@@ -179,6 +211,20 @@ export function ChatThread({ conversationId, userId }: Props) {
                 query.fetchNextPage();
               }
             }}
+            // In una lista invertita l'header sta in fondo: è il posto del
+            // messaggio che sta partendo.
+            ListHeaderComponent={
+              pending ? (
+                <View style={{ marginBottom: messages.length > 0 ? 8 : 0 }}>
+                  <MessageBubble
+                    content={pending}
+                    createdAt={new Date()}
+                    own
+                    status="sending"
+                  />
+                </View>
+              ) : null
+            }
             ListFooterComponent={
               query.isFetchingNextPage ? (
                 <ActivityIndicator

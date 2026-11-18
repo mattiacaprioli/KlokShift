@@ -30,7 +30,10 @@ export type ChatCounterpart = {
 
 export type ConversationListItem = Conversation & {
   other: ChatCounterpart;
-  lastMessage: Pick<Message, "content" | "created_at" | "sender_id"> | null;
+  lastMessage: Pick<
+    Message,
+    "content" | "created_at" | "sender_id" | "read_at" | "kind"
+  > | null;
   unreadCount: number;
 };
 
@@ -80,7 +83,7 @@ export async function getConversationsPage(
     // !inner: escludi le conversazioni senza messaggi (create al tap di
     // "Contatta" ma mai iniziate) — non devono comparire nella lista.
     .select(
-      "*, last:messages!inner(content, created_at, sender_id), unread:messages(count)"
+      "*, last:messages!inner(content, created_at, sender_id, read_at, kind), unread:messages(count)"
     )
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
     .order("created_at", { ascending: false, referencedTable: "last" })
@@ -255,6 +258,17 @@ export async function markConversationRead(
     p_conversation: conversationId,
   });
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Porta il mio segnalibro «ricevuto» all'ultimo messaggio in ogni mia
+ * conversazione con novità; restituisce quante ne ha avanzate (0 = nessuna
+ * scrittura). Non chiamarla direttamente: passa da `requestChatDelivery`.
+ */
+export async function markChatsDelivered(): Promise<number> {
+  const { data, error } = await supabase.rpc("mark_chats_delivered");
+  if (error) throw new Error(error.message);
+  return data ?? 0;
 }
 
 /**

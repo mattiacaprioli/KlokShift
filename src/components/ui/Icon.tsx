@@ -7,6 +7,7 @@ export type IconName =
   | "chevR"
   | "chevL"
   | "check"
+  | "checkDouble"
   | "close"
   | "plus"
   | "alert"
@@ -80,6 +81,9 @@ export function Icon({
       {name === "chevR" && <Path {...p} d="M9 6l6 6-6 6" />}
       {name === "chevL" && <Path {...p} d="M15 6l-6 6 6 6" />}
       {name === "check" && <Path {...p} d="M5 12l5 5 9-10" strokeWidth={2.2} />}
+      {name === "checkDouble" && (
+        <Path {...p} d="M2 12.5l4.5 4.5 8.5-10M10.5 16l1 1 8.5-10" strokeWidth={2.2} />
+      )}
       {name === "close" && <Path {...p} d="M6 6l12 12M18 6L6 18" />}
       {name === "plus" && <Path {...p} d="M12 5v14M5 12h14" />}
       {name === "alert" && (

@@ -12,6 +12,12 @@ import { userErrorMessage } from "@/lib/errors";
 import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { ChangeRequestCard } from "../chat/ChangeRequestCard";
+import { MessageTicks } from "../chat/MessageTicks";
+import {
+  messageStatus,
+  otherDeliveredAt,
+  type MessageStatus,
+} from "@/features/chat/messageStatus";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import {
@@ -91,6 +97,12 @@ export function ChatPage() {
             {conversations.map((c) => {
               const active = c.id === id;
               const mine = c.lastMessage?.sender_id === userId;
+              // Le spunte prendono il posto di «Tu:» sui miei messaggi di
+              // testo; le card del cambio turno restano col prefisso.
+              const ticks =
+                c.lastMessage && mine && c.lastMessage.kind === "text"
+                  ? messageStatus(c.lastMessage, otherDeliveredAt(c, userId))
+                  : null;
               return (
                 <button
                   key={c.id}
@@ -122,10 +134,15 @@ export function ChatPage() {
                       ) : null}
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="truncate text-xs text-t3">
-                        {c.lastMessage
-                          ? `${mine ? "Tu: " : ""}${c.lastMessage.content}`
-                          : "Nessun messaggio"}
+                      <span className="flex min-w-0 items-center gap-1">
+                        {ticks ? (
+                          <MessageTicks status={ticks} tone="list" />
+                        ) : null}
+                        <span className="truncate text-xs text-t3">
+                          {c.lastMessage
+                            ? `${mine && !ticks ? "Tu: " : ""}${c.lastMessage.content}`
+                            : "Nessun messaggio"}
+                        </span>
                       </span>
                       {c.unreadCount > 0 ? (
                         <span className="shrink-0 rounded-full bg-gold-fill px-1.5 text-[11px] font-bold text-gold-ink">
@@ -297,10 +314,8 @@ function Thread({
 
   // Messaggi deduplicati, canale realtime e mark-read vengono dall'hook
   // condiviso con l'app: qui c'è solo la UI.
-  const { query, messages, other, notFound, send, submit } = useChatThread(
-    conversationId,
-    userId
-  );
+  const { query, messages, other, notFound, send, submit, statusOf, pending } =
+    useChatThread(conversationId, userId);
 
   // I messaggi arrivano dal più recente: si mostrano invertiti, e si scende in
   // fondo a ogni nuovo arrivo.
@@ -308,7 +323,7 @@ function Thread({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [messages.length, pending]);
 
   if (notFound) {
     return (
@@ -321,11 +336,17 @@ function Thread({
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const invalid = submit(text, {
-      onSuccess: () => setText(""),
-      onError: () => setSendError("Messaggio non inviato. Riprova."),
+    const draft = text;
+    // Come su WhatsApp il testo lascia subito il campo e diventa la bolla con
+    // l'orologio; se l'invio fallisce torna dov'era.
+    const invalid = submit(draft, {
+      onError: () => {
+        setText((current) => (current === "" ? draft : current));
+        setSendError("Messaggio non inviato. Riprova.");
+      },
     });
     setSendError(invalid);
+    if (!invalid) setText("");
   }
 
   return (
@@ -347,7 +368,7 @@ function Thread({
           <QueryError error={query.error} />
         ) : query.isLoading ? (
           <MessageSkeleton />
-        ) : ordered.length === 0 ? (
+        ) : ordered.length === 0 && !pending ? (
           <p className="py-12 text-center text-sm text-t3">
             {other
               ? `Scrivi il primo messaggio a ${other.name}.`
@@ -391,27 +412,23 @@ function Thread({
                   );
                 }
                 return (
-                  <div
+                  <TextBubble
                     key={m.id}
-                    className={cn(
-                      "max-w-[70%] rounded-2xl px-3.5 py-2.5",
-                      own
-                        ? "self-end rounded-br-md bg-gold-fill text-gold-ink"
-                        : "self-start rounded-bl-md bg-bg-2 text-t1"
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{m.content}</p>
-                    <p
-                      className={cn(
-                        "mt-1 text-right font-mono text-[10px] opacity-70",
-                        own ? "text-gold-ink" : "text-t4"
-                      )}
-                    >
-                      {toTimeString(new Date(m.created_at))}
-                    </p>
-                  </div>
+                    content={m.content}
+                    createdAt={new Date(m.created_at)}
+                    own={own}
+                    status={statusOf(m)}
+                  />
                 );
               })}
+              {pending ? (
+                <TextBubble
+                  content={pending}
+                  createdAt={new Date()}
+                  own
+                  status="sending"
+                />
+              ) : null}
             </div>
             <div ref={bottomRef} />
           </>
@@ -438,6 +455,42 @@ function Thread({
       {sendError ? (
         <p className="px-4 pb-3 text-xs text-error">{sendError}</p>
       ) : null}
+    </div>
+  );
+}
+
+function TextBubble({
+  content,
+  createdAt,
+  own,
+  status,
+}: {
+  content: string;
+  createdAt: Date;
+  own: boolean;
+  status: MessageStatus | null;
+}) {
+  return (
+    <div
+      className={cn(
+        "max-w-[70%] rounded-2xl px-3.5 py-2.5",
+        own
+          ? "self-end rounded-br-md bg-gold-fill text-gold-ink"
+          : "self-start rounded-bl-md bg-bg-2 text-t1"
+      )}
+    >
+      <p className="text-sm whitespace-pre-wrap">{content}</p>
+      <div className="mt-1 flex items-center justify-end gap-1">
+        <span
+          className={cn(
+            "font-mono text-[10px] opacity-70",
+            own ? "text-gold-ink" : "text-t4"
+          )}
+        >
+          {toTimeString(createdAt)}
+        </span>
+        {status ? <MessageTicks status={status} /> : null}
+      </div>
     </div>
   );
 }

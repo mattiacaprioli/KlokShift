@@ -8,6 +8,7 @@ import {
   shiftViewQueryKeys,
   workEventQueryKeys,
 } from "@/features/shifts/invalidation";
+import { requestChatDelivery } from "@/features/chat/requestChatDelivery";
 import { watchRejoin } from "./rejoin";
 
 type Row = Record<string, unknown>;
@@ -134,6 +135,20 @@ export function RealtimeSync({
   // Solo `venuesKey`, non `venueIds`: vedi il punto 3 qui sopra. La stringa è la
   // stessa lista, ed è l'unica forma che si può mettere nelle dipendenze.
   const { workspaceId, venuesKey } = useOwnerVenues();
+
+  // Spunte «ricevuto»: all'avvio con sessione si segnano i messaggi arrivati
+  // mentre l'app era chiusa. Sulla dashboard anche al ritorno sulla scheda
+  // (`visibilitychange`); in app il ritorno in primo piano lo segnala
+  // `AppProviders` (AppState), perché qui non si importa react-native.
+  useEffect(() => {
+    requestChatDelivery();
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") requestChatDelivery();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [userId]);
 
   useEffect(() => {
     if (!isManager || !workspaceId || venuesKey === "") return;
@@ -271,9 +286,13 @@ export function RealtimeSync({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
-        () => {
+        (payload) => {
           invalidate(qk.chat.conversationsAll);
           invalidate(qk.chat.unreadAll);
+          // Il messaggio dell'altro è arrivato fin qui: spunte «ricevuto».
+          if (idOf(rowOf(payload), "sender_id") !== userId) {
+            requestChatDelivery();
+          }
         }
       )
       .subscribe(rejoin.onStatus);
@@ -339,9 +358,13 @@ export function RealtimeSync({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
-        () => {
+        (payload) => {
           invalidate(qk.chat.conversationsAll);
           invalidate(qk.chat.unreadAll);
+          // Il messaggio dell'altro è arrivato fin qui: spunte «ricevuto».
+          if (idOf(rowOf(payload), "sender_id") !== userId) {
+            requestChatDelivery();
+          }
         }
       )
       .subscribe(rejoin.onStatus);

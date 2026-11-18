@@ -9,6 +9,8 @@ import { timeAgo } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import type { ConversationListItem } from "./api";
 import { useConversations } from "./hooks";
+import { MessageTicks } from "./MessageTicks";
+import { messageStatus, otherDeliveredAt } from "./messageStatus";
 import { useColors } from "@/lib/theme";
 
 function ConversationRow({
@@ -20,9 +22,16 @@ function ConversationRow({
   userId: string;
   onPress: () => void;
 }) {
-  const preview = item.lastMessage
-    ? (item.lastMessage.sender_id === userId ? "Tu: " : "") +
-      item.lastMessage.content
+  const last = item.lastMessage;
+  const mine = last?.sender_id === userId;
+  // Le spunte prendono il posto di «Tu:» sui miei messaggi di testo; le card
+  // del cambio turno hanno il loro stato e restano col prefisso.
+  const ticks =
+    last && mine && last.kind === "text"
+      ? messageStatus(last, otherDeliveredAt(item, userId))
+      : null;
+  const preview = last
+    ? (mine && !ticks ? "Tu: " : "") + last.content
     : "Nessun messaggio";
 
   return (
@@ -51,9 +60,12 @@ function ConversationRow({
             </Text>
           ) : null}
         </View>
-        <Text className="mt-0.5 text-sm text-t3" numberOfLines={1}>
-          {preview}
-        </Text>
+        <View className="mt-0.5 flex-row items-center gap-1">
+          {ticks ? <MessageTicks status={ticks} tone="list" /> : null}
+          <Text className="flex-1 text-sm text-t3" numberOfLines={1}>
+            {preview}
+          </Text>
+        </View>
       </View>
       <View className="items-end gap-1.5">
         <Text className="text-[11px] text-t4">

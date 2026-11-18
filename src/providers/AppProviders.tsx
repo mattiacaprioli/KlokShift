@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "react-error-boundary";
 import * as Sentry from "@sentry/react-native";
 import { refreshOnForeground } from "@/lib/foregroundRefresh";
+import { requestChatDelivery } from "@/features/chat/requestChatDelivery";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider } from "@/lib/auth";
 import { OwnerVenuesProvider } from "@/features/venues/OwnerVenues";
@@ -28,7 +29,11 @@ import { ErrorFallback } from "@/providers/ErrorFallback";
 export function AppProviders({ children }: PropsWithChildren) {
   useEffect(() => {
     const listener = AppState.addEventListener("change", (state) => {
-      if (state === "active") refreshOnForeground(queryClient);
+      if (state !== "active") return;
+      refreshOnForeground(queryClient);
+      // Spunte «ricevuto» per i messaggi arrivati in background. Senza
+      // sessione la RPC fallisce e lo scheduler la ignora.
+      requestChatDelivery();
     });
     return () => listener.remove();
   }, []);

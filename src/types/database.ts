@@ -401,7 +401,9 @@ export type Database = {
           last_message_at: string | null
           shift_id: string | null
           user_a: string
+          user_a_delivered_at: string | null
           user_b: string
+          user_b_delivered_at: string | null
           workspace_id: string
         }
         Insert: {
@@ -410,7 +412,9 @@ export type Database = {
           last_message_at?: string | null
           shift_id?: string | null
           user_a: string
+          user_a_delivered_at?: string | null
           user_b: string
+          user_b_delivered_at?: string | null
           workspace_id: string
         }
         Update: {
@@ -419,7 +423,9 @@ export type Database = {
           last_message_at?: string | null
           shift_id?: string | null
           user_a?: string
+          user_a_delivered_at?: string | null
           user_b?: string
+          user_b_delivered_at?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -2941,6 +2947,7 @@ export type Database = {
         Returns: undefined
       }
       local_now: { Args: never; Returns: string }
+      mark_chats_delivered: { Args: never; Returns: number }
       mark_conversation_read: {
         Args: { p_conversation: string }
         Returns: undefined

@@ -477,6 +477,8 @@ Obiettivo: un ragazzo di vent'anni capisce l'app al primo colpo, in tutti e tre 
 - [x] **Revisione esperienza dipendente (27/10)**: E01–E12 fatti e rilasciati ([plans/EMPLOYEE-REVIEW-2026-10-27.md](plans/EMPLOYEE-REVIEW-2026-10-27.md)). Verificato sul remoto il 27/10: `clock-reminders` ogni 10 minuti, 62 esecuzioni senza errori, 46 ms in media; un promemoria vero partito e chiuso dalla timbratura. Restano la push qui sotto e le prove a mano.
 - [x] ✅ **Edge Function `push` pubblicata (v10, 27/10)** con `ttl` di un'ora e priorità alta per i promemoria di timbratura; `verify_jwt` invariato (false). Prova: senza segreto risponde 401. La modifica del 31/10 (malattia fuori dal tipo) è pubblicata dal 16/11 (v12).
 
+- [ ] **Spunte della chat (18/11)** ✅ nel codice: inviato / ricevuto / visualizzato come WhatsApp, in app e dashboard ([spec](docs/superpowers/specs/2026-11-18-chat-spunte-design.md)). Da rilasciare: push su `main` (la CI applica `20261118000000_chat_delivery`, che mette anche `conversations` in realtime), poi build nativa. Prova a mano con due account: ✓ all'invio, ✓✓ grigie quando l'altro apre l'app, ✓✓ piene quando apre il thread, senza ricaricare; tema chiaro e scuro (se attenuato/pieno si distingue poco, un token dedicato).
+
 ### Prove a mano (mai fatte dal vivo)
 - [ ] **Aggancio automatico** ora che le email partono: registrarsi con l'indirizzo dell'invito di prova (`+invito`), confermare l'email, verificare che la scheda preparata dalla sede si colleghi (`private.link_member_invites`). Anche: registrazione non confermata (resta scollegata).
 - [ ] **Dashboard con un account reale**: login, prova incrociata app↔web (realtime, notifiche, copertura), export ore.

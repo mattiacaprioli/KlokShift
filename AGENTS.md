@@ -63,6 +63,15 @@ dall'authority (`private.speaks_for_workspace`).
   `20261031000100`): notifica, Home («Richieste») e pagina Assenze; le
   notifiche delle assenze aprono sempre Assenze, mai un thread. Le card già
   inviate sono state cancellate. Non rimetterle senza una decisione di prodotto.
+- **Spunte** (2026-11-18, `20261118000000`): inviato / ricevuto / visualizzato,
+  **sempre accese** per tutti, nei due sensi (nessun interruttore, scelta del
+  fondatore). «Visualizzato» è `messages.read_at`; «ricevuto» è un
+  **segnalibro per persona** sulla conversazione (`user_a_delivered_at` /
+  `user_b_delivered_at`), avanzato da `mark_chats_delivered` e da
+  `mark_conversation_read`: una scrittura per conversazione, **mai** per
+  messaggio (costo). La regola sta solo in `src/features/chat/messageStatus.ts`;
+  le card non hanno spunte. Si segna ricevuto da `requestChatDelivery`
+  (avvio, messaggio in arrivo su `RealtimeSync`, ritorno in primo piano).
 
 ## Spostare un turno (2026-09-20)
 

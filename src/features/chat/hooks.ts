@@ -19,6 +19,8 @@ import {
   openConversation,
   markConversationRead,
   sendMessage,
+  type Conversation,
+  type ConversationDetail,
   type Message,
   type MessageCursor,
   type ConversationCursor,
@@ -97,6 +99,37 @@ export function appendMessageToCache(qc: QueryClient, message: Message) {
     ...existing,
     pages: [[message, ...existing.pages[0]], ...existing.pages.slice(1)],
   });
+}
+
+/**
+ * Un messaggio cambiato (in pratica: `read_at`, l'altro ha aperto il thread)
+ * prende il posto della sua copia in cache. Spunte «visualizzato» in diretta.
+ */
+export function applyMessageUpdateToCache(qc: QueryClient, message: Message) {
+  const key = qk.chat.messages(message.conversation_id);
+  const existing = qc.getQueryData<InfiniteData<Message[]>>(key);
+  if (!existing) return;
+  qc.setQueryData<InfiniteData<Message[]>>(key, {
+    ...existing,
+    pages: existing.pages.map((page) =>
+      page.map((m) => (m.id === message.id ? { ...m, ...message } : m))
+    ),
+  });
+}
+
+/**
+ * La conversazione cambiata (segnalibri «ricevuto», `last_message_at`) si
+ * fonde nell'header del thread senza perdere la controparte. Spunte
+ * «ricevuto» in diretta.
+ */
+export function applyConversationUpdateToCache(
+  qc: QueryClient,
+  row: Conversation
+) {
+  const key = qk.chat.conversation(row.id);
+  const existing = qc.getQueryData<ConversationDetail | null>(key);
+  if (!existing) return;
+  qc.setQueryData<ConversationDetail>(key, { ...existing, ...row });
 }
 
 export function useSendMessage(conversationId: string, userId: string) {

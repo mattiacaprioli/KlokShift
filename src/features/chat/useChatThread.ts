@@ -2,14 +2,21 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { supabase } from "@/lib/supabase";
-import type { Message } from "./api";
+import type { Conversation, Message } from "./api";
 import {
   appendMessageToCache,
+  applyConversationUpdateToCache,
+  applyMessageUpdateToCache,
   useConversation,
   useMarkConversationRead,
   useMessagesInfinite,
   useSendMessage,
 } from "./hooks";
+import {
+  messageStatus,
+  otherDeliveredAt,
+  type MessageStatus,
+} from "./messageStatus";
 import { messageSchema } from "./schema";
 
 /**
@@ -76,6 +83,33 @@ export function useChatThread(conversationId: string, userId: string) {
           appendMessageToCache(qc, payload.new as Message);
         }
       )
+      // Spunte in diretta: l'altro apre il thread (`read_at` sui miei
+      // messaggi) o la sua app scarica i messaggi (segnalibro sulla
+      // conversazione).
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          applyMessageUpdateToCache(qc, payload.new as Message);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversations",
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          applyConversationUpdateToCache(qc, payload.new as Conversation);
+        }
+      )
       .subscribe((status) => {
         if (status !== "SUBSCRIBED") return;
         if (firstSubscribe) {
@@ -83,6 +117,9 @@ export function useChatThread(conversationId: string, userId: string) {
           return;
         }
         qc.invalidateQueries({ queryKey: qk.chat.messages(conversationId) });
+        qc.invalidateQueries({
+          queryKey: qk.chat.conversation(conversationId),
+        });
       });
 
     return () => {
@@ -108,6 +145,20 @@ export function useChatThread(conversationId: string, userId: string) {
     [send]
   );
 
+  // Le spunte: solo sui miei messaggi di testo (le card hanno il loro stato).
+  const otherDelivered = conversation.data
+    ? otherDeliveredAt(conversation.data, userId)
+    : null;
+  const statusOf = useCallback(
+    (m: Message): MessageStatus | null =>
+      m.sender_id === userId && m.kind === "text"
+        ? messageStatus(m, otherDelivered)
+        : null,
+    [userId, otherDelivered]
+  );
+  // Il testo in invio, per la bolla provvisoria con l'orologio.
+  const pending = send.isPending ? (send.variables ?? null) : null;
+
   // Conversazione inesistente/senza accesso (es. apertura di una notifica la cui
   // conversazione è stata rimossa): stato chiaro invece di un thread morto.
   const notFound =
@@ -122,5 +173,7 @@ export function useChatThread(conversationId: string, userId: string) {
     send,
     submit,
     markRead,
+    statusOf,
+    pending,
   };
 }
