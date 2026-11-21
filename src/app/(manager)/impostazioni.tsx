@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { StaffChatToggle } from "@/features/chat/StaffChatToggle";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useViewMode } from "@/features/team/ViewMode";
+import { showSwitchToWork } from "@/features/team/viewModeLogic";
 import { CollaboratorPermissionsCard } from "@/features/team/CollaboratorPermissionsCard";
 import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -33,8 +34,14 @@ export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
-  const { isOwner, workspaceId } = useOwnerVenues();
+  const { isOwner, workspaceId, memberships } = useOwnerVenues();
   const { canSwitch } = useViewMode();
+  const switchToWork = showSwitchToWork({
+    canSwitch,
+    isOwner,
+    workspaceId,
+    memberships,
+  });
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -129,8 +136,9 @@ export default function ManagerSettingsScreen() {
           {/* Per un dipendente promosso questo è l'account con cui lavora,
               non un account da sede: cancellarlo da qui vorrebbe dire
               chiudere la propria carriera dalla porta di servizio. Lo trova
-              nelle impostazioni del suo lato. */}
-          {canSwitch ? null : <DeleteAccountSection />}
+              nelle impostazioni del suo lato. Se quel lato dal Menu non si
+              raggiunge (`showSwitchToWork`), resta qui. */}
+          {switchToWork ? null : <DeleteAccountSection />}
         </View>
       </ScrollView>
     </View>

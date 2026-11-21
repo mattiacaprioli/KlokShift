@@ -71,7 +71,7 @@ export const SUPPORT_FAQ: readonly SupportFaq[] = [
   },
   {
     q: "Come passo dalla gestione ai miei turni?",
-    a: "Se gestisci e lavori anche nei turni, nel Menu trovi «Passa ai tuoi turni»; dall'altra parte, nel Profilo, «Passa alla gestione». L'app si ricorda l'ultima scelta.",
+    a: "Se sei titolare e ti metti in turno nella tua azienda, non serve cambiare: i tuoi turni li timbri e confermi dalla Home, in «I tuoi turni». Se sei un collaboratore, o lavori anche per un'altra azienda, nel Menu trovi «Passa ai tuoi turni»; dall'altra parte, nel Profilo, «Passa alla gestione». L'app si ricorda l'ultima scelta.",
     audience: ["manager", "waiter"],
   },
   {

@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { usePendingAbsenceCount } from "@/features/absences/hooks";
 import { useSwitchToWorkView } from "@/features/onboarding/useSwitchToWorkView";
 import { useViewMode } from "@/features/team/ViewMode";
+import { showSwitchToWork } from "@/features/team/viewModeLogic";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -59,8 +60,15 @@ export default function ManagerMenuScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
-  const { venues, isOwner, authority, workspaceName, canAny } = useOwnerVenues();
+  const { venues, isOwner, authority, workspaceName, canAny, workspaceId, memberships } =
+    useOwnerVenues();
   const { canSwitch } = useViewMode();
+  const switchToWork = showSwitchToWork({
+    canSwitch,
+    isOwner,
+    workspaceId,
+    memberships,
+  });
   const workView = useSwitchToWorkView();
 
   const canStaff = canAny("can_manage_staff");
@@ -121,8 +129,10 @@ export default function ManagerMenuScreen() {
         </Pressable>
 
         {/* L'altro cappello: il Profilo del dipendente ha «Passa alla
-            gestione», qui c'è il ritorno. */}
-        {canSwitch ? (
+            gestione», qui c'è il ritorno. Al titolare solo se lavora anche in
+            un'altra azienda: i suoi turni qui li timbra e conferma dalla Home
+            (`showSwitchToWork`). */}
+        {switchToWork ? (
           <NavRow
             icon="user"
             title="Passa ai tuoi turni"

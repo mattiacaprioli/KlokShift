@@ -1,3 +1,4 @@
+import type { Membership } from "@/features/workspace/types";
 import type { ViewMode } from "./viewModeStorage";
 
 /**
@@ -38,4 +39,37 @@ export function resolvedViewMode({
   if (canManage) return { effective: "manager", canSwitch };
   if (hasPersonalView) return { effective: "waiter", canSwitch };
   return { effective: intent, canSwitch };
+}
+
+/**
+ * «Passa ai tuoi turni» nel Menu della gestione.
+ *
+ * Il titolare non ne ha bisogno per la propria azienda: la Home della gestione
+ * gli fa già timbrare e confermare i suoi turni («I tuoi turni»), e mettersi
+ * in turno da sé vale come conferma. Gli resta solo se lavora **anche in
+ * un'altra azienda**, i cui turni stanno solo nella vista lavoro.
+ * Il collaboratore lo tiene: ferie, cambi turno e ore sue passano da lì.
+ */
+export function showSwitchToWork({
+  canSwitch,
+  isOwner,
+  workspaceId,
+  memberships,
+}: {
+  canSwitch: boolean;
+  isOwner: boolean;
+  workspaceId: string | undefined;
+  memberships: readonly Pick<
+    Membership,
+    "workspace_id" | "status" | "authority" | "works"
+  >[];
+}): boolean {
+  if (!canSwitch) return false;
+  if (!isOwner) return true;
+  return memberships.some(
+    (m) =>
+      m.workspace_id !== workspaceId &&
+      m.status === "active" &&
+      (m.authority === "none" || m.works.length > 0)
+  );
 }

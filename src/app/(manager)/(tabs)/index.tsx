@@ -16,7 +16,10 @@ import { withShift } from "@/features/assignments/agenda";
 import {
   useMyAssignedUpcoming,
   useOwnerTodayAssignments,
+  useRespondToAssignment,
 } from "@/features/assignments/hooks";
+import { DeclineShiftModal } from "@/features/assignments/DeclineShiftModal";
+import { NextShiftCard } from "@/features/assignments/NextShiftCard";
 import { useMyRosterIds } from "@/features/assignments/useMyRoster";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
@@ -59,6 +62,7 @@ import {
   capitalize,
   formatRelativeStart,
   formatShiftRange,
+  isShiftOver,
   todayString,
 } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
@@ -187,10 +191,44 @@ export default function ManagerHome() {
     [myAssignedQuery.data, mine],
   );
   const plannedInBlocked = blocksPlannedClockIn(myUnplannedQuery.data ?? []);
-  // Il prossimo turno ha già la sua card se è da timbrare: non due volte.
+
+  /**
+   * I propri turni ancora da confermare, con Conferma e Rifiuta come nella
+   * Home del dipendente. Mettersi in turno da sé vale già come conferma, ma un
+   * collaboratore può assegnare il titolare o cambiare l'orario di un turno in
+   * cui c'è (la conferma si riapre): senza questo, si rispondeva solo dalla
+   * vista lavoro, che al titolare il Menu non offre più (`showSwitchToWork`).
+   */
+  const myToConfirm = useMemo(() => {
+    const clocking = new Set(myClockItems.map((item) => item.id));
+    return withShift(myAssignedQuery.data ?? []).filter(
+      (item) =>
+        mine.has(item.venue_member_id) &&
+        item.status === "assigned" &&
+        !clocking.has(item.id) &&
+        !isShiftOver(item.shift) &&
+        item.shift.status !== "cancelled",
+    );
+  }, [myAssignedQuery.data, mine, myClockItems]);
+  const respond = useRespondToAssignment();
+  const [declining, setDeclining] = useState<string | null>(null);
+  function onConfirm(id: string) {
+    respond.mutate(
+      { id, status: "confirmed" },
+      {
+        onSuccess: () => toast.show("Presenza confermata"),
+        onError: (e) =>
+          toast.show(userErrorMessage(e, "Operazione non riuscita. Riprova."), "error"),
+      },
+    );
+  }
+
+  // Il prossimo turno ha già la sua card se è da timbrare o da confermare:
+  // non due volte.
   const showMyNextShift =
     myNextShift != null &&
-    !myClockItems.some((item) => item.shift_id === myNextShift.id);
+    !myClockItems.some((item) => item.shift_id === myNextShift.id) &&
+    !myToConfirm.some((item) => item.shift_id === myNextShift.id);
 
   /** Il badge di una sede, o niente se il titolare ne ha una sola. */
   const venueBadge = (venueId: string | undefined) => {
@@ -459,7 +497,7 @@ export default function ManagerHome() {
 
             {/* Il proprio turno prima di quelli degli altri: chi organizza i
                 turni e ci lavora apre l'app anche per sapere quando attacca. */}
-            {myClockItems.length > 0 || showMyNextShift ? (
+            {myClockItems.length > 0 || myToConfirm.length > 0 || showMyNextShift ? (
               <View className="gap-2.5">
                 <Mono>I tuoi turni</Mono>
                 {myClockItems.map((item) => (
@@ -467,6 +505,20 @@ export default function ManagerHome() {
                     key={item.id}
                     item={item}
                     inBlocked={plannedInBlocked}
+                  />
+                ))}
+                {myToConfirm.map((item) => (
+                  <NextShiftCard
+                    key={item.id}
+                    item={item}
+                    onPress={() =>
+                      router.push(`/(manager)/shift/${item.shift_id}`)
+                    }
+                    onConfirm={() => onConfirm(item.id)}
+                    onDecline={() => setDeclining(item.id)}
+                    pending={
+                      respond.isPending && respond.variables?.id === item.id
+                    }
                   />
                 ))}
                 {myNextShift && showMyNextShift ? (
@@ -641,6 +693,10 @@ export default function ManagerHome() {
       </ScrollView>
 
       <UnplannedClockModal clock={managing} onClose={() => setManaging(null)} />
+      <DeclineShiftModal
+        assignmentId={declining}
+        onClose={() => setDeclining(null)}
+      />
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolvedViewMode } from "@/features/team/viewModeLogic";
+import { resolvedViewMode, showSwitchToWork } from "@/features/team/viewModeLogic";
 
 describe("resolvedViewMode", () => {
   it.each([
@@ -90,5 +90,50 @@ describe("resolvedViewMode", () => {
     expect(accountA.effective).toBe("waiter");
     expect(accountB.effective).toBe("manager");
     expect(afterRevoke).toEqual({ effective: "waiter", canSwitch: false });
+  });
+});
+
+describe("showSwitchToWork", () => {
+  const own = { workspace_id: "w1", status: "active" as const, authority: "owner" as const, works: [{}] as never[] };
+  const elsewhere = { workspace_id: "w2", status: "active" as const, authority: "none" as const, works: [] };
+
+  it("il titolare in turno solo nella sua azienda non lo vede", () => {
+    expect(
+      showSwitchToWork({ canSwitch: true, isOwner: true, workspaceId: "w1", memberships: [own] })
+    ).toBe(false);
+  });
+
+  it("il titolare che lavora anche altrove lo vede", () => {
+    expect(
+      showSwitchToWork({ canSwitch: true, isOwner: true, workspaceId: "w1", memberships: [own, elsewhere] })
+    ).toBe(true);
+  });
+
+  it("un invito non ancora accettato altrove non conta", () => {
+    expect(
+      showSwitchToWork({
+        canSwitch: true,
+        isOwner: true,
+        workspaceId: "w1",
+        memberships: [own, { ...elsewhere, status: "invited" as const }],
+      })
+    ).toBe(false);
+  });
+
+  it("il collaboratore lo vede", () => {
+    expect(
+      showSwitchToWork({
+        canSwitch: true,
+        isOwner: false,
+        workspaceId: "w1",
+        memberships: [{ ...own, authority: "collaborator" as const }],
+      })
+    ).toBe(true);
+  });
+
+  it("senza interruttore mai", () => {
+    expect(
+      showSwitchToWork({ canSwitch: false, isOwner: false, workspaceId: "w1", memberships: [elsewhere] })
+    ).toBe(false);
   });
 });
