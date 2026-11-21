@@ -1,9 +1,9 @@
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { KeyboardAvoidingView } from "react-native";
+import { AppState, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -23,6 +23,7 @@ import {
   resendLabel,
   useResendConfirmation,
 } from "@/features/auth/useResendConfirmation";
+import { CONFIRM_REDIRECT_URL } from "@/features/auth/redirects";
 import type { ViewMode } from "@/features/team/viewModeStorage";
 import { useColors } from "@/lib/theme";
 
@@ -38,7 +39,10 @@ export default function SignupAccount() {
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false);
-  const [sentTo, setSentTo] = useState<string | null>(null);
+  // Email e password restano in memoria solo su questa schermata, come già nel
+  // form: servono a «Controlla la posta» per far entrare da sola la persona
+  // quando torna dall'email confermata.
+  const [sentTo, setSentTo] = useState<{ email: string; password: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit } = useForm<SignupForm>({
@@ -71,6 +75,7 @@ export default function SignupAccount() {
       password: values.password,
       fullName: values.fullName.trim(),
       intent,
+      emailRedirectTo: CONFIRM_REDIRECT_URL,
     });
     setLoading(false);
     if (res.error) {
@@ -82,13 +87,13 @@ export default function SignupAccount() {
       return;
     }
     if (res.needsConfirmation) {
-      setSentTo(values.email.trim());
+      setSentTo({ email: values.email.trim(), password: values.password });
       return;
     }
     // in caso di sessione attiva, i guard nel root layout reindirizzano
   });
 
-  if (sentTo) return <CheckYourMail email={sentTo} />;
+  if (sentTo) return <CheckYourMail email={sentTo.email} password={sentTo.password} />;
 
   return (
     <KeyboardAvoidingView
@@ -206,13 +211,14 @@ export default function SignupAccount() {
  * sarebbe registrarsi con un altro indirizzo: proprio quello da evitare, perché
  * è l'indirizzo a collegarlo alla scheda che la sede gli ha preparato.
  */
-function CheckYourMail({ email }: { email: string }) {
+function CheckYourMail({ email, password }: { email: string; password: string }) {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // `true`: l'email della registrazione è appena partita, quindi il contatore
   // parte da fermo. Offrire subito il bottone vorrebbe dire offrire un 429.
-  const resend = useResendConfirmation(email, undefined, true);
+  const resend = useResendConfirmation(email, CONFIRM_REDIRECT_URL, true);
+  const { tryEnter, entering, enterError } = useEnterWhenConfirmed(email, password);
 
   return (
     <View className="flex-1 bg-bg-0">
@@ -246,7 +252,8 @@ function CheckYourMail({ email }: { email: string }) {
             {email}
           </Text>
           <Text className="mt-3 text-center font-sans text-[13px] leading-5 text-t3">
-            Apri il link per attivare l&apos;account, poi accedi.
+            Apri il link per attivare l&apos;account, poi torna qui: entri da
+            solo.
           </Text>
         </View>
 
@@ -273,13 +280,71 @@ function CheckYourMail({ email }: { email: string }) {
           />
         </View>
 
+        {enterError ? (
+          <Text className="mt-6 text-center font-sans text-[13px] leading-5 text-error">
+            {enterError}
+          </Text>
+        ) : null}
         <GoldButton
           className="mt-6"
           size="lg"
-          label="Vai all'accesso"
-          onPress={() => router.replace("/(auth)/login")}
+          label={entering ? "Accesso…" : "Ho confermato, entra"}
+          disabled={entering}
+          onPress={() => tryEnter(true)}
         />
+        <Pressable
+          className="mt-5 items-center"
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text className="font-sans-semibold text-sm text-gold">Vai all&apos;accesso</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * Entra appena l'email risulta confermata, senza far riscrivere email e
+ * password: prova l'accesso quando l'app torna in primo piano (la persona
+ * rientra dalla posta o dalla pagina «Email confermata») e quando preme il
+ * pulsante. Con la sessione aperta ci pensano i guard del root layout.
+ *
+ * In automatico tace: un «email non confermata» vuol dire solo che non ha
+ * ancora aperto il link. Dal pulsante dice cosa manca.
+ */
+function useEnterWhenConfirmed(email: string, password: string) {
+  const { signIn } = useAuth();
+  const [entering, setEntering] = useState(false);
+  const [enterError, setEnterError] = useState<string | null>(null);
+  const busy = useRef(false);
+
+  const tryEnter = useCallback(
+    async (fromButton: boolean) => {
+      if (busy.current) return;
+      busy.current = true;
+      if (fromButton) {
+        setEntering(true);
+        setEnterError(null);
+      }
+      const res = await signIn(email, password);
+      busy.current = false;
+      setEntering(false);
+      if (!res.error || !fromButton) return;
+      setEnterError(
+        res.needsConfirmation
+          ? "L'email non risulta ancora confermata. Apri il link che ti abbiamo mandato, poi riprova."
+          : res.error
+      );
+    },
+    [signIn, email, password]
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void tryEnter(false);
+    });
+    return () => sub.remove();
+  }, [tryEnter]);
+
+  return { tryEnter, entering, enterError };
 }

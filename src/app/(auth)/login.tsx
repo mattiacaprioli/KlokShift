@@ -17,15 +17,10 @@ import {
   useResendConfirmation,
 } from "@/features/auth/useResendConfirmation";
 import { GhostButton } from "@/components/ui/GhostButton";
-import { DEFAULT_SITE_URL } from "@/features/account/legal";
-
-// Il link di recupero atterra sulla dashboard, l'unico posto con la pagina dove
-// si sceglie la nuova password: il Site URL del progetto porta all'app, che
-// quella pagina non ce l'ha. Stesso indirizzo che la dashboard manda per sé
-// (`web/src/pages/Login.tsx`), quindi già nell'allowlist dei redirect.
-const RECOVERY_REDIRECT_URL = `${(
-  process.env.EXPO_PUBLIC_SITE_URL?.trim() || DEFAULT_SITE_URL
-).replace(/\/+$/, "")}/app/`;
+import {
+  CONFIRM_REDIRECT_URL,
+  RECOVERY_REDIRECT_URL,
+} from "@/features/auth/redirects";
 
 export default function Login() {
   const insets = useSafeAreaInsets();
@@ -161,7 +156,7 @@ export default function Login() {
  */
 function ResendBlock({ control }: { control: Control<LoginForm> }) {
   const email = useWatch({ control, name: "email" }) ?? "";
-  const resend = useResendConfirmation(email);
+  const resend = useResendConfirmation(email, CONFIRM_REDIRECT_URL);
 
   return (
     <View className="gap-2 rounded-2xl border border-border-2 bg-bg-1 p-4">

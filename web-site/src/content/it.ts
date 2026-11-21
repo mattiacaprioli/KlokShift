@@ -308,4 +308,23 @@ export const it: Content = {
     ],
     homeLabel: "Scopri KlokShift",
   },
+
+  emailConfirmed: {
+    eyebrow: "Account",
+    ok: {
+      title: "Email confermata.",
+      body: "Il tuo account è attivo. Torna nell'app: entri da solo, senza riscrivere email e password.",
+    },
+    expired: {
+      title: "Questo link non vale più.",
+      body: "Forse l'hai già aperto, e allora l'account è attivo: torna nell'app e accedi. Altrimenti è scaduto: dall'app puoi farti rimandare l'email.",
+    },
+    error: {
+      title: "Non siamo riusciti a confermare l'email.",
+      body: "Torna nell'app e prova ad accedere. Se ti dice che l'email non è confermata, fatti rimandare il link.",
+    },
+    openApp: "Apri l'app",
+    otherDevice:
+      "Hai aperto l'email dal computer? Va bene lo stesso: l'account è confermato, apri l'app sul telefono.",
+  },
 };

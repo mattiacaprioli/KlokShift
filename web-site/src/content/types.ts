@@ -132,4 +132,18 @@ export type Content = {
     whatItems: string[];
     homeLabel: string;
   };
+
+  /*
+   * Il ritorno dal link di conferma dell'email (`email-confermata.html`), per
+   * chi si è registrato dall'app. Tre esiti: fatto, link scaduto o già usato,
+   * altro errore.
+   */
+  emailConfirmed: {
+    eyebrow: string;
+    ok: { title: string; body: string };
+    expired: { title: string; body: string };
+    error: { title: string; body: string };
+    openApp: string;
+    otherDevice: string;
+  };
 };

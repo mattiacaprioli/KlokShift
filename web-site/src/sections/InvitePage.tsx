@@ -46,7 +46,7 @@ export function InvitePage() {
         <Container className="py-14 sm:py-20">
           <div className="max-w-2xl">
             <Eyebrow>{c.eyebrow}</Eyebrow>
-            <h1 className="mt-3 text-[length:var(--text-fluid-h1)] font-semibold">
+            <h1 className="mt-3 text-[length:var(--text-fluid-h2)] font-semibold">
               {c.title}
             </h1>
             <p className="mt-4 text-[length:var(--text-fluid-lead)] text-t2">

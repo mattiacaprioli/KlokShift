@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => ({
       input: {
         main: resolve(here, "index.html"),
         invito: resolve(here, "invito.html"),
+        // Il ritorno dal link di conferma dell'email fatto dall'app.
+        emailConfermata: resolve(here, "email-confermata.html"),
       },
     },
   },

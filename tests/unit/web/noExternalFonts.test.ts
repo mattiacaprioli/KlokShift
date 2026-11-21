@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * (spec DPA §6.4). Vale per gli HTML d'ingresso e per ogni CSS.
  */
 const root = resolve(process.cwd());
-const ENTRIES = ["web/index.html", "web-site/index.html", "web-site/invito.html"];
+const ENTRIES = ["web/index.html", "web-site/index.html", "web-site/invito.html", "web-site/email-confermata.html"];
 const CSS_DIRS = ["web/src", "web-site/src", "shared"];
 
 function cssFiles(dir: string): string[] {
