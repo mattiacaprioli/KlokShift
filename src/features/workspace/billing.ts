@@ -110,3 +110,42 @@ export function parseWorkspaceBilling(value: unknown): WorkspaceBilling | null {
 export function hasOpenSubscription(billing: WorkspaceBilling | null | undefined): boolean {
   return !!billing && billing.status !== "canceled";
 }
+
+const FOUNDER_STATUSES = ["reserved", "active", "ended"] as const;
+
+/**
+ * Sconto «clienti fondatori» dell'azienda (`get_founder_offer`), per l'ambiente
+ * Paddle del checkout. `eligible` = il prossimo acquisto avrebbe lo sconto;
+ * `active` = l'abbonamento ce l'ha fino a `ends_at`. Solo pagina Piano sul web.
+ */
+export type FounderOffer = {
+  status: (typeof FOUNDER_STATUSES)[number] | null;
+  ends_at: string | null;
+  percent: number;
+  eligible: boolean;
+};
+
+export function parseFounderOffer(value: unknown): FounderOffer {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return invalid();
+  const raw = value as Record<string, unknown>;
+  const status = raw.status === null ? null : oneOf(raw.status, FOUNDER_STATUSES);
+  const offer: FounderOffer = {
+    status,
+    ends_at: instant(raw.ends_at),
+    percent: typeof raw.percent === "number" && Number.isInteger(raw.percent) && raw.percent > 0 && raw.percent < 100
+      ? raw.percent : invalid(),
+    eligible: typeof raw.eligible === "boolean" ? raw.eligible : invalid(),
+  };
+  // Attivo o finito ha sempre una scadenza.
+  if ((status === "active" || status === "ended") && !offer.ends_at) return invalid();
+  return offer;
+}
+
+/**
+ * Se il riepilogo dell'acquisto mostra lo sconto. Il checkout ha l'ultima
+ * parola (`founder` nella sua risposta: i posti possono finire nel frattempo);
+ * prima di aprirlo vale `eligible`. Senza dati, niente sconto promesso.
+ */
+export function founderDiscountShown(offer: FounderOffer | null | undefined, checkoutFounder: boolean | undefined): boolean {
+  return checkoutFounder ?? offer?.eligible ?? false;
+}

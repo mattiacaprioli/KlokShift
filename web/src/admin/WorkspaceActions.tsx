@@ -6,6 +6,7 @@ import type { AccountCommand, AccountControl, AdminClassification, WorkspaceComm
 import { classifications } from "@/features/admin/types";
 import { PLAN_BANDS, planBandLabel, planOptionLabel, smallestBandFor, type AccessPlan } from "@/features/workspace/planBands";
 import { userErrorMessage } from "@/lib/errors";
+import { FOUNDER_OFFER } from "../../../shared/pricing";
 import { date, mib } from "./format";
 import { cn } from "@/lib/cn";
 import { Button, Card, Field, Input, Select, Textarea } from "../ui/primitives";
@@ -14,7 +15,8 @@ import type { IconName } from "./ui";
 import { confirmationFailure } from "./confirmation";
 
 const labels = { customer: "Cliente", internal: "Interno", test: "Test", unclassified: "Non classificato" };
-const actionLabels = { grant_lifetime: "Gratuità a vita / variazione capacità", set_classification: "Classificazione", add_note: "Nota amministrativa" };
+const actionLabels = { grant_lifetime: "Gratuità a vita / variazione capacità", set_classification: "Classificazione", add_note: "Nota amministrativa",
+  grant_founder_offer: "Riserva posto fondatori" };
 const PLAN_CHOICES: { plan: AccessPlan; icon: IconName; detail: string }[] = [
   { plan: "base", icon: "staff", detail: "Stesse funzioni, persone uniche limitate" },
   { plan: "team", icon: "staff", detail: "Stesse funzioni, più persone" },
@@ -79,6 +81,12 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
   const lifetimeText = (l: NonNullable<typeof snapshot>["lifetime"]) => l
     ? `${PLAN_BANDS[l.plan].label} · ${l.venue_limit} ${l.venue_limit === 1 ? "sede" : "sedi"} · documenti ${l.document_limit_bytes == null ? "quota non dichiarata" : mib(l.document_limit_bytes)}`
     : "Non assegnata";
+  const offer = snapshot?.founder_offer;
+  const offerText = !offer ? "Nessun posto"
+    : offer.status === "reserved" ? "Posto riservato: lo sconto parte col primo acquisto"
+    : offer.status === "active" ? `Attivo fino al ${offer.ends_at ? date(offer.ends_at) : "—"}`
+    : `Terminato${offer.ended_at ? ` il ${date(offer.ended_at)}` : ""}`;
+  const seats = query.data?.founder_seats;
   return <Card><SectionHeader title="Gestisci piano e classificazione" icon="settings" />
     <p className="-mt-2 mb-5 text-sm text-t3">Prepara un intervento per questa azienda. Le modifiche si applicano dopo aver rivisto il riepilogo e confermato.</p>
     <Feedback error={error ?? query.error} success={success} />
@@ -89,6 +97,8 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
         <dl className="space-y-3 text-sm">
           <div><dt className="text-xs text-t3">Classificazione</dt><dd className="mt-0.5 text-t1">{labels[snapshot!.classification]}.</dd></div>
           <div><dt className="text-xs text-t3">Gratuità a vita</dt><dd className="mt-0.5 text-t1">{lifetimeText(snapshot!.lifetime)}.</dd></div>
+          <div><dt className="text-xs text-t3">Sconto fondatori</dt><dd className="mt-0.5 text-t1">{offerText}.</dd>
+            {seats ? <dd className="mt-0.5 text-xs text-t3">{`Posti presi: ${seats.taken} di ${seats.total}`}</dd> : null}</div>
         </dl>
         <div className="space-y-3 border-t border-border-2 pt-4">
           <Meter label="Persone" used={snapshot!.access?.usage?.people} limit={snapshot!.access?.limits.people} unlimited={!!snapshot!.access?.plan && snapshot!.access.limits.people === null} missing="non assegnato" />
@@ -97,7 +107,7 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
       </div>
       {review ? <div className="space-y-4 rounded-xl border border-gold/40 bg-gold/[0.04] p-5">
         <h3 className="flex items-center gap-2 font-semibold"><Icon name="shield" className="size-4 text-gold" />Modifica da confermare: {actionLabels[review.change.action]}</h3>
-        {review.change.action !== "add_note" ? <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+        {review.change.action === "grant_lifetime" || review.change.action === "set_classification" ? <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
           <div className="rounded-xl bg-bg-1 p-3"><p className="text-xs text-t3">Prima</p><p className="mt-1 text-sm text-t2">{review.change.action === "grant_lifetime" ? lifetimeText(snapshot!.lifetime) : labels[snapshot!.classification]}</p></div>
           <Icon name="chevronRight" className="mx-auto size-5 rotate-90 text-gold sm:rotate-0" />
           <div className="rounded-xl border border-gold/40 bg-bg-1 p-3"><p className="text-xs text-gold">Dopo</p><p className="mt-1 text-sm font-semibold text-t1">{review.change.action === "grant_lifetime"
@@ -108,6 +118,9 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
           <p className="text-sm">Questa azienda riceve {planOptionLabel(review.change.plan).replace(" · ", ", ")}, un totale di {review.change.venueLimit} {review.change.venueLimit === 1 ? "sede gratuita" : "sedi gratuite"} e {mib(review.change.documentLimitBytes)} di documenti dichiarati.</p>
           <p className="text-sm text-t3">Decorrenza alla conferma sul server, senza scadenza commerciale, carta o rinnovi. L’eventuale concessione precedente resta nello storico con la sua fine. Le altre aziende dello stesso titolare mantengono i propri diritti.</p>
           <p className="text-sm text-t3">La quota documenti viene registrata: il blocco degli upload al suo raggiungimento non è ancora attivo.</p>
+        </> : review.change.action === "grant_founder_offer" ? <>
+          <p className="text-sm">{`Questa azienda riceve uno dei ${seats?.total ?? FOUNDER_OFFER.seats} posti fondatori: al primo acquisto paga il ${FOUNDER_OFFER.percent}% in meno per ${FOUNDER_OFFER.months} mesi dal primo addebito.`}</p>
+          <p className="text-sm text-t3">{`Posti presi oggi: ${seats ? `${seats.taken} di ${seats.total}` : "non disponibile"}. Il posto vale per i pagamenti veri, non per la sandbox. Non si assegna a chi ha già avuto un abbonamento o la gratuità a vita.`}</p>
         </> : review.change.action === "set_classification" ?
           <p className="text-sm">Nuova etichetta: {labels[review.change.classification]}. Accesso, prova e piano rimangono quelli attuali.</p> :
           <p className="text-sm">La nota viene aggiunta al registro senza modificare diritti o scadenze.</p>}
@@ -119,7 +132,7 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
         <h3 className="text-sm font-semibold">Prepara una modifica</h3>
         <fieldset className="space-y-2">
           <legend className="mb-2"><StepLabel n={1}>Intervento</StepLabel></legend>
-          <div className="grid gap-2 sm:grid-cols-3">{(Object.keys(actionLabels) as (keyof typeof actionLabels)[]).map((value) =>
+          <div className="grid gap-2 sm:grid-cols-2">{(Object.keys(actionLabels) as (keyof typeof actionLabels)[]).map((value) =>
             <RadioCard key={value} name="action" value={value} checked={action === value} onChange={() => setAction(value)}
               icon={actionIcons[value]} title={actionLabels[value]} detail={actionDetails[value]} />)}</div>
         </fieldset>
@@ -136,7 +149,7 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
           <Field label="Nuova classificazione"><Select value={classification} onChange={(e) => setClassification(e.target.value as AdminClassification)}>{classificationOptions}</Select></Field>
         </fieldset> : null}
         <div>
-          <div className="mb-2"><StepLabel n={action === "add_note" ? 2 : 3}>Perché lo fai</StepLabel></div>
+          <div className="mb-2"><StepLabel n={action === "add_note" || action === "grant_founder_offer" ? 2 : 3}>Perché lo fai</StepLabel></div>
           <Reason value={reason} onChange={setReason} />
         </div>
         <Button type="submit" variant="gold" disabled={!reason.trim() || mutation.isPending}>Rivedi intervento<Icon name="chevronRight" className="size-4" /></Button>
@@ -145,11 +158,12 @@ export function WorkspaceActions({ userId, workspaceId }: { userId: string; work
   </Card>;
 }
 
-const actionIcons = { grant_lifetime: "gift", set_classification: "tag", add_note: "note" } as const;
+const actionIcons = { grant_lifetime: "gift", set_classification: "tag", add_note: "note", grant_founder_offer: "euro" } as const;
 const actionDetails = {
   grant_lifetime: "Piano, sedi e quota documenti senza scadenza",
   set_classification: "Cliente, interno, test: non tocca i diritti",
   add_note: "Solo una riga nel registro",
+  grant_founder_offer: `−${FOUNDER_OFFER.percent}% per ${FOUNDER_OFFER.months} mesi dal primo acquisto`,
 };
 
 function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {

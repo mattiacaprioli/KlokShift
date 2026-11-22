@@ -21,6 +21,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.0";
 import {
   isClientConfigRequest,
+  isDiscountLimitError,
   paddleConfig,
   parsePrepared,
   parseSelection,
@@ -102,22 +103,37 @@ Deno.serve(async (req) => {
     return json({ error: "prepare_failed" }, 500);
   }
 
-  let response: Response;
-  try {
-    response = await fetch(`${PADDLE.apiBase}/transactions`, {
+  const createTransaction = (candidate: typeof prepared) =>
+    fetch(`${PADDLE.apiBase}/transactions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${PADDLE.apiKey}`,
         "Content-Type": "application/json",
         "Paddle-Version": "1",
       },
-      body: JSON.stringify(transactionBody(prepared)),
+      body: JSON.stringify(transactionBody(candidate)),
     });
+
+  let response: Response;
+  let payload: unknown;
+  let founder = prepared.discountId !== null;
+  try {
+    response = await createTransaction(prepared);
+    payload = await response.json().catch(() => null);
+    // Posti fondatori finiti nel frattempo (limite d'uso dello sconto): una sola
+    // ripetizione a prezzo di listino, e il browser lo sa (`founder: false`).
+    if (!response.ok && founder &&
+        isDiscountLimitError({ ...(payload as object | null), status: response.status })) {
+      console.error("billing-checkout: sconto fondatori non applicabile, riprovo senza");
+      founder = false;
+      response = await createTransaction({ ...prepared, discountId: null });
+      payload = await response.json().catch(() => null);
+    }
   } catch {
     console.error("billing-checkout: Paddle non raggiungibile");
     return json({ error: "billing_unavailable" }, 502);
   }
-  const created = transactionId(await response.json().catch(() => null));
+  const created = transactionId(payload);
   if (!response.ok || !created) {
     // Solo lo stato HTTP: il corpo di Paddle può ripetere dati della richiesta.
     console.error("billing-checkout: creazione transazione", response.status);
@@ -137,5 +153,6 @@ Deno.serve(async (req) => {
     environment: PADDLE.environment,
     clientToken: PADDLE.clientToken,
     email: userData.user.email ?? null,
+    founder,
   });
 });

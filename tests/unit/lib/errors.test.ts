@@ -19,6 +19,12 @@ describe("userErrorMessage", () => {
     );
   });
 
+  it("dice al fondatore che lo sconto live non c'è ancora", () => {
+    expect(userErrorMessage(new Error("founder_offer_unavailable"))).toBe(
+      "Lo sconto fondatori non è ancora attivo per gli acquisti veri: nessun posto è stato riservato."
+    );
+  });
+
   it("spiega le maggiorazioni non valide", () => {
     expect(userErrorMessage(new Error("invalid_surcharge"))).toBe(
       "Controlla le maggiorazioni: percentuali fra 0 e 300 con al massimo un decimale, fascia al quarto d'ora."

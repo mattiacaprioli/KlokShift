@@ -36,6 +36,10 @@ export const qk = {
   workspaceBilling: {
     byWorkspace: (workspaceId: string) =>
       ["workspaceBilling", "byWorkspace", workspaceId] as const,
+    founder: (workspaceId: string, environment: string) =>
+      ["workspaceBilling", "founder", workspaceId, environment] as const,
+    /** Ambiente Paddle del checkout (`client_config`): non cambia senza ricaricare. */
+    checkoutEnvironment: ["workspaceBilling", "checkoutEnvironment"] as const,
   },
   venues: {
     all: ["venues"] as const,

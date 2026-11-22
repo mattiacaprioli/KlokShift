@@ -419,6 +419,20 @@ Edge Functions del billing si pubblicano a mano subito dopo la migration; restan
 da fare i prodotti Paddle e i prezzi sandbox di Grande, che arrivano con una migration
 a parte (`20261122000300_large_prices_sandbox.sql`, da scrivere appena ci sono gli id Paddle) (vedi `docs/MONETIZATION.md` §2).
 
+**Clienti fondatori** (2026-11-22, migration `20261122000400`, da rilasciare:
+prima la migration, poi `billing-checkout` e `billing-scheduled` a mano, poi il
+push). Le prime **10** aziende che pagano hanno **−30% per 24 mesi** (§2-bis di
+`docs/MONETIZATION.md`). ⚠️ `FOUNDER_OFFER` in `shared/pricing.ts` e
+`private.founder_offer_percent()` / `founder_offer_seats()` / `founder_offer_end()`
+sono gemelli **manuali**: cambiano insieme, e con loro il «10» scritto nel testo
+di `founder_seats_full` in `src/lib/errors.ts`. I posti si contano per **ambiente**
+(sandbox/live) solo nel database: lo sconto su Paddle (sandbox e live) è **senza
+limite d'uso**, perché non è verificato se i rinnovi lo consumino. Lo toglie `billing-scheduled` (PATCH `discount: null`)
+dopo `ends_at`; a segnarlo `ended` è solo l'evento firmato, e se lo sconto
+ricompare sullo stesso abbonamento la riga torna attiva con la scadenza di prima. La dashboard del
+fondatore richiede la migration (`founder_seats`). Prova:
+[docs/TEST-BILLING-FOUNDERS.md](docs/TEST-BILLING-FOUNDERS.md).
+
 - Il piano è aziendale; le tre fasce (Piccola 15, Media 40, Grande 100 persone) hanno
   le stesse funzioni e capacità diversa. Il limite riguarda persone uniche
   nell'intera azienda, non per sede.

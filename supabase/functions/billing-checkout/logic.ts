@@ -71,11 +71,21 @@ export function prepareError(message: string | undefined): { status: number; cod
   return code ? { status: PREPARE_ERRORS[code], code } : { status: 500, code: "prepare_failed" };
 }
 
-export type PreparedCheckout = { checkoutId: string; items: { price_id: string; quantity: number }[] };
+export type PreparedCheckout = {
+  checkoutId: string;
+  items: { price_id: string; quantity: number }[];
+  /** Sconto «clienti fondatori» deciso dal database (`dsc_…`), nullo se non spetta. */
+  discountId: string | null;
+};
 
 export function parsePrepared(data: unknown): PreparedCheckout | null {
   if (!data || typeof data !== "object") return null;
-  const raw = data as { checkout_id?: unknown; items?: unknown };
+  const raw = data as { checkout_id?: unknown; items?: unknown; discount_id?: unknown };
+  // Assente o nullo = nessuno sconto; qualunque altra cosa che non sia `dsc_…` è una risposta rotta.
+  if (raw.discount_id != null && !(typeof raw.discount_id === "string" && /^dsc_[a-z0-9]+$/.test(raw.discount_id))) {
+    return null;
+  }
+  const discountId = typeof raw.discount_id === "string" ? raw.discount_id : null;
   if (typeof raw.checkout_id !== "string" || !UUID.test(raw.checkout_id) || !Array.isArray(raw.items) ||
       raw.items.length === 0) return null;
   const items = raw.items.map((item) => {
@@ -85,7 +95,7 @@ export function parsePrepared(data: unknown): PreparedCheckout | null {
       ? { price_id: value.price_id, quantity: value.quantity } : null;
   });
   return items.every((item) => item !== null)
-    ? { checkoutId: raw.checkout_id, items: items as PreparedCheckout["items"] } : null;
+    ? { checkoutId: raw.checkout_id, items: items as PreparedCheckout["items"], discountId } : null;
 }
 
 /** Corpo della transazione Paddle: l'azienda passa solo dal riferimento della richiesta. */
@@ -94,7 +104,21 @@ export function transactionBody(prepared: PreparedCheckout) {
     items: prepared.items,
     collection_mode: "automatic",
     custom_data: { klokshift_checkout: prepared.checkoutId },
+    // Lo sconto parte solo se il database l'ha deciso: mai dal browser.
+    ...(prepared.discountId ? { discount_id: prepared.discountId } : {}),
   };
+}
+
+/**
+ * Paddle rifiuta la transazione per lo sconto (es. `usage_limit` esaurito): errore 4xx
+ * il cui `code` o `detail` nomina «discount». Il codice esatto non è stato osservato in
+ * sandbox, quindi si riconosce per parola e si riprova una volta senza sconto.
+ */
+export function isDiscountLimitError(paddleError: unknown): boolean {
+  const raw = paddleError as { status?: unknown; error?: { code?: unknown; detail?: unknown } } | null;
+  if (typeof raw?.status === "number" && (raw.status < 400 || raw.status >= 500)) return false;
+  const { code, detail } = raw?.error ?? {};
+  return [code, detail].some((value) => typeof value === "string" && /discount/i.test(value));
 }
 
 export function transactionId(data: unknown): string | null {

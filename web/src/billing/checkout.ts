@@ -22,6 +22,8 @@ type PreparedCheckout = {
   environment: "sandbox" | "live";
   clientToken: string;
   email: string | null;
+  /** Lo sconto fondatori è nella transazione. Un servizio vecchio senza il campo = no. */
+  founder: boolean;
 };
 
 const ERRORS: [string, string][] = [
@@ -48,7 +50,24 @@ export async function prepareCheckout(selection: CheckoutSelection): Promise<Pre
       (data.environment !== "sandbox" && data.environment !== "live") || typeof data.clientToken !== "string") {
     throw new UserFacingError("Il pagamento non è disponibile in questo momento. Riprova fra qualche minuto.");
   }
-  return data;
+  return { ...data, founder: data.founder === true };
+}
+
+/**
+ * L'ambiente Paddle in cui gira il checkout (`client_config`, dati pubblici):
+ * serve a chiedere lo sconto fondatori dello stesso ambiente, perché i posti si
+ * contano per ambiente. Non cambia senza ricaricare la pagina.
+ */
+let environmentRequest: Promise<"sandbox" | "live"> | null = null;
+export function getCheckoutEnvironment(): Promise<"sandbox" | "live"> {
+  environmentRequest ??= supabase.functions.invoke<{ environment?: unknown }>(
+    "billing-checkout", { body: { action: "client_config" } },
+  ).then(({ data }) => {
+    const environment = data?.environment;
+    if (environment !== "sandbox" && environment !== "live") throw new Error("billing_unavailable");
+    return environment;
+  }).catch((error: unknown) => { environmentRequest = null; throw error; });
+  return environmentRequest;
 }
 
 type PaddleEvent = { name?: string };

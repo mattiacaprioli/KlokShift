@@ -137,11 +137,14 @@ I dettagli di proration, concorrenza e modifica dei cicli vanno provati con il p
 
 Deciso il **22 novembre 2026**. È l'unico sconto previsto al lancio, oltre ai due mesi dell'annuale.
 
-- **A chi**: le prime **30 aziende** che pagano, contate dal server sulla prima transazione completata e non per richiesta. Si possono assegnare anche a mano, dalla dashboard del fondatore, con motivo e audit.
+**Stato**: nel codice dal 22/11/2026 (migration `20261122000400`, Edge Function `billing-checkout` e `billing-scheduled`, Piano, dashboard del fondatore, sito), **da rilasciare**. Provato in sandbox solo in parte; la procedura è in [TEST-BILLING-FOUNDERS.md](TEST-BILLING-FOUNDERS.md). I posti si contano per ambiente (sandbox/live), solo nel database, e quelli riservati dal fondatore sono live. Prima del live va ricreato lo sconto in Paddle live **senza limite d'uso** (anche quello sandbox va tolto): non è verificato se i rinnovi lo consumino, e un limite raggiunto fermerebbe lo sconto qualunque cosa dica il database.
+
+- **A chi**: le prime **10 aziende** che pagano (erano 30, ridotte il 22/11), contate dal server sulla prima transazione completata e non per richiesta. Si possono assegnare anche a mano, dalla dashboard del fondatore, con motivo e audit.
 - **Cosa**: **−30%** su fascia e sedi aggiuntive, mensile o annuale, per **24 mesi** dal primo addebito. Per tutto quel periodo il **prezzo di listino resta bloccato**: un aumento del listino non li tocca fino alla fine dei 24 mesi.
 - **In cambio**, dichiarato nelle condizioni dell'offerta e non come obbligo per avere il servizio: feedback (una call di 30 minuti nei primi 2 mesi) e, se vogliono, una testimonianza con il loro nome.
 - **Alla fine dei 24 mesi** si passa al listino in vigore, con lo stesso preavviso di 60 giorni degli aumenti (§6). Nessun «prezzo bloccato a vita».
 - **Cambi di fascia o di sedi** mantengono lo sconto fino alla scadenza originaria: crescere non lo fa perdere, e passare all'annuale non fa ripartire i 24 mesi.
+- **Effetto noto e accettato** (22/11): lo sconto si toglie al rinnovo dopo la scadenza, quindi chi passa dal mensile all'annuale vicino alla fine dei 24 mesi paga un anno intero ancora scontato. Nel caso estremo lo sconto dura circa 35 mesi. Non si corregge: è un caso raro e a favore del cliente.
 - **Pausa e disdetta**: i mesi in pausa contano nei 24 (la scadenza non si sposta). Chi esce e torna dopo la fine dell'operatività non lo riprende.
 - **Non si somma** alla gratuità a vita, a eventuali convenzioni future o ad altri codici. Lo sconto vale per l'azienda e non si trasferisce a un'altra azienda della stessa persona.
 - Sul sito se ne parla come di «posti limitati» solo se il conteggio è reale e visibile. Niente scarsità finta.

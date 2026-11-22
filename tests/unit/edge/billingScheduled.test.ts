@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  checkScheduledTarget, formatAlert, formatReminder, isPermanent, paddleErrorCode, parseAlert, parseScheduledChange,
+  checkScheduledTarget, formatAlert, founderEndRequest, formatReminder, isPermanent, paddleErrorCode, parseAlert, parseScheduledChange,
   runScheduled, scheduledDateBody, scheduledPatchBody, type AlertInfo, type QueuedEmail, type ScheduledChange, type ScheduledDeps,
 } from "../../../supabase/functions/billing-scheduled/logic";
 import { edgeRuntime, post } from "./runtime";
@@ -205,6 +205,7 @@ function deps(over: Partial<ScheduledDeps> = {}): ScheduledDeps & Fns {
     send: vi.fn(async () => true),
     markReminder: vi.fn(async () => true),
     markAlert: vi.fn(async () => true),
+    founderOffersDue: vi.fn(async () => []),
     ...over,
   } as never;
 }
@@ -545,5 +546,40 @@ describe("billing-scheduled: handler", () => {
       { items: monthly, proration_billing_mode: "do_not_bill" },
       { next_billed_at: EFFECTIVE, proration_billing_mode: "do_not_bill" },
     ]);
+  });
+});
+
+describe("billing-scheduled: fine dello sconto fondatori", () => {
+  const due = (id: unknown) => ({ workspace_id: WORKSPACE, paddle_subscription_id: id, ends_at: EFFECTIVE });
+
+  it("la richiesta toglie lo sconto dall'abbonamento", () => {
+    expect(founderEndRequest({ paddle_subscription_id: "sub_01x" }))
+      .toEqual({ path: "/subscriptions/sub_01x", body: { discount: null } });
+  });
+
+  it("una PATCH per riga dovuta, dopo i cambi programmati", async () => {
+    const d = deps({ founderOffersDue: vi.fn(async () => [due("sub_01a"), due("sub_01b")]) });
+    expect(await runScheduled(d, "https://k.test/app")).toMatchObject({ applied: 1, founderEnded: 2 });
+    expect(d.patchSubscription.mock.calls.slice(1)).toEqual([["sub_01a", { discount: null }], ["sub_01b", { discount: null }]]);
+  });
+
+  it("salta le righe senza id dell'abbonamento Paddle", async () => {
+    const d = deps({ claim: vi.fn(async () => []), founderOffersDue: vi.fn(async () => [due(null), due(""), due("sub_01a")]) });
+    expect(await runScheduled(d, "https://k.test/app")).toMatchObject({ founderEnded: 1 });
+    expect(d.patchSubscription).toHaveBeenCalledTimes(1);
+  });
+
+  it("una PATCH rifiutata non ferma le altre e lascia un codice", async () => {
+    const patch = vi.fn(async (id: string) => id === "sub_01a" ? { ok: false as const, status: 500 } : { ok: true as const });
+    const d = deps({ claim: vi.fn(async () => []), patchSubscription: patch as never,
+      founderOffersDue: vi.fn(async () => [due("sub_01a"), due("sub_01b")]) });
+    expect(await runScheduled(d, "https://k.test/app")).toMatchObject({ founderEnded: 1, error: "founder_end_failed" });
+    expect(patch).toHaveBeenCalledTimes(2);
+  });
+
+  it("lettura delle righe fallita: codice, niente PATCH, il resto del giro prosegue", async () => {
+    const d = deps({ claim: vi.fn(async () => []), founderOffersDue: vi.fn(async () => null) });
+    expect(await runScheduled(d, "https://k.test/app")).toMatchObject({ error: "founder_due_read_failed" });
+    expect(d.patchSubscription).not.toHaveBeenCalled();
   });
 });

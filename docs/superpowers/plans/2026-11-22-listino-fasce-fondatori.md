@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** sostituire Base/Team (30 persone / senza limite) con le fasce Piccola/Media/Grande (15/40/100) in server, Paddle, dashboard, sito e app, e aggiungere lo sconto «clienti fondatori» (−30% per 24 mesi alle prime 30 aziende che pagano).
+**Goal:** sostituire Base/Team (30 persone / senza limite) con le fasce Piccola/Media/Grande (15/40/100) in server, Paddle, dashboard, sito e app, e aggiungere lo sconto «clienti fondatori» (−30% per 24 mesi alle prime 10 aziende che pagano).
 
 **Architecture:** il limite di persone passa da sei `case when plan = 'base' then 30` sparsi a **una** funzione SQL, `private.plan_people_limit`, con un gemello manuale TypeScript (`src/features/workspace/planBands.ts`). Le chiavi interne restano `base` (Piccola) e `team` (Media); si aggiungono `large` (Grande) e, solo per le concessioni del fondatore, `custom` (senza limite). Lo sconto è uno sconto Paddle **senza scadenza propria**: lo applica il checkout, lo conferma l'avviso firmato e lo toglie KlokShift alla data `ends_at` che decide il database, così pausa e cambio di ciclo non spostano i 24 mesi.
 
@@ -171,7 +171,7 @@ Il piano ha **due parti rilasciabili da sole**: la Parte A (fasce) funziona senz
 **Interfaces:**
 - Produces: `discount_id` sandbox (`dsc_…`) e l'esito delle cinque verifiche qui sotto. **Se la verifica 3 fallisce, fermarsi**: il disegno di B1–B3 dipende da lei.
 
-- [ ] **Step 1:** creare in Paddle sandbox lo sconto «Clienti fondatori»: `type: percentage`, `amount: "30"`, `recurring: true`, `maximum_recurring_intervals: null`, `usage_limit: 30`, `enabled_for_checkout: false` (nessun codice digitabile), `restrict_to` = i sei `price_id` di fascia e i due della sede aggiuntiva.
+- [ ] **Step 1:** creare in Paddle sandbox lo sconto «Clienti fondatori»: `type: percentage`, `amount: "30"`, `recurring: true`, `maximum_recurring_intervals: null`, `usage_limit: 10`, `enabled_for_checkout: false` (nessun codice digitabile), `restrict_to` = i sei `price_id` di fascia e i due della sede aggiuntiva.
 - [ ] **Step 2:** verificare e annotare: (1) una transazione creata con `discount_id` mostra −30% su fascia e sedi; (2) i rinnovi non consumano `usage_limit`, i nuovi acquisti sì; (3) `PATCH /subscriptions/{id}` con `"discount": null` toglie lo sconto dal rinnovo successivo senza addebiti; (4) un aumento immediato (`billing-manage`) mantiene lo sconto anche sul conguaglio; (5) il cambio programmato in due PATCH (`billing-scheduled`) lo mantiene. Annotare anche il codice d'errore di Paddle quando `usage_limit` è esaurito.
 
 ### Task B1: sconto nel database
@@ -186,7 +186,7 @@ Il piano ha **due parti rilasciabili da sole**: la Parte A (fasce) funziona senz
   - `private.billing_discounts(environment, discount_id text check (~ '^dsc_[a-z0-9]+$'), kind text check (kind = 'founder'), selectable boolean)`, chiusa ai client come `billing_prices`.
   - `public.workspace_founder_offers(workspace_id uuid pk → workspaces, source text check (in 'auto','founder'), status text check (in 'reserved','active','ended'), reserved_at, activated_at, ends_at, ended_at, subscription_id uuid, end_notice_at timestamptz)`, RLS attiva e nessun accesso diretto.
   - `private.founder_seats_taken() returns integer` = righe `active` + `ended` + `reserved` con `source = 'founder'`.
-  - `billing_prepare_checkout` restituisce anche `'discount_id'` (testo o null): non nullo se l'azienda ha un posto `reserved`, oppure se non ha **mai** avuto una riga in `billing_subscriptions` e `founder_seats_taken() < 30`.
+  - `billing_prepare_checkout` restituisce anche `'discount_id'` (testo o null): non nullo se l'azienda ha un posto `reserved`, oppure se non ha **mai** avuto una riga in `billing_subscriptions` e `founder_seats_taken() < 10`.
   - `billing_apply_event`: se l'abbonamento ha `data.discount.id` fra quelli `founder`, crea o aggiorna la riga `active` con `activated_at` = inizio del primo periodo e `ends_at` = quella data più 24 mesi di calendario (Europe/Rome, come l'archivio in `workspace_access_at`). Se lo sconto sparisce da un abbonamento con la riga `active`, la segna `ended`.
   - `public.get_founder_offer(p_workspace uuid) returns jsonb` `{status, ends_at, percent: 30, eligible}`, solo per il titolare attivo; `eligible` = il prossimo checkout avrebbe lo sconto.
   - `admin_apply_workspace_action` accetta l'azione `grant_founder_offer` (allargare il `check` di `admin_operations`): crea una riga `reserved`/`founder`; la rifiuta con `founder_seats_full` se i posti sono finiti e con `founder_offer_not_eligible` se l'azienda ha già avuto un abbonamento o una gratuità a vita.
@@ -195,12 +195,12 @@ Il piano ha **due parti rilasciabili da sole**: la Parte A (fasce) funziona senz
 
 - [ ] **Step 1: test che falliscono** in `148_founder_offers.sql`:
   - Azienda nuova senza abbonamenti: `billing_prepare_checkout(...)->>'discount_id'` = il `dsc_` sandbox.
-  - Con 30 righe `active`: `discount_id` nullo.
+  - Con 10 righe `active`: `discount_id` nullo.
   - Azienda con un abbonamento `canceled` precedente: `discount_id` nullo.
   - Avviso `subscription.created` con `discount.id` founder e periodo dal 2026-12-01: riga `active`, `ends_at = '2028-12-01 00:00 Europe/Rome'`.
   - Avviso successivo senza `discount`: riga `ended`.
   - Un secondo avviso `subscription.created` uguale (ripetuto da Paddle) non duplica e non sposta `ends_at`.
-  - `grant_founder_offer` con 30 posti presi → `founder_seats_full`.
+  - `grant_founder_offer` con 10 posti presi → `founder_seats_full`.
   - `queue_founder_offer_notices` a `ends_at − 60 giorni` crea una notifica; richiamata, nessuna seconda.
   - Un collaboratore non legge `get_founder_offer` (`not_allowed`), un client non esegue `billing_founder_offers_due`.
 - [ ] **Step 2:** `supabase/tests/run.sh reset && supabase/tests/run.sh test` → FAIL.
@@ -245,9 +245,9 @@ Il piano ha **due parti rilasciabili da sole**: la Parte A (fasce) funziona senz
 
 **Interfaces:**
 - Consumes: `get_founder_offer` (B1), `founder` nella risposta del checkout (B2).
-- Produces: `shared/pricing.ts` → `export const FOUNDER_OFFER = { percent: 30, months: 24, seats: 30 } as const` e `quotePlan(plan, cycle, venues, { founder?: boolean })`, con `total` scontato e arrotondato al centesimo e `listTotal` pieno.
+- Produces: `shared/pricing.ts` → `export const FOUNDER_OFFER = { percent: 30, months: 24, seats: 10 } as const` e `quotePlan(plan, cycle, venues, { founder?: boolean })`, con `total` scontato e arrotondato al centesimo e `listTotal` pieno.
 
-- [ ] **Step 1: test che falliscono:** `quotePlan("team","monthly",1,{founder:true})` → `total 34.3`, `listTotal 49`; `quotePlan("large","annual",2,{founder:true}).total === 728`; la pagina Piano con `eligible: true` mostra «Sconto fondatori: −30% per 24 mesi» accanto al totale, e con `status: 'active'` mostra «Sconto fondatori fino al {ends_at}»; con `founder: false` dal checkout il riepilogo non mostra lo sconto; la notifica `founder_offer_ending` apre la pagina Piano sulla dashboard e, nell'app nativa, la schermata dello stato dell'azienda **senza importi**; la FAQ del sito dice «Le prime 30 aziende che pagano hanno il 30% di sconto per 24 mesi» senza contatore dei posti (anon non legge il database).
+- [ ] **Step 1: test che falliscono:** `quotePlan("team","monthly",1,{founder:true})` → `total 34.3`, `listTotal 49`; `quotePlan("large","annual",2,{founder:true}).total === 728`; la pagina Piano con `eligible: true` mostra «Sconto fondatori: −30% per 24 mesi» accanto al totale, e con `status: 'active'` mostra «Sconto fondatori fino al {ends_at}»; con `founder: false` dal checkout il riepilogo non mostra lo sconto; la notifica `founder_offer_ending` apre la pagina Piano sulla dashboard e, nell'app nativa, la schermata dello stato dell'azienda **senza importi**; la FAQ del sito dice «Le prime 10 aziende che pagano hanno il 30% di sconto per 24 mesi» senza contatore dei posti (anon non legge il database).
 - [ ] **Step 2:** `yarn vitest run` sui file indicati → FAIL.
 - [ ] **Step 3:** implementare; nell'area del fondatore aggiungere il pulsante «Riserva posto fondatori» (azione `grant_founder_offer`, motivo obbligatorio come le altre azioni) e il numero di posti presi nel riepilogo.
 - [ ] **Step 4:** test → PASS; `npx tsc --noEmit && yarn lint`.

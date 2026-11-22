@@ -28,6 +28,15 @@ describe("dove atterra una notifica", () => {
     expect(webRouteForNotification("billing_change_reminder", "w1")).toBe("/piano");
   });
 
+  it("fine dello sconto fondatori: stato dell'azienda nell'app, pagina Piano sul web", () => {
+    // related_id è l'azienda: mai un turno. Nell'app niente importi né acquisti,
+    // si atterra sulla Home con la card «Stato dell'azienda».
+    expect(routeForNotification("manager", "founder_offer_ending", "w1")).toBe("/(manager)/(tabs)");
+    expect(routeForNotification("manager", "founder_offer_ending", null)).toBe("/(manager)/(tabs)");
+    expect(routeForNotification("waiter", "founder_offer_ending", "w1")).toBeNull();
+    expect(webRouteForNotification("founder_offer_ending", "w1")).toBe("/piano");
+  });
+
   it("allarme del cambio di piano al fondatore: solo push nell'app, area fondatore sul web", () => {
     // related_id è l'azienda: lo stesso link dell'email d'allarme (formatAlert).
     expect(routeForNotification("manager", "billing_admin_alert", "w1")).toBeNull();

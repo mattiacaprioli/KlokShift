@@ -1,5 +1,5 @@
 import type { Content } from "./types";
-import { EXTRA_VENUE_PRICES, PLAN_PRICES, formatEuro } from "../../../shared/pricing";
+import { EXTRA_VENUE_PRICES, FOUNDER_OFFER, PLAN_PRICES, formatEuro } from "../../../shared/pricing";
 
 /**
  * Importi in prosa, derivati dal listino unico (`shared/pricing.ts`): senza
@@ -232,6 +232,12 @@ export const it: Content = {
       {
         q: "Posso già acquistare un piano?",
         a: "Non ancora: siamo in beta. I prezzi qui sopra sono quelli previsti al lancio.",
+      },
+      {
+        q: "C'è uno sconto per chi inizia?",
+        // Senza numero di posti: MONETIZATION §2-bis parla di «posti limitati» solo con
+        // un conteggio visibile, e il sito non legge il database (scelta del 22/11).
+        a: `Sì, c'è uno sconto per i primi clienti: il ${FOUNDER_OFFER.percent}% per ${FOUNDER_OFFER.months} mesi, su fascia e sedi aggiuntive. Poi si paga il listino in vigore. Se ti spetta, lo vedi nella pagina Piano prima di pagare.`,
       },
       {
         q: "I dipendenti pagano?",

@@ -1840,6 +1840,66 @@ export type Database = {
           },
         ]
       }
+      workspace_founder_offers: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          end_notice_at: string | null
+          ended_at: string | null
+          ends_at: string | null
+          environment: string
+          reserved_at: string | null
+          source: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          end_notice_at?: string | null
+          ended_at?: string | null
+          ends_at?: string | null
+          environment: string
+          reserved_at?: string | null
+          source: string
+          status: string
+          subscription_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          end_notice_at?: string | null
+          ended_at?: string | null
+          ends_at?: string | null
+          environment?: string
+          reserved_at?: string | null
+          source?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_founder_offers_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "billing_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_founder_offers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           authority: Database["public"]["Enums"]["member_authority"]
@@ -2219,6 +2279,10 @@ export type Database = {
       billing_cancel_scheduled_change: {
         Args: { p_environment: string; p_user: string; p_workspace: string }
         Returns: undefined
+      }
+      billing_founder_offers_due: {
+        Args: { p_environment: string }
+        Returns: Json[]
       }
       billing_manage_context: {
         Args: { p_environment: string; p_user: string; p_workspace: string }
@@ -2603,6 +2667,10 @@ export type Database = {
       }
       get_chat_unread_count: { Args: never; Returns: number }
       get_export_codes: { Args: { p_workspace: string }; Returns: Json }
+      get_founder_offer: {
+        Args: { p_environment: string; p_workspace: string }
+        Returns: Json
+      }
       get_hours_summary: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -3533,6 +3601,7 @@ export type Database = {
         | "billing_admin_alert"
         | "shift_published"
         | "shift_drafts_reminder"
+        | "founder_offer_ending"
       shift_status: "open" | "closed" | "cancelled"
       venue_scope: "all" | "selected"
     }
@@ -3704,6 +3773,7 @@ export const Constants = {
         "billing_admin_alert",
         "shift_published",
         "shift_drafts_reminder",
+        "founder_offer_ending",
       ],
       shift_status: ["open", "closed", "cancelled"],
       venue_scope: ["all", "selected"],

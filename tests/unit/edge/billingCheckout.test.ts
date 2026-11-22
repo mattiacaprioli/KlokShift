@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { paddleConfig, parsePrepared, parseSelection, prepareError } from "../../../supabase/functions/billing-checkout/logic";
+import { isDiscountLimitError, paddleConfig, transactionBody, parsePrepared, parseSelection, prepareError } from "../../../supabase/functions/billing-checkout/logic";
 import { edgeRuntime, post } from "./runtime";
 
 const WORKSPACE = "11111111-1111-4111-8111-111111111111";
@@ -40,6 +40,26 @@ describe("billing-checkout: regole pure", () => {
     expect(prepareError("not_allowed")).toEqual({ status: 403, code: "not_allowed" });
     expect(prepareError("billing_venues_need_agreement")).toEqual({ status: 409, code: "billing_venues_need_agreement" });
     expect(prepareError("qualcosa di interno")).toEqual({ status: 500, code: "prepare_failed" });
+  });
+
+  it("lo sconto fondatori: dsc_ o null, mai un prezzo", () => {
+    expect(parsePrepared({ ...prepared, discount_id: "dsc_01abc" })?.discountId).toBe("dsc_01abc");
+    expect(parsePrepared({ ...prepared, discount_id: null })?.discountId).toBeNull();
+    expect(parsePrepared({ ...prepared, discount_id: "pri_01abc" })).toBeNull();
+  });
+
+  it("il corpo della transazione porta discount_id solo se non nullo", () => {
+    const base = parsePrepared(prepared)!;
+    expect("discount_id" in transactionBody(base)).toBe(false);
+    expect(transactionBody({ ...base, discountId: "dsc_01abc" }).discount_id).toBe("dsc_01abc");
+  });
+
+  it("riconosce il rifiuto dello sconto e non un 400 generico", () => {
+    expect(isDiscountLimitError({ status: 400, error: { code: "discount_usage_limit_exceeded", detail: "x" } })).toBe(true);
+    expect(isDiscountLimitError({ status: 400, error: { code: "invalid_field", detail: "Discount has reached its limit" } })).toBe(true);
+    expect(isDiscountLimitError({ status: 400, error: { code: "invalid_field", detail: "items invalid" } })).toBe(false);
+    expect(isDiscountLimitError({ status: 500, error: { code: "discount_x" } })).toBe(false);
+    expect(isDiscountLimitError(null)).toBe(false);
   });
 
   it("rifiuta una risposta di preparazione incompleta", () => {
@@ -91,7 +111,7 @@ describe("billing-checkout", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       transactionId: "txn_01abc", environment: "sandbox", clientToken: "test_fixturetoken",
-      email: "titolare@example.test",
+      email: "titolare@example.test", founder: false,
     });
     expect(edge.rpc).toHaveBeenCalledWith("billing_prepare_checkout", {
       p_environment: "sandbox", p_user: "user-1", p_workspace: WORKSPACE,
@@ -146,5 +166,35 @@ describe("billing-checkout", () => {
     const edge = checkout();
     expect((await edge.request({ ...selection, plan: "pro" })).status).toBe(400);
     expect(edge.rpc).not.toHaveBeenCalled();
+  });
+
+  it("con lo sconto: la transazione lo porta e la risposta dice founder: true", async () => {
+    const edge = checkout({ prepare: { data: { ...prepared, discount_id: "dsc_01abc" }, error: null } });
+    const response = await edge.request();
+    expect((await response.json()).founder).toBe(true);
+    const [, init] = edge.fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string).discount_id).toBe("dsc_01abc");
+  });
+
+  it("sconto esaurito su Paddle: una sola ripetizione senza sconto, founder: false", async () => {
+    const edge = checkout({ prepare: { data: { ...prepared, discount_id: "dsc_01abc" }, error: null } });
+    edge.fetch
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ error: { code: "discount_usage_limit_exceeded" } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ data: { id: "txn_01abc" } }) } as Response);
+    const response = await edge.request();
+    expect(response.status).toBe(200);
+    expect((await response.json()).founder).toBe(false);
+    expect(edge.fetch).toHaveBeenCalledTimes(2);
+    const [, retry] = edge.fetch.mock.calls[1] as unknown as [string, RequestInit];
+    expect("discount_id" in JSON.parse(retry.body as string)).toBe(false);
+  });
+
+  it("un 400 generico con lo sconto non si ripete: 502", async () => {
+    const edge = checkout({
+      prepare: { data: { ...prepared, discount_id: "dsc_01abc" }, error: null },
+      paddle: { ok: false, status: 400, body: { error: { code: "invalid_field", detail: "items" } } },
+    });
+    expect((await edge.request()).status).toBe(502);
+    expect(edge.fetch).toHaveBeenCalledTimes(1);
   });
 });

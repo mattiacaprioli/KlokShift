@@ -56,8 +56,8 @@ describe("Interventi del fondatore: esito verificato e retry", () => {
     response({ generated_at: date, target_id: id, revision, snapshot: {
       classification: "unclassified", migration_review_required: true, access: null,
       document_known_bytes: 0, document_unknown_sizes: 0, lifetime: null,
-    } });
-    await expect(getWorkspaceControl(id)).resolves.toMatchObject({ revision });
+    }, founder_seats: { taken: 0, total: 10 } });
+    await expect(getWorkspaceControl(id)).resolves.toMatchObject({ revision, founder_seats: { taken: 0, total: 10 } });
   });
   it("verifica il destinatario della classificazione account", async () => {
     response({ ...result, target_id: other, action: "set_classification", period_id: null });

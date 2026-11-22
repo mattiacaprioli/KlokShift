@@ -44,8 +44,9 @@ const detail = {
 const control = {
   revision: "a".repeat(32), snapshot: {
     classification: "test", access, document_known_bytes: 31045, document_unknown_sizes: 0,
-    lifetime: { plan: "base", venue_limit: 2, document_limit_bytes: 4096 * 1048576 },
+    lifetime: { plan: "base", venue_limit: 2, document_limit_bytes: 4096 * 1048576 }, founder_offer: null,
   },
+  founder_seats: { taken: 0, total: 10 },
 };
 function render(scheda?: string) {
   const path = `/amministrazione/aziende/${id}${scheda ? `?scheda=${scheda}` : ""}`;

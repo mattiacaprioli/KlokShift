@@ -5,17 +5,19 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PianoPage } from "../../web/src/pages/Piano";
 import type { WorkspaceAccess } from "@/features/workspace/access";
+import { founderDiscountShown, parseFounderOffer } from "@/features/workspace/billing";
 
-const { context, mutate, billing, prepareCheckout } = vi.hoisted(() => ({
-  context: vi.fn(), mutate: vi.fn(), billing: vi.fn(), prepareCheckout: vi.fn(),
+const { context, mutate, billing, founder, prepareCheckout } = vi.hoisted(() => ({
+  context: vi.fn(), mutate: vi.fn(), billing: vi.fn(), founder: vi.fn(), prepareCheckout: vi.fn(),
 }));
 vi.mock("@/features/venues/OwnerVenues", () => ({ useOwnerVenues: context }));
 vi.mock("@/features/workspace/hooks", () => ({
   useStartWorkspaceTrial: () => ({ isPending: false, error: null, mutate }),
   useWorkspaceBilling: billing,
+  useFounderOffer: founder,
 }));
 // Il checkout vero carica Supabase e Paddle.js: qui conta solo che aprire la pagina non lo avvii.
-vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout: vi.fn() }));
+vi.mock("../../web/src/billing/checkout", () => ({ prepareCheckout, openCheckout: vi.fn(), getCheckoutEnvironment: vi.fn() }));
 // L'export completo carica Supabase: qui conta solo che il pulsante ci sia.
 vi.mock("../../web/src/export/fullExport", () => ({ downloadFullExport: vi.fn() }));
 vi.mock("../../web/src/billing/manage", () => ({
@@ -52,6 +54,7 @@ describe("Piano e accesso del cliente", () => {
   beforeEach(() => {
     context.mockReturnValue(base); mutate.mockReset(); prepareCheckout.mockReset();
     billing.mockReturnValue(noBilling);
+    founder.mockReturnValue({ data: undefined });
   });
   it("separa la gratuità effettiva dal listino e non avvia nulla aprendo la pagina", () => {
     const html = render();
@@ -269,5 +272,45 @@ describe("Piano e accesso del cliente", () => {
     expect(html).not.toContain("Il cambio è già stato inviato");
     expect(html).not.toContain("Annulla il cambio");
     expect(html).not.toContain("Per aumentare annulla prima");
+  });
+  const noOffer = { status: null, ends_at: null, percent: 30, eligible: false };
+  it("sconto fondatori: accanto al totale, con il prezzo di listino", () => {
+    context.mockReturnValue({ ...base, access: trialAccess });
+    founder.mockReturnValue({ data: { ...noOffer, eligible: true } });
+    const html = render();
+    expect(html).toContain("Sconto fondatori: −30% per 24 mesi");
+    expect(html).toContain("20,30");
+    expect(html).toContain("29,00");
+  });
+  it("senza diritto allo sconto il riepilogo resta a listino", () => {
+    context.mockReturnValue({ ...base, access: trialAccess });
+    founder.mockReturnValue({ data: noOffer });
+    const html = render();
+    expect(html).not.toContain("Sconto fondatori");
+    expect(html).toContain("29,00");
+    expect(html).not.toContain("20,30");
+  });
+  it("abbonamento con lo sconto attivo: fino a quando vale", () => {
+    subscriptionAccess();
+    billing.mockReturnValue({ ...noBilling, data: subscription });
+    founder.mockReturnValue({ data: { ...noOffer, status: "active", ends_at: "2028-12-01T00:00:00+01:00" } });
+    expect(render()).toContain("Sconto fondatori fino al 01/12/2028");
+  });
+  it("il checkout ha l'ultima parola: con founder false lo sconto sparisce", () => {
+    const eligible = { ...noOffer, eligible: true };
+    expect(founderDiscountShown(eligible, undefined)).toBe(true);
+    expect(founderDiscountShown(eligible, false)).toBe(false);
+    expect(founderDiscountShown(noOffer, undefined)).toBe(false);
+    expect(founderDiscountShown(noOffer, true)).toBe(true);
+    expect(founderDiscountShown(undefined, undefined)).toBe(false);
+  });
+  it("legge la risposta di get_founder_offer e rifiuta quella incoerente", () => {
+    expect(parseFounderOffer({ status: "reserved", ends_at: null, percent: 30, eligible: true }))
+      .toEqual({ status: "reserved", ends_at: null, percent: 30, eligible: true });
+    expect(parseFounderOffer({ status: null, ends_at: null, percent: 30, eligible: false })).toEqual(noOffer);
+    expect(() => parseFounderOffer({ status: "active", ends_at: null, percent: 30, eligible: false })).toThrow();
+    expect(() => parseFounderOffer({ status: "boh", ends_at: null, percent: 30, eligible: false })).toThrow();
+    expect(() => parseFounderOffer({ status: null, ends_at: null, percent: 30 })).toThrow();
+    expect(() => parseFounderOffer(null)).toThrow();
   });
 });

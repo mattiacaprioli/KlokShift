@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PLAN_PRICES, formatEuro, quotePlan } from "../../shared/pricing";
+import { FOUNDER_OFFER, PLAN_PRICES, formatEuro, quotePlan } from "../../shared/pricing";
 import { it as content } from "../../web-site/src/content/it";
 
 describe("Listino web approvato", () => {
@@ -67,5 +67,28 @@ describe("Listino web approvato", () => {
     expect(content.hero.note).toContain("nessun rinnovo automatico");
     expect(content.plans.note).toContain("Nessun addebito automatico");
     expect(content.faq.items.find(item => item.q === "Posso già acquistare un piano?")?.a).toContain("Non ancora");
+  });
+  it("sconto fondatori: 10 posti, 30% per 24 mesi, totale arrotondato al centesimo", () => {
+    expect(FOUNDER_OFFER).toEqual({ percent: 30, months: 24, seats: 10 });
+    const monthly = quotePlan("team", "monthly", 1, { founder: true });
+    expect(monthly.total).toBe(34.3);
+    expect(monthly.listTotal).toBe(49);
+    const annual = quotePlan("large", "annual", 2, { founder: true });
+    expect(annual.total).toBe(728);
+    expect(annual.listTotal).toBe(1040);
+    expect(annual.monthlyEquivalent).toBe(728 / 12);
+    // Senza sconto il totale resta quello di listino.
+    expect(quotePlan("team", "monthly", 1)).toMatchObject({ total: 49, listTotal: 49 });
+    expect(quotePlan("base", "monthly", 1, { founder: false }).total).toBe(29);
+    expect(quotePlan("base", "monthly", 1, { founder: true }).total).toBe(20.3);
+  });
+  it("la FAQ dice lo sconto fondatori senza contare i posti", () => {
+    const answers = content.faq.items.map((item) => item.a);
+    const founder = answers.find((a) => a.includes("sconto per i primi clienti"));
+    expect(founder).toContain("sconto per i primi clienti: il 30% per 24 mesi");
+    // Senza conteggio visibile non si dice quanti posti ci sono (MONETIZATION §2-bis).
+    expect(founder).not.toMatch(/prime \d+ aziende/);
+    // anon non legge il database: niente «posti rimasti» o contatori.
+    expect(JSON.stringify(content)).not.toMatch(/posti (rimasti|liberi|disponibili)|ne restano/i);
   });
 });

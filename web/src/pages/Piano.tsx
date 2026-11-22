@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
-import { useWorkspaceBilling } from "@/features/workspace/hooks";
+import { useFounderOffer, useWorkspaceBilling } from "@/features/workspace/hooks";
 import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { workspaceAccessMessage, type WorkspaceAccess } from "@/features/workspace/access";
-import { hasOpenSubscription, type PendingPlanChange, type WorkspaceBilling } from "@/features/workspace/billing";
+import { founderDiscountShown, hasOpenSubscription, type FounderOffer, type PendingPlanChange, type WorkspaceBilling } from "@/features/workspace/billing";
 import { describePlanTarget, pendingChangeCancellable, scheduledChangeBlocker, type PlanTarget } from "@/features/workspace/scheduledChange";
 import { PLAN_BANDS, planOptionLabel, type SalePlan } from "@/features/workspace/planBands";
 import { LEGAL_URLS } from "@/features/account/legal";
 import { userErrorMessage } from "@/lib/errors";
-import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
-import { openCheckout, prepareCheckout } from "../billing/checkout";
+import { qk } from "@/lib/queryKeys";
+import { EXTRA_VENUE_PRICES, FOUNDER_OFFER, formatEuro, quotePlan } from "../../../shared/pricing";
+import { getCheckoutEnvironment, openCheckout, prepareCheckout } from "../billing/checkout";
 import {
   checkVenues, increaseOptions, needsCustomAgreement, PEOPLE_AGREEMENT_MESSAGE, purchaseOptions, scheduledOptions,
   SELF_SERVE_MAX_VENUES, VENUES_AGREEMENT_MESSAGE,
@@ -148,6 +149,11 @@ function BillingSection({ workspaceId, access, refetchAccess }: {
   const [late, setLate] = useState(false);
   const billing = useWorkspaceBilling(workspaceId, { refetchInterval: awaiting ? 3_000 : false });
   const subscription = billing.data;
+  // Lo sconto fondatori si chiede per l'ambiente Paddle del checkout. Se la
+  // lettura non riesce la pagina resta a listino: non si promette uno sconto.
+  const environment = useQuery({ queryKey: qk.workspaceBilling.checkoutEnvironment, queryFn: getCheckoutEnvironment,
+    staleTime: Infinity, retry: false });
+  const offer = useFounderOffer(workspaceId, environment.data, { refetchInterval: awaiting ? 3_000 : false }).data;
   const done = !awaiting ? false
     : awaiting.kind === "purchase" ? hasOpenSubscription(subscription) && access?.source === "subscription"
     : awaiting.kind === "change" ? subscription?.plan === awaiting.plan && subscription.extra_venues === awaiting.extraVenues
@@ -187,17 +193,17 @@ function BillingSection({ workspaceId, access, refetchAccess }: {
       : "Annullato: aggiorniamo lo stato fra pochi secondi.";
     // Programmare o annullare un cambio al rinnovo non passa da Paddle: nessun
     // avviso da aspettare, basta rileggere l'abbonamento.
-    return <SubscriptionCard workspaceId={workspaceId} billing={subscription as WorkspaceBilling}
+    return <SubscriptionCard workspaceId={workspaceId} billing={subscription as WorkspaceBilling} offer={offer}
       usage={access?.usage ?? null} notice={notice} busy={!!awaiting}
       onAwait={(next) => { setLate(false); setAwaiting(next); }} onRefresh={() => billing.refetch()} />;
   }
   if (!access || access.state === "expired") return null;
   if (access.source === "complimentary_lifetime" && access.state === "operational") return null;
-  return <PurchasePanel workspaceId={workspaceId} access={access} onPaid={() => setAwaiting({ kind: "purchase" })} />;
+  return <PurchasePanel workspaceId={workspaceId} access={access} offer={offer} onPaid={() => setAwaiting({ kind: "purchase" })} />;
 }
 
-function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, onRefresh }: {
-  workspaceId: string; billing: WorkspaceBilling; usage: WorkspaceAccess["usage"]; notice: string | null; busy: boolean;
+function SubscriptionCard({ workspaceId, billing, offer, usage, notice, busy, onAwait, onRefresh }: {
+  workspaceId: string; billing: WorkspaceBilling; offer: FounderOffer | undefined; usage: WorkspaceAccess["usage"]; notice: string | null; busy: boolean;
   onAwait: (next: Awaiting) => void; onRefresh: () => Promise<unknown>;
 }) {
   const pausing = billing.scheduled_change?.action === "pause";
@@ -211,7 +217,10 @@ function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, 
   const restart = useMutation({ mutationFn: () => restartSubscription(workspaceId), onSuccess: () => onAwait({ kind: "restart" }) });
   const stop = useMutation({ mutationFn: () => stopRenewals(workspaceId), onSuccess: () => onAwait({ kind: "stop" }) });
   const error = portal.error ?? resume.error ?? pause.error ?? restart.error ?? stop.error;
-  const restartPrice = quotePlan(billing.plan, yearly ? "annual" : "monthly", 1 + billing.extra_venues).total;
+  // Lo sconto resta sull'abbonamento fino alla scadenza, anche dopo una pausa.
+  const founderActive = offer?.status === "active" && !!offer.ends_at;
+  const restartPrice = quotePlan(billing.plan, yearly ? "annual" : "monthly", 1 + billing.extra_venues,
+    { founder: founderActive }).total;
   const periodEnd = billing.current_period_ends_at ? dateOnly(billing.current_period_ends_at) : null;
   const archiveEnd = billing.current_period_ends_at ? dateOnly(addMonths(billing.current_period_ends_at, 12)) : null;
   const pending = billing.pending_change;
@@ -228,6 +237,9 @@ function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, 
         {paused ? (billing.paused_at ? <Value label="In pausa dal" value={dateOnly(billing.paused_at)} /> : null)
           : billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
       </dl>
+      {founderActive && offer?.ends_at
+        ? <p className="mt-5 text-sm text-gold">{`Sconto fondatori fino al ${dateOnly(offer.ends_at)}: −${FOUNDER_OFFER.percent}% su fascia e sedi. Dopo si paga il listino in vigore.`}</p>
+        : null}
       {notice ? <p className="mt-5 text-sm text-t2" role="status">{notice}</p> : null}
       {billing.status === "past_due" && billing.past_due_since ? <p className="mt-5 text-sm text-gold" role="alert">Il rinnovo del {dateOnly(billing.past_due_since)} non è andato a buon fine. Paddle ritenta il pagamento; puoi continuare a lavorare per 7 giorni, poi resta la sola consultazione finché il pagamento non arriva.</p> : null}
       {pausing ? <p className="mt-5 text-sm text-t2">Pausa programmata: lavori normalmente fino all’ultimo giorno indicato, poi gli addebiti si fermano e l’azienda passa alla consultazione ed export, con tutto lo storico. Riparti quando vuoi da questa pagina, senza rifare l’acquisto.</p>
@@ -474,8 +486,8 @@ function UpgradeForm({ workspaceId, billing, people, busy, onApplied }: {
   );
 }
 
-function PurchasePanel({ workspaceId, access, onPaid }: {
-  workspaceId: string; access: WorkspaceAccess; onPaid: () => void;
+function PurchasePanel({ workspaceId, access, offer, onPaid }: {
+  workspaceId: string; access: WorkspaceAccess; offer: FounderOffer | undefined; onPaid: () => void;
 }) {
   const people = access.usage?.people ?? 0;
   const openVenues = Math.max(1, access.usage?.venues ?? 1);
@@ -485,13 +497,19 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
   const [venues, setVenues] = useState(String(openVenues));
   const count = Number(venues);
   const venueCheck = checkVenues(venues, openVenues);
+  // Cosa ha deciso l'ultimo checkout sullo sconto: se i posti sono finiti nel
+  // frattempo (`founder: false`) il riepilogo torna a listino.
+  const [checkoutFounder, setCheckoutFounder] = useState<boolean | undefined>(undefined);
+  const founder = founderDiscountShown(offer, checkoutFounder);
   // Oltre 100 persone nessuna fascia si compra: niente prezzo, solo l'accordo.
-  const quote = venueCheck === "ok" && options.length > 0 ? quotePlan(plan, interval === "year" ? "annual" : "monthly", count) : null;
+  const quote = venueCheck === "ok" && options.length > 0
+    ? quotePlan(plan, interval === "year" ? "annual" : "monthly", count, { founder }) : null;
   const inTrial = access.source === "trial" && access.state === "operational";
 
   const buy = useMutation({
     mutationFn: async () => {
       const prepared = await prepareCheckout({ workspaceId, plan, interval, extraVenues: count - 1 });
+      setCheckoutFounder(prepared.founder);
       return openCheckout(prepared);
     },
     onSuccess: (result) => { if (result === "completed") onPaid(); },
@@ -521,7 +539,9 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
       </div>
       {quote ? (
         <div className="mt-5 rounded-xl bg-bg-2 p-4">
-          <p className="text-xl text-t1">{formatEuro(quote.total)} <span className="text-sm text-t3">{interval === "year" ? "all’anno" : "al mese"} + IVA</span></p>
+          <p className="text-xl text-t1">{formatEuro(quote.total)} <span className="text-sm text-t3">{interval === "year" ? "all’anno" : "al mese"} + IVA</span>
+            {founder ? <> <span className="text-sm text-t3 line-through">{formatEuro(quote.listTotal)}</span></> : null}</p>
+          {founder ? <p className="mt-1 text-sm font-medium text-gold">{`Sconto fondatori: −${FOUNDER_OFFER.percent}% per ${FOUNDER_OFFER.months} mesi`}<span className="font-normal text-t3"> dal primo addebito, poi il listino in vigore.</span></p> : null}
           {interval === "year" ? <p className="mt-1 text-xs text-t3">Equivale a {formatEuro(quote.monthlyEquivalent)} al mese, per 12 mesi consecutivi.</p> : null}
           {count > 1 ? <p className="mt-1 text-xs text-t3">Comprende {count - 1} {count - 1 === 1 ? "sede aggiuntiva" : "sedi aggiuntive"} a {formatEuro(interval === "year" ? EXTRA_VENUE_PRICES.annual : EXTRA_VENUE_PRICES.monthly)} ciascuna.</p> : null}
         </div>

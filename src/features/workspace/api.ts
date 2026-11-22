@@ -1,7 +1,7 @@
 import { LEGAL_VERSION } from "@/features/legal/version";
 import { supabase } from "@/lib/supabase";
 import { parseWorkspaceAccess, type WorkspaceAccess } from "./access";
-import { parseWorkspaceBilling, type WorkspaceBilling } from "./billing";
+import { parseFounderOffer, parseWorkspaceBilling, type FounderOffer, type WorkspaceBilling } from "./billing";
 import type { MyContext } from "./types";
 
 /** Stato/capacità dell'azienda; la RPC verifica appartenenza e dati condivisibili. */
@@ -22,6 +22,19 @@ export async function getWorkspaceBilling(workspaceId: string): Promise<Workspac
   const { data, error } = await supabase.rpc("get_workspace_billing", { p_workspace: workspaceId });
   if (error) throw new Error(error.message);
   return parseWorkspaceBilling(data);
+}
+
+/**
+ * Sconto fondatori dell'azienda nell'ambiente Paddle del checkout (lo dice
+ * `billing-checkout`): i posti si contano per ambiente. Solo il titolare.
+ */
+export async function getFounderOffer(workspaceId: string, environment: "sandbox" | "live"): Promise<FounderOffer> {
+  if (!workspaceId.trim()) throw new Error("workspace_billing_invalid");
+  const { data, error } = await supabase.rpc("get_founder_offer", {
+    p_workspace: workspaceId, p_environment: environment,
+  });
+  if (error) throw new Error(error.message);
+  return parseFounderOffer(data);
 }
 
 /** Avvio esplicito del titolare; date e idempotenza appartengono al server. */

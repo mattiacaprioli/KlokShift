@@ -61,6 +61,7 @@ export function routeForNotification(
       type === "shift_unassigned" ||
       type === "archive_reminder" ||
       type === "billing_change_reminder" ||
+      type === "founder_offer_ending" ||
       type === "billing_admin_alert"
     )
       return null;
@@ -89,6 +90,9 @@ export function routeForNotification(
   // Promemoria del cambio di piano al rinnovo: stessa scelta, i dettagli e
   // l'annullamento sono nella pagina Piano sul web.
   if (type === "billing_change_reminder") return "/(manager)/(tabs)";
+  // Fine dello sconto fondatori (`related_id` = azienda): la Home con la card
+  // «Stato dell'azienda». Nell'app nessun importo; prezzi e disdetta sono sul web.
+  if (type === "founder_offer_ending") return "/(manager)/(tabs)";
   // Allarme al fondatore su un cambio di piano: nell'app vale la push, l'area
   // fondatore è solo sul web. Il `related_id` è l'azienda, non un turno.
   if (type === "billing_admin_alert") return null;

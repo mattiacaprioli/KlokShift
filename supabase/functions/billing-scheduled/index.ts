@@ -3,7 +3,9 @@
 //
 // La chiama ogni 10 minuti `private.run_scheduled_billing_changes` (pg_cron →
 // pg_net) quando c'è lavoro: cambi da inviare nelle 24 ore prima del rinnovo,
-// promemoria da spedire al titolare, allarmi da spedire al fondatore.
+// promemoria da spedire al titolare, allarmi da spedire al fondatore, sconti
+// fondatori da togliere (24 mesi: `PATCH {"discount": null}`, lo stato `ended`
+// lo scrive poi l'avviso firmato).
 //
 // Per ogni cambio preso in carico (`billing_scheduled_claim`, che lo toglie
 // dalla coda per 15 minuti): legge l'abbonamento da Paddle, controlla che
@@ -193,6 +195,12 @@ Deno.serve(async (req) => {
         });
         if (rpcErr) console.error("billing-scheduled: result", rpcErr.code ?? "unknown");
         return !rpcErr;
+      },
+      async founderOffersDue() {
+        if (!PADDLE) return [];
+        const { data, error } = await admin.rpc("billing_founder_offers_due", { p_environment: PADDLE.environment });
+        if (error) return null;
+        return Array.isArray(data) ? data as Record<string, unknown>[] : [];
       },
       listReminderEmails: () => emailReady ? pendingRows("reminder") : Promise.resolve([]),
       listAlertEmails: () => emailReady && FOUNDER_ALERT_EMAIL ? pendingRows("alert") : Promise.resolve([]),

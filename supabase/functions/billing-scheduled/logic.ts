@@ -170,7 +170,17 @@ export function scheduledDateBody(effectiveAt: string) {
   return { next_billed_at: new Date(effectiveAt).toISOString().replace(/\.\d{3}Z$/, "Z"), proration_billing_mode: "do_not_bill" };
 }
 
-export type ScheduledPatch = ReturnType<typeof scheduledPatchBody> | ReturnType<typeof scheduledDateBody>;
+/**
+ * Fine dello sconto fondatori (24 mesi): `discount: null` lo toglie dal rinnovo
+ * successivo, senza addebiti (provato in sandbox). Lo stato `ended` non lo
+ * scrive chi invia: lo scrive l'avviso firmato che segue.
+ */
+export function founderEndRequest(row: { paddle_subscription_id: string }) {
+  return { path: `/subscriptions/${row.paddle_subscription_id}`, body: { discount: null } };
+}
+
+export type ScheduledPatch =
+  | ReturnType<typeof scheduledPatchBody> | ReturnType<typeof scheduledDateBody> | ReturnType<typeof founderEndRequest>["body"];
 
 /**
  * Codice di una risposta HTTP di Paddle (0 = non raggiungibile). 400, 404 e
@@ -349,11 +359,14 @@ export type ScheduledDeps = {
   markReminder(id: string, sent: boolean, attempts: number): Promise<boolean>;
   /** Come `markReminder`, solo se l'allarme è ancora `kind`: un'escalation concorrente non risulta spedita. */
   markAlert(id: string, sent: boolean, attempts: number, kind: AlertKind): Promise<boolean>;
+  /** Sconti fondatori da togliere (`billing_founder_offers_due`); null se la lettura fallisce. */
+  founderOffersDue(): Promise<Record<string, unknown>[] | null>;
 };
 
 export type ScheduledRun = {
   applied: number; failed: number; retry: number;
   reminders: number; alerts: number; skipped: number; emailFailed: number;
+  founderEnded: number;
   error?: string;
 };
 
@@ -414,7 +427,7 @@ async function sendOne(deps: ScheduledDeps, raw: Record<string, unknown>): Promi
 
 /** Invia i cambi presi in carico, poi le email in attesa. Restituisce i conteggi. */
 export async function runScheduled(deps: ScheduledDeps, dashboardUrl: string): Promise<ScheduledRun> {
-  const out: ScheduledRun = { applied: 0, failed: 0, retry: 0, reminders: 0, alerts: 0, skipped: 0, emailFailed: 0 };
+  const out: ScheduledRun = { applied: 0, failed: 0, retry: 0, reminders: 0, alerts: 0, skipped: 0, emailFailed: 0, founderEnded: 0 };
   const errors: string[] = [];
 
   const claimed = await deps.claim();
@@ -422,6 +435,19 @@ export async function runScheduled(deps: ScheduledDeps, dashboardUrl: string): P
   for (const raw of claimed ?? []) {
     const outcome = await sendOne(deps, raw);
     if (outcome) out[outcome]++; else errors.push("result_failed");
+  }
+
+  // Sconto fondatori a fine corsa: una PATCH per riga, dopo i cambi programmati.
+  // Un errore di una riga non ferma le altre; ripetere è innocuo (lo sconto già
+  // tolto resta tolto) e il giro si ripete finché l'avviso firmato non chiude la riga.
+  const due = await deps.founderOffersDue();
+  if (!due) errors.push("founder_due_read_failed");
+  for (const raw of due ?? []) {
+    const id = raw.paddle_subscription_id;
+    if (typeof id !== "string" || id === "") continue;
+    const request = founderEndRequest({ paddle_subscription_id: id });
+    const write = await deps.patchSubscription(id, request.body);
+    if (write.ok) out.founderEnded++; else errors.push("founder_end_failed");
   }
 
   // Email che non vanno più spedite: si segnano come fatte senza inviarle.

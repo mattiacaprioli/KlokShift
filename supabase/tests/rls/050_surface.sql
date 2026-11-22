@@ -80,7 +80,7 @@ begin
                          'billing_prepare_change', 'billing_prepare_lifecycle',
                          'billing_prepare_scheduled_change', 'billing_record_scheduled_change',
                          'billing_cancel_scheduled_change', 'billing_scheduled_claim',
-                         'billing_scheduled_result')
+                         'billing_scheduled_result', 'billing_founder_offers_due')
         and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
     '', 'inviti, delete_account, concessioni e pagamenti sono solo della service role');
   perform tests.eq(

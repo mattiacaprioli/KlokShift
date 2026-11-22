@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import {
   createFirstVenue,
+  getFounderOffer,
   getMyContext,
   getStaffCanChat,
   getWorkspaceAccess,
@@ -59,6 +60,25 @@ export function useWorkspaceBilling(
     queryKey: qk.workspaceBilling.byWorkspace(workspaceId ?? ""),
     queryFn: () => getWorkspaceBilling(workspaceId as string),
     enabled,
+    refetchOnWindowFocus: true,
+    refetchInterval: options.refetchInterval ?? false,
+    staleTime: 0,
+  });
+}
+
+/**
+ * Sconto fondatori per la pagina Piano. Parte solo quando si conosce l'ambiente
+ * Paddle del checkout; con `refetchInterval` segue l'abbonamento dopo un acquisto.
+ */
+export function useFounderOffer(
+  workspaceId: string | undefined,
+  environment: "sandbox" | "live" | undefined,
+  options: { refetchInterval?: number | false } = {}
+) {
+  return useQuery({
+    queryKey: qk.workspaceBilling.founder(workspaceId ?? "", environment ?? ""),
+    queryFn: () => getFounderOffer(workspaceId as string, environment as "sandbox" | "live"),
+    enabled: !!workspaceId && !!environment,
     refetchOnWindowFocus: true,
     refetchInterval: options.refetchInterval ?? false,
     staleTime: 0,

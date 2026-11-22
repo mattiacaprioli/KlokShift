@@ -17,15 +17,24 @@ const lifetime = z.object({
   period_id: id, plan: z.enum(["base", "team", "large", "custom"]), venue_limit: count.min(1),
   document_limit_bytes: count.min(1).nullable(),
 });
+/** Il posto fondatori live dell'azienda (la sandbox è solo di prova). */
+const founderOffer = z.object({
+  status: z.enum(["reserved", "active", "ended"]), source: z.enum(["auto", "founder"]),
+  reserved_at: date.nullable(), activated_at: date.nullable(), ends_at: date.nullable(), ended_at: date.nullable(),
+});
 export const snapshotSchema = z.object({
   classification, migration_review_required: z.boolean().nullable(), access: access.nullable(),
   document_known_bytes: count, document_unknown_sizes: count, lifetime: lifetime.nullable(),
+  founder_offer: founderOffer.nullable().default(null),
 });
 export const workspaceControlSchema = z.object({
   generated_at: date, target_id: id, revision, snapshot: snapshotSchema,
+  // Posti live presi in tutto (fuori dallo snapshot: non cambia la revisione di quest'azienda).
+  founder_seats: z.object({ taken: count, total: count.min(1) }),
 }).refine((v) => !v.snapshot.access || v.snapshot.access.workspace_id === v.target_id);
 export const accountControlSchema = z.object({ generated_at: date, target_id: id, revision, classification });
-const action = z.enum(["grant_lifetime", "set_classification", "add_note", "delete_data", "plan_band_migration"]);
+const action = z.enum(["grant_lifetime", "set_classification", "add_note", "delete_data", "plan_band_migration",
+  "grant_founder_offer"]);
 export const operationResultSchema = z.object({
   operation_id: id, action, target_id: id, applied_at: date, period_id: id.nullable(),
 }).refine((v) => (v.action === "grant_lifetime") === (v.period_id !== null));
@@ -49,7 +58,8 @@ export type AdminClassification = typeof classifications[number];
 export type WorkspaceAction =
   | { action: "grant_lifetime"; plan: AccessPlan; venueLimit: number; documentLimitBytes: number }
   | { action: "set_classification"; classification: AdminClassification }
-  | { action: "add_note" };
+  | { action: "add_note" }
+  | { action: "grant_founder_offer" };
 export type WorkspaceCommand = {
   workspaceId: string; operationId: string; revision: string; reason: string; change: WorkspaceAction;
 };
