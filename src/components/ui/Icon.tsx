@@ -24,6 +24,7 @@ export type IconName =
   | "camera"
   | "shield"
   | "help"
+  | "info"
   | "settings"
   | "bell"
   | "verified"
@@ -163,6 +164,12 @@ export function Icon({
         <>
           <Circle {...p} cx={12} cy={12} r={9} />
           <Path {...p} d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17v.1" />
+        </>
+      )}
+      {name === "info" && (
+        <>
+          <Circle {...p} cx={12} cy={12} r={9} />
+          <Path {...p} d="M12 11v6M12 7.5v.1" />
         </>
       )}
       {name === "lock" && (

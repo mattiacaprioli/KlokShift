@@ -11,6 +11,7 @@ import {
 import {
   BAND_ERROR,
   OVERTIME_HELP,
+  holidaysHelp,
   PCT_ERROR,
   SURCHARGES_HELP,
   isQuarterTime,
@@ -21,6 +22,7 @@ import {
 } from "@/features/assignments/surcharges";
 import { Button, Field, Input } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
+import { SidebarIcon } from "../ui/SidebarIcon";
 
 /**
  * Le regole delle maggiorazioni (equivalente web di `(manager)/maggiorazioni`):
@@ -164,6 +166,9 @@ function RulesForm({
     );
   }
 
+  // Quali giorni sono festivi: dietro la «i», per non allungare il modulo.
+  const [showHolidays, setShowHolidays] = useState(false);
+
   const pct = (label: string, value: string, set: (v: string) => void, bad: boolean, hint?: string) => (
     <Field label={`${label} (%)`} error={bad ? PCT_ERROR : undefined} hint={hint}>
       <Input
@@ -189,8 +194,38 @@ function RulesForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         {pct("Domenica", sunday, setSunday, parsed.sunday.invalid)}
-        {pct("Festivi", holiday, setHoliday, parsed.holiday.invalid)}
+        <div className="flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5">
+            <label htmlFor="surcharge-holiday" className="text-xs font-semibold uppercase tracking-wider text-t3">
+              Festivi (%)
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowHolidays((v) => !v)}
+              aria-expanded={showHolidays}
+              aria-label="Quali giorni sono festivi"
+              title="Quali giorni sono festivi"
+              className={`focus-gold rounded-full ${showHolidays ? "text-gold" : "text-t4 hover:text-t2"}`}
+            >
+              <SidebarIcon name="info" className="size-3.5" />
+            </button>
+          </span>
+          <Input
+            id="surcharge-holiday"
+            value={holiday}
+            inputMode="decimal"
+            placeholder="Spenta"
+            disabled={!gate.allowed}
+            onChange={(e) => setHoliday(e.target.value)}
+          />
+          {parsed.holiday.invalid ? <span className="text-xs text-error">{PCT_ERROR}</span> : null}
+        </div>
       </div>
+      {showHolidays ? (
+        <p className="rounded-xl border border-border-2 bg-bg-1 px-3 py-2 text-xs leading-5 text-t2">
+          {holidaysHelp(Number(month.slice(0, 4)))}
+        </p>
+      ) : null}
       {pct("Straordinario", overtime, setOvertime, parsed.overtime.invalid, OVERTIME_HELP)}
       {save.error ? (
         <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">

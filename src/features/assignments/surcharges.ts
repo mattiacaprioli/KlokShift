@@ -265,3 +265,49 @@ export function rulesChangeNote(
   return `${changes}: da ${until} valgono le regole salvate per ${until}.`;
 }
 
+
+const MONTHS_IT = [
+  "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+  "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+];
+
+/**
+ * Pasqua (`YYYY-MM-DD`), calendario gregoriano.
+ * ⚠️ Gemello **manuale** di `private.easter_date` (stesso algoritmo): serve
+ * solo a dire le date nel modulo, il conto delle ore lo fa il database.
+ */
+export function easterDate(year: number): string {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Quali giorni contano come festivi, sotto il campo «Festivi»: gli stessi di
+ * `private.italian_holiday`, con le date di Pasqua e Pasquetta dell'anno.
+ */
+export function holidaysHelp(year: number): string {
+  const [, em, ed] = easterDate(year).split("-").map(Number);
+  const monday = new Date(year, em - 1, ed + 1);
+  const mm = monday.getMonth() + 1;
+  const md = monday.getDate();
+  const easter =
+    mm === em
+      ? `${ed} e ${md} ${MONTHS_IT[em - 1]}`
+      : `${ed} ${MONTHS_IT[em - 1]} e ${md} ${MONTHS_IT[mm - 1]}`;
+  // San Francesco è tornato festivo dal 2026, come in `private.italian_holiday`.
+  const october = year >= 2026 ? " 4 ottobre," : "";
+  return `Contano come festivi: 1 e 6 gennaio, Pasqua e Pasquetta (nel ${year}: ${easter}), 25 aprile, 1 maggio, 2 giugno, 15 agosto,${october} 1 novembre, 8, 25 e 26 dicembre. Solo il calendario italiano.`;
+}

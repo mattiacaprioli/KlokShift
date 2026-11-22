@@ -10,6 +10,8 @@ import {
   surchargeLabel,
   surchargeTotals,
   toSurchargeRules,
+  easterDate,
+  holidaysHelp,
   toSurcharges,
   type SurchargeRow,
 } from "@/features/assignments/surcharges";
@@ -182,5 +184,22 @@ describe("mesi futuri", () => {
     expect(rulesChangeNote([v], "2027-01", "2026-11")).toBe(
       "Valgono da gennaio 2027 a febbraio 2027: da marzo 2027 valgono le regole salvate per marzo 2027."
     );
+  });
+});
+
+describe("quali giorni sono festivi", () => {
+  it("Pasqua come la calcola il database (private.easter_date)", () => {
+    expect(easterDate(2026)).toBe("2026-04-05");
+    expect(easterDate(2027)).toBe("2027-03-28");
+    expect(easterDate(2024)).toBe("2024-03-31");
+  });
+
+  it("l'elenco dice le date di Pasqua e Pasquetta dell'anno", () => {
+    expect(holidaysHelp(2026)).toBe(
+      "Contano come festivi: 1 e 6 gennaio, Pasqua e Pasquetta (nel 2026: 5 e 6 aprile), 25 aprile, 1 maggio, 2 giugno, 15 agosto, 4 ottobre, 1 novembre, 8, 25 e 26 dicembre. Solo il calendario italiano."
+    );
+    expect(holidaysHelp(2024)).toContain("(nel 2024: 31 marzo e 1 aprile)");
+    expect(holidaysHelp(2027)).toContain("(nel 2027: 28 e 29 marzo)");
+    expect(holidaysHelp(2025)).not.toContain("4 ottobre");
   });
 });

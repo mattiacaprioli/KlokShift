@@ -18,6 +18,7 @@ import {
 import {
   BAND_ERROR,
   OVERTIME_HELP,
+  holidaysHelp,
   PCT_ERROR,
   SURCHARGES_HELP,
   isQuarterTime,
@@ -137,6 +138,9 @@ function RulesForm({
   const [sunday, setSunday] = useState(pctInput(initial.sunday_pct));
   const [holiday, setHoliday] = useState(pctInput(initial.holiday_pct));
   const [overtime, setOvertime] = useState(pctInput(initial.overtime_pct));
+  const colors = useColors();
+  // Quali giorni sono festivi: dietro la «i», per non allungare il modulo.
+  const [showHolidays, setShowHolidays] = useState(false);
 
   const parsed = {
     night: parseSurchargePct(night),
@@ -194,7 +198,32 @@ function RulesForm({
       </View>
       {badBand ? <Text className="text-xs text-error">{BAND_ERROR}</Text> : null}
       {pctField("Domenica", sunday, setSunday, parsed.sunday.invalid)}
-      {pctField("Festivi", holiday, setHoliday, parsed.holiday.invalid)}
+      <View className="gap-2">
+        <View className="flex-row items-center gap-2">
+          <Mono>Festivi (%)</Mono>
+          <Pressable
+            onPress={() => setShowHolidays((v) => !v)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Quali giorni sono festivi"
+            accessibilityState={{ expanded: showHolidays }}
+          >
+            <Icon name="info" size={16} color={showHolidays ? colors.gold : colors.t3} />
+          </Pressable>
+        </View>
+        {showHolidays ? (
+          <Text className="text-sm leading-5 text-t2">{holidaysHelp(Number(month.slice(0, 4)))}</Text>
+        ) : null}
+        <Input
+          value={holiday}
+          onChangeText={setHoliday}
+          keyboardType="decimal-pad"
+          placeholder="Spenta"
+          editable={gate.allowed}
+          accessibilityLabel="Festivi (%)"
+        />
+        {parsed.holiday.invalid ? <Text className="text-xs text-error">{PCT_ERROR}</Text> : null}
+      </View>
       {pctField("Straordinario", overtime, setOvertime, parsed.overtime.invalid)}
       <Text className="text-xs leading-4 text-t3">{OVERTIME_HELP}</Text>
       {gate.allowed ? (

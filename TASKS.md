@@ -552,6 +552,7 @@ L'app sarà usata anche fuori dall'Italia. Oggi non c'è nessuna internazionaliz
 - **Email d'invito** (`invite-staff`): testo italiano nel codice. Chi riceve l'invito non ha un account, quindi la lingua va presa da altro (sede, titolare, o scelta nel form d'invito).
 - **Email di Supabase Auth** (conferma, recupero password): template **in inglese**, brevi (scelta del 16/09), nella Dashboard. Si possono dividere per lingua dentro lo stesso template leggendo `user_metadata` (`{{ if eq .Data.locale "en" }}…{{ else }}…{{ end }}`, Go templates), ma solo quando `locale` verrà salvato alla registrazione.
 - **Sito vetrina**: già predisposto (`web-site/src/content/it.ts` + `types.ts`); pagine legali solo in italiano.
+- **Festivi delle maggiorazioni** (22/11): `private.italian_holiday` conosce solo il calendario italiano, quindi una sede all'estero avrebbe i festivi italiani. Quando arriva il primo cliente estero (non prima): un **paese per sede** (Italia di default) con i festivi già caricati, come Deputy/Planday/Homebase, più **giorni propri a data precisa** per sede (festivo locale, chiusura concordata; il patrono rientrerebbe da qui, facoltativo e senza riscrivere i mesi passati). Mai far scrivere all'utente tutto il calendario. Il patrono «ogni anno» è stato tolto il 22/11 (`20261122000000`).
 
 ### Multi-sede — cosa resta fuori (13/09)
 
