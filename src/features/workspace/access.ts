@@ -19,7 +19,7 @@ const ACCESS_SOURCES = [
   "subscription",
   "payment_grace",
 ] as const;
-const ACCESS_PLANS = ["base", "team"] as const;
+const ACCESS_PLANS = ["base", "team", "large", "custom"] as const;
 
 export type WorkspaceAccessState = (typeof ACCESS_STATES)[number];
 export type WorkspaceAccessSource = (typeof ACCESS_SOURCES)[number];
@@ -37,7 +37,11 @@ export type WorkspaceAccess = {
   can_operate: boolean;
   can_read: boolean;
   can_complete_attendance: boolean;
-  /** `people: null` significa senza limite soltanto con piano Team esplicito. */
+  /**
+   * Il limite lo decide il server, senza confronto con PLAN_BANDS: le build già
+   * installate devono leggere anche le fasce e i limiti venuti dopo di loro.
+   * `plan: null` fuori da `setup`/`migration_pending` è una fascia sconosciuta.
+   */
   limits: { people: number | null; venues: number | null };
   /** I dipendenti non ricevono gli aggregati dell'intera azienda. */
   usage: { people: number; venues: number } | null;
@@ -76,6 +80,25 @@ function count(value: unknown): number {
   return value;
 }
 
+/** Il limite di persone lo decide il server: un intero ≥ 1 o nessun limite. */
+function peopleLimit(value: unknown): number | null {
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    return invalidAccess();
+  }
+  return value;
+}
+
+/**
+ * Una fascia che questa versione non conosce (aggiunta dopo la build) non
+ * blocca: diventa «piano non assegnato» nelle etichette, e limiti, uso e stato
+ * restano quelli del server.
+ */
+function planValue(value: unknown): WorkspaceAccessPlan | null {
+  if (typeof value !== "string") return invalidAccess();
+  return ACCESS_PLANS.includes(value as WorkspaceAccessPlan) ? (value as WorkspaceAccessPlan) : null;
+}
+
 function timestamp(value: unknown): string | null {
   if (value === null) return null;
   // Postgres restituisce un istante ISO con offset, non una data locale.
@@ -105,7 +128,7 @@ export function parseWorkspaceAccess(value: unknown): WorkspaceAccess {
     workspace_id: raw.workspace_id,
     state: enumValue(raw.state, ACCESS_STATES),
     source: raw.source === null ? null : enumValue(raw.source, ACCESS_SOURCES),
-    plan: raw.plan === null ? null : enumValue(raw.plan, ACCESS_PLANS),
+    plan: raw.plan === null ? null : planValue(raw.plan),
     operational_from: timestamp(raw.operational_from),
     operational_until: timestamp(raw.operational_until),
     archive_until: timestamp(raw.archive_until),
@@ -114,7 +137,7 @@ export function parseWorkspaceAccess(value: unknown): WorkspaceAccess {
     can_read: booleanValue(raw.can_read),
     can_complete_attendance: booleanValue(raw.can_complete_attendance),
     limits: {
-      people: limits.people === null ? null : count(limits.people),
+      people: peopleLimit(limits.people),
       venues: limits.venues === null ? null : count(limits.venues),
     },
     usage: usage === null ? null : { people: count(usage.people), venues: count(usage.venues) },
@@ -132,7 +155,7 @@ export function parseWorkspaceAccess(value: unknown): WorkspaceAccess {
 
   if (access.state === "setup" || access.state === "migration_pending") {
     if (
-      access.source !== null || access.plan !== null ||
+      access.source !== null || raw.plan !== null ||
       access.operational_from !== null || access.operational_until !== null ||
       access.archive_until !== null || access.attendance_until !== null ||
       access.limits.people !== null || access.limits.venues !== null ||
@@ -144,10 +167,8 @@ export function parseWorkspaceAccess(value: unknown): WorkspaceAccess {
   }
 
   if (
-    access.source === null || access.plan === null || access.operational_from === null ||
-    access.limits.venues === null || access.limits.venues < 1 ||
-    (access.plan === "base" && access.limits.people !== 30) ||
-    (access.plan === "team" && access.limits.people !== null)
+    access.source === null || raw.plan === null || access.operational_from === null ||
+    access.limits.venues === null || access.limits.venues < 1
   ) {
     return invalidAccess();
   }

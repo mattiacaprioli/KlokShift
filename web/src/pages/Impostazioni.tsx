@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { PLAN_BANDS } from "@/features/workspace/planBands";
 import { userErrorMessage } from "@/lib/errors";
 import { changePasswordSchema } from "@/features/auth/schema";
 import { hasVerifiedTotp } from "@/features/auth/changePassword";
@@ -182,7 +183,7 @@ const ACCESS_SOURCE: Record<string, string> = {
 function CompanySection({ workspaceId }: { workspaceId: string }) {
   const { workspaceName, access } = useOwnerVenues();
   const summary = access?.plan
-    ? [access.plan === "team" ? "Team" : "Base", access.source ? ACCESS_SOURCE[access.source] : null].filter(Boolean).join(" · ")
+    ? [PLAN_BANDS[access.plan].label, access.source ? ACCESS_SOURCE[access.source] : null].filter(Boolean).join(" · ")
     : "Stato, limiti e abbonamento";
   return (
     <SettingsCard icon="venue" title="Azienda" description={workspaceName ?? undefined}>

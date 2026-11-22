@@ -107,12 +107,21 @@ describe("billing-scheduled: confronto con Paddle", () => {
 });
 
 describe("billing-scheduled: email", () => {
+  it("le etichette dei piani sono Piccola, Media, Grande", () => {
+    expect(parseScheduledChange(raw({ target_plan: "custom" }))).toBeNull();
+    expect(parseAlert(raw({ alert_kind: "failed", target_plan: "custom" }))?.target).toBeNull();
+    for (const [plan, label] of [["base", "Piccola"], ["team", "Media"], ["large", "Grande"]]) {
+      expect(formatReminder(change({ target_plan: plan }), "Bar", "https://k.test/app/").text).toContain(`Piano: ${label}`);
+      expect(formatAlert(alert({ target_plan: plan }), "Bar", "https://k.test/app").text).toContain(`${label}, annuale, 2 sedi`);
+    }
+  });
+
   it("promemoria al titolare: data di Roma, importo, link alla pagina Piano", () => {
     const mail = formatReminder(change(), "Bar <Stagione>", "https://k.test/app/");
     expect(mail.subject).toBe("Dal 18/11/2026 cambia l'abbonamento di Bar <Stagione>");
     expect(mail.text).toContain("290,00 €");
     expect(mail.text).toContain("IVA compresa");
-    expect(mail.text).toContain("Base");
+    expect(mail.text).toContain("Piccola");
     expect(mail.text).toContain("annuale");
     expect(mail.text).toContain("2 sedi");
     expect(mail.text).toContain("https://k.test/app/#/piano");
@@ -128,7 +137,7 @@ describe("billing-scheduled: email", () => {
     expect(mail.text).toContain("articoli");
     expect(mail.text).toContain("paddle_items_changed");
     expect(mail.text).toContain(`https://k.test/app/#/amministrazione/aziende/${WORKSPACE}`);
-    expect(mail.text).toContain("Base, annuale, 2 sedi");
+    expect(mail.text).toContain("Piccola, annuale, 2 sedi");
     expect(formatAlert(alert({ alert_kind: "not_sent" }), "Bar Sole", "https://k.test/app").text).toContain("6 ore");
     expect(formatAlert(alert({ alert_kind: "renewal_mismatch", close_reason: "renewal_mismatch" }), "Bar Sole",
       "https://k.test/app").text).toContain("articoli diversi");

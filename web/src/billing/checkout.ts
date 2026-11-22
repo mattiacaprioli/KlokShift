@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { functionErrorCode } from "@/lib/functionError";
+import type { SalePlan } from "@/features/workspace/planBands";
 
 /*
  * Acquisto dalla pagina Piano. Solo dashboard web: l'app nativa non mostra
@@ -11,7 +12,7 @@ import { functionErrorCode } from "@/lib/functionError";
 
 export type CheckoutSelection = {
   workspaceId: string;
-  plan: "base" | "team";
+  plan: SalePlan;
   interval: "month" | "year";
   extraVenues: number;
 };
@@ -26,7 +27,7 @@ type PreparedCheckout = {
 const ERRORS: [string, string][] = [
   ["billing_subscription_exists", "Questa azienda ha già un abbonamento attivo."],
   ["billing_not_required", "Questa azienda ha un accesso gratuito permanente: non serve acquistare."],
-  ["workspace_people_capacity", "Il piano Base arriva a 30 persone e oggi il tuo team è più grande: scegli il piano Team."],
+  ["workspace_people_capacity", "La fascia scelta è troppo piccola per le persone che hai oggi: scegline una più grande."],
   ["workspace_venue_capacity", "Le sedi aperte sono più di quelle scelte. Aumenta il numero di sedi."],
   ["billing_checkout_rate_limited", "Troppi tentativi in poco tempo. Riprova fra un'ora."],
   ["not_allowed", "Solo il titolare può acquistare per questa azienda."],

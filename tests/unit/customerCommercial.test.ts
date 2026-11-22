@@ -128,11 +128,17 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("rimborsi.html");
     expect(prepareCheckout).not.toHaveBeenCalled();
   });
-  it("oltre 30 persone non offre il piano Base", () => {
-    context.mockReturnValue({ ...base, access: { ...trialAccess, usage: { people: 31, venues: 1 } } });
+  it("oltre 15 persone non offre la fascia Piccola", () => {
+    context.mockReturnValue({ ...base, access: { ...trialAccess, usage: { people: 16, venues: 1 } } });
     const html = render();
-    expect(html).not.toContain("Base · fino a 30 persone");
-    expect(html).toContain("Base arriva a 30 persone: oggi ne conti 31.");
+    expect(html).not.toContain("Piccola · fino a 15 persone");
+    expect(html).toContain("Media · fino a 40 persone");
+    expect(html).toContain("Grande · fino a 100 persone");
+    expect(html).toContain("oggi conti 16 persone");
+  });
+  it("oltre 100 persone rimanda a un accordo su misura", () => {
+    context.mockReturnValue({ ...base, access: { ...trialAccess, usage: { people: 101, venues: 1 } } });
+    expect(render()).toContain("Oltre 100 persone serve un accordo su misura: scrivi a info@klokshift.com");
   });
   it("con un abbonamento aperto mostra rinnovo e stato, non un secondo acquisto", () => {
     context.mockReturnValue({ ...base, access: { ...trialAccess, source: "subscription" } });
@@ -143,7 +149,7 @@ describe("Piano e accesso del cliente", () => {
     } });
     const html = render();
     expect(html).toContain("Rinnovo non riuscito");
-    expect(html).toContain("Team · annuale");
+    expect(html).toContain("Media · annuale");
     expect(html).toContain("puoi continuare a lavorare per 7 giorni");
     expect(html).not.toContain("Procedi al pagamento");
   });
@@ -216,19 +222,26 @@ describe("Piano e accesso del cliente", () => {
     expect(html).toContain("Aggiorna il metodo di pagamento");
     expect(html).not.toContain("Aumenta piano o sedi");
   });
-  it("Team: il modulo non propone di tornare a Base", () => {
+  it("Media: l'aumento propone solo Grande, il cambio al rinnovo anche Piccola", () => {
     subscriptionAccess();
     billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team" } });
     const html = render();
-    expect(upgradeForm(html)).not.toContain("Base · fino a 30 persone");
-    // Il cambio al rinnovo invece lo propone.
-    expect(html.split("Cambia dal prossimo rinnovo")[1]).toContain("Base · fino a 30 persone");
+    expect(upgradeForm(html)).not.toContain("Piccola · fino a 15 persone");
+    expect(upgradeForm(html)).toContain("Grande · fino a 100 persone");
+    expect(html.split("Cambia dal prossimo rinnovo")[1]).toContain("Piccola · fino a 15 persone");
+    expect(html.split("Cambia dal prossimo rinnovo")[1]).not.toContain("Grande · fino a 100 persone");
+  });
+  it("Grande con 98 persone: al posto del selettore d'aumento c'è l'accordo su misura", () => {
+    context.mockReturnValue({ ...base, access: { ...trialAccess, source: "subscription", usage: { people: 98, venues: 1 } } });
+    billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "large" } });
+    const html = render();
+    expect(upgradeForm(html)).toContain("Oltre 100 persone serve un accordo su misura: scrivi a info@klokshift.com");
   });
   it("cambio in attesa: la riga al posto dei moduli, annullabile", () => {
     subscriptionAccess();
     billing.mockReturnValue({ ...noBilling, data: { ...subscription, plan: "team", extra_venues: 2, pending_change: pending } });
     const html = render();
-    expect(html).toContain("Dal 18/11/2099: Base · annuale, 1 sede — 353.8 € IVA compresa");
+    expect(html).toContain("Dal 18/11/2099: Piccola · annuale, 1 sede — 353.8 € IVA compresa");
     expect(html).toContain("Annulla il cambio");
     expect(html).toContain("Per aumentare annulla prima il cambio programmato");
     expect(html).not.toContain("Aumenta piano o sedi");

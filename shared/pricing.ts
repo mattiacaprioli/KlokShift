@@ -2,6 +2,7 @@
 export const PLAN_PRICES = {
   base: { monthly: 29, annual: 290 },
   team: { monthly: 49, annual: 490 },
+  large: { monthly: 89, annual: 890 },
 } as const;
 export const EXTRA_VENUE_PRICES = { monthly: 15, annual: 150 } as const;
 export type PricingPlan = keyof typeof PLAN_PRICES;

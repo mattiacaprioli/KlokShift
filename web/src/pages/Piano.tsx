@@ -7,10 +7,15 @@ import { TRIAL_COPY } from "@/features/workspace/trialCopy";
 import { workspaceAccessMessage, type WorkspaceAccess } from "@/features/workspace/access";
 import { hasOpenSubscription, type PendingPlanChange, type WorkspaceBilling } from "@/features/workspace/billing";
 import { describePlanTarget, pendingChangeCancellable, scheduledChangeBlocker, type PlanTarget } from "@/features/workspace/scheduledChange";
+import { PLAN_BANDS, planOptionLabel, type SalePlan } from "@/features/workspace/planBands";
 import { LEGAL_URLS } from "@/features/account/legal";
 import { userErrorMessage } from "@/lib/errors";
 import { EXTRA_VENUE_PRICES, formatEuro, quotePlan } from "../../../shared/pricing";
 import { openCheckout, prepareCheckout } from "../billing/checkout";
+import {
+  checkVenues, increaseOptions, needsCustomAgreement, PEOPLE_AGREEMENT_MESSAGE, purchaseOptions, scheduledOptions,
+  SELF_SERVE_MAX_VENUES, VENUES_AGREEMENT_MESSAGE,
+} from "../billing/planOptions";
 import { applyChange, cancelScheduledChange, formatCents, openPortal, pauseRenewals, previewChange, previewScheduledChange,
   restartSubscription, resumeRenewals, scheduleChange, stopRenewals, type ScheduledSelection } from "../billing/manage";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -56,7 +61,7 @@ export function PianoPage() {
           {current ? (
             <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
               <Value label="Stato" value={stateLabels[current.state]} />
-              <Value label="Piano" value={current.plan === "base" ? "Base" : current.plan === "team" ? "Team" : "Non assegnato"} />
+              <Value label="Piano" value={current.plan ? PLAN_BANDS[current.plan].label : "Non assegnato"} />
               <Value label="Origine dell’accesso" value={current.source === "trial" ? "Prova gratuita" : current.source === "complimentary_lifetime" ? "Gratuito a vita" : current.source === "transition" ? "Accesso transitorio" : current.source === "subscription" ? "Abbonamento" : current.source === "payment_grace" ? "Rinnovo in sospeso" : current.source ? "Concessione a tempo" : "Non assegnato"} />
               <Value label="Persone in azienda" value={current.usage?.people ?? "Non disponibile"} />
               <Value label="Limite persone" value={!current.plan ? "Non assegnato" : current.limits.people === null ? "Senza limite" : current.limits.people} />
@@ -71,7 +76,7 @@ export function PianoPage() {
           {current?.state === "migration_pending" ? <p className="mt-5 text-sm text-t2">Questa azienda esisteva già prima dei nuovi piani. Il piano e i limiti devono essere assegnati esplicitamente; la prova non parte automaticamente.</p> : null}
           {current?.source === "complimentary_lifetime" ? <p className="mt-5 text-sm text-t2">La gratuità vale per questa azienda e nei limiti indicati. Non prevede pagamenti o rinnovi.</p> : null}
           {current?.plan && current.usage ? <p className="mt-5 text-xs text-t3">Ogni persona conta una volta nell’azienda, anche se lavora in più sedi. Chi gestisce senza lavorare nei turni non occupa posti.</p> : null}
-          {current?.limits.people === 30 && (current.usage?.people ?? 0) >= 28 ? <p className="mt-3 text-sm text-gold">Il limite di 30 persone è vicino o raggiunto. Le persone e i turni già presenti restano utilizzabili.</p> : null}
+          {current?.limits.people != null && (current.usage?.people ?? 0) >= current.limits.people - 2 ? <p className="mt-3 text-sm text-gold">Il limite di {current.limits.people} persone è vicino o raggiunto. Le persone e i turni già presenti restano utilizzabili.</p> : null}
           {current?.state === "setup" ? (
             <div className="mt-5 space-y-3 border-t border-border-2 pt-5">
               {/* Stessi testi della pagina /prova e dell'app: l'avvio passa da lì. */}
@@ -130,7 +135,7 @@ const ACTIVATION_TIMEOUT_MS = 90_000;
 /** Cosa la pagina sta aspettando dall'avviso di Paddle dopo un'azione del titolare. */
 type Awaiting =
   | { kind: "purchase" }
-  | { kind: "change"; plan: "base" | "team"; extraVenues: number }
+  | { kind: "change"; plan: SalePlan; extraVenues: number }
   | { kind: "resume" }
   | { kind: "pause" }
   | { kind: "stop" }
@@ -218,7 +223,7 @@ function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, 
       <h2 className="font-semibold text-t1">Abbonamento</h2>
       <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-2">
         <Value label="Stato" value={billing.status === "active" ? "Attivo" : billing.status === "past_due" ? "Rinnovo non riuscito" : "In pausa"} />
-        <Value label="Piano" value={`${billing.plan === "base" ? "Base" : "Team"} · ${billing.billing_interval === "year" ? "annuale" : "mensile"}`} />
+        <Value label="Piano" value={`${PLAN_BANDS[billing.plan].label} · ${billing.billing_interval === "year" ? "annuale" : "mensile"}`} />
         <Value label="Sedi comprese" value={1 + billing.extra_venues} />
         {paused ? (billing.paused_at ? <Value label="In pausa dal" value={dateOnly(billing.paused_at)} /> : null)
           : billing.current_period_ends_at ? <Value label={stopping ? "Ultimo giorno" : "Prossimo rinnovo"} value={dateOnly(billing.scheduled_change?.effective_at ?? billing.current_period_ends_at)} /> : null}
@@ -266,7 +271,7 @@ function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, 
       ) : confirming === "restart" ? (
         <ConfirmDialog
           title="Ripartire adesso?"
-          message={`Paddle addebita subito ${formatEuro(restartPrice)} + IVA sulla carta salvata, per un nuovo ${yearly ? "anno" : "mese"} da oggi (${billing.plan === "base" ? "Base" : "Team"} con ${1 + billing.extra_venues} ${billing.extra_venues === 0 ? "sede" : "sedi"}). L’azienda torna operativa appena arriva il pagamento.`}
+          message={`Paddle addebita subito ${formatEuro(restartPrice)} + IVA sulla carta salvata, per un nuovo ${yearly ? "anno" : "mese"} da oggi (fascia ${PLAN_BANDS[billing.plan].label} con ${1 + billing.extra_venues} ${billing.extra_venues === 0 ? "sede" : "sedi"}). L’azienda torna operativa appena arriva il pagamento.`}
           confirmLabel="Riparti e paga"
           pending={restart.isPending}
           onConfirm={() => restart.mutate(undefined, { onSettled: () => setConfirming(null) })}
@@ -291,7 +296,7 @@ function SubscriptionCard({ workspaceId, billing, usage, notice, busy, onAwait, 
         ? pending
           ? (pendingChangeCancellable(pending)
               ? <p className="mt-3 text-sm text-t2">Per aumentare annulla prima il cambio programmato.</p> : null)
-          : <UpgradeForm key={`${billing.plan}-${billing.extra_venues}`} workspaceId={workspaceId} billing={billing} busy={busy}
+          : <UpgradeForm key={`${billing.plan}-${billing.extra_venues}`} workspaceId={workspaceId} billing={billing} people={usage?.people ?? 0} busy={busy}
               onApplied={(plan, extraVenues) => onAwait({ kind: "change", plan, extraVenues })} />
         : null}
       {billing.status === "active" && billing.scheduled_change === null && !pending
@@ -338,9 +343,11 @@ function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: 
 }) {
   const currentVenues = 1 + billing.extra_venues;
   const current: PlanTarget = { plan: billing.plan, interval: billing.billing_interval, extraVenues: billing.extra_venues };
-  const [plan, setPlan] = useState<"base" | "team">(billing.plan);
+  const [plan, setPlan] = useState<SalePlan>(billing.plan);
   const [interval, setBillingInterval] = useState<"month" | "year">(billing.billing_interval);
-  const [venues, setVenues] = useState(currentVenues);
+  // Da sé al massimo 5 sedi: oltre serve un accordo (anche al rinnovo).
+  const maxVenues = Math.min(currentVenues, SELF_SERVE_MAX_VENUES);
+  const [venues, setVenues] = useState(maxVenues);
   const target: PlanTarget = { plan, interval, extraVenues: venues - 1 };
   // Senza i numeri d'uso decide il server, con lo stesso motivo.
   const blocker = scheduledChangeBlocker({ current, target, people: usage?.people ?? 0, openVenues: usage?.venues ?? 0 });
@@ -362,9 +369,8 @@ function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: 
       <p className="mt-1 text-sm text-t2">Piano più piccolo, meno sedi o un altro periodo: fino al rinnovo non cambia nulla e non paghi niente adesso.</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <Field label="Piano">
-          <Select value={plan} onChange={(e) => { setPlan(e.target.value as "base" | "team"); reset(); }}>
-            <option value="base">Base · fino a 30 persone</option>
-            {billing.plan === "team" ? <option value="team">Team · senza limite di persone</option> : null}
+          <Select value={plan} onChange={(e) => { setPlan(e.target.value as SalePlan); reset(); }}>
+            {scheduledOptions(billing.plan).map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
           </Select>
         </Field>
         <Field label="Periodo">
@@ -374,9 +380,10 @@ function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: 
         </Field>
         <Field label="Sedi totali">
           <Select value={String(venues)} onChange={(e) => { setVenues(Number(e.target.value)); reset(); }}>
-            {Array.from({ length: currentVenues }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+            {Array.from({ length: maxVenues }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
           </Select>
         </Field>
+        {currentVenues > SELF_SERVE_MAX_VENUES ? <p className="text-sm text-t2 sm:col-span-3" role="status">{VENUES_AGREEMENT_MESSAGE}</p> : null}
       </div>
       {blocker ? <p className="mt-3 text-sm text-t2" role="status">{blocker}</p> : null}
       {quote && previewed ? (
@@ -401,15 +408,19 @@ function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: 
 }
 
 /** Solo aumenti: piano non inferiore e sedi non meno di oggi. Importi calcolati da Paddle. */
-function UpgradeForm({ workspaceId, billing, busy, onApplied }: {
-  workspaceId: string; billing: WorkspaceBilling; busy: boolean;
-  onApplied: (plan: "base" | "team", extraVenues: number) => void;
+function UpgradeForm({ workspaceId, billing, people, busy, onApplied }: {
+  workspaceId: string; billing: WorkspaceBilling; people: number; busy: boolean;
+  onApplied: (plan: SalePlan, extraVenues: number) => void;
 }) {
   const currentVenues = 1 + billing.extra_venues;
-  const [plan, setPlan] = useState<"base" | "team">(billing.plan);
+  const [plan, setPlan] = useState<SalePlan>(billing.plan);
   const [venues, setVenues] = useState(String(currentVenues));
+  // La fascia di oggi resta scelta per aggiungere solo sedi.
+  const planChoices = [billing.plan, ...increaseOptions(billing.plan)];
+  const customAgreement = needsCustomAgreement(billing.plan, people);
   const count = Number(venues);
-  const valid = venues.trim() !== "" && Number.isSafeInteger(count) && count >= currentVenues && count <= 1000;
+  const venueCheck = checkVenues(venues, currentVenues);
+  const valid = venueCheck === "ok";
   const changed = valid && (plan !== billing.plan || count !== currentVenues);
   const selection = { workspaceId, plan, extraVenues: count - 1 };
   const preview = useMutation({ mutationFn: () => previewChange(selection) });
@@ -423,14 +434,15 @@ function UpgradeForm({ workspaceId, billing, busy, onApplied }: {
     <div className="mt-6 border-t border-border-2 pt-5">
       <h3 className="font-semibold text-t1">Aumenta piano o sedi</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Piano">
-          <Select value={plan} onChange={(e) => { setPlan(e.target.value as "base" | "team"); reset(); }}>
-            {billing.plan === "base" ? <option value="base">Base · fino a 30 persone</option> : null}
-            <option value="team">Team · senza limite di persone</option>
-          </Select>
-        </Field>
-        <Field label="Sedi totali" error={valid ? undefined : `Almeno ${currentVenues}: quelle già comprese.`}>
-          <Input type="number" min={currentVenues} step={1} value={venues} onChange={(e) => { setVenues(e.target.value); reset(); }} />
+        {customAgreement
+          ? <p className="text-sm text-t2" role="status">{PEOPLE_AGREEMENT_MESSAGE}</p>
+          : <Field label="Piano">
+              <Select value={plan} onChange={(e) => { setPlan(e.target.value as SalePlan); reset(); }}>
+                {planChoices.map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
+              </Select>
+            </Field>}
+        <Field label="Sedi totali" error={venueCheck === "agreement" ? VENUES_AGREEMENT_MESSAGE : venueCheck === "too_few" ? `Almeno ${currentVenues}: quelle già comprese.` : undefined}>
+          <Input type="number" min={currentVenues} max={SELF_SERVE_MAX_VENUES} step={1} value={venues} onChange={(e) => { setVenues(e.target.value); reset(); }} />
         </Field>
       </div>
       {quote ? (
@@ -447,7 +459,7 @@ function UpgradeForm({ workspaceId, billing, busy, onApplied }: {
       {preview.error ?? apply.error ? <p className="mt-3 text-sm text-error" role="alert">{userErrorMessage(preview.error ?? apply.error)}</p> : null}
       {confirming && quote ? (
         <ConfirmDialog
-          title={`Passare a ${plan === "base" ? "Base" : "Team"} con ${count} ${count === 1 ? "sede" : "sedi"}?`}
+          title={`Passare alla fascia ${PLAN_BANDS[plan].label} con ${count} ${count === 1 ? "sede" : "sedi"}?`}
           message={`Paddle addebita subito ${formatCents(quote.dueNowCents, quote.currency)} sul metodo di pagamento salvato. Dal prossimo rinnovo paghi ${formatCents(quote.renewalCents, quote.currency)} ${per}.`}
           confirmLabel="Conferma e paga"
           pending={apply.isPending}
@@ -464,13 +476,14 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
 }) {
   const people = access.usage?.people ?? 0;
   const openVenues = Math.max(1, access.usage?.venues ?? 1);
-  const baseAllowed = people <= 30;
-  const [plan, setPlan] = useState<"base" | "team">(baseAllowed ? "base" : "team");
+  const options = purchaseOptions(people);
+  const [plan, setPlan] = useState<SalePlan>(options[0] ?? "large");
   const [interval, setBillingInterval] = useState<"month" | "year">("month");
   const [venues, setVenues] = useState(String(openVenues));
   const count = Number(venues);
-  const validVenues = venues.trim() !== "" && Number.isSafeInteger(count) && count >= openVenues && count <= 1000;
-  const quote = validVenues ? quotePlan(plan, interval === "year" ? "annual" : "monthly", count) : null;
+  const venueCheck = checkVenues(venues, openVenues);
+  // Oltre 100 persone nessuna fascia si compra: niente prezzo, solo l'accordo.
+  const quote = venueCheck === "ok" && options.length > 0 ? quotePlan(plan, interval === "year" ? "annual" : "monthly", count) : null;
   const inTrial = access.source === "trial" && access.state === "operational";
 
   const buy = useMutation({
@@ -484,12 +497,11 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
   return (
     <Card>
       <h2 className="font-semibold text-t1">Attiva un abbonamento</h2>
-      <p className="mt-2 text-sm text-t2">Entrambi i piani hanno le stesse funzioni e una sede inclusa: cambia solo quante persone e sedi puoi avere.</p>
+      <p className="mt-2 text-sm text-t2">Tutte le fasce hanno le stesse funzioni e una sede inclusa: cambia solo quante persone e sedi puoi avere.</p>
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
-        <Field label="Piano" error={baseAllowed ? undefined : `Base arriva a 30 persone: oggi ne conti ${people}.`}>
-          <Select value={plan} onChange={(e) => setPlan(e.target.value as "base" | "team")}>
-            {baseAllowed ? <option value="base">Base · fino a 30 persone</option> : null}
-            <option value="team">Team · senza limite di persone</option>
+        <Field label="Piano" error={options.length === 0 ? PEOPLE_AGREEMENT_MESSAGE : options.length < 3 ? `Le fasce più piccole non bastano: oggi conti ${people} persone.` : undefined}>
+          <Select value={plan} onChange={(e) => setPlan(e.target.value as SalePlan)}>
+            {options.map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
           </Select>
         </Field>
         <Field label="Periodo">
@@ -497,8 +509,8 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
             <option value="month">Mensile</option><option value="year">Annuale · 2 mesi gratuiti</option>
           </Select>
         </Field>
-        <Field label="Sedi totali" error={validVenues ? undefined : `Almeno ${openVenues}: le sedi aperte oggi.`}>
-          <Input type="number" min={openVenues} step={1} value={venues} onChange={(e) => setVenues(e.target.value)} />
+        <Field label="Sedi totali" error={venueCheck === "agreement" ? VENUES_AGREEMENT_MESSAGE : venueCheck === "too_few" ? `Almeno ${openVenues}: le sedi aperte oggi.` : undefined}>
+          <Input type="number" min={openVenues} max={SELF_SERVE_MAX_VENUES} step={1} value={venues} onChange={(e) => setVenues(e.target.value)} />
         </Field>
       </div>
       {quote ? (
@@ -517,7 +529,7 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
         {" · "}<a className="focus-gold text-gold underline" href={LEGAL_URLS.dpa} target="_blank" rel="noreferrer">Trattamento dei dati</a>
       </p>
       <div className="mt-5">
-        <Button variant="gold" disabled={!quote || buy.isPending} onClick={() => buy.mutate()}>
+        <Button variant="gold" disabled={!quote || options.length === 0 || buy.isPending} onClick={() => buy.mutate()}>
           {buy.isPending ? "Apertura del pagamento…" : "Procedi al pagamento"}
         </Button>
       </div>

@@ -27,7 +27,7 @@ export const financeSchema = z.object({
 export const workspaceFinanceSchema = z.object({
   generated_at: date,
   subscriptions: z.array(z.object({
-    environment: env, status: z.enum(["active", "past_due", "paused", "canceled"]), plan: z.enum(["base", "team"]),
+    environment: env, status: z.enum(["active", "past_due", "paused", "canceled"]), plan: z.enum(["base", "team", "large"]),
     billing_interval: z.enum(["month", "year"]), extra_venues: count, current_period_ends_at: date.nullable(),
     scheduled_change: z.string().nullable(), created_at: date, currency: z.string(),
     recurring_cents: cents, mrr_cents: cents,

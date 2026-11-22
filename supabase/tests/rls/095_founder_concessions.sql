@@ -45,7 +45,7 @@ begin
   perform tests.eq(public.admin_get_workspace_control(ws)#>>'{snapshot,access,source}','complimentary_lifetime','diritto permanente aziendale');
   perform tests.eq(public.admin_get_workspace_control(ws)#>>'{snapshot,access,operational_until}',null::text,'nessuna scadenza fittizia');
   perform tests.eq(public.admin_get_workspace_control(ws)#>>'{snapshot,lifetime,document_limit_bytes}','2147483648','quota dichiarata verificabile');
-  perform tests.eq(public.admin_get_workspace_control(tests.id('W1'))#>>'{snapshot,access,plan}','team','altra azienda non cambia');
+  perform tests.eq(public.admin_get_workspace_control(tests.id('W1'))#>>'{snapshot,access,plan}','custom','altra azienda non cambia');
   perform tests.eq((public.admin_list_operations('workspace',ws)->>'total')::int,2,'retry non duplica audit');
   perform tests.raises(format('select public.admin_apply_workspace_action(%L,''add_note'',''payload cambiato'',%L,%L)',ws,op,revision),'admin_operation_conflict');
   revision:=public.admin_get_workspace_control(ws)->>'revision';

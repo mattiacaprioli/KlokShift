@@ -1,6 +1,6 @@
 # Monetizzazione di KlokShift
 
-Aggiornato il **18 ottobre 2026** (regola dei rimborsi, §6). Documento canonico delle decisioni commerciali e di prodotto approvate da Alisher; i dettagli ancora aperti sono indicati esplicitamente.
+Aggiornato il **22 novembre 2026** (listino a tre fasce e clienti fondatori, §2 e §2-bis; prima: regola dei rimborsi, §6, 18 ottobre). Documento canonico delle decisioni commerciali e di prodotto approvate da Alisher; i dettagli ancora aperti sono indicati esplicitamente.
 
 **Stato dell'implementazione, 6 ottobre:** M03a/M03b forniscono modello e
 controlli server su operatività, capacità persone/sedi, rettifiche pregresse e
@@ -52,51 +52,78 @@ La sequenza di lavoro, l'audit del codice e le verifiche sono nel [piano di impl
 
 ## 2. Listino e capacità
 
-Gli importi sono approvati. I nomi **Base** e **Team** sono provvisori.
+**Listino a tre fasce, deciso il 22 novembre 2026**, dopo il confronto con i concorrenti dello stesso giorno (§10). Sostituisce Base 29 € fino a 30 persone e Team 49 € senza limite: a 25 persone eravamo a 29 € contro i 79 € di TurniFacili Presenze, e a 60 persone a 49 € contro circa 149 €. Inoltre Team non cresceva mai con l'azienda. **Nel codice dal 22 novembre 2026, da rilasciare** (migration `20261122000100_plan_bands.sql`, test SQL 147): `private.plan_people_limit` (Piccola 15, Media 40, Grande 100, su misura senza limite) e `private.plan_rank` sono la fonte unica dei limiti, gemella di `src/features/workspace/planBands.ts`; `shared/pricing.ts` ha Grande a 89/890 €; pagina Piano, area del fondatore (quattro fasce, «Su misura» compreso), sito (tre schede) e `termini.html` (data 22 novembre 2026, **senza** alzare la versione legale) sono allineati. Le concessioni gratuite e di transizione `team` sono diventate `custom` (senza limite, audit `plan_band_migration`, `actor_id` nullo); le prove `team` sono passate a `large`.
+
+**Ancora da fare prima di vendere sulle fasce:**
+
+- **Paddle (A0, a mano)**: rinominare i prodotti Base→Piccola e Team→Media; creare Grande a 89 €/mese e 890 €/anno (sandbox, poi live).
+- **Prezzi sandbox di Grande**: non sono nel DB; vanno in una migration a parte (`20261122000300_large_prices_sandbox.sql`) quando ci sono i due `pri_…`. Finché mancano, un checkout su Grande risponde `billing_price_unavailable`. Poi i prezzi live.
+- **Edge Functions** `billing-checkout`, `billing-manage`, `billing-scheduled`: pubblicarle a mano **subito dopo** la migration (le vecchie rifiutano `large`).
+- **Prova in sandbox** (nuova azienda di test): prova → acquisto Piccola → aumento a Grande → riduzione a Media al rinnovo; l'esito va in [TEST-BILLING-SCHEDULED.md](TEST-BILLING-SCHEDULED.md).
+- `public.grant_workspace_access` (solo service role/seed) accetta ancora solo `base`/`team`: da allineare.
+- Decidere se la modifica a `termini.html` richiede un rialzo della versione legale (`private.current_legal_version()` e `LEGAL_VERSION` insieme, dopo i 30 giorni di preavviso).
 
 | Voce | Mensile | Annuale anticipato | Capacità |
 |---|---:|---:|---|
-| Base | 29 € | 290 € | Una sede inclusa; fino a 30 persone uniche in organico nell'intera azienda |
-| Team | 49 € | 490 € | Una sede inclusa; organico senza limite commerciale |
-| Sede aggiuntiva | 15 € | 150 € | Una sede operativa oltre quella inclusa |
+| Piccola | 29 € | 290 € | Una sede inclusa; fino a **15** persone uniche nell'intera azienda |
+| Media | 49 € | 490 € | Una sede inclusa; da 16 a **40** persone |
+| Grande | 89 € | 890 € | Una sede inclusa; da 41 a **100** persone |
+| Su richiesta | accordo | accordo | Oltre 100 persone o più di 5 sedi, con un accordo scritto dal fondatore |
+| Sede aggiuntiva | 15 € | 150 € | Una sede operativa oltre quella inclusa, uguale in tutte le fasce |
 
-Entrambi i piani includono le stesse funzioni disponibili del prodotto; la differenza riguarda la capacità. Organico senza limite non significa sedi o spazio documenti infiniti.
+I nomi indicano la dimensione: i piani si distinguono **solo per capacità**, e «piano Team» si confondeva con il team, cioè le persone dell'azienda (glossario). Tutte le fasce includono le stesse funzioni disponibili del prodotto. Anche la fascia più alta non dà sedi o spazio documenti infiniti.
 
 L'annuale copre **12 mesi consecutivi** al prezzo equivalente a **10 mensilità**: il risparmio corrisponde a due mesi, non a un secondo periodo di prova.
 
 Con `S >= 1` sedi acquistate:
 
-- Mensile: prezzo piano + `15 × (S − 1)`.
-- Annuale: prezzo piano + `150 × (S − 1)`.
-- Base con due sedi: 44 €/mese oppure 440 €/anno.
-- Team con tre sedi: 79 €/mese oppure 790 €/anno.
+- Mensile: prezzo fascia + `15 × (S − 1)`.
+- Annuale: prezzo fascia + `150 × (S − 1)`.
+- Piccola con due sedi: 44 €/mese oppure 440 €/anno.
+- Media con tre sedi: 79 €/mese oppure 790 €/anno.
+- Grande con cinque sedi: 149 €/mese oppure 1.490 €/anno.
+
+Da sé si comprano **al massimo 5 sedi in tutto** (1 inclusa + 4 aggiuntive), in ogni fascia: oltre serve l'accordo scritto della riga «Su richiesta». Il server lo applica all'acquisto, all'aumento e al cambio dal rinnovo (`billing_venues_need_agreement`, «Oltre 5 sedi serve un accordo su misura: scrivi a info@klokshift.com»), e la pagina Piano non offre di più. Le concessioni del fondatore non hanno questo tetto.
+
+Con le fasce restiamo sotto TurniFacili Presenze in ognuna (29/49/89 € contro 45/79/~149 €), con timbratura ed export per il consulente compresi. Niente piano gratuito: le aziende sotto le 5–10 persone non sono il bersaglio, e il supporto ha un costo anche quando il cliente non paga.
+
+### Passaggio al listino a fasce
+
+- **Nomi interni**: nel codice `base` resta la fascia Piccola e `team` la fascia Media; è stata aggiunta la chiave `large` (Grande) e `custom` per le concessioni senza limite. Come per `waiter`/`manager`, rinominare le chiavi costerebbe molto e non darebbe niente.
+- **Concessioni già fatte**: la gratuità a vita (Da Buffa), le concessioni temporanee e i periodi di transizione che erano `team` sono diventati `custom`, quindi **mantengono il perimetro concesso**, persone senza limite, con una riga di audit `plan_band_migration` (autore nullo), fatta da `private.migrate_plan_bands()`. Nessuna concessione era su `base` (controllato sul remoto il 22/11): non c'era niente da portare da 30 a 15. Le prove che erano `team` sono passate a `large`. Abbonamenti già pagati: nessuno al 22/11.
+- **Server**: il limite sta in **una sola funzione**, `private.plan_people_limit` (migration `20261122000100_plan_bands.sql`: Piccola 15, Media 40, Grande 100, `custom` senza limite), con `private.plan_rank` per l'ordine delle fasce; funzioni, controlli, concessioni e cambi programmati la usano; gli avvisi del fondatore («vicino al limite», «oltre il limite») leggono `limits.people` da `private.workspace_access_at`, che a sua volta lo prende da lì. Il client non ricontrolla il limite contro le fasce: accetta quello che il server manda (le build native già installate devono leggere anche fasce venute dopo di loro; una fascia sconosciuta diventa «piano non assegnato» senza bloccare). Il gemello manuale lato client è `src/features/workspace/planBands.ts`: cambiano insieme.
+- **Superamento e riduzione** (sotto): valgono le stesse regole, applicate a ogni soglia (15, 40, 100) invece che solo a 30.
+- **Prova**: si fa sulla fascia **Grande** con una sede (prima era Team). Chi ha più di 100 persone la fa sulla Grande e poi passa all'accordo su richiesta.
+- **Condizione di rilascio**: la migration `20261122000100_plan_bands.sql` si applica solo insieme a sito, FAQ, JSON-LD, pagina Piano e `shared/pricing.ts` già allineati, nello stesso rilascio: il listino pubblico non deve mai promettere una capacità diversa da quella che il server applica.
 
 Il sito attuale indica **IVA esclusa**. Con Paddle come MoR, il regime forfettario del fondatore non determina automaticamente il trattamento delle vendite di Paddle ai clienti. La dicitura fiscale e il trattamento dei rapporti fondatore/Paddle devono essere validati col commercialista prima del primo incasso. Gli importi confermati non autorizzano un'aliquota universale o una fatturazione interna improvvisata.
 
 ### Conteggio delle persone: decisione e dettagli aperti
 
-È approvato il conteggio di **30 persone uniche nell'intera azienda**: chi lavora in più sedi della stessa azienda conta una volta. Persone in aziende diverse rientrano nella capacità di ciascuna azienda.
+È approvato il conteggio delle **persone uniche nell'intera azienda** (soglie 15/40/100 dal 22/11, prima 30): chi lavora in più sedi della stessa azienda conta una volta. Contano solo le persone **attive** in organico, non chi è uscito: così un'attività stagionale che a luglio sale da 25 a 45 persone e poi scende non resta nella fascia alta tutto l'anno. Persone in aziende diverse rientrano nella capacità di ciascuna azienda.
 
 Restano da validare le regole applicative: schede manuali senza account, inviti che riservano un posto, titolari/collaboratori in organico, organico di sedi chiuse, uscita/ripristino e collegamento/merge delle schede. Il piano propone un conteggio dell'organico corrente, distinto dagli account registrati o dagli utenti che hanno aperto l'app.
 
 Il limite deve essere controllato dal server sull'intera azienda, anche quando il collaboratore può vedere soltanto alcune sedi. Non creare duplicati commerciali della stessa persona per ogni sede.
 
-### Superamento dei 30 e downgrade
+### Superamento della soglia e downgrade
 
-- Avvisi a 28 e 30 persone conteggiate.
-- Al 31° posto si blocca soltanto l'aggiunta/ripristino eccedente; il lavoro esistente continua.
+Le regole valgono per ogni soglia di fascia (15, 40, 100). Gli esempi con 30 e Team/Base vengono dal listino precedente e si leggono come «soglia della fascia» e «fascia più alta/più bassa».
+
+- Avvisi a 2 persone dalla soglia e alla soglia (a 28 e 30 col listino precedente).
+- Al primo posto oltre la soglia si blocca soltanto l'aggiunta/ripristino eccedente; il lavoro esistente continua.
 - Nessuna espulsione, cancellazione dello storico o conversione con addebito silenzioso.
 - Upgrade esplicito dal web, con costo proporzionato al periodo residuo accettato dal titolare e capacità aggiornata dopo esito finanziario verificato.
-- Team → Base: riduzione programmata al rinnovo soltanto quando l'azienda è già entro 30 persone.
-- Un'aggiunta incompatibile con la capacità futura richiede di annullare esplicitamente il downgrade; non rinnova Team di nascosto.
+- Riduzione di fascia (per esempio Grande → Media): programmata al rinnovo soltanto quando l'azienda è già entro la soglia della fascia d'arrivo.
+- Un'aggiunta incompatibile con la capacità futura richiede di annullare esplicitamente il downgrade; non rinnova la fascia alta di nascosto.
 - Le stesse verifiche valgono per le sedi. Chiusura, riapertura e riduzione degli extra devono preservare lo storico e rispettare la capacità futura.
 - Per un'azienda gratuita, l'aumento della concessione passa dalla decisione del fondatore.
 
 **Esecuzione attuale (18 ottobre 2026):** dalla pagina Piano il titolare fa da solo gli **aumenti** (Base→Team, sedi in più), con l'importo proporzionale calcolato da Paddle e mostrato prima della conferma; carta, ricevute e disdetta passano dal portale clienti di Paddle.
 
-**Cambio al rinnovo (31 ottobre 2026, nel codice, da rilasciare):** anche **riduzioni** (Team→Base, meno sedi) e **cambio mensile↔annuale** li fa da solo il titolare, dalla pagina Piano («Cambia dal prossimo rinnovo»), con data e importo del rinnovo (anteprima Paddle, IVA compresa) prima della conferma. Il cambio vale dal prossimo rinnovo e non si paga niente adesso; fino ad allora l'azienda tiene ciò che ha pagato.
+**Cambio al rinnovo (31 ottobre 2026, nel codice, da rilasciare):** anche **riduzioni** (di fascia, meno sedi) e **cambio mensile↔annuale** li fa da solo il titolare, dalla pagina Piano («Cambia dal prossimo rinnovo»), con data e importo del rinnovo (anteprima Paddle, IVA compresa) prima della conferma. Il cambio vale dal prossimo rinnovo e non si paga niente adesso; fino ad allora l'azienda tiene ciò che ha pagato.
 
-- Team→Base solo con al massimo 30 persone già nel team; meno sedi solo con le sedi aperte già dentro il nuovo numero. Piano e sedi non possono aumentare nello stesso cambio: prima l'aumento, poi il resto.
+- Riduzione di fascia solo con le persone già entro la soglia della fascia d'arrivo (15 per Piccola, 40 per Media, 100 per Grande); meno sedi solo con le sedi aperte già dentro il nuovo numero. Piano e sedi non possono aumentare nello stesso cambio: prima l'aumento, poi il resto.
 - Un solo cambio aperto per abbonamento. Si annulla dalla pagina fino a 24 ore prima del rinnovo; finché è aperto sono bloccati gli aumenti e le aggiunte di persone o sedi oltre il limite futuro. Pausa e chiusura lo annullano finché non è stato inviato a Paddle; dopo l'invio una pausa o chiusura avvenuta ferma il rinnovo stesso.
 - A meno di 24 ore dal rinnovo non si programma: resta l'email a info@klokshift.com.
 - KlokShift lo invia a Paddle nelle 24 ore prima del rinnovo, senza addebito; Paddle rinnova col piano nuovo e il diritto cambia solo con l'avviso firmato. Se non si può più applicare prima del rinnovo (regole cambiate, rifiuto definitivo di Paddle), il rinnovo avviene col piano attuale: il titolare lo sa dall'app, il fondatore con email e push, e la differenza si rimborsa a mano. Gli altri imprevisti (cambio non arrivato a 6 ore dal rinnovo, rinnovo diverso dal programmato, data del rinnovo non rimessa, nessun rinnovo due ore dopo la data) arrivano solo al fondatore, che verifica su Paddle.
@@ -106,11 +133,26 @@ Prove sandbox e procedura in [TEST-BILLING-SCHEDULED.md](TEST-BILLING-SCHEDULED.
 
 I dettagli di proration, concorrenza e modifica dei cicli vanno provati con il provider scelto. Chiudere una sede non cancella automaticamente un extra già acquistato né genera un rimborso.
 
+## 2-bis. Clienti fondatori
+
+Deciso il **22 novembre 2026**. È l'unico sconto previsto al lancio, oltre ai due mesi dell'annuale.
+
+- **A chi**: le prime **30 aziende** che pagano, contate dal server sulla prima transazione completata e non per richiesta. Si possono assegnare anche a mano, dalla dashboard del fondatore, con motivo e audit.
+- **Cosa**: **−30%** su fascia e sedi aggiuntive, mensile o annuale, per **24 mesi** dal primo addebito. Per tutto quel periodo il **prezzo di listino resta bloccato**: un aumento del listino non li tocca fino alla fine dei 24 mesi.
+- **In cambio**, dichiarato nelle condizioni dell'offerta e non come obbligo per avere il servizio: feedback (una call di 30 minuti nei primi 2 mesi) e, se vogliono, una testimonianza con il loro nome.
+- **Alla fine dei 24 mesi** si passa al listino in vigore, con lo stesso preavviso di 60 giorni degli aumenti (§6). Nessun «prezzo bloccato a vita».
+- **Cambi di fascia o di sedi** mantengono lo sconto fino alla scadenza originaria: crescere non lo fa perdere, e passare all'annuale non fa ripartire i 24 mesi.
+- **Pausa e disdetta**: i mesi in pausa contano nei 24 (la scadenza non si sposta). Chi esce e torna dopo la fine dell'operatività non lo riprende.
+- **Non si somma** alla gratuità a vita, a eventuali convenzioni future o ad altri codici. Lo sconto vale per l'azienda e non si trasferisce a un'altra azienda della stessa persona.
+- Sul sito se ne parla come di «posti limitati» solo se il conteggio è reale e visibile. Niente scarsità finta.
+
+**Più avanti, non al lancio**: sconti del 10–15% per chi arriva da un **consulente del lavoro** o da un'**associazione di categoria**, e «porta un collega» (un mese gratis a entrambi, dopo aver verificato come Paddle gestisce i crediti). Sono esclusi gli sconti a tempo (Black Friday, primo mese a metà prezzo: la prova fa già quel lavoro) e i codici pubblici riutilizzabili.
+
 ## 3. Prova gratuita e aziende gratuite a vita
 
 ### Tutte le nuove aziende: 30 giorni senza carta
 
-La prova di **30 giorni gratuiti senza carta** è approvata per tutte le nuove aziende, con **piano Team e una sede inclusa**. Il primo mese gratuito è questa prova: non si aggiunge automaticamente un'altra promozione.
+La prova di **30 giorni gratuiti senza carta** è approvata per tutte le nuove aziende, con **fascia Grande e una sede inclusa** (Team fino al listino del 22/11). Il primo mese gratuito è questa prova: non si aggiunge automaticamente un'altra promozione.
 
 - Nessun addebito senza acquisto autorizzato e consenso al flusso ricorrente.
 - Alla fine, in assenza di un periodo pagante o concessione valida, termina l'operatività e si passa alla consultazione/export.
@@ -255,7 +297,20 @@ Restano aperti: approvazione e configurazione Paddle; compatibilità ATECO, proc
 
 ## 10. Riferimenti e limiti del confronto
 
-Fonti ufficiali verificate il **5 ottobre 2026**. Sono esempi commerciali, non norme italiane o regole da copiare integralmente.
+**Listino, 22 novembre 2026** (pagine prezzi ufficiali, prezzi mensili IVA esclusa; quelli in dollari non sono convertiti):
+
+- [TurniFacili](https://turnifacili.com/prezzi): per azienda a fasce (fino a 15 / 16–50 / oltre 50). Base 29/59 €, Presenze 45/79 € e ~149 € (1.488 €/anno), AI 69/99 €. Trimestrale −5%, annuale 2 mesi gratis, 14 giorni di prova **con carta**.
+- [Skello](https://www.skello.io/it/pricing): da 59–99 €/mese, non è chiaro se per sede; −10% con l'annuale; 14 giorni di prova.
+- [Shiftbase](https://www.shiftbase.com/pricing): gratis fino a 15 persone; Basic 30 € con 6 persone incluse + 4 € a persona; −10% con l'annuale.
+- [Connecteam](https://connecteam.com/pricing/): gratis fino a 10 persone; Basic 35 $ (29 $ con l'annuale) per le prime 30 persone + 1 $ a persona.
+- [7shifts](https://www.7shifts.com/pricing): per sede, 44,99–149,99 $ a seconda delle persone (fino a 30/60/senza limite); gratis fino a 15.
+- [Deputy](https://www.deputy.com/pricing) 5–9 $ a persona; [Planday](https://www.planday.com/pricing/) 2,99–4,49 $ a persona; [When I Work](https://wheniwork.com/pricing) 2,50–5 $; [Sling](https://getsling.com/pricing) gratis fino a 30 persone.
+- Italiani a prezzo fisso: [Horix](https://horix.es/it) 19 €/mese; PagoPro 19/49 € ([confronto](https://pagopro.it/vs/skello)).
+- [Paddle](https://www.paddle.com/pricing): 5% + 0,50 $ a transazione, cioè circa il 6,6% su 29 € al mese e il 5,2% su 290 € all'anno. Un motivo in più per spingere l'annuale.
+
+Limiti: nessun prezzo è stato ancora provato con clienti veri. Il primo test è chiedere il prezzo a 5–10 titolari durante la beta.
+
+**Regole di servizio**: fonti ufficiali verificate il **5 ottobre 2026**. Sono esempi commerciali, non norme italiane o regole da copiare integralmente.
 
 - [When I Work: pausa](https://help.wheniwork.com/articles/hibernating-your-account/): pausa mensile con dati conservati e accesso sospeso; non prova un congelamento annuale. KlokShift non adotta automaticamente il minimo di pausa del concorrente.
 - [Planday: fatture e accesso](https://help.planday.com/en/articles/67176-invoices-and-billing-faqs-and-troubleshooting): solleciti tipici a 8/16 giorni; non uno standard di sette giorni per rinnovi con carta.

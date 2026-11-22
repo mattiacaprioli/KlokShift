@@ -23,7 +23,7 @@ function access(state: "setup" | "operational" | "migration_pending" | "archive"
     can_operate: state === "operational",
     can_read: true,
     can_complete_attendance: state === "operational",
-    limits: open ? { people: null, venues: 1 } : { people: null, venues: null },
+    limits: open ? { people: 40, venues: 1 } : { people: null, venues: null },
     usage: { people: 0, venues: 1 },
   });
 }

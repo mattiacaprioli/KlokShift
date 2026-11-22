@@ -19,7 +19,7 @@ function access(source: "trial" | "subscription", until: string): WorkspaceAcces
     can_operate: true,
     can_read: true,
     can_complete_attendance: true,
-    limits: { people: null, venues: 1 },
+    limits: { people: 40, venues: 1 },
     usage: { people: 0, venues: 1 },
   });
 }

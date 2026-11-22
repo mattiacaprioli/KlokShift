@@ -8,7 +8,7 @@ import { it as copy } from "../../../web-site/src/content/it";
  */
 function homeText({ withFaq = true } = {}): string {
   const { footer: _footer, invite: _invite, faq, plans, ...home } = copy;
-  // Il nome del piano («Base · fino a 30 persone») è lo stesso di dashboard e
+  // Il nome del piano («Piccola») è lo stesso di dashboard e
   // pagina Piano: è un nome, non una stringa decorativa.
   const plansWithoutNames = {
     ...plans,

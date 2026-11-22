@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAdminRead, useAdminWrite } from "@/features/admin/hooks";
 import { canRetryScheduledChange, listScheduledChanges, resolveScheduledChange, retryScheduledChange, scheduledFailureReason } from "@/features/admin/scheduledChanges";
 import type { ScheduledBillingChange } from "@/features/admin/scheduledChanges";
+import { PLAN_BANDS } from "@/features/workspace/planBands";
 import { userErrorMessage } from "@/lib/errors";
 import { date } from "./format";
 import { Button, Card, Field, Input, Pill } from "../ui/primitives";
@@ -17,7 +18,7 @@ function alertText(c: ScheduledBillingChange): string {
   if (c.close_reason !== "renewal_mismatch") return "Paddle ha ricevuto il cambio, ma qui risultava già chiuso: controlla su Paddle articoli e data del rinnovo, poi chiudi l'avviso con una nota.";
   return "Il rinnovo è avvenuto con un piano diverso da quello programmato: controlla su Paddle e rimborsa la differenza.";
 }
-const planNames = { base: "Base", team: "Team" } as const;
+const planNames = { base: PLAN_BANDS.base.label, team: PLAN_BANDS.team.label, large: PLAN_BANDS.large.label } as const;
 const intervalNames = { month: "mensile", year: "annuale" } as const;
 const statusLabels: Record<ScheduledBillingChange["status"], string> = {
   pending: "In attesa", applied: "Inviato a Paddle", confirmed: "Confermato", canceled: "Annullato", failed: "Non applicato",

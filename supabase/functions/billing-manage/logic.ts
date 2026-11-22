@@ -1,13 +1,17 @@
 // Helper locali alla funzione: nessun import dal bundle dell'app o tra deploy.
 // `paddleConfig` è la copia di quello di `billing-checkout` (stesse regole).
 
+export type BillingPlan = "base" | "team" | "large";
+export const PLAN_LABEL: Record<BillingPlan, string> = { base: "Piccola", team: "Media", large: "Grande" };
+const isBillingPlan = (value: unknown): value is BillingPlan => value === "base" || value === "team" || value === "large";
+
 export type BillingEnvironment = "sandbox" | "live";
 export type ManageAction = "portal" | "resume_renewals" | "preview_change" | "apply_change" | "pause" | "resume" | "cancel"
   | "preview_scheduled_change" | "schedule_change" | "cancel_scheduled_change";
 export type ManageRequest = {
   action: ManageAction;
   workspaceId: string;
-  plan?: "base" | "team";
+  plan?: BillingPlan;
   interval?: "month" | "year";
   expectedRenewalCents?: number;
   extraVenues?: number;
@@ -25,13 +29,13 @@ export function parseRequest(body: unknown): ManageRequest | null {
   if (typeof raw.workspaceId !== "string" || !UUID.test(raw.workspaceId)) return null;
   const action = raw.action as ManageAction;
   if (action === "preview_change" || action === "apply_change") {
-    if (raw.plan !== "base" && raw.plan !== "team") return null;
+    if (!isBillingPlan(raw.plan)) return null;
     if (typeof raw.extraVenues !== "number" || !Number.isSafeInteger(raw.extraVenues) ||
         raw.extraVenues < 0 || raw.extraVenues > 999) return null;
     return { action, workspaceId: raw.workspaceId, plan: raw.plan, extraVenues: raw.extraVenues };
   }
   if (action === "preview_scheduled_change" || action === "schedule_change") {
-    if (raw.plan !== "base" && raw.plan !== "team") return null;
+    if (!isBillingPlan(raw.plan)) return null;
     if (raw.interval !== "month" && raw.interval !== "year") return null;
     if (typeof raw.extraVenues !== "number" || !Number.isSafeInteger(raw.extraVenues) ||
         raw.extraVenues < 0 || raw.extraVenues > 999) return null;
@@ -80,6 +84,7 @@ const DB_ERRORS: Record<string, number> = {
   billing_scheduled_venues: 409,
   billing_change_already_sent: 409,
   billing_nothing_scheduled: 409,
+  billing_venues_need_agreement: 409,
 };
 
 export function dbError(message: string | undefined): { status: number; code: string } {
@@ -90,17 +95,17 @@ export function dbError(message: string | undefined): { status: number; code: st
 type Item = { price_id: string; quantity: number };
 export type PreparedChange = {
   subscriptionId: string;
-  plan: "base" | "team";
+  plan: BillingPlan;
   planPriceId: string;
   extraVenues: number;
   extraPriceId: string | null;
-  knownPrices: Record<string, "base" | "team" | "extra_venue">;
+  knownPrices: Record<string, BillingPlan | "extra_venue">;
 };
 
 export function parsePreparedChange(data: unknown): PreparedChange | null {
   const raw = data as Record<string, unknown> | null;
   if (!raw || typeof raw.subscription_id !== "string" || !/^sub_[a-z0-9]+$/.test(raw.subscription_id) ||
-      (raw.plan !== "base" && raw.plan !== "team") || typeof raw.plan_price_id !== "string" ||
+      (!isBillingPlan(raw.plan)) || typeof raw.plan_price_id !== "string" ||
       typeof raw.extra_venues !== "number" || !raw.known_prices || typeof raw.known_prices !== "object") {
     return null;
   }
@@ -128,7 +133,7 @@ export function buildItems(current: unknown, change: PreparedChange): Item[] | n
     const id = item.price?.id;
     if (typeof id !== "string") return null;
     const kind = change.knownPrices[id];
-    if (kind === "base" || kind === "team") {
+    if (kind === "base" || kind === "team" || kind === "large") {
       if (planPrice) return null;
       planPrice = id; currentPlan = kind;
     } else if (kind === "extra_venue") {

@@ -1,6 +1,10 @@
 // Helper locali alla funzione: nessun import dal bundle dell'app o tra deploy.
 // `paddleConfig` è la copia di quello di `billing-manage` (stesse regole).
 
+export type BillingPlan = "base" | "team" | "large";
+export const PLAN_LABEL: Record<BillingPlan, string> = { base: "Piccola", team: "Media", large: "Grande" };
+const isBillingPlan = (value: unknown): value is BillingPlan => value === "base" || value === "team" || value === "large";
+
 export type BillingEnvironment = "sandbox" | "live";
 export type Item = { price_id: string; quantity: number };
 export type Mail = { subject: string; text: string; html: string };
@@ -27,7 +31,7 @@ export type ScheduledChange = {
   subscriptionId: string;
   workspaceId: string;
   requestedBy: string;
-  targetPlan: "base" | "team";
+  targetPlan: BillingPlan;
   targetInterval: "month" | "year";
   targetExtraVenues: number;
   /** Il ciclo alla richiesta: diverso da `targetInterval` vuol dire cambio di ciclo. */
@@ -59,7 +63,7 @@ export function parseScheduledChange(raw: Record<string, unknown>): ScheduledCha
   const targetItems = parseItems(raw.target_items);
   const alertKind = raw.alert_kind ?? null;
   if (typeof raw.id !== "string" || typeof raw.subscription_id !== "string" || typeof raw.workspace_id !== "string" ||
-      typeof raw.requested_by !== "string" || (raw.target_plan !== "base" && raw.target_plan !== "team") ||
+      typeof raw.requested_by !== "string" || !isBillingPlan(raw.target_plan) ||
       (raw.target_interval !== "month" && raw.target_interval !== "year") ||
       typeof raw.target_extra_venues !== "number" ||
       (raw.from_interval !== "month" && raw.from_interval !== "year") || !fromItems || !targetItems ||
@@ -212,11 +216,11 @@ function money(cents: number, currency: string): string {
 
 type TargetFields = Pick<ScheduledChange, "targetPlan" | "targetInterval" | "targetExtraVenues" | "renewalCents" | "currency">;
 
-/** «Base, annuale, 2 sedi», il punto d'arrivo in parole. */
+/** «Piccola, annuale, 2 sedi», il punto d'arrivo in parole. */
 function target(row: TargetFields) {
   const venues = 1 + row.targetExtraVenues;
   return {
-    plan: row.targetPlan === "base" ? "Base" : "Team",
+    plan: PLAN_LABEL[row.targetPlan],
     interval: row.targetInterval === "year" ? "annuale" : "mensile",
     venues: `${venues} ${venues === 1 ? "sede" : "sedi"}`,
     amount: `${money(row.renewalCents, row.currency)} IVA compresa`,
@@ -279,7 +283,7 @@ export function parseAlert(raw: Record<string, unknown>): AlertInfo | null {
       !Number.isFinite(Date.parse(effective_at)) ||
       !ALERT_KINDS.includes(alert_kind)) return null;
   const { target_plan, target_interval, target_extra_venues, renewal_cents, currency } = raw;
-  const target = (target_plan === "base" || target_plan === "team") &&
+  const target = isBillingPlan(target_plan) &&
       (target_interval === "month" || target_interval === "year") &&
       typeof target_extra_venues === "number" && typeof renewal_cents === "number" && typeof currency === "string"
     ? { targetPlan: target_plan, targetInterval: target_interval, targetExtraVenues: target_extra_venues,

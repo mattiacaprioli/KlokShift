@@ -1,4 +1,5 @@
 import type { WorkspaceAccess } from "./access";
+import { PLAN_BANDS } from "./planBands";
 
 /**
  * Cosa promette la prova, detto uguale in app, sulla dashboard e in Piano.
@@ -15,7 +16,8 @@ export const TRIAL_COPY = {
   // Tre punti e non cinque (15/11): carta, partenza e «una volta sola»
   // dicevano la stessa cosa in tre righe.
   points: [
-    "Tutte le funzioni, una sede, persone senza limite.",
+    // La prova è Grande (§2): il numero viene dalla fascia, non si scrive a mano.
+    `Tutte le funzioni, una sede, fino a ${PLAN_BANDS.large.people} persone.`,
     "Nessuna carta. I 30 giorni partono quando tocchi «Avvia la prova», una volta sola per azienda.",
     "Alla fine nessun addebito: turni e ore restano consultabili ed esportabili.",
   ],

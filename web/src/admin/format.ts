@@ -12,7 +12,7 @@ export const labels: Record<string, string> = {
   confirmed: "Confermato", unconfirmed: "Da confermare", anonymous: "Anonimo",
   owner: "Titolare", collaborator: "Collaboratore", none: "Dipendente",
   active: "Attivo", invited: "Invitato", left: "Uscito",
-  base: "Base", team: "Team", trial: "Prova", complimentary_lifetime: "Gratuito a vita",
+  base: "Piccola", team: "Media", large: "Grande", custom: "Su misura", trial: "Prova", complimentary_lifetime: "Gratuito a vita",
   complimentary_temporary: "Concessione temporanea", transition: "Transizione",
   subscription: "Abbonamento", payment_grace: "Tolleranza pagamento",
 };

@@ -15,30 +15,30 @@ begin
   perform public.grant_workspace_access(ws,'complimentary_lifetime','base',3,now()-interval '1 day',null,'Fixture capacità Base');
   perform tests.login('Ow');
   current_people := (public.get_workspace_access(ws)#>>'{usage,people}')::integer;
-  for i in current_people+1..30 loop
+  for i in current_people+1..15 loop
     r := public.add_member(ws,jsonb_build_object('full_name','Capacità '||i),'none','{}','all',
       jsonb_build_array(jsonb_build_object('venue_id',v1)));
     mid := (r->>'member_id')::uuid;
   end loop;
-  perform tests.eq((public.get_workspace_access(ws)#>>'{usage,people}')::integer,30,'30 persone uniche');
-  perform tests.raises(format('select public.add_member(%L,''{"full_name":"31"}'',''none'',''{}'',''all'',%L)',
-    ws,jsonb_build_array(jsonb_build_object('venue_id',v2))), 'workspace_people_capacity','31esima persona rifiutata');
+  perform tests.eq((public.get_workspace_access(ws)#>>'{usage,people}')::integer,15,'15 persone uniche');
+  perform tests.raises(format('select public.add_member(%L,''{"full_name":"16"}'',''none'',''{}'',''all'',%L)',
+    ws,jsonb_build_array(jsonb_build_object('venue_id',v2))), 'workspace_people_capacity','sedicesima persona rifiutata');
   -- La stessa persona in due sedi non occupa un nuovo posto.
   perform public.set_member_venue(mid,v2);
-  perform tests.eq((public.get_workspace_access(ws)#>>'{usage,people}')::integer,30,'persona in due sedi una volta');
+  perform tests.eq((public.get_workspace_access(ws)#>>'{usage,people}')::integer,15,'persona in due sedi una volta');
   perform public.remove_member(mid);
-  perform tests.eq((public.get_workspace_access(ws)#>>'{usage,people}')::integer,29,'uscita libera posto');
+  perform tests.eq((public.get_workspace_access(ws)#>>'{usage,people}')::integer,14,'uscita libera posto');
   -- Ripristino tramite email, invito riservato, titolare in organico.
   r := public.add_member(ws,'{"full_name":"Posto riservato","email":"str@t.test"}','none','{}','all',
     jsonb_build_array(jsonb_build_object('venue_id',v1)));
   perform tests.login('Str');
   perform public.respond_to_invite((r->>'member_id')::uuid,true);
   perform tests.logout();
-  perform tests.eq((private.workspace_access_at(ws,now())#>>'{usage,people}')::integer,30,'accettazione non conta due volte');
+  perform tests.eq((private.workspace_access_at(ws,now())#>>'{usage,people}')::integer,15,'accettazione non conta due volte');
   -- Collaboratore limitato a V1: l'intera azienda consuma la capacità.
   update public.workspace_members set can_staff=true where id=tests.id('M_Co');
   perform tests.login('Co');
-  perform tests.raises(format('select public.add_member(%L,''{"full_name":"31 scope"}'',''none'',''{}'',''all'',%L)',
+  perform tests.raises(format('select public.add_member(%L,''{"full_name":"16 scope"}'',''none'',''{}'',''all'',%L)',
     ws,jsonb_build_array(jsonb_build_object('venue_id',v1))), 'workspace_people_capacity','scope non restringe conteggio');
   perform tests.login('Ow');
   -- Terza sede e riapertura: comprende persone nascoste nella sede chiusa.

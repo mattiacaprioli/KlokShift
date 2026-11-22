@@ -29,7 +29,7 @@ const empty = { total: 0, limit: 25, offset: 0, items: [] };
 const access = {
   workspace_id: id, state: "operational", source: "complimentary_lifetime", plan: "base",
   operational_from: at, operational_until: null, attendance_until: null, archive_until: null,
-  limits: { people: 30, venues: 2 }, usage: { people: 3, venues: 1 },
+  limits: { people: 15, venues: 2 }, usage: { people: 3, venues: 1 },
 };
 const detail = {
   generated_at: at,
@@ -115,13 +115,22 @@ describe("Scheda azienda del fondatore", () => {
     const checked = (panel.content.match(/<input[^>]*type="radio"[^>]*>/g) ?? [])
       .filter((tag) => tag.includes('checked=""')).map((tag) => tag.match(/name="(\w+)"[^>]*value="(\w+)"/)?.slice(1).join("="));
     expect(checked).toEqual(["action=grant_lifetime", "plan=base"]);
-    expect(panel.content).toContain("Base · fino a 30 persone");
+    for (const label of ["Piccola · fino a 15 persone", "Media · fino a 40 persone", "Grande · fino a 100 persone", "Su misura · senza limite di persone"]) {
+      expect(panel.content).toContain(label);
+    }
     expect(panel.content).toMatch(/<input[^>]*value="2"/);
     expect(panel.content).toMatch(/<input[^>]*value="4096"/);
     expect(panel.content).toContain("0,03 MiB");
     // Operativa: la cancellazione su richiesta non si propone.
     expect(panel.content).not.toContain("Cancella i dati su richiesta del cliente");
     expect(mutate).not.toHaveBeenCalled();
+  });
+  it("con la fascia Su misura il misuratore persone mostra l'infinito", () => {
+    read.mockImplementation((_user, resource) => ({ isSuccess: true, data: resource === "workspace" ? detail
+      : resource === "workspace-control" ? { ...control, snapshot: { ...control.snapshot, access: { ...access, plan: "custom", limits: { people: null, venues: 2 } },
+        lifetime: { plan: "custom", venue_limit: 2, document_limit_bytes: 4096 * 1048576 } } }
+      : resource === "workspace-finance" ? { generated_at: at, subscriptions: [], payments: [], refunds: [] } : empty }));
+    expect(visiblePanel(render("gestione")).content).toContain("∞");
   });
   it("nasconde schede e moduli dopo un diniego anche se erano presenti dati", () => {
     read.mockReturnValue({ isError: true, error: new Error("admin_not_allowed"), data: detail });

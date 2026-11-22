@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import { parseWorkspaceAccess } from "@/features/workspace/access";
+import type { AccessPlan } from "@/features/workspace/planBands";
 import { classifications, pageSchema } from "./types";
 
 const id = z.string().uuid();
@@ -13,7 +14,7 @@ const access = z.unknown().transform((v, ctx) => {
   catch { ctx.addIssue({ code: "custom", message: "Invalid commercial access" }); return z.NEVER; }
 });
 const lifetime = z.object({
-  period_id: id, plan: z.enum(["base", "team"]), venue_limit: count.min(1),
+  period_id: id, plan: z.enum(["base", "team", "large", "custom"]), venue_limit: count.min(1),
   document_limit_bytes: count.min(1).nullable(),
 });
 export const snapshotSchema = z.object({
@@ -24,7 +25,7 @@ export const workspaceControlSchema = z.object({
   generated_at: date, target_id: id, revision, snapshot: snapshotSchema,
 }).refine((v) => !v.snapshot.access || v.snapshot.access.workspace_id === v.target_id);
 export const accountControlSchema = z.object({ generated_at: date, target_id: id, revision, classification });
-const action = z.enum(["grant_lifetime", "set_classification", "add_note", "delete_data"]);
+const action = z.enum(["grant_lifetime", "set_classification", "add_note", "delete_data", "plan_band_migration"]);
 export const operationResultSchema = z.object({
   operation_id: id, action, target_id: id, applied_at: date, period_id: id.nullable(),
 }).refine((v) => (v.action === "grant_lifetime") === (v.period_id !== null));
@@ -33,7 +34,7 @@ const auditState = z.object({
   lifetime: lifetime.nullable().optional(),
 });
 const operationSchema = z.object({
-  operation_id: id, actor_id: id, action, reason: z.string().min(1).max(2000),
+  operation_id: id, actor_id: id.nullable(), action, reason: z.string().min(1).max(2000),
   before_state: auditState, after_state: auditState, applied_at: date,
 }).refine((v) => v.action === "grant_lifetime" ?
   v.after_state.lifetime != null && v.after_state.access?.state === "operational" &&
@@ -46,7 +47,7 @@ export type WorkspaceControl = z.infer<typeof workspaceControlSchema>;
 export type AccountControl = z.infer<typeof accountControlSchema>;
 export type AdminClassification = typeof classifications[number];
 export type WorkspaceAction =
-  | { action: "grant_lifetime"; plan: "base" | "team"; venueLimit: number; documentLimitBytes: number }
+  | { action: "grant_lifetime"; plan: AccessPlan; venueLimit: number; documentLimitBytes: number }
   | { action: "set_classification"; classification: AdminClassification }
   | { action: "add_note" };
 export type WorkspaceCommand = {

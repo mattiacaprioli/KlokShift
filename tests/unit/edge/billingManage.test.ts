@@ -21,6 +21,25 @@ const scheduled = (over: Partial<PreparedScheduledChange> = {}): PreparedSchedul
 });
 
 describe("billing-manage: regole pure", () => {
+  it("accetta la fascia Grande, rifiuta custom", () => {
+    for (const action of ["preview_change", "apply_change"] as const) {
+      expect(parseRequest({ action, workspaceId: WORKSPACE, plan: "large", extraVenues: 0 })).toMatchObject({ plan: "large" });
+      expect(parseRequest({ action, workspaceId: WORKSPACE, plan: "custom", extraVenues: 0 })).toBeNull();
+    }
+    for (const action of ["preview_scheduled_change", "schedule_change"] as const) {
+      const extra = action === "schedule_change" ? { expectedRenewalCents: 3500 } : {};
+      expect(parseRequest({ action, workspaceId: WORKSPACE, plan: "large", interval: "year", extraVenues: 0, ...extra }))
+        .toMatchObject({ plan: "large" });
+      expect(parseRequest({ action, workspaceId: WORKSPACE, plan: "custom", interval: "year", extraVenues: 0, ...extra })).toBeNull();
+    }
+  });
+
+  it("buildItems riconosce un prezzo Grande come piano", () => {
+    const k = { ...known, pri_01large: "large" } as PreparedChange["knownPrices"];
+    expect(buildItems([item("pri_01large")], change({ plan: "large", planPriceId: "pri_01large", knownPrices: k, extraVenues: 0, extraPriceId: null })))
+      .toEqual([{ price_id: "pri_01large", quantity: 1 }]);
+  });
+
   it("accetta i cambi programmati; rifiuta ciclo o sedi non validi", () => {
     for (const action of ["preview_scheduled_change", "schedule_change"] as const) {
       const expected = action === "schedule_change" ? { expectedRenewalCents: 3500 } : {};
@@ -126,6 +145,7 @@ describe("billing-manage: regole pure", () => {
 
   it("traduce i rifiuti del database", () => {
     expect(dbError("billing_downgrade_unsupported")).toEqual({ status: 409, code: "billing_downgrade_unsupported" });
+    expect(dbError("billing_venues_need_agreement")).toEqual({ status: 409, code: "billing_venues_need_agreement" });
     expect(dbError("billing_no_subscription")).toEqual({ status: 404, code: "billing_no_subscription" });
     expect(dbError("dettaglio interno")).toEqual({ status: 500, code: "manage_failed" });
     expect(paddleConfig({ environment: "sandbox", apiKey: "pdl_live_apikey_x" })).toBeNull();

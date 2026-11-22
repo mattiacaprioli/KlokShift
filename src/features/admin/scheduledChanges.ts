@@ -25,7 +25,7 @@ const scheduledChange = z.object({
   environment: z.enum(["sandbox", "live"]),
   status: z.enum(["pending", "applied", "confirmed", "canceled", "failed"]),
   close_reason: z.string().nullable(),
-  target_plan: z.enum(["base", "team"]),
+  target_plan: z.enum(["base", "team", "large"]),
   target_interval: z.enum(["month", "year"]),
   target_extra_venues: z.number().int().nonnegative(),
   effective_at: date,

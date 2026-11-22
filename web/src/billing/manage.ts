@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { UserFacingError } from "@/lib/errors";
 import { functionErrorCode } from "@/lib/functionError";
+import type { SalePlan } from "@/features/workspace/planBands";
 
 /*
  * Gestione dell'abbonamento dalla pagina Piano (solo dashboard web, come
@@ -10,8 +11,8 @@ import { functionErrorCode } from "@/lib/functionError";
 
 export type PortalLinks = { overview: string; paymentMethod: string | null; cancel: string | null };
 export type ChangePreview = { currency: string; dueNowCents: number; renewalCents: number };
-type ChangeSelection = { workspaceId: string; plan: "base" | "team"; extraVenues: number };
-export type ScheduledSelection = { workspaceId: string; plan: "base" | "team"; interval: "month" | "year"; extraVenues: number };
+type ChangeSelection = { workspaceId: string; plan: SalePlan; extraVenues: number };
+export type ScheduledSelection = { workspaceId: string; plan: SalePlan; interval: "month" | "year"; extraVenues: number };
 export type ScheduledPreview = { currency: string; renewalCents: number; effectiveAt: string };
 
 const ERRORS: [string, string][] = [
@@ -21,7 +22,7 @@ const ERRORS: [string, string][] = [
   ["billing_change_pending", "C'è già un cambio programmato: annullalo prima di farne un altro o di aumentare il piano."],
   ["billing_too_close_to_renewal", "Mancano meno di 24 ore al rinnovo: per cambiare adesso scrivi a info@klokshift.com."],
   ["billing_change_already_sent", "Il cambio è già stato inviato per il rinnovo: dopo il rinnovo potrai modificare di nuovo il piano."],
-  ["billing_scheduled_people", "Il piano Base comprende 30 persone: togli dal team chi non lavora più prima di programmare il cambio."],
+  ["billing_scheduled_people", "La fascia scelta comprende meno persone di quelle che hai oggi: togli dal team chi non lavora più prima di programmare il cambio."],
   ["billing_scheduled_venues", "Chiudi prima le sedi in più: le sedi aperte devono stare nel piano scelto."],
   ["billing_no_change", "È la stessa scelta che hai già."],
   ["billing_change_scheduled", "C’è già una pausa o una chiusura programmata: annullala prima di cambiare."],

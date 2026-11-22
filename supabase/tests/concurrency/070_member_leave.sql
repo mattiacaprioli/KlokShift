@@ -42,7 +42,7 @@ begin
   venue := public.create_venue(ws,'Sede uscita membro');
   perform tests.logout();
   execute 'reset role';
-  perform public.grant_workspace_access(ws,'complimentary_lifetime','team',1,now(),null,'Fixture uscita locale');
+  perform public.grant_workspace_access(ws,'complimentary_lifetime','custom',1,now(),null,'Fixture uscita locale');
   perform tests.login('Ow');
   member := (public.add_member(ws,'{"full_name":"Emma","email":"emp@t.test"}',
     'none','{}','all',jsonb_build_array(jsonb_build_object('venue_id',venue)))->>'member_id')::uuid;

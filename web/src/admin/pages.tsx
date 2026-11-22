@@ -235,7 +235,7 @@ export function WorkspacesPage({ userId }: {
     <FilterBar onSubmit={() => setFilters({ ...draft, offset: 0 })}>
       <SearchField label="Ricerca" value={draft.query} onChange={(q) => setDraft({ ...draft, query: q })} />
       <Field label="Stato"><Select value={draft.state} onChange={(e) => setDraft({ ...draft, state: e.target.value as WorkspaceFilters['state'] })}>{filterOptions(workspaceStates)}</Select></Field>
-      <Field label="Piano"><Select value={draft.plan} onChange={(e) => setDraft({ ...draft, plan: e.target.value as WorkspaceFilters['plan'] })}>{filterOptions(['base', 'team'])}</Select></Field>
+      <Field label="Piano"><Select value={draft.plan} onChange={(e) => setDraft({ ...draft, plan: e.target.value as WorkspaceFilters['plan'] })}>{filterOptions(['base', 'team', 'large', 'custom'])}</Select></Field>
       <Field label="Classificazione"><Select value={draft.classification} onChange={(e) => setDraft({ ...draft, classification: e.target.value as WorkspaceFilters['classification'] })}>{filterOptions(classifications)}</Select></Field>
       <Button type="submit" variant="gold"><Icon name="search" className="size-4" />Cerca</Button>
     </FilterBar>
@@ -272,7 +272,7 @@ function CapacityMeters({ w }: { w: AdminWorkspace }) {
   const a = w.access;
   const missing = a === null ? 'Non disponibile' : 'Non assegnato';
   return <div className="min-w-0 space-y-2">
-    <Meter label="Persone" used={a?.usage?.people} limit={a?.limits.people} unlimited={a?.plan === 'team'} missing={missing} />
+    <Meter label="Persone" used={a?.usage?.people} limit={a?.limits.people} unlimited={!!a?.plan && a.limits.people === null} missing={missing} />
     <Meter label="Sedi" used={w.open_venues} limit={a?.limits.venues} missing={missing} />
   </div>;
 }
@@ -286,7 +286,7 @@ function Capacity({ w }: {
   return <dl className="grid grid-cols-[auto_1fr] text-sm [&>dd]:pl-4 [&>dd]:border-b [&>dd]:border-border [&>dd]:py-2 [&>dd]:text-right [&>dd]:font-semibold [&>dd]:tabular-nums [&>dt]:border-b [&>dt]:border-border [&>dt]:py-2 [&>dt]:text-t3">
     <dt>Piano attuale</dt><dd>{a?.plan ? labels[a.plan] : missing}</dd>
     <dt>Persone in azienda</dt><dd>{a?.usage?.people ?? 'Conteggio non disponibile'}</dd>
-    <dt>Limite persone</dt><dd>{a?.plan === 'team' ? 'Senza limite' : a?.limits.people ?? missing}</dd>
+    <dt>Limite persone</dt><dd>{a?.plan && a.limits.people === null ? 'Senza limite' : a?.limits.people ?? missing}</dd>
     <dt>Sedi aperte</dt><dd>{w.open_venues}</dd>
     <dt>Sedi consentite</dt><dd>{a?.limits.venues ?? missing}</dd>
   </dl>;
@@ -367,7 +367,7 @@ function WorkspaceHero({ w }: { w: AdminWorkspace }) {
         </div>
       </div>
       <div className="grid w-full gap-3 sm:w-72">
-        <Meter label="Persone" used={a?.usage?.people} limit={a?.limits.people} unlimited={a?.plan === 'team'} missing={missing} />
+        <Meter label="Persone" used={a?.usage?.people} limit={a?.limits.people} unlimited={!!a?.plan && a.limits.people === null} missing={missing} />
         <Meter label="Sedi aperte" used={w.open_venues} limit={a?.limits.venues} missing={missing} />
         <Meter label="Documenti" used={w.document_known_bytes} limit={w.document_limit_bytes} missing="—" format={bytes} />
       </div>

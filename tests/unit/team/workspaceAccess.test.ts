@@ -24,8 +24,8 @@ function trial() {
     can_operate: true,
     can_read: true,
     can_complete_attendance: true,
-    limits: { people: null, venues: 1 },
-    usage: { people: 45, venues: 1 },
+    limits: { people: 40, venues: 1 },
+    usage: { people: 35, venues: 1 },
   };
 }
 
@@ -58,15 +58,15 @@ describe("accesso commerciale aziendale", () => {
 
   it("il gate sedi usa l'uso aziendale e non le sedi visibili", () => {
     expect(canCreateVenue({ access: parseWorkspaceAccess(trial()) }).allowed).toBe(false);
-    expect(canCreateVenue({ access: parseWorkspaceAccess({ ...trial(), limits: { people: null, venues: 2 } }) }).allowed).toBe(true);
+    expect(canCreateVenue({ access: parseWorkspaceAccess({ ...trial(), limits: { people: 40, venues: 2 } }) }).allowed).toBe(true);
     expect(canCreateVenue({ access: parseWorkspaceAccess({ ...trial(), state: "archive", can_operate: false }) }).allowed).toBe(false);
   });
   it("riconosce la prova Team senza confonderla con una capacità mancante", () => {
     const access = parseWorkspaceAccess(trial());
     expect(access.plan).toBe("team");
-    expect(access.limits.people).toBeNull();
+    expect(access.limits.people).toBe(40);
     expect(access.limits.venues).toBe(1);
-    expect(access.usage?.people).toBe(45);
+    expect(access.usage?.people).toBe(35);
     expect(access.can_operate).toBe(true);
   });
 
@@ -78,10 +78,10 @@ describe("accesso commerciale aziendale", () => {
       operational_until: null,
       archive_until: null,
       attendance_until: null,
-      limits: { people: 30, venues: 3 },
+      limits: { people: 15, venues: 3 },
     });
     expect(access.operational_until).toBeNull();
-    expect(access.limits).toEqual({ people: 30, venues: 3 });
+    expect(access.limits).toEqual({ people: 15, venues: 3 });
   });
 
   it("conserva la consultazione quando termina l'operatività", () => {
@@ -160,7 +160,7 @@ describe("accesso commerciale aziendale", () => {
     ["abbonamento", "subscription", "Abbonamento attivo."],
     ["tolleranza di pagamento", "payment_grace", "Il rinnovo dell'abbonamento non è andato a buon fine. Puoi continuare a lavorare ancora per pochi giorni: il titolare può sistemarlo."],
   ])("accetta l'origine %s, con scadenza e messaggio neutro", (_name, source, message) => {
-    const access = parseWorkspaceAccess({ ...trial(), source, plan: "base", limits: { people: 30, venues: 2 } });
+    const access = parseWorkspaceAccess({ ...trial(), source, plan: "base", limits: { people: 15, venues: 2 } });
     expect(access.source).toBe(source);
     expect(workspaceAccessMessage(access)).toBe(message);
     // Nell'app nativa niente prezzi né inviti all'acquisto (App Store 3.1.3).
@@ -172,11 +172,17 @@ describe("accesso commerciale aziendale", () => {
       .toThrow("workspace_access_invalid");
   });
 
+  it("un piano sconosciuto (anche il vecchio «pro») non blocca: piano non assegnato", () => {
+    const access = parseWorkspaceAccess({ ...trial(), plan: "pro" });
+    expect(access.plan).toBeNull();
+    expect(access.can_operate).toBe(true);
+    expect(access.limits).toEqual({ people: 40, venues: 1 });
+  });
+
   it.each([
     ["risposta assente", null],
     ["oggetto vuoto", {}],
     ["stato sconosciuto", { ...trial(), state: "pro" }],
-    ["vecchio piano", { ...trial(), plan: "pro" }],
     ["origine sconosciuta", { ...trial(), source: "coupon" }],
     ["flag non booleano", { ...trial(), can_operate: "true" }],
     ["capacità assente", { ...trial(), limits: {} }],
@@ -278,5 +284,10 @@ describe("azienda in preparazione: cosa si dice e a chi", () => {
       ]),
     ];
     for (const text of texts) expect(text).not.toMatch(/€|acquist|compra|paga|abbonament/i);
+  });
+
+  it("la prova promette la fascia Grande, col numero della fascia", () => {
+    expect(TRIAL_COPY.points[0]).toBe("Tutte le funzioni, una sede, fino a 100 persone.");
+    expect(TRIAL_COPY.points.join(" ")).not.toMatch(/senza limite/);
   });
 });

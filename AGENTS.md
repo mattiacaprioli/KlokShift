@@ -401,7 +401,7 @@ locale dalla prima prova MFA reale/visuale sul progetto di soli test propri;
 dettagli, filtri, diniego multiutente, nuovo login e revoca live restano aperti.
 
 **Cambio di piano al rinnovo** (2026-10-31, migration `20261101000000`…`000500`,
-da applicare). Riduzioni (Team→Base, meno sedi) e mensile↔annuale li programma
+da applicare). Riduzioni (fascia più piccola, meno sedi) e mensile↔annuale li programma
 il titolare dalla pagina Piano: nasce una riga in `billing_scheduled_changes`, a
 Paddle non parte niente. Il lavoro pg_cron `billing-scheduled-changes` → Edge
 Function `billing-scheduled` la invia nelle 24 ore prima del rinnovo con
@@ -411,8 +411,17 @@ cambio è aperto le aggiunte oltre la capacità futura sono bloccate; il diritto
 cambia solo con l'avviso firmato. Prove e procedura in
 [docs/TEST-BILLING-SCHEDULED.md](docs/TEST-BILLING-SCHEDULED.md).
 
-- Il piano è aziendale; i due piani hanno le stesse funzioni e capacità diversa.
-  Il limite di 30 riguarda persone uniche nell'intera azienda, non per sede.
+**Listino a fasce** (2026-11-22, migration `20261122000100`, da rilasciare).
+Chiavi interne `base` (Piccola), `team` (Media), `large` (Grande), `custom`
+(su misura, senza limite). ⚠️ `src/features/workspace/planBands.ts` e
+`private.plan_people_limit` sono gemelli **manuali**: cambiano insieme. Le tre
+Edge Functions del billing si pubblicano a mano subito dopo la migration; restano
+da fare i prodotti Paddle e i prezzi sandbox di Grande, che arrivano con una migration
+a parte (`20261122000300_large_prices_sandbox.sql`, da scrivere appena ci sono gli id Paddle) (vedi `docs/MONETIZATION.md` §2).
+
+- Il piano è aziendale; le tre fasce (Piccola 15, Media 40, Grande 100 persone) hanno
+  le stesse funzioni e capacità diversa. Il limite riguarda persone uniche
+  nell'intera azienda, non per sede.
 - Prova di 30 giorni senza carta per tutte le nuove aziende. Gratuità a vita
   assegnata dal fondatore per azienda, con piano e sedi concessi individualmente.
 - Pausa mensile a fine periodo pagato; annuale senza congelamento automatico.
@@ -525,9 +534,10 @@ docs/ plans/ # decisioni di prodotto, piani e audit
 
 ⚠️ Il copy del sito vetrina sta tutto in `web-site/src/content/it.ts` e non può
 nominare recensioni, candidature o paghe. Il listino pubblico è sul sito e i
-riepiloghi/acquisti contrattuali sono sul web: 29 €/mese o 290 €/anno fino a 30 dipendenti unici nell'azienda,
-49 €/mese o 490 €/anno senza limite, sede aggiuntiva 15 €/mese o 150 €/anno,
-IVA esclusa; l'annuale equivale a 10 mensilità, quindi offre 2 mesi gratuiti.
+riepiloghi/acquisti contrattuali sono sul web: tre fasce per dipendenti unici nell'azienda — Piccola 29 €/mese o 290 €/anno
+(fino a 15), Media 49 €/mese o 490 €/anno (fino a 40), Grande 89 €/mese o
+890 €/anno (fino a 100), oltre «su misura» —, sede aggiuntiva 15 €/mese o
+150 €/anno, IVA esclusa; l'annuale equivale a 10 mensilità, quindi offre 2 mesi gratuiti.
 L'app nativa non mostra prezzi. La procedura fiscale effettiva del provider
 resta da validare. Vedi `web-site/README.md` e `docs/MONETIZATION.md`.
 

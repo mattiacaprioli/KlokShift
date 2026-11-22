@@ -73,7 +73,7 @@ begin
     end if;
     if kind in (1,3) then
       perform tests.login('Ow');
-      for i in 1..29 loop
+      for i in 1..14 loop
         perform public.add_member(ws,jsonb_build_object('full_name','Posto '||i),'none','{}','all',
           jsonb_build_array(jsonb_build_object('venue_id',venue)));
       end loop;
@@ -111,7 +111,7 @@ begin
     select workspace_id into ws from tests.capacity_fixture where capacity_fixture.kind=v_kind;
     -- Accesso interno con istante esplicito: nessun auth/client aggira il lock.
     used:=(private.workspace_access_at(ws,now())#>>array['usage',usage_key])::integer;
-    perform tests.eq(used,case usage_key when 'people' then 30 else 2 end,'uso finale esatto: '||v_kind);
+    perform tests.eq(used,case usage_key when 'people' then 15 else 2 end,'uso finale esatto: '||v_kind);
     perform dblink_disconnect('capacity_a');
     perform dblink_disconnect('capacity_b');
   end loop;

@@ -87,7 +87,7 @@ begin
   perform tests.raises(format('select public.billing_cancel_scheduled_change(''sandbox'', %L, %L)', tests.id('Ow'), ws),
     'billing_nothing_scheduled', 'niente da annullare senza un cambio');
 
-  -- Due sedi aperte, un collaboratore, un dipendente e la squadra fino a 30 persone.
+  -- Due sedi aperte, un collaboratore, un dipendente e la squadra fino a 15 persone.
   perform tests.login('Ow');
   vb := public.create_venue(ws, 'Sede B');
   r := public.add_member(ws, '{"full_name":"Carlo","email":"co@t.test"}'::jsonb, 'collaborator',
@@ -99,11 +99,11 @@ begin
   perform tests.login('Emp'); perform public.respond_to_invite((r ->> 'member_id')::uuid, true);
   perform tests.login('Ow');
   people := (public.get_workspace_access(ws) #>> '{usage,people}')::integer;
-  for i in people + 1..30 loop
+  for i in people + 1..15 loop
     perform public.add_member(ws, jsonb_build_object('full_name', 'Persona ' || i), 'none', '{}', 'all',
       jsonb_build_array(jsonb_build_object('venue_id', va)));
   end loop;
-  perform tests.eq((public.get_workspace_access(ws) #>> '{usage,people}')::integer, 30, '30 persone uniche');
+  perform tests.eq((public.get_workspace_access(ws) #>> '{usage,people}')::integer, 15, '15 persone uniche');
   perform tests.logout();
 
   -- Chi non è titolare non programma e non annulla.
@@ -121,7 +121,7 @@ begin
   perform tests.raises(format('select public.billing_prepare_scheduled_change(''sandbox'', %L, %L, ''base'', ''week'', 1)',
     tests.id('Ow'), ws), 'billing_invalid_selection', 'cicli inventati rifiutati');
 
-  -- Team→Base con 30 persone: ammesso, al prossimo rinnovo.
+  -- Team→Base con 15 persone: ammesso, al prossimo rinnovo.
   r := public.billing_prepare_scheduled_change('sandbox', tests.id('Ow'), ws, 'base', 'month', 1);
   perform tests.eq(r ->> 'subscription_id', 'sub_01sched', 'l''abbonamento Paddle da modificare');
   perform tests.eq((r ->> 'effective_at')::timestamptz, now() + interval '29 days', 'effetto al rinnovo');
@@ -131,13 +131,13 @@ begin
   perform tests.eq(r ->> 'extra_price_id', extra_m, 'sede in più mensile');
   perform tests.eq(r -> 'known_prices' ->> team_m, 'team', 'riconosce l''articolo attuale');
 
-  -- Con 31 persone Base non basta.
+  -- Con 16 persone Base non basta.
   perform tests.login('Ow');
-  mid := (public.add_member(ws, '{"full_name":"Trentunesima"}', 'none', '{}', 'all',
+  mid := (public.add_member(ws, '{"full_name":"Sedicesima"}', 'none', '{}', 'all',
     jsonb_build_array(jsonb_build_object('venue_id', vb))) ->> 'member_id')::uuid;
   perform tests.sched_service();
   perform tests.raises(format('select public.billing_prepare_scheduled_change(''sandbox'', %L, %L, ''base'', ''month'', 1)',
-    tests.id('Ow'), ws), 'billing_scheduled_people', 'Base con 31 persone rifiutato');
+    tests.id('Ow'), ws), 'billing_scheduled_people', 'Base con 16 persone rifiutato');
   perform tests.raises(format('select public.billing_record_scheduled_change(''sandbox'', %L, %L, ''base'', ''month'', 1, %L, %L, 2900, ''EUR'')',
     tests.id('Ow'), ws, from_items, base_items), 'billing_scheduled_people', 'e non si registra');
   perform tests.login('Ow');
@@ -507,11 +507,11 @@ begin
   perform tests.login('Ow');
   vb := public.create_venue(ws, 'Sede B');
   people := (public.get_workspace_access(ws) #>> '{usage,people}')::integer;
-  for i in people + 1..31 loop
+  for i in people + 1..16 loop
     mid := (public.add_member(ws, jsonb_build_object('full_name', 'Futura ' || i), 'none', '{}', 'all',
       jsonb_build_array(jsonb_build_object('venue_id', va))) ->> 'member_id')::uuid;
   end loop;
-  perform tests.eq((public.get_workspace_access(ws) #>> '{usage,people}')::integer, 31, '31 persone, Team non ha limite');
+  perform tests.eq((public.get_workspace_access(ws) #>> '{usage,people}')::integer, 16, '16 persone, dentro Team (40)');
   perform tests.logout();
 
   -- Senza cambio aperto la capacità futura non esiste.
@@ -527,15 +527,15 @@ begin
     '[{"price_id":"pri_01m577s3dchg2ctcrenkderz05","quantity":1}]'::jsonb, 2900, 'EUR',
     now() + interval '29 days', tests.id('Ow'), 'pending', 'month')
   returning id into cid;
-  perform tests.eq(private.billing_future_limits(ws), jsonb_build_object('people', 30, 'venues', 1),
+  perform tests.eq(private.billing_future_limits(ws), jsonb_build_object('people', 15, 'venues', 1),
     'limiti futuri di Base senza sedi in più');
 
   -- Uscire e chiudere si può sempre, anche oltre il limite futuro.
   perform tests.login('Ow');
   perform public.remove_member(mid);
   perform public.set_venue_closed(vb, true);
-  perform tests.eq((public.get_workspace_access(ws) #>> '{usage,people}')::integer, 30, 'uscita sempre possibile');
-  -- 30 è il tetto di Base: la trentunesima persona no.
+  perform tests.eq((public.get_workspace_access(ws) #>> '{usage,people}')::integer, 15, 'uscita sempre possibile');
+  -- 15 è il tetto di Base: la sedicesima persona no.
   perform tests.raises(format('select public.add_member(%L,''{"full_name":"Oltre"}'',''none'',''{}'',''all'',%L)',
     ws, jsonb_build_array(jsonb_build_object('venue_id', va))), 'workspace_people_capacity_scheduled',
     'persona oltre il tetto del piano futuro');
@@ -763,10 +763,10 @@ begin
   perform tests.sched_service();
   perform public.billing_cancel_scheduled_change('sandbox', tests.id('Ow'), ws);
 
-  -- Regole cambiate: 31 persone (Team non ha limite) e un cambio verso Base.
+  -- Regole cambiate: 16 persone (dentro Team, oltre Base) e un cambio verso Base.
   perform tests.login('Ow');
   people := (public.get_workspace_access(ws) #>> '{usage,people}')::integer;
-  for i in people + 1..31 loop
+  for i in people + 1..16 loop
     mid := (public.add_member(ws, jsonb_build_object('full_name', 'Lavoro ' || i), 'none', '{}', 'all',
       jsonb_build_array(jsonb_build_object('venue_id', va))) ->> 'member_id')::uuid;
   end loop;
@@ -777,7 +777,7 @@ begin
   update public.billing_scheduled_changes set effective_at = now() + interval '23 hours' where id = cid;
   perform tests.eq(private.queue_scheduled_billing_work(now()), 1, 'dentro la finestra: ricontrollate');
   select * into row from public.billing_scheduled_changes where id = cid;
-  perform tests.eq(row.status || '/' || row.close_reason, 'failed/rules_changed', '31 persone su Base: non si invia');
+  perform tests.eq(row.status || '/' || row.close_reason, 'failed/rules_changed', '16 persone su Base: non si invia');
   perform tests.eq(row.last_error_code, 'billing_scheduled_people', 'con il codice della regola');
   perform tests.eq(row.alert_kind, 'failed', 'e l''allarme al fondatore');
   perform tests.eq(tests.sched_failed_count(ws, tests.id('Ow')), 1, 'e il titolare lo sa dall''app');

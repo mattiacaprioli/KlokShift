@@ -103,7 +103,7 @@ begin
   perform tests.login('Ow');
   w1 := public.create_workspace('W1');
   perform tests.logout();
-  perform public.grant_workspace_access(w1,'complimentary_lifetime','team',10,now(),null,'Fixture locale dominio');
+  perform public.grant_workspace_access(w1,'complimentary_lifetime','custom',10,now(),null,'Fixture locale dominio');
   perform tests.login('Ow');
   v1 := public.create_venue(w1, 'V1', 'Via Uno 1', 'Milano');
   v2 := public.create_venue(w1, 'V2', 'Via Due 2', 'Milano');
@@ -142,7 +142,7 @@ begin
   perform tests.login('Emp');
   w2 := public.create_workspace('W2');
   perform tests.logout();
-  perform public.grant_workspace_access(w2,'complimentary_lifetime','team',10,now(),null,'Fixture locale dominio');
+  perform public.grant_workspace_access(w2,'complimentary_lifetime','custom',10,now(),null,'Fixture locale dominio');
   perform tests.login('Emp');
   v3 := public.create_venue(w2, 'V3');
   insert into tests.ids values ('W2', w2), ('V3', v3);

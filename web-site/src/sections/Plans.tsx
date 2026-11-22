@@ -9,7 +9,7 @@ import { SIGNUP_URL } from "../config";
 import type { BillingCycle, Price } from "../content/types";
 
 /*
- * Prezzi: due card per dimensione del team e sotto quello che includono entrambe.
+ * Prezzi: tre card per fascia di persone e sotto quello che includono tutte.
  *
  * Il limite di persone e la sede inclusa devono leggersi dentro ogni card:
  * sono le due informazioni che distinguono i piani e non possono dipendere
@@ -122,17 +122,27 @@ export function Plans() {
         })}
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
         {t.plans.options.map((plan, index) => (
           <PriceCard
             key={plan.name}
             plan={plan}
             billingCycle={billingCycle}
-            highlighted={index === 0}
+            highlighted={index === 1}
             delay={index * 80}
           />
         ))}
       </div>
+
+      <p className="mt-4 text-t2">
+        {t.plans.custom.text}{" "}
+        <a
+          href={`mailto:${t.plans.custom.email}`}
+          className="font-semibold text-gold underline underline-offset-4"
+        >
+          {t.plans.custom.link}
+        </a>
+      </p>
 
       <Reveal className="mt-4 rounded-2xl border border-border bg-bg-0/40 p-6 sm:p-8">
         <h3 className="font-mono text-xs tracking-[0.18em] text-t3 uppercase">

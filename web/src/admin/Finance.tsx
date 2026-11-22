@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAdminRead } from "@/features/admin/hooks";
 import { currentMonth, formatMoney, getAdminFinance, getAdminWorkspaceFinance, shiftMonth } from "@/features/admin/finance";
 import type { FinanceEnvironment } from "@/features/admin/finance";
+import { PLAN_BANDS } from "@/features/workspace/planBands";
 import { userErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/cn";
 import { Card, Pill } from "../ui/primitives";
@@ -124,7 +125,7 @@ export function WorkspaceFinancePanel({ userId, workspaceId }: { userId: string;
       : <ul className="space-y-2">{d.subscriptions.map((s) => <li key={`${s.environment}-${s.created_at}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-bg-1 px-4 py-3">
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-semibold">{s.plan === "base" ? "Base" : "Team"} · {s.billing_interval === "year" ? "annuale" : "mensile"} · {1 + s.extra_venues} {s.extra_venues === 0 ? "sede" : "sedi"}</span>
+              <span className="font-semibold">{PLAN_BANDS[s.plan].label} · {s.billing_interval === "year" ? "annuale" : "mensile"} · {1 + s.extra_venues} {s.extra_venues === 0 ? "sede" : "sedi"}</span>
               <span className="inline-flex items-center gap-1.5 text-t3"><Dot tone={subscriptionTone[s.status]} />{statusLabels[s.status]}{s.scheduled_change === "cancel" ? ", in chiusura" : s.scheduled_change === "pause" ? ", pausa programmata" : ""}</span>
               {s.environment === "sandbox" ? <Pill>Sandbox</Pill> : null}
             </p>

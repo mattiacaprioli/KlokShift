@@ -7,7 +7,7 @@
  * Non importa Expo/React Native.
  */
 const STATUSES = ["active", "past_due", "paused", "canceled"] as const;
-const PLANS = ["base", "team"] as const;
+const PLANS = ["base", "team", "large"] as const;
 const INTERVALS = ["month", "year"] as const;
 const ACTIONS = ["cancel", "pause", "resume"] as const;
 const PENDING_STATUSES = ["pending", "applied"] as const;

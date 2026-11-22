@@ -147,7 +147,7 @@ export const it: Content = {
 
   plans: {
     title: "Un prezzo per l'azienda, non per ogni dipendente.",
-    lead: "Listino previsto al lancio, stesse funzioni in entrambi. In beta si prova gratis: gli acquisti non sono ancora attivi.",
+    lead: "Listino previsto al lancio, stesse funzioni in ogni fascia. In beta si prova gratis: gli acquisti non sono ancora attivi.",
     billing: {
       label: "Periodo di fatturazione",
       monthly: "Mensile",
@@ -156,7 +156,7 @@ export const it: Content = {
     },
     options: [
       {
-        name: "Base · fino a 30 persone",
+        name: "Piccola",
         monthly: {
           amount: formatEuro(PLAN_PRICES.base.monthly),
           period: "al mese",
@@ -167,11 +167,11 @@ export const it: Content = {
           equivalent: `Equivale a ${formatEuro(PLAN_PRICES.base.annual / 12)} al mese, con fatturazione annuale.`,
           saving: `Risparmi ${euro(annualSaving(PLAN_PRICES.base))} all'anno`,
         },
-        details: ["30 persone uniche nell'intera azienda", "1 sede inclusa", "Prezzo IVA esclusa"],
+        details: ["Fino a 15 persone nell'intera azienda", "1 sede inclusa", "Prezzo IVA esclusa"],
         badge: "Per iniziare",
       },
       {
-        name: "Team · senza limite persone",
+        name: "Media",
         monthly: {
           amount: formatEuro(PLAN_PRICES.team.monthly),
           period: "al mese",
@@ -182,10 +182,30 @@ export const it: Content = {
           equivalent: `Equivale a ${formatEuro(PLAN_PRICES.team.annual / 12)} al mese, con fatturazione annuale.`,
           saving: `Risparmi ${euro(annualSaving(PLAN_PRICES.team))} all'anno`,
         },
-        details: ["1 sede inclusa", "Prezzo IVA esclusa"],
+        details: ["Da 16 a 40 persone", "1 sede inclusa", "Prezzo IVA esclusa"],
+        badge: "Consigliato",
+      },
+      {
+        name: "Grande",
+        monthly: {
+          amount: formatEuro(PLAN_PRICES.large.monthly),
+          period: "al mese",
+        },
+        annual: {
+          amount: formatEuro(PLAN_PRICES.large.annual),
+          period: "all'anno",
+          equivalent: `Equivale a ${formatEuro(PLAN_PRICES.large.annual / 12)} al mese, con fatturazione annuale.`,
+          saving: `Risparmi ${euro(annualSaving(PLAN_PRICES.large))} all'anno`,
+        },
+        details: ["Da 41 a 100 persone", "1 sede inclusa", "Prezzo IVA esclusa"],
       },
     ],
-    includedTitle: "Incluso in entrambi",
+    custom: {
+      text: "Oltre 100 persone o più di 5 sedi:",
+      link: "scrivici",
+      email: "info@klokshift.com",
+    },
+    includedTitle: "Incluso in ogni fascia",
     included: [
       "App per il team, gratuita",
       "Turni, conferme e copertura",
@@ -207,7 +227,7 @@ export const it: Content = {
     items: [
       {
         q: "Serve una carta per provare?",
-        a: "No. Hai 30 giorni gratis con il piano Team e una sede. Alla fine non paghi nulla in automatico.",
+        a: "No. Hai 30 giorni gratis sulla fascia Grande e una sede. Alla fine non paghi nulla in automatico.",
       },
       {
         q: "Posso già acquistare un piano?",

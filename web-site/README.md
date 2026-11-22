@@ -44,10 +44,12 @@ Il sito deve raccontare il prodotto che esiste oggi:
 Il **listino pubblico** è qui; riepiloghi contrattuali e acquisti saranno sul
 web. L'app nativa non mostra prezzi:
 
-- fino a 30 dipendenti unici nell'intera azienda: 29 € al mese oppure 290 € all'anno;
-- dipendenti illimitati: 49 € al mese oppure 490 € all'anno;
-- sede aggiuntiva: 15 € al mese oppure 150 € all'anno;
-- IVA esclusa e 30 giorni di prova senza carta.
+- **Piccola**, fino a 15 persone uniche nell'intera azienda: 29 € al mese oppure 290 € all'anno;
+- **Media**, da 16 a 40 persone: 49 € al mese oppure 490 € all'anno;
+- **Grande**, da 41 a 100 persone: 89 € al mese oppure 890 € all'anno;
+- oltre 100 persone o più di 5 sedi: un accordo su misura (info@klokshift.com);
+- sede aggiuntiva, per tutte le fasce: 15 € al mese oppure 150 € all'anno;
+- IVA esclusa e 30 giorni di prova senza carta (fascia Grande, una sede).
 
 Con la fatturazione annuale si pagano 10 mensilità invece di 12: sono quindi
 inclusi **due mesi gratuiti**. Gli importi principali di sito/dashboard derivano

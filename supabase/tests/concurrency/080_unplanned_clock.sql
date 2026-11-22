@@ -76,7 +76,7 @@ begin
   v1 := public.create_venue(ws, 'Fuori turno uno');
   perform tests.logout();
   execute 'reset role';
-  perform public.grant_workspace_access(ws, 'complimentary_lifetime', 'team', 2, now(), null, 'Fixture fuori turno');
+  perform public.grant_workspace_access(ws, 'complimentary_lifetime', 'custom', 2, now(), null, 'Fixture fuori turno');
   perform tests.login('Ow');
   v2 := public.create_venue(ws, 'Fuori turno due');
   member := (public.add_member(ws, '{"full_name":"Emma","email":"emp@t.test"}', 'none', '{}', 'all',

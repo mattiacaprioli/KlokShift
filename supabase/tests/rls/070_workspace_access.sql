@@ -77,9 +77,9 @@ begin
   r := public.get_workspace_access(ws);
   perform tests.eq(r ->> 'state', 'operational', 'la prova valida dà accesso');
   perform tests.eq(r ->> 'source', 'trial', 'la fonte è la prova, non un pagamento');
-  perform tests.eq(r ->> 'plan', 'team', 'la prova usa la capacità Team');
+  perform tests.eq(r ->> 'plan', 'large', 'la prova usa la fascia Grande');
   perform tests.eq((r #>> '{limits,venues}')::integer, 1, 'la prova include una sede');
-  perform tests.ok(r #> '{limits,people}' = 'null'::jsonb, 'Team non ha tetto commerciale persone');
+  perform tests.eq((r #>> '{limits,people}')::integer, 100, 'Grande arriva a 100 persone');
   perform tests.eq((r ->> 'operational_from')::timestamptz, now(), 'inizio impostato dal server');
   perform tests.eq((r ->> 'operational_until')::timestamptz,
     now() + interval '720 hours', 'prova di trenta giorni di durata');
@@ -325,7 +325,7 @@ begin
     'l''azienda gratuita a vita è operativa');
   perform tests.eq(public.get_workspace_access(tests.id('W1')) ->> 'state', 'operational',
     'la gratuità W2 non passa all''altra azienda dello stesso account');
-  perform tests.eq(public.get_workspace_access(tests.id('W1')) ->> 'plan', 'team',
+  perform tests.eq(public.get_workspace_access(tests.id('W1')) ->> 'plan', 'custom',
     'W1 conserva la propria concessione fixture indipendente dal Base di W2');
   perform tests.logout();
 end $$;
@@ -354,7 +354,7 @@ begin
   perform tests.eq((r ->> 'can_operate')::boolean, false, 'un periodo futuro non concede accesso');
   r := private.workspace_access_at(ws, starts);
   perform tests.eq(r ->> 'state', 'operational', 'inizio del periodo inclusivo');
-  perform tests.eq((r #>> '{limits,people}')::integer, 30, 'Base conserva il tetto 30');
+  perform tests.eq((r #>> '{limits,people}')::integer, 15, 'Base arriva a 15 persone');
   perform tests.eq((r #>> '{limits,venues}')::integer, 2, 'capacità concessa al periodo');
   r := private.workspace_access_at(ws, finish - interval '1 microsecond');
   perform tests.eq((r ->> 'can_operate')::boolean, true, 'accesso fino alla fine esclusiva');

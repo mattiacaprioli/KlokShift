@@ -12,6 +12,11 @@ const prepared = {
 };
 
 describe("billing-checkout: regole pure", () => {
+  it("accetta la fascia Grande e rifiuta custom", () => {
+    expect(parseSelection({ ...selection, plan: "large" })).toEqual({ ...selection, plan: "large" });
+    expect(parseSelection({ ...selection, plan: "custom" })).toBeNull();
+  });
+
   it("accetta solo una scelta completa", () => {
     expect(parseSelection(selection)).toEqual(selection);
     for (const bad of [
@@ -33,6 +38,7 @@ describe("billing-checkout: regole pure", () => {
   it("traduce i rifiuti del database in stati HTTP", () => {
     expect(prepareError("billing_subscription_exists")).toEqual({ status: 409, code: "billing_subscription_exists" });
     expect(prepareError("not_allowed")).toEqual({ status: 403, code: "not_allowed" });
+    expect(prepareError("billing_venues_need_agreement")).toEqual({ status: 409, code: "billing_venues_need_agreement" });
     expect(prepareError("qualcosa di interno")).toEqual({ status: 500, code: "prepare_failed" });
   });
 

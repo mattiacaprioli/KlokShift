@@ -55,7 +55,7 @@ begin
     perform public.create_venue(ws,'Prima sede');
     perform tests.logout();
     execute 'reset role';
-    perform public.grant_workspace_access(ws,'complimentary_lifetime','team',2,now(),null,'Setup fixture');
+    perform public.grant_workspace_access(ws,'complimentary_lifetime','custom',2,now(),null,'Setup fixture');
     op:=gen_random_uuid();
     insert into tests.founder_fixture values(kind,ws,private.admin_workspace_revision(ws),op,
       case when kind='retry' then op else gen_random_uuid() end);

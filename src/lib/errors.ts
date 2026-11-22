@@ -44,6 +44,8 @@ const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["admin_cleanup_failed"], message: "Non è stato possibile togliere i file adesso: restano in coda, riprova fra poco." },
   { match: ["admin_review_note_required"], message: "Scrivi cosa hai fatto, da 3 a 500 caratteri." },
   { match: ["scheduled_change_not_retryable"], message: "Questo cambio non si può più ritentare: il rinnovo è passato o è avvenuto con un altro piano. Aggiorna la pagina." },
+  // Stessa frase di VENUES_AGREEMENT_MESSAGE (web/src/billing/planOptions.ts).
+  { match: ["billing_venues_need_agreement"], message: "Oltre 5 sedi serve un accordo su misura: scrivi a info@klokshift.com" },
   { match: ["billing_change_pending"], message: "Per questo abbonamento c'è già un altro cambio aperto: non se ne ritenta un secondo. Aggiorna la pagina." },
   { match: ["admin_review_not_open"], message: "Questa voce non chiede più un'azione. Aggiorna la pagina." },
   { match: ["admin_reason_required"], message: "Inserisci un motivo da 1 a 2000 caratteri." },

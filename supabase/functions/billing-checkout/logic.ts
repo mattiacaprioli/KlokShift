@@ -1,9 +1,13 @@
 // Helper locali alla funzione: nessun import dal bundle dell'app o tra deploy.
 
+export type BillingPlan = "base" | "team" | "large";
+export const PLAN_LABEL: Record<BillingPlan, string> = { base: "Piccola", team: "Media", large: "Grande" };
+const isBillingPlan = (value: unknown): value is BillingPlan => value === "base" || value === "team" || value === "large";
+
 export type BillingEnvironment = "sandbox" | "live";
 export type CheckoutSelection = {
   workspaceId: string;
-  plan: "base" | "team";
+  plan: BillingPlan;
   interval: "month" | "year";
   extraVenues: number;
 };
@@ -21,7 +25,7 @@ export function parseSelection(body: unknown): CheckoutSelection | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const raw = body as Record<string, unknown>;
   if (typeof raw.workspaceId !== "string" || !UUID.test(raw.workspaceId)) return null;
-  if (raw.plan !== "base" && raw.plan !== "team") return null;
+  if (!isBillingPlan(raw.plan)) return null;
   if (raw.interval !== "month" && raw.interval !== "year") return null;
   if (typeof raw.extraVenues !== "number" || !Number.isSafeInteger(raw.extraVenues) ||
       raw.extraVenues < 0 || raw.extraVenues > 999) return null;
@@ -56,6 +60,7 @@ const PREPARE_ERRORS: Record<string, number> = {
   billing_not_required: 409,
   workspace_people_capacity: 409,
   workspace_venue_capacity: 409,
+  billing_venues_need_agreement: 409,
   workspace_access_unavailable: 409,
   billing_checkout_rate_limited: 429,
   billing_price_unavailable: 503,

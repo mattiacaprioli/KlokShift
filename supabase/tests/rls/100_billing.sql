@@ -161,7 +161,7 @@ begin
   a := private.workspace_access_at(ws, t0 + interval '1 day');
   perform tests.eq(a ->> 'source', 'subscription', 'il diritto viene dall''abbonamento');
   perform tests.eq(a ->> 'plan', 'base', 'piano comprato');
-  perform tests.eq((a #>> '{limits,people}')::integer, 30, 'Base: 30 persone');
+  perform tests.eq((a #>> '{limits,people}')::integer, 15, 'Base: 15 persone');
   perform tests.eq((a #>> '{limits,venues}')::integer, 1, 'una sede inclusa');
   perform tests.eq((a ->> 'operational_until')::timestamptz, e1, 'operativo fino a fine periodo pagato');
   perform tests.eq((select status from public.billing_checkouts where id = co), 'completed', 'richiesta completata');
@@ -183,7 +183,7 @@ begin
   a := private.workspace_access_at(ws, t0 + interval '11 days');
   perform tests.eq(a ->> 'plan', 'team', 'dopo l''upgrade: Team');
   perform tests.eq((a #>> '{limits,venues}')::integer, 2, 'sede inclusa più una aggiuntiva');
-  perform tests.eq(a #>> '{limits,people}', null, 'Team senza limite di persone');
+  perform tests.eq((a #>> '{limits,people}')::integer, 40, 'Team: 40 persone');
   perform tests.eq((a ->> 'operational_from')::timestamptz, t0, 'l''inizio resta quello dell''acquisto, non dell''upgrade');
 
   -- Rinnovo pagato.

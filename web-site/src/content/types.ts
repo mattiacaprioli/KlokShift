@@ -76,6 +76,8 @@ export type Content = {
       annualBadge: string;
     };
     options: Price[];
+    /** Oltre le fasce: riga sotto le schede, con il link all'email. */
+    custom: { text: string; link: string; email: string };
     includedTitle: string;
     included: string[];
     extraVenue: Record<BillingCycle, string> & { detail: string };
