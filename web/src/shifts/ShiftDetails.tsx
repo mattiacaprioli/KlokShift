@@ -1,6 +1,8 @@
 import { ListSkeleton } from "../ui/Skeleton";
 import { PersonAvatar } from "../ui/PersonAvatar";
 import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { MoreMenu, type MoreMenuItem } from "../ui/MoreMenu";
 import { userErrorMessage } from "@/lib/errors";
 import { absenceForShift } from "@/features/absences/conflicts";
 import { useAbsenceAvailability } from "@/features/absences/hooks";
@@ -68,10 +70,13 @@ import { SaveTemplateDialog } from "./SaveTemplateDialog";
  */
 export function ShiftDetails({
   shift,
+  headerActions,
   onEdit,
   onClose,
 }: {
   shift: Shift;
+  /** Il posto accanto a «Chiudi»: qui ci va il «⋯» delle azioni secondarie. */
+  headerActions: HTMLElement | null;
   onEdit: () => void;
   onClose: () => void;
 }) {
@@ -99,12 +104,33 @@ export function ShiftDetails({
   // Anche da un turno passato o annullato: «come venerdì scorso» è proprio il
   // caso. Il fuori turno no: non è stato pianificato.
   const canSaveTemplate = canManage && !shift.unplanned;
+  // Il «⋯» accanto a «Chiudi» (22/11): le azioni che servono ogni tanto, e
+  // quelle che tolgono il turno a tutti, lontane da un clic distratto.
+  // «Modifica» resta in fondo, in vista: è l'azione di tutti i giorni.
+  const [confirming, setConfirming] = useState<"cancel" | "delete" | null>(null);
   const draft = isDraft(shift);
   const expiredDraft = isExpiredDraft(shift, now);
   // Una bozza finita non è mai partita: si elimina (chi gestisce i turni) o si
   // registra come fatta (chi ha «Ore»).
   const canDeleteDraft = canManage && draft && !cancelled && !shift.unplanned;
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const moreItems: MoreMenuItem[] = [
+    ...(canSaveTemplate && !roleReqsQuery.isPending
+      ? [
+          {
+            label: "Salva come modello",
+            onSelect: () => setSavingTemplate(true),
+            title: "Riusa orari, pausa e persone che servono in un nuovo turno",
+          },
+        ]
+      : []),
+    // Una bozza non ha avvisato nessuno: non si annulla, si elimina.
+    ...(canDeleteDraft
+      ? [{ label: DRAFT_DELETE_LABEL, onSelect: () => setConfirming("delete"), danger: true }]
+      : canEdit
+        ? [{ label: "Annulla turno", onSelect: () => setConfirming("cancel"), danger: true }]
+        : []),
+  ];
   const showLiveClock =
     !cancelled &&
     now >= shiftStartsAt(shift.date, shift.start_time) &&
@@ -337,7 +363,18 @@ export function ShiftDetails({
         </div>
       </div>
 
-      {canEdit || canSaveTemplate || canDeleteDraft || canRecordDraft ? (
+      {/* «Salva come modello» si usa ogni tanto: sta nel «⋯» accanto a
+          «Chiudi», e in fondo restano le azioni sul turno. */}
+      {headerActions && moreItems.length > 0
+        ? createPortal(<MoreMenu items={moreItems} />, headerActions)
+        : null}
+      {confirming === "cancel" ? (
+        <CancelShiftDialog shift={shift} onClose={() => setConfirming(null)} onDone={onClose} />
+      ) : confirming === "delete" ? (
+        <DeleteDraftDialog shift={shift} onClose={() => setConfirming(null)} onDone={onClose} />
+      ) : null}
+
+      {canEdit || canRecordDraft ? (
         <footer className="flex flex-wrap gap-2 border-t border-border-2 px-6 py-4">
           {canEdit ? (
             <Button variant="gold" onClick={onEdit}>
@@ -346,20 +383,6 @@ export function ShiftDetails({
           ) : null}
           {canRecordDraft ? (
             <RecordDraftButton shift={shift} onDone={onClose} />
-          ) : null}
-          {/* Una bozza non ha avvisato nessuno: non si annulla, si elimina. */}
-          {canDeleteDraft ? (
-            <DeleteDraftButton shift={shift} onDone={onClose} />
-          ) : canEdit ? (
-            <CancelShiftButton shift={shift} onDone={onClose} />
-          ) : null}
-          {canSaveTemplate ? (
-            <Button
-              onClick={() => setSavingTemplate(true)}
-              disabled={roleReqsQuery.isPending}
-            >
-              Salva come modello
-            </Button>
           ) : null}
         </footer>
       ) : null}
@@ -392,51 +415,40 @@ function Info({ label, children }: { label: string; children: ReactNode }) {
  * chiede conferma, e la conferma dice anche che il passo è reversibile — è la
  * prima cosa che serve sapere quando si clicca per sbaglio.
  */
-function CancelShiftButton({
+function CancelShiftDialog({
   shift,
+  onClose,
   onDone,
 }: {
   shift: Shift;
+  onClose: () => void;
   onDone: () => void;
 }) {
   const toast = useToast();
   const status = useUpdateShiftStatus(shift.id);
-  const [asking, setAsking] = useState(false);
 
   return (
-    <>
-      <Button
-        type="button"
-        variant="danger"
-        onClick={() => setAsking(true)}
-        disabled={status.isPending}
-      >
-        Annulla turno
-      </Button>
-      {asking ? (
-        <ConfirmDialog
-          title="Annullare il turno?"
-          message="Chi è assegnato riceve una notifica e il turno sparisce dalla sua agenda. Potrai ripristinarlo da qui."
-          confirmLabel="Annulla il turno"
-          cancelLabel="Lascialo attivo"
-          destructive
-          pending={status.isPending}
-          onCancel={() => setAsking(false)}
-          onConfirm={() =>
-            status.mutate("cancelled", {
-              onSuccess: () => {
-                toast.show("Turno annullato");
-                onDone();
-              },
-              onError: (e) => {
-                toast.show(userErrorMessage(e), "error");
-                setAsking(false);
-              },
-            })
-          }
-        />
-      ) : null}
-    </>
+    <ConfirmDialog
+      title="Annullare il turno?"
+      message="Chi è assegnato riceve una notifica e il turno sparisce dalla sua agenda. Potrai ripristinarlo da qui."
+      confirmLabel="Annulla il turno"
+      cancelLabel="Lascialo attivo"
+      destructive
+      pending={status.isPending}
+      onCancel={() => onClose()}
+      onConfirm={() =>
+        status.mutate("cancelled", {
+          onSuccess: () => {
+            toast.show("Turno annullato");
+            onDone();
+          },
+          onError: (e) => {
+            toast.show(userErrorMessage(e), "error");
+            onClose();
+          },
+        })
+      }
+    />
   );
 }
 
@@ -511,51 +523,40 @@ function CancelledBanner({
 }
 
 /** Elimina una bozza: sparisce per sempre, e nessuno è mai stato avvisato. */
-function DeleteDraftButton({
+function DeleteDraftDialog({
   shift,
+  onClose,
   onDone,
 }: {
   shift: Shift;
+  onClose: () => void;
   onDone: () => void;
 }) {
   const toast = useToast();
   const del = useDeleteShift(shift.id);
-  const [asking, setAsking] = useState(false);
 
   return (
-    <>
-      <Button
-        type="button"
-        variant="danger"
-        onClick={() => setAsking(true)}
-        disabled={del.isPending}
-      >
-        {DRAFT_DELETE_LABEL}
-      </Button>
-      {asking ? (
-        <ConfirmDialog
-          title={DRAFT_DELETE_TITLE}
-          message={DRAFT_DELETE_MESSAGE}
-          confirmLabel={DRAFT_DELETE_LABEL}
-          cancelLabel="Indietro"
-          destructive
-          pending={del.isPending}
-          onCancel={() => setAsking(false)}
-          onConfirm={() =>
-            del.mutate(undefined, {
-              onSuccess: () => {
-                toast.show(DRAFT_DELETED_TOAST);
-                onDone();
-              },
-              onError: (e) => {
-                toast.show(userErrorMessage(e), "error");
-                setAsking(false);
-              },
-            })
-          }
-        />
-      ) : null}
-    </>
+    <ConfirmDialog
+      title={DRAFT_DELETE_TITLE}
+      message={DRAFT_DELETE_MESSAGE}
+      confirmLabel={DRAFT_DELETE_LABEL}
+      cancelLabel="Indietro"
+      destructive
+      pending={del.isPending}
+      onCancel={() => onClose()}
+      onConfirm={() =>
+        del.mutate(undefined, {
+          onSuccess: () => {
+            toast.show(DRAFT_DELETED_TOAST);
+            onDone();
+          },
+          onError: (e) => {
+            toast.show(userErrorMessage(e), "error");
+            onClose();
+          },
+        })
+      }
+    />
   );
 }
 

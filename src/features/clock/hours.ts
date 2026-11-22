@@ -402,3 +402,38 @@ export function formatClockTime(value: string): string {
     timeZone: "Europe/Rome",
   }).format(new Date(value));
 }
+
+const romeDay = new Intl.DateTimeFormat("it-IT", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Europe/Rome",
+});
+
+/**
+ * L'uscita cade in un altro giorno dell'entrata (ora italiana)? Allora la
+ * card ne dice anche la data, «dd/mm»: con il solo orario un'uscita timbrata
+ * il giorno dopo sembrava normale, e le ore erano 31 invece di 8.
+ */
+export function clockOutDayNote(inAt: string, outAt: string): string | null {
+  const outDay = romeDay.format(new Date(outAt));
+  return romeDay.format(new Date(inAt)) === outDay ? null : outDay;
+}
+
+/** L'orario `time` spostato sul giorno di `day` (ora locale): il campo del giorno. */
+export function withDay(time: Date, day: Date): Date {
+  const out = new Date(time);
+  out.setFullYear(day.getFullYear(), day.getMonth(), day.getDate());
+  return out;
+}
+
+/**
+ * Entrata e uscita scelte a mano (giorno e ora). Il server chiede solo che
+ * l'uscita venga dopo; qui si ferma anche una timbratura di 24 ore o più, che
+ * è sempre un giorno sbagliato (l'uscita dimenticata, corretta solo nell'ora).
+ */
+export function clockRangeError(inAt: Date, outAt: Date): string | null {
+  const ms = outAt.getTime() - inAt.getTime();
+  if (ms <= 0) return "L’uscita deve essere dopo l’entrata.";
+  if (ms >= 24 * 3_600_000) return "Più di 24 ore: controlla i giorni.";
+  return null;
+}

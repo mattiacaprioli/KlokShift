@@ -1,12 +1,14 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { MoreRow } from "@/components/ui/MoreRow";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { InfoRow } from "@/components/ui/InfoRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
@@ -107,6 +109,37 @@ function GuardScreen({ children }: { children: ReactNode }) {
     </View>
   );
 }
+
+/** Cosa si sceglie nel «⋯» del turno; si apre a pannello chiuso. */
+type MoreAction = "template" | "delete" | "cancel" | "reopen" | "restore";
+
+const MORE_STATUS_ROW: Record<
+  Exclude<MoreAction, "template">,
+  { icon: IconName; title: string; subtitle: string; danger?: boolean }
+> = {
+  delete: {
+    icon: "close",
+    title: DRAFT_DELETE_LABEL,
+    subtitle: "È una bozza: nessuno l'ha vista, quindi non parte nessun avviso.",
+    danger: true,
+  },
+  cancel: {
+    icon: "close",
+    title: "Annulla turno",
+    subtitle: "Chi è assegnato riceve un avviso. Potrai ripristinarlo.",
+    danger: true,
+  },
+  reopen: {
+    icon: "calendar",
+    title: "Riapri turno",
+    subtitle: "Torna aperto come prima.",
+  },
+  restore: {
+    icon: "calendar",
+    title: "Ripristina turno",
+    subtitle: "Torna in agenda per chi era assegnato.",
+  },
+};
 
 const SHIFT_STATUS_LABEL: Record<Enums<"shift_status">, string> = {
   open: "Aperto",
@@ -268,7 +301,7 @@ function PresenceRow({
             <Text className="text-base font-sans-bold text-t1">{name}</Text>
             {locked ? <Pill label="Tu" variant="tag" /> : null}
           </View>
-          <Text className="text-xs text-t3">
+          <Text className="text-sm text-t3">
             {assignment.role?.name ?? "Ruolo da assegnare"}
           </Text>
         </View>
@@ -284,11 +317,11 @@ function PresenceRow({
           <Pressable
             disabled={presence.isPending}
             onPress={() => setPresent(true)}
-            className={cn("px-3 py-1.5", present && "bg-gold-fill")}
+            className={cn("px-3.5 py-2", present && "bg-gold-fill")}
           >
             <Text
               className={cn(
-                "text-xs font-sans-semibold",
+                "text-sm font-sans-semibold",
                 present ? "text-gold-ink" : "text-t3"
               )}
             >
@@ -298,10 +331,10 @@ function PresenceRow({
           <Pressable
             disabled={presence.isPending}
             onPress={() => setPresent(false)}
-            className={cn("px-3 py-1.5", !present && "bg-error")}
+            className={cn("px-3.5 py-2", !present && "bg-error")}
           >
             <Text
-              className="text-xs font-sans-semibold"
+              className="text-sm font-sans-semibold"
               style={{ color: !present ? colors.white : colors.t3 }}
             >
               Assente
@@ -450,6 +483,10 @@ export default function ShiftDetailScreen() {
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  // Il «⋯» della testata: le azioni che servono ogni tanto (oggi «Salva come
+  // modello»), come «Altre azioni» in Turni e il «⋯» della dashboard.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const afterMore = useRef<MoreAction | null>(null);
   const [addingWorker, setAddingWorker] = useState(false);
 
   function onCancelShift() {
@@ -558,6 +595,28 @@ export default function ShiftDetailScreen() {
   // A turno finito (non a mezzanotte) si passa dalla vista "staff assegnato"
   // a quella delle presenze.
   const isPast = isShiftOver(shift);
+  // Anche da un turno passato o annullato: «come venerdì scorso» è proprio il
+  // caso. Il fuori turno no: non è stato pianificato.
+  const canSaveTemplate = !shift.unplanned && can(shift.venue_id, "can_manage_shifts");
+  /**
+   * L'azione sullo stato del turno, nel «⋯» (22/11): annullare ed eliminare
+   * tolgono il turno a tutti e non devono stare a un tocco distratto in mezzo
+   * alla pagina; «Modifica» invece resta in vista, è l'azione di tutti i giorni.
+   * Il fuori turno non si annulla né si elimina (C06); un turno già svolto non
+   * si annulla (le ore sono lavorate), come sulla dashboard.
+   */
+  const statusAction: MoreAction | null = shift.unplanned
+    ? null
+    : isDraft(shift) && shift.status === "open"
+      ? "delete"
+      : shift.status === "open"
+        ? isPast
+          ? null
+          : "cancel"
+        : shift.status === "closed"
+          ? "reopen"
+          : "restore";
+  const showTemplate = canSaveTemplate && !roleReqsQuery.isPending;
   // Una bozza già finita non ha presenze: nessuno l'ha mai vista, e le azioni
   // sulle ore (presenze, timbrature, sostituti) il database le rifiuta.
   const presenceMode = isPast && !isDraft(shift);
@@ -631,10 +690,28 @@ export default function ShiftDetailScreen() {
           eyebrow="Turno"
           title={shift.title}
           right={
-            <Pill
-              label={SHIFT_STATUS_LABEL[shift.status]}
-              variant={shift.status}
-            />
+            <View className="flex-row items-center gap-2">
+              {/* Un turno finito non è più «Aperto», come sulla dashboard. */}
+              {shift.status === "open" && isPast ? (
+                <Pill label="Concluso" variant="closed" />
+              ) : (
+                <Pill
+                  label={SHIFT_STATUS_LABEL[shift.status]}
+                  variant={shift.status}
+                />
+              )}
+              {showTemplate || statusAction ? (
+                <Pressable
+                  onPress={() => setMoreOpen(true)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Altre azioni"
+                  className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                >
+                  <Icon name="more" size={20} color={colors.t1} />
+                </Pressable>
+              ) : null}
+            </View>
           }
         />
       </View>
@@ -717,20 +794,6 @@ export default function ShiftDetailScreen() {
             </Pressable>
           ) : null}
 
-          {/* Anche da un turno passato o annullato: «come venerdì scorso» è
-              proprio il caso. Il fuori turno no: non è stato pianificato. */}
-          {!shift.unplanned && can(shift.venue_id, "can_manage_shifts") ? (
-            <Pressable
-              disabled={roleReqsQuery.isPending}
-              onPress={() => setSavingTemplate(true)}
-              className="items-center rounded-2xl border border-border-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-t1">
-                Salva come modello
-              </Text>
-            </Pressable>
-          ) : null}
-
           {/* In fondo: l'azione che toglie il turno a tutti non è la prima che
               si incontra. */}
           {/* Una bozza scaduta non si è mai vista né è mai partita: si registra
@@ -754,50 +817,6 @@ export default function ShiftDetailScreen() {
             </Pressable>
           ) : null}
 
-          {shift.unplanned ? null : isDraft(shift) && shift.status === "open" ? (
-            // Una bozza non ha avvisato nessuno: non si annulla, si elimina.
-            <Pressable
-              disabled={busy}
-              onPress={() => setDeleteVisible(true)}
-              className="items-center rounded-2xl border border-border-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-error">
-                {DRAFT_DELETE_LABEL}
-              </Text>
-            </Pressable>
-          ) : shift.status === "open" ? (
-            <Pressable
-              disabled={busy}
-              onPress={() => setCancelVisible(true)}
-              className="items-center rounded-2xl border border-border-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-error">
-                Annulla turno
-              </Text>
-            </Pressable>
-          ) : shift.status === "closed" ? (
-            <Pressable
-              disabled={busy}
-              onPress={() => onChangeShiftStatus("open")}
-              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-t1">
-                Riapri turno
-              </Text>
-            </Pressable>
-          ) : (
-            /* Annullato: senza questo, un tocco sbagliato costava il turno — si
-               poteva solo ricrearlo da zero e riassegnare tutti. */
-            <Pressable
-              disabled={busy}
-              onPress={() => setRestoreVisible(true)}
-              className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
-            >
-              <Text className="text-sm font-sans-semibold text-gold">
-                Ripristina turno
-              </Text>
-            </Pressable>
-          )}
         </View>
 
         {roleRequirements.length > 0 ? (
@@ -998,6 +1017,46 @@ export default function ShiftDetailScreen() {
         onConfirm={onRestoreShift}
         onCancel={() => setRestoreVisible(false)}
       />
+
+      <BottomSheet
+        visible={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onClosed={() => {
+          // A pannello chiuso: un secondo Modal aperto mentre il primo esce, su
+          // iOS, a volte non compare (come in Turni).
+          const next = afterMore.current;
+          afterMore.current = null;
+          if (next === "template") setSavingTemplate(true);
+          else if (next === "delete") setDeleteVisible(true);
+          else if (next === "cancel") setCancelVisible(true);
+          else if (next === "restore") setRestoreVisible(true);
+          else if (next === "reopen") onChangeShiftStatus("open");
+        }}
+      >
+        <Text className="text-lg font-sans-bold text-t1">Altre azioni</Text>
+        <View className="gap-2 pt-5">
+          {showTemplate ? (
+            <MoreRow
+              icon="clipboard"
+              title="Salva come modello"
+              subtitle="Orari, pausa e persone che servono, da riusare in un nuovo turno."
+              onPress={() => {
+                afterMore.current = "template";
+                setMoreOpen(false);
+              }}
+            />
+          ) : null}
+          {statusAction ? (
+            <MoreRow
+              {...MORE_STATUS_ROW[statusAction]}
+              onPress={() => {
+                afterMore.current = statusAction;
+                setMoreOpen(false);
+              }}
+            />
+          ) : null}
+        </View>
+      </BottomSheet>
 
       {savingTemplate ? (
         <SaveTemplateModal

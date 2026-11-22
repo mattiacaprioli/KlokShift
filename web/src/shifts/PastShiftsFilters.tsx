@@ -51,7 +51,9 @@ export function PastShiftsFilters({
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 print:hidden">
-      <label className="flex min-w-56 flex-1 flex-col gap-1.5">
+      {/* `min-w-40` e non 56: con otto filtri, 224 px di ricerca mandavano
+          «Persona» a capo su uno schermo normale. Si allarga comunque. */}
+      <label className="flex min-w-40 flex-1 flex-col gap-1.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-t3">
           Cerca
         </span>

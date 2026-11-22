@@ -17,6 +17,8 @@ import { CollaboratorPermissionsCard } from "@/features/team/CollaboratorPermiss
 import { WorkspaceAccessCard } from "@/features/workspace/WorkspaceAccessCard";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
+import { RefreshControl } from "react-native";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeSection } from "@/features/appearance/ThemeSection";
 import { useColors } from "@/lib/theme";
@@ -34,7 +36,10 @@ export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, profile, signOut } = useAuth();
-  const { isOwner, workspaceId, memberships } = useOwnerVenues();
+  const { isOwner, workspaceId, memberships, refetch } = useOwnerVenues();
+  // Lo stato dell'azienda si ricarica trascinando in giù (non c'è più un
+  // «Aggiorna» nella sua card, vedi `WorkspaceAccessCard`).
+  const pull = usePullToRefresh(() => refetch());
   const { canSwitch } = useViewMode();
   const switchToWork = showSwitchToWork({
     canSwitch,
@@ -50,6 +55,13 @@ export default function ManagerSettingsScreen() {
       </View>
 
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            tintColor={colors.gold}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
+          />
+        }
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: 12,

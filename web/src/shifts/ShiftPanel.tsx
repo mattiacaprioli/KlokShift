@@ -197,6 +197,7 @@ export function ShiftPanel({
         {shift && !editing ? (
           <ShiftDetails
             shift={shift}
+            headerActions={headerActions}
             onEdit={() => setEditing(true)}
             onClose={onClose}
           />

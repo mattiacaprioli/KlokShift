@@ -3,8 +3,8 @@ import { Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
+import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { TimeField } from "@/features/shifts/TimeField";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
@@ -25,7 +25,9 @@ import {
   useVoidClockRecord,
 } from "./hooks";
 import {
-  clockBreakText,
+  clockOutDayNote,
+  clockRangeError,
+  withDay,
   clockRecordHours,
   effectiveClockBreak,
   effectiveClockTimes,
@@ -37,6 +39,7 @@ import { useColors } from "@/lib/theme";
 import { withAlpha } from "@/constants/colors";
 
 type EditMode = "correct" | "void" | null;
+
 
 function formatCorrectionDate(value: string): string {
   return new Intl.DateTimeFormat("it-IT", {
@@ -155,14 +158,19 @@ export function ManagerClockReview({
   const hours = clockRecordHours(activeClock, shiftBreak);
   const delta = hours != null ? formatHoursVariance(hours - plannedHours) : null;
   const pause = effectiveClockBreak(activeClock, shiftBreak.break_minutes);
-  const pauseText = clockBreakText(pause, shiftBreak.break_paid);
+  const outDay = activeTimes.outAt
+    ? clockOutDayNote(activeTimes.inAt, activeTimes.outAt)
+    : null;
   const reviewed = assignment.attendance_reviewed_at != null;
   const pending =
     approve.isPending ||
     correct.isPending ||
     correctBreak.isPending ||
     voidClock.isPending;
-  const invalidRange = outAt.getTime() <= inAt.getTime();
+  // Giorno e ora si scelgono entrambi: con la sola ora il giorno restava
+  // quello timbrato, e un'uscita del giorno dopo dava 32 ore.
+  const rangeError = clockRangeError(inAt, outAt);
+  const invalidRange = rangeError != null;
   const breakValue = Number(breakDraft);
   const breakValid = breakDraft !== "" && Number.isInteger(breakValue);
   // Il motivo è facoltativo (20261026000300): la traccia è la correzione
@@ -275,36 +283,35 @@ export function ManagerClockReview({
 
   return (
     <>
-      <View className="mt-3 rounded-2xl border border-border bg-bg-1 p-3.5">
-        <View className="flex-row items-start justify-between gap-3">
-          <View className="flex-1 flex-row items-center gap-2">
-            <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
-              <Icon name="clock" size={17} color={colors.gold} />
-            </View>
-            <View className="flex-1">
-              <Text className="text-xs font-sans-semibold uppercase tracking-wider text-t3">
-                Timbratura
+      {/* Una sezione della card della persona, non una card dentro la card:
+          tre colonne (entrata, uscita, pausa), poi le ore grandi con lo stato,
+          poi le azioni. Prima era un riquadro di cinque righe piccole. */}
+      <View className="mt-4 border-t border-border pt-4">
+        <View className="flex-row gap-3">
+          <ClockCell label="Entrata" value={formatClockTime(activeTimes.inAt)} />
+          <ClockCell
+            label="Uscita"
+            value={activeTimes.outAt ? formatClockTime(activeTimes.outAt) : "Manca"}
+            note={outDay ? `il ${outDay}` : null}
+            warn={!activeTimes.outAt || outDay != null}
+          />
+          <ClockCell
+            label="Pausa"
+            value={pause.minutes > 0 ? formatHours(pause.minutes / 60) : "Nessuna"}
+            note={pause.minutes > 0 ? (shiftBreak.break_paid ? "retribuita" : "non retribuita") : null}
+          />
+        </View>
+
+        <View className="mt-4 flex-row items-center justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-sm text-t3">Ore</Text>
+            <View className="flex-row flex-wrap items-baseline gap-x-2">
+              <Text className="text-2xl font-sans-bold text-t1">
+                {hours != null ? formatHours(hours) : "—"}
               </Text>
-              <Text className="mt-0.5 text-sm font-sans-semibold text-t1">
-                {formatClockTime(activeTimes.inAt)} –{" "}
-                {activeTimes.outAt
-                  ? formatClockTime(activeTimes.outAt)
-                  : "uscita mancante"}
-              </Text>
-              {pauseText ? (
-                <Text className="mt-0.5 text-xs text-t3">
-                  {pauseText.charAt(0).toUpperCase() + pauseText.slice(1)}
-                </Text>
-              ) : null}
-              {hours != null ? (
-                <Text className="mt-0.5 text-xs text-t3">
-                  Totale proposto: {formatHours(hours)}
-                  {delta ? (
-                    <Text className="font-sans-semibold text-warning">
-                      {" "}
-                      · {delta} sul turno
-                    </Text>
-                  ) : null}
+              {delta ? (
+                <Text className="text-sm font-sans-semibold text-warning">
+                  {delta} sul turno
                 </Text>
               ) : null}
             </View>
@@ -314,7 +321,7 @@ export function ManagerClockReview({
               reviewed
                 ? assignment.attendance_auto_approved
                   ? AUTO_APPROVED_LABEL
-                  : "Approvato"
+                  : "Approvate"
                 : "Da verificare"
             }
             variant={reviewed ? "accepted" : "pending"}
@@ -323,24 +330,25 @@ export function ManagerClockReview({
 
         {!activeTimes.outAt ? (
           <View className="mt-3 rounded-xl bg-warning/10 px-3 py-2.5">
-            <Text className="text-xs leading-4 text-warning">
+            <Text className="text-sm leading-5 text-warning">
               {personName} ha timbrato l’entrata, ma non l’uscita. Inseriscila
               prima di approvare le ore.
+            </Text>
+          </View>
+        ) : outDay ? (
+          <View className="mt-3 rounded-xl bg-warning/10 px-3 py-2.5">
+            <Text className="text-sm leading-5 text-warning">
+              L’uscita è di un altro giorno: controlla che sia giusta.
             </Text>
           </View>
         ) : null}
 
         {!locked ? (
-          <View className="mt-3 gap-2">
+          <View className="mt-4 flex-row gap-2.5">
             {!reviewed && activeTimes.outAt ? (
               <GoldButton
-                label={
-                  pending
-                    ? "Attendere…"
-                    : hours != null
-                      ? `Approva ${formatHours(hours)}`
-                      : "Approva"
-                }
+                className="flex-1"
+                label={pending ? "Attendere…" : "Approva"}
                 size="sm"
                 disabled={pending}
                 onPress={onApprove}
@@ -349,63 +357,72 @@ export function ManagerClockReview({
             <Pressable
               disabled={pending}
               onPress={openCorrection}
-              className="items-center rounded-xl border border-border-2 py-2.5"
+              accessibilityRole="button"
+              className="flex-1 items-center justify-center rounded-full border border-border-2 py-2.5"
             >
               <Text className="text-sm font-sans-semibold text-gold">
-                {activeTimes.outAt ? "Correggi orari e pausa" : "Inserisci uscita"}
-              </Text>
-            </Pressable>
-            <Pressable
-              disabled={pending}
-              onPress={() => {
-                setReason("");
-                setMode("void");
-              }}
-              className="items-center py-1.5"
-            >
-              <Text className="text-xs font-sans-semibold text-error">
-                Annulla timbratura
+                {activeTimes.outAt ? "Correggi" : "Inserisci uscita"}
               </Text>
             </Pressable>
           </View>
         ) : null}
 
-        {corrections.length > 0 ? (
-          <View className="mt-2 border-t border-border pt-2">
-            <Pressable
-              onPress={() => setShowHistory((value) => !value)}
-              className="flex-row items-center justify-between py-1"
-            >
-              <Text className="text-xs text-t3">
-                {corrections.length === 1
-                  ? "1 correzione registrata"
-                  : `${corrections.length} correzioni registrate`}
-              </Text>
-              <Text className="text-xs font-sans-semibold text-gold">
-                {showHistory ? "Nascondi" : "Mostra"}
-              </Text>
-            </Pressable>
-            {showHistory ? (
-              <View className="mt-2 gap-2">
-                {corrections.map((item) => (
-                  <View key={item.id} className="rounded-xl bg-bg-2 px-3 py-2">
-                    <Text className="text-xs text-t2">
-                      {item.reason ?? "Nessun motivo indicato"}
-                    </Text>
-                    <Text className="mt-1 text-[11px] text-t4">
-                      {item.corrector?.full_name ?? "La sede"} ·{" "}
-                      {formatCorrectionDate(item.created_at)}
-                    </Text>
-                  </View>
-                ))}
-                <Text className="text-[11px] text-t4">
-                  Originale: {formatClockTime(activeClock.clock_in_at)} –{" "}
-                  {activeClock.clock_out_at
-                    ? formatClockTime(activeClock.clock_out_at)
-                    : "uscita mancante"}
+        {!locked || corrections.length > 0 ? (
+          <View className="mt-3 flex-row items-center justify-between">
+            {!locked ? (
+              <Pressable
+                disabled={pending}
+                onPress={() => {
+                  setReason("");
+                  setMode("void");
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+              >
+                <Text className="text-sm text-error">Annulla timbratura</Text>
+              </Pressable>
+            ) : (
+              <View />
+            )}
+            {corrections.length > 0 ? (
+              <Pressable
+                onPress={() => setShowHistory((value) => !value)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showHistory }}
+              >
+                <Text className="text-sm text-t3">
+                  {corrections.length === 1
+                    ? "1 correzione"
+                    : `${corrections.length} correzioni`}
+                  <Text className="font-sans-semibold text-gold">
+                    {showHistory ? "  Nascondi" : "  Mostra"}
+                  </Text>
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        {showHistory && corrections.length > 0 ? (
+          <View className="mt-3 gap-2">
+            {corrections.map((item) => (
+              <View key={item.id} className="rounded-xl bg-bg-2 px-3 py-2.5">
+                <Text className="text-sm text-t2">
+                  {item.reason ?? "Nessun motivo indicato"}
+                </Text>
+                <Text className="mt-1 text-xs text-t4">
+                  {item.corrector?.full_name ?? "La sede"} ·{" "}
+                  {formatCorrectionDate(item.created_at)}
                 </Text>
               </View>
-            ) : null}
+            ))}
+            <Text className="text-xs text-t4">
+              Originale: {formatClockTime(activeClock.clock_in_at)} –{" "}
+              {activeClock.clock_out_at
+                ? formatClockTime(activeClock.clock_out_at)
+                : "uscita mancante"}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -447,26 +464,13 @@ export function ManagerClockReview({
               showsVerticalScrollIndicator={false}
             >
               {mode === "correct" ? (
-                <View className="flex-row gap-3">
-                  <TimeField
-                    className="flex-1"
-                    label="Entrata"
-                    value={inAt}
-                    onChange={setInAt}
-                  />
-                  <TimeField
-                    className="flex-1"
-                    label="Uscita"
-                    value={outAt}
-                    onChange={setOutAt}
-                  />
-                </View>
-              ) : null}
-
-              {mode === "correct" && invalidRange ? (
-                <Text className="mt-2 text-xs font-sans-semibold text-error">
-                  L’uscita deve essere successiva all’entrata.
-                </Text>
+                <DayTimeFields
+                  inAt={inAt}
+                  outAt={outAt}
+                  onIn={setInAt}
+                  onOut={setOutAt}
+                  error={rangeError}
+                />
               ) : null}
 
               {mode === "correct" ? (
@@ -566,7 +570,8 @@ function EnterTimesModal({
   const [outAt, setOutAt] = useState(() => defaultOut);
   const [reason, setReason] = useState("");
   const now = useNow();
-  const invalidRange = outAt.getTime() <= inAt.getTime();
+  const rangeError = clockRangeError(inAt, outAt);
+  const invalidRange = rangeError != null;
   const future = outAt.getTime() > now.getTime();
   const canSave = !invalidRange && !future && !enter.isPending;
 
@@ -612,19 +617,13 @@ function EnterTimesModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View className="flex-row gap-3">
-              <TimeField className="flex-1" label="Entrata" value={inAt} onChange={setInAt} />
-              <TimeField className="flex-1" label="Uscita" value={outAt} onChange={setOutAt} />
-            </View>
-            {invalidRange ? (
-              <Text className="mt-2 text-xs font-sans-semibold text-error">
-                L’uscita deve essere successiva all’entrata.
-              </Text>
-            ) : future ? (
-              <Text className="mt-2 text-xs font-sans-semibold text-error">
-                L’uscita non può essere nel futuro.
-              </Text>
-            ) : null}
+            <DayTimeFields
+              inAt={inAt}
+              outAt={outAt}
+              onIn={setInAt}
+              onOut={setOutAt}
+              error={rangeError ?? (future ? "L’uscita non può essere nel futuro." : null)}
+            />
             <View className="mt-5">
               <Input
                 label="Motivo (facoltativo)"
@@ -653,5 +652,82 @@ function EnterTimesModal({
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+/** Una colonna della timbratura: etichetta piccola, orario grande. */
+function ClockCell({
+  label,
+  value,
+  note,
+  warn = false,
+}: {
+  label: string;
+  value: string;
+  note?: string | null;
+  warn?: boolean;
+}) {
+  return (
+    <View className="flex-1">
+      <Text className="text-xs text-t3">{label}</Text>
+      <Text
+        className={warn ? "text-lg font-sans-semibold text-warning" : "text-lg font-sans-semibold text-t1"}
+      >
+        {value}
+      </Text>
+      {note ? (
+        <Text className={warn ? "text-xs text-warning" : "text-xs text-t3"}>{note}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Entrata e uscita con **giorno e ora**, nelle due finestre (correzione e
+ * inserimento). Il giorno si sceglie a parte e tiene l'ora (`withDay`).
+ */
+function DayTimeFields({
+  inAt,
+  outAt,
+  onIn,
+  onOut,
+  error,
+}: {
+  inAt: Date;
+  outAt: Date;
+  onIn: (d: Date) => void;
+  onOut: (d: Date) => void;
+  error: string | null;
+}) {
+  return (
+    <View className="gap-4">
+      <View>
+        <Mono className="mb-2">Entrata</Mono>
+        <View className="flex-row gap-3">
+          <TimeField
+            className="flex-[1.4]"
+            mode="date"
+            value={inAt}
+            onChange={(d) => onIn(withDay(inAt, d))}
+          />
+          <TimeField className="flex-1" value={inAt} onChange={onIn} />
+        </View>
+      </View>
+      <View>
+        <Mono className="mb-2">Uscita</Mono>
+        <View className="flex-row gap-3">
+          <TimeField
+            className="flex-[1.4]"
+            mode="date"
+            value={outAt}
+            onChange={(d) => onOut(withDay(outAt, d))}
+          />
+          <TimeField className="flex-1" value={outAt} onChange={onOut} />
+        </View>
+      </View>
+      {error ? (
+        <Text className="text-sm font-sans-semibold text-error">{error}</Text>
+      ) : null}
+    </View>
   );
 }

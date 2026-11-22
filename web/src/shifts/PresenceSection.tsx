@@ -26,8 +26,8 @@ import {
   useVoidClockRecord,
 } from "@/features/clock/hooks";
 import {
-  clockBreakText,
   clockRecordHours,
+  clockOutDayNote,
   effectiveClockBreak,
   effectiveClockTimes,
   formatClockTime,
@@ -263,7 +263,7 @@ function ClockReview({
 
   const hours = clockRecordHours(clock, shiftBreak);
   const delta = hours != null ? formatHoursVariance(hours - plannedHours) : null;
-  const pauseText = clockBreakText(pause, shiftBreak.break_paid);
+  const outDay = times.outAt ? clockOutDayNote(times.inAt, times.outAt) : null;
   const pending =
     approve.isPending || correct.isPending || correctBreak.isPending || voidClock.isPending;
   const error = approve.error ?? correct.error ?? correctBreak.error ?? voidClock.error;
@@ -290,30 +290,56 @@ function ClockReview({
         if (event.key === "Enter") event.preventDefault();
       }}
     >
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-mono text-t2">
-          Timbrato {formatClockTime(times.inAt)}–{times.outAt ? formatClockTime(times.outAt) : "uscita mancante"}
-          {pauseText ? ` · ${pauseText}` : ""}
-          {hours != null ? ` · ${formatHours(hours)}` : ""}
-        </span>
-        {delta ? (
-          <span className="rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">
-            {delta} sul turno
-          </span>
-        ) : null}
-        {assignment.attendance_reviewed_at ? (
-          <span className="rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">
-            {assignment.attendance_auto_approved ? AUTO_APPROVED_LABEL : "Approvato"}
-          </span>
-        ) : (
-          <span className="rounded-full bg-gold/10 px-2 py-0.5 font-semibold text-gold">
-            Da verificare
-          </span>
-        )}
+      {/* Come la card dell'app: entrata, uscita e pausa in colonne, le ore
+          grandi con lo stato, poi le azioni. Prima era una riga mono fitta. */}
+      {/* Quattro colonne allineate in alto e a sinistra: le etichette sulla
+          stessa riga, sotto i numeri. Prima «Ore» stava in fondo a destra e,
+          allineata in basso, scendeva per la nota della pausa. */}
+      <div className="grid grid-cols-4 gap-6 pt-1">
+          <ClockCell label="Entrata" value={formatClockTime(times.inAt)} />
+          <ClockCell
+            label="Uscita"
+            value={times.outAt ? formatClockTime(times.outAt) : "Manca"}
+            note={outDay ? `il ${outDay}` : null}
+            warn={!times.outAt || outDay != null}
+          />
+          <ClockCell
+            label="Pausa"
+            value={pause.minutes > 0 ? formatHours(pause.minutes / 60) : "Nessuna"}
+            note={pause.minutes > 0 ? (shiftBreak.break_paid ? "retribuita" : "non retribuita") : null}
+          />
+        <div className="min-w-0">
+          <span className="block text-[11px] font-semibold uppercase tracking-wider text-t3">Ore</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-base font-semibold text-t1">{hours != null ? formatHours(hours) : "—"}</span>
+            {assignment.attendance_reviewed_at ? (
+              <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
+                {assignment.attendance_auto_approved ? AUTO_APPROVED_LABEL : "Approvate"}
+              </span>
+            ) : (
+              <span className="rounded-full bg-gold/10 px-2.5 py-0.5 text-xs font-semibold text-gold">
+                Da verificare
+              </span>
+            )}
+          </div>
+          {delta ? (
+            <span className="block text-xs font-semibold text-warning">{delta} sul turno</span>
+          ) : null}
+        </div>
       </div>
 
+      {!times.outAt ? (
+        <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+          Ha timbrato l’entrata, ma non l’uscita. Inseriscila prima di approvare le ore.
+        </p>
+      ) : outDay ? (
+        <p className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+          L’uscita è di un altro giorno: controlla che sia giusta.
+        </p>
+      ) : null}
+
       {!locked ? (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {times.outAt && !assignment.attendance_reviewed_at ? (
             <Button
               type="button"
@@ -322,7 +348,7 @@ function ClockReview({
               onClick={() => approve.mutate(assignment.id)}
               className="px-3 py-1.5 text-xs"
             >
-              {hours != null ? `Approva ${formatHours(hours)}` : "Approva"}
+              Approva
             </Button>
           ) : null}
           <Button
@@ -336,17 +362,16 @@ function ClockReview({
             }}
             className="px-3 py-1.5 text-xs"
           >
-            {times.outAt ? "Correggi orari e pausa" : "Inserisci uscita"}
+            {times.outAt ? "Correggi" : "Inserisci uscita"}
           </Button>
-          <Button
+          <button
             type="button"
-            variant="danger"
             disabled={pending}
             onClick={() => setMode("void")}
-            className="px-3 py-1.5 text-xs"
+            className="focus-gold ml-auto rounded px-1 text-xs text-error hover:underline disabled:opacity-50"
           >
             Annulla timbratura
-          </Button>
+          </button>
         </div>
       ) : null}
 
@@ -462,8 +487,10 @@ function ClockReview({
       ) : null}
 
       {clock.corrections.length > 0 ? (
-        <details className="mt-2 text-[11px] text-t4">
-          <summary className="cursor-pointer">Storico correzioni</summary>
+        <details className="mt-3 text-xs text-t3">
+          <summary className="cursor-pointer">
+            {clock.corrections.length === 1 ? "1 correzione" : `${clock.corrections.length} correzioni`}
+          </summary>
           <ul className="mt-1 space-y-1 pl-4">
             {clock.corrections.map((item) => (
               <li key={item.id}>
@@ -699,10 +726,11 @@ export function PresenceSection({
               </button>
 
               {clocked ? (
-                // Le ore vengono dalla timbratura: si correggono lì sotto.
-                <span className="w-20 text-center font-mono text-xs text-t3">
-                  {absent ? "—" : hours}
-                </span>
+                // Le ore vengono dalla timbratura: stanno, grandi, nella sua
+                // sezione qui sotto. Qui solo da assente.
+                absent ? (
+                  <span className="w-20 text-center font-mono text-xs text-t3">—</span>
+                ) : null
               ) : (
               <Input
                 type="number"
@@ -773,5 +801,28 @@ export function PresenceSection({
         </p>
       ) : null}
     </section>
+  );
+}
+
+/** Una colonna della timbratura: etichetta piccola, orario grande. */
+function ClockCell({
+  label,
+  value,
+  note,
+  warn = false,
+}: {
+  label: string;
+  value: string;
+  note?: string | null;
+  warn?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <span className="block text-[11px] font-semibold uppercase tracking-wider text-t3">{label}</span>
+      <span className={cn("block text-base font-semibold", warn ? "text-warning" : "text-t1")}>{value}</span>
+      {note ? (
+        <span className={cn("block text-xs", warn ? "text-warning" : "text-t3")}>{note}</span>
+      ) : null}
+    </div>
   );
 }

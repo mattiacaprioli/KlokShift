@@ -6,6 +6,8 @@ export type MoreMenuItem = {
   onSelect: () => void;
   /** Spiegazione al passaggio del mouse (es. «Duplica la settimana»). */
   title?: string;
+  /** Un'azione che toglie qualcosa (annulla, elimina): in rosso. */
+  danger?: boolean;
 };
 
 /**
@@ -73,7 +75,8 @@ export function MoreMenu({
                 item.onSelect();
               }}
               className={cn(
-                "focus-gold block w-full whitespace-nowrap px-4 py-2 text-left text-sm text-t1 transition hover:bg-bg-3"
+                "focus-gold block w-full whitespace-nowrap px-4 py-2 text-left text-sm transition hover:bg-bg-3",
+                item.danger ? "text-error" : "text-t1"
               )}
             >
               {item.label}

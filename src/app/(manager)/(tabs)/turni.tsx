@@ -12,7 +12,8 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Icon, type IconName } from "@/components/ui/Icon";
+import { MoreRow } from "@/components/ui/MoreRow";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { Segmented } from "@/components/ui/Segmented";
@@ -934,34 +935,5 @@ export default function ManagerShiftsScreen() {
         />
       )}
     </View>
-  );
-}
-
-/** Una riga del pannello «Altre azioni». */
-function MoreRow({
-  icon,
-  title,
-  subtitle,
-  onPress,
-}: {
-  icon: IconName;
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className="flex-row items-center gap-3.5 rounded-2xl border border-border bg-bg-2 px-4 py-3.5"
-    >
-      <Icon name={icon} size={20} color={colors.t3} />
-      <View className="flex-1">
-        <Text className="text-[15px] font-sans-semibold text-t1">{title}</Text>
-        <Text className="mt-0.5 text-[13px] leading-[18px] text-t3">{subtitle}</Text>
-      </View>
-      <Icon name="chevR" size={16} color={colors.t3} />
-    </Pressable>
   );
 }
