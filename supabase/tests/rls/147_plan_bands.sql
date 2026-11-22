@@ -142,11 +142,13 @@ begin
   update public.workspaces set deleted_at = now() where id in (life, temp, trans, trial);
 end $$;
 
--- Prezzi sandbox di Grande solo per questo file: quelli veri arrivano in una
--- migration a parte, quando esistono su Paddle.
-insert into private.billing_prices (environment, price_id, item, billing_interval) values
-  ('sandbox', 'pri_01testlargemonth', 'large', 'month'),
-  ('sandbox', 'pri_01testlargeyear', 'large', 'year');
+-- Prezzi sandbox di Grande: quelli veri, dalla migration 20261122000300.
+do $$
+begin
+  perform tests.eq((select count(*)::int from private.billing_prices
+                     where environment = 'sandbox' and item = 'large' and selectable), 2,
+    'Grande ha il prezzo mensile e quello annuale in sandbox');
+end $$;
 
 -- 2. Vincoli: le fasce nuove entrano dove servono, `custom` solo nei periodi.
 do $$
@@ -237,7 +239,7 @@ end $$;
 -- 5. La prova è Grande; acquisto, aumento e riduzione seguono le fasce.
 do $$
 declare w uuid[]; ws uuid; co uuid; a jsonb; r jsonb; cid uuid; mid uuid;
-  large_m text := 'pri_01testlargemonth';
+  large_m text := 'pri_01m81x936fptc7ptqzj4qxg1zn';
   team_m text := 'pri_01m577vzt1b6qkyyf80pnq4aj9';
 begin
   w := tests.bands_workspace('Fasce: Grande');
@@ -321,7 +323,7 @@ begin
   perform tests.raises(format('select public.billing_prepare_scheduled_change(''sandbox'', %L, %L, ''custom'', ''month'', 0)',
     tests.id('Ow'), ws), 'billing_invalid_selection', 'nemmeno al rinnovo il personalizzato');
   r := public.billing_prepare_change('sandbox', tests.id('Ow'), ws, 'large', 0);
-  perform tests.eq(r ->> 'plan_price_id', 'pri_01testlargemonth', 'Team→Grande è un aumento');
+  perform tests.eq(r ->> 'plan_price_id', 'pri_01m81x936fptc7ptqzj4qxg1zn', 'Team→Grande è un aumento');
   -- Self-serve fino a 5 sedi in tutto: 4 aggiuntive sì, 5 no (serve un accordo).
   r := public.billing_prepare_change('sandbox', tests.id('Ow'), ws, 'team', 4);
   perform tests.eq((r ->> 'extra_venues')::integer, 4, '5 sedi in tutto si comprano da sé');
