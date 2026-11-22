@@ -1,5 +1,5 @@
 import { ListSkeleton } from "../ui/Skeleton";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { userErrorMessage } from "@/lib/errors";
@@ -29,7 +29,6 @@ import {
   Card,
   Field,
   Input,
-  PageColumns,
   PageHeader,
   Pill,
   Placeholder,
@@ -455,7 +454,13 @@ function MemberCard({ member }: { member: TeamMember }) {
 }
 
 /** Il modulo d'invito: email, sedi, permessi. */
-function InviteForm({ workspaceId }: { workspaceId: string }) {
+function InviteForm({
+  workspaceId,
+  onDone,
+}: {
+  workspaceId: string;
+  onDone: () => void;
+}) {
   const toast = useToast();
   const { venues, isMultiVenue } = useOwnerVenues();
   const add = useAddTeamMember();
@@ -500,10 +505,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
                   ? `Invito creato · email non spedita: ${res.emailError}`
                   : "Invito creato · email non spedita, riprova dalla lista"
           );
-          setFullName("");
-          setEmail("");
-          setPicked([]);
-          setPermissions(NO_PERMISSIONS);
+          onDone();
         },
         onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
@@ -511,18 +513,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <Card className="flex flex-col gap-5 p-6">
-      <div>
-        <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
-        <h2 className="font-serif text-xl text-t1">Invita un collaboratore</h2>
-        <p className="mt-1.5 text-xs leading-relaxed text-t3">
-          Se ha già un account, trova l&apos;invito da accettare quando entra.
-          Altrimenti gli mandiamo un link: lo apre, sceglie una password ed è
-          dentro, senza registrarsi. Finché non lo apre non esiste nessun
-          account.
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-5">
       <Field label="Nome e cognome">
         <Input
           value={fullName}
@@ -605,7 +596,62 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
           l&apos;account.
         </p>
       </div>
-    </Card>
+    </div>
+  );
+}
+
+/**
+ * «Invita un collaboratore» in una finestra, aperta dal «+ Invita» della
+ * pagina: la lista prende tutta la larghezza e il form non resta sempre lì.
+ * Si chiude con Esc, col clic fuori, con «Chiudi» e dopo l'invio.
+ */
+function InviteDialog({
+  workspaceId,
+  onClose,
+}: {
+  workspaceId: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
+      <div
+        role="dialog"
+        aria-modal
+        aria-label="Invita un collaboratore"
+        className="relative flex max-h-[min(90vh,48rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border-2 bg-bg-0"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-border-2 px-6 py-4">
+          <div className="min-w-0">
+            <h2 className="font-serif text-xl text-t1">Invita un collaboratore</h2>
+            <p className="mt-1 max-w-md text-xs leading-relaxed text-t3">
+              Se ha già un account, trova l&apos;invito da accettare quando
+              entra. Altrimenti gli mandiamo un link: lo apre, sceglie una
+              password ed è dentro, senza registrarsi.
+            </p>
+          </div>
+          <Button onClick={onClose} aria-label="Chiudi">
+            Chiudi
+          </Button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <InviteForm workspaceId={workspaceId} onDone={onClose} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -616,9 +662,8 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
  * permessi: qui cambia solo che i permessi si spuntano invece di scorrere, e che
  * con una tastiera davanti invitare tre persone è questione di un minuto.
  *
- * Due colonne da `xl`: la lista è quella che si torna a guardare, l'invito resta
- * a portata accanto. Sotto quella larghezza la colonna dell'invito lascerebbe
- * alla lista meno spazio di quanto chiedono le pastiglie dei permessi.
+ * L'invito si apre in una finestra dal «+ Invita» (22/11): prima era una
+ * colonna fissa accanto alla lista, sempre aperta anche quando non serviva.
  *
  * ⚠️ Solo il titolare: un collaboratore viene rimandato alla home. La difesa vera
  * è il DB, che lascia `set_member_access` al solo titolare — qui si evita solo
@@ -627,6 +672,7 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
 export function TeamPage() {
   const { workspaceId, isOwner, isLoading } = useOwnerVenues();
   const team = useTeam(isOwner ? (workspaceId ?? "") : "");
+  const [inviting, setInviting] = useState(false);
 
   if (isLoading) return <ListSkeleton avatar label="Caricamento collaboratori…" />;
   if (!isOwner) return <Navigate to="/" replace />;
@@ -653,9 +699,14 @@ export function TeamPage() {
                 .join(" · ")
             : "Chi altro gestisce le tue sedi, e cosa può fare"
         }
+        actions={
+          <Button variant="gold" onClick={() => setInviting(true)}>
+            + Invita
+          </Button>
+        }
       />
 
-      <PageColumns aside={<InviteForm workspaceId={workspaceId} />} mainClassName="gap-3">
+      <div className="flex flex-col gap-3">
         {team.isPending ? (
           <ListSkeleton avatar label="Caricamento collaboratori…" />
         ) : team.isError ? (
@@ -664,11 +715,23 @@ export function TeamPage() {
           <Placeholder
             title="Nessun collaboratore"
             detail="Invita chi organizza i turni con te: sceglierai cosa può fare e su quali sedi."
+            action={
+              <Button variant="gold" onClick={() => setInviting(true)}>
+                + Invita un collaboratore
+              </Button>
+            }
           />
         ) : (
           members.map((m) => <MemberCard key={m.memberId} member={m} />)
         )}
-      </PageColumns>
+      </div>
+
+      {inviting ? (
+        <InviteDialog
+          workspaceId={workspaceId}
+          onClose={() => setInviting(false)}
+        />
+      ) : null}
     </>
   );
 }

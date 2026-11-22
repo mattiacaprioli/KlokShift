@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 import { ChangeRequestCard } from "../chat/ChangeRequestCard";
 import { MessageTicks } from "../chat/MessageTicks";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { MoreMenu, type MoreMenuItem } from "../ui/MoreMenu";
+import { useMessageMenu, type MessageAction } from "../chat/MessageMenu";
 import {
   DELETED_TEXT,
   canDelete,
@@ -344,12 +344,13 @@ function Thread({
   const [editing, setEditing] = useState<Message | null>(null);
   const [deleting, setDeleting] = useState<Message | null>(null);
 
-  function actionsFor(m: Message): MoreMenuItem[] {
+  function actionsFor(m: Message): MessageAction[] {
     const now = new Date();
-    const items: MoreMenuItem[] = [];
+    const items: MessageAction[] = [];
     if (canEdit(m, userId, now)) {
       items.push({
         label: "Modifica",
+        icon: "edit",
         onSelect: () => {
           setEditing(m);
           setText(m.content);
@@ -358,7 +359,12 @@ function Thread({
       });
     }
     if (canDelete(m, userId, now)) {
-      items.push({ label: "Elimina", onSelect: () => setDeleting(m) });
+      items.push({
+        label: "Elimina",
+        icon: "delete",
+        danger: true,
+        onSelect: () => setDeleting(m),
+      });
     }
     return items;
   }
@@ -587,8 +593,9 @@ function TextBubble({
   status: MessageStatus | null;
   edited?: boolean;
   deleted?: boolean;
-  actions?: MoreMenuItem[];
+  actions?: MessageAction[];
 }) {
+  const menu = useMessageMenu(actions, own);
   return (
     <div
       className={cn(
@@ -597,8 +604,10 @@ function TextBubble({
       )}
     >
       <div
+        onContextMenu={menu.onContextMenu}
         className={cn(
-          "min-w-0 rounded-2xl px-3.5 py-2.5",
+          "min-w-0 rounded-2xl px-3.5 py-2.5 transition",
+          menu.open && "ring-2 ring-gold/40",
           own
             ? "rounded-br-md bg-gold-fill text-gold-ink"
             : "rounded-bl-md bg-bg-2 text-t1"
@@ -625,12 +634,10 @@ function TextBubble({
           {status ? <MessageTicks status={status} /> : null}
         </div>
       </div>
-      {actions.length > 0 ? (
-        // Il «⋯» compare al passaggio del mouse (o col focus da tastiera).
-        <div className="opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-          <MoreMenu items={actions} label="Azioni sul messaggio" />
-        </div>
-      ) : null}
+      {/* La freccetta compare al passaggio del mouse; anche il clic destro
+          sulla bolla apre le azioni. */}
+      {menu.trigger}
+      {menu.menu}
     </div>
   );
 }
