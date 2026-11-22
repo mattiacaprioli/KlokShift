@@ -367,12 +367,15 @@ function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: 
     <div className="mt-6 border-t border-border-2 pt-5">
       <h3 className="font-semibold text-t1">Cambia dal prossimo rinnovo</h3>
       <p className="mt-1 text-sm text-t2">Piano più piccolo, meno sedi o un altro periodo: fino al rinnovo non cambia nulla e non paghi niente adesso.</p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <Field label="Piano">
-          <Select value={plan} onChange={(e) => { setPlan(e.target.value as SalePlan); reset(); }}>
-            {scheduledOptions(billing.plan).map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
-          </Select>
-        </Field>
+      {/* La fascia su una riga intera: «Grande · fino a 100 persone» in un terzo di card si tagliava. */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Field label="Piano">
+            <Select value={plan} onChange={(e) => { setPlan(e.target.value as SalePlan); reset(); }}>
+              {scheduledOptions(billing.plan).map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
+            </Select>
+          </Field>
+        </div>
         <Field label="Periodo">
           <Select value={interval} onChange={(e) => { setBillingInterval(e.target.value as "month" | "year"); reset(); }}>
             <option value="month">Mensile</option><option value="year">Annuale · 2 mesi gratuiti</option>
@@ -383,7 +386,7 @@ function ScheduleChangeForm({ workspaceId, billing, usage, busy, onScheduled }: 
             {Array.from({ length: maxVenues }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
           </Select>
         </Field>
-        {currentVenues > SELF_SERVE_MAX_VENUES ? <p className="text-sm text-t2 sm:col-span-3" role="status">{VENUES_AGREEMENT_MESSAGE}</p> : null}
+        {currentVenues > SELF_SERVE_MAX_VENUES ? <p className="text-sm text-t2 sm:col-span-2" role="status">{VENUES_AGREEMENT_MESSAGE}</p> : null}
       </div>
       {blocker ? <p className="mt-3 text-sm text-t2" role="status">{blocker}</p> : null}
       {quote && previewed ? (
@@ -498,12 +501,15 @@ function PurchasePanel({ workspaceId, access, onPaid }: {
     <Card>
       <h2 className="font-semibold text-t1">Attiva un abbonamento</h2>
       <p className="mt-2 text-sm text-t2">Tutte le fasce hanno le stesse funzioni e una sede inclusa: cambia solo quante persone e sedi puoi avere.</p>
-      <div className="mt-5 grid gap-4 sm:grid-cols-3">
-        <Field label="Piano" error={options.length === 0 ? PEOPLE_AGREEMENT_MESSAGE : options.length < 3 ? `Le fasce più piccole non bastano: oggi conti ${people} persone.` : undefined}>
-          <Select value={plan} onChange={(e) => setPlan(e.target.value as SalePlan)}>
-            {options.map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
-          </Select>
-        </Field>
+      {/* La fascia su una riga intera, come in «Cambia dal prossimo rinnovo». */}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Field label="Piano" error={options.length === 0 ? PEOPLE_AGREEMENT_MESSAGE : options.length < 3 ? `Le fasce più piccole non bastano: oggi conti ${people} persone.` : undefined}>
+            <Select value={plan} onChange={(e) => setPlan(e.target.value as SalePlan)}>
+              {options.map((p) => <option key={p} value={p}>{planOptionLabel(p)}</option>)}
+            </Select>
+          </Field>
+        </div>
         <Field label="Periodo">
           <Select value={interval} onChange={(e) => setBillingInterval(e.target.value as "month" | "year")}>
             <option value="month">Mensile</option><option value="year">Annuale · 2 mesi gratuiti</option>

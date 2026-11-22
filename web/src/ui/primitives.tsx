@@ -25,6 +25,7 @@ import type {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
+import { menuPlacement } from "./menuPlacement";
 import { Link } from "react-router-dom";
 
 type ButtonVariant = "gold" | "ghost" | "danger";
@@ -238,7 +239,8 @@ type SelectOption = {
 };
 
 /**
- * Select da scrivania con il menu ancorato sotto al controllo.
+ * Select da scrivania con il menu ancorato sotto al controllo, o sopra
+ * quando sotto non c'è posto (`menuPlacement`).
  *
  * Il popup di un `<select>` nativo non è posizionabile via CSS: macOS lo
  * centra sull'opzione corrente e finisce per coprire il campo. Il select vero
@@ -312,14 +314,18 @@ export const Select = forwardRef<
     if (!rect) return;
     const gutter = 8;
     const width = Math.max(rect.width, 160);
+    // Altezza vera del menu: l'effetto gira dopo il montaggio, quindi c'è già.
+    // Senza menu si prende il massimo (256), che non sbaglia mai per difetto.
+    const contentHeight = menuRef.current?.scrollHeight ?? 256;
+    const { top, maxHeight } = menuPlacement(rect, window.innerHeight, contentHeight, gutter);
     setMenuPosition({
       left: Math.max(
         gutter,
         Math.min(rect.left, window.innerWidth - width - gutter)
       ),
-      top: rect.bottom + gutter,
+      top,
       width,
-      maxHeight: Math.max(96, window.innerHeight - rect.bottom - gutter * 2),
+      maxHeight,
     });
   }
 
