@@ -16,10 +16,19 @@ import { useColors } from "@/lib/theme";
 export function PersonAbsencesSection({
   personId,
   onRecord,
+  self,
 }: {
   personId: string;
-  /** Dove si registra un'assenza (malattia al telefono, ferie concordate). */
-  onRecord: () => void;
+  /**
+   * Dove si registra un'assenza (malattia al telefono, ferie concordate).
+   * Assente: non la si può registrare da qui.
+   */
+  onRecord?: () => void;
+  /**
+   * La propria scheda. Il titolare le sue assenze le registra da sé; il
+   * collaboratore le chiede, e qui non ha il pulsante (`is_restricted_self`).
+   */
+  self?: "owner" | "collaborator";
 }) {
   const colors = useColors();
   const query = usePersonAbsences(personId);
@@ -29,7 +38,7 @@ export function PersonAbsencesSection({
     <View>
       <SectionHeader
         title="Assenze"
-        actionLabel="Registra assenza"
+        actionLabel={onRecord ? "Registra assenza" : undefined}
         onAction={onRecord}
       />
       {query.isLoading ? (
@@ -38,8 +47,11 @@ export function PersonAbsencesSection({
         <QueryError onRetry={() => query.refetch()} />
       ) : absences.length === 0 ? (
         <Text className="text-sm leading-5 text-t3">
-          Nessuna assenza. Ferie e permessi li chiede il dipendente dall’app;
-          una malattia comunicata a voce la registri da qui.
+          {self === "owner"
+            ? "Nessuna assenza. Le tue ferie, i permessi e la malattia li registri da qui: risultano subito approvati."
+            : self === "collaborator"
+              ? "Nessuna assenza. Le tue ferie e i permessi li chiedi al titolare da «Passa ai tuoi turni», nel Menu."
+              : "Nessuna assenza. Ferie e permessi li chiede il dipendente dall’app; una malattia comunicata a voce la registri da qui."}
         </Text>
       ) : (
         <View className="gap-3">

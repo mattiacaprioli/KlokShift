@@ -351,7 +351,10 @@ function PersonPanel({
           </TabPanel>
           {canAny("can_manage_staff") ? (
             <TabPanel active={tab === "assenze"}>
-              <AbsencesPanel memberId={person.id} />
+              <AbsencesPanel
+                memberId={person.id}
+                self={isMe ? (isOwner ? "owner" : "collaborator") : undefined}
+              />
             </TabPanel>
           ) : null}
           {canAny("can_manage_documents") ? (

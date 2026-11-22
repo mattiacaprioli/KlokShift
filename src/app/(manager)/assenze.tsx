@@ -2,6 +2,7 @@ import { ListSkeleton } from "@/components/ui/Skeleton";
 import { useMemo, useState } from "react";
 import { RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ChipRow, FilterChip } from "@/components/ui/FilterChip";
@@ -44,7 +45,9 @@ import { useColors } from "@/lib/theme";
 export default function ManagerAbsencesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { canAny, ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const router = useRouter();
+  const { canAny, ownerId, venues, isMultiVenue, canUseOperations } =
+    useOwnerVenues();
   // Con il solo permesso Turni la RLS non restituisce nessuna riga: meglio dirlo
   // che mostrare «Nessuna assenza».
   const canStaff = canAny("can_manage_staff");
@@ -84,7 +87,25 @@ export default function ManagerAbsencesScreen() {
   return (
     <View className="flex-1 bg-bg-0">
       <View className="shrink-0 px-5 pb-6" style={{ paddingTop: insets.top + 8 }}>
-        <ScreenHeader eyebrow="Ogni giorno" title="Assenze" />
+        <ScreenHeader
+          eyebrow="Ogni giorno"
+          title="Assenze"
+          right={
+            // La malattia al telefono, le ferie concordate a voce, le proprie
+            // del titolare: prima si registravano solo dalla scheda della
+            // persona, e il titolare non trovava dove mettere le sue.
+            canStaff && canUseOperations ? (
+              <Pressable
+                onPress={() => router.push("/(manager)/staff/assenza/new")}
+                accessibilityRole="button"
+                accessibilityLabel="Registra assenza"
+                className="rounded-full border border-border-gold bg-bg-2 px-3 py-1.5"
+              >
+                <Text className="text-sm font-sans-semibold text-gold">+ Registra</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
       </View>
 
       <ScrollView
@@ -114,7 +135,7 @@ export default function ManagerAbsencesScreen() {
         ) : (rows ?? []).length === 0 ? (
           <EmptyState
             title="Nessuna assenza"
-            subtitle="Le richieste di ferie e permessi le mandano i dipendenti dall’app e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona."
+            subtitle="Le richieste di ferie e permessi le mandano i dipendenti dall’app e compaiono qui. Una malattia comunicata a voce la registri con «+ Registra»."
           />
         ) : (
           <>

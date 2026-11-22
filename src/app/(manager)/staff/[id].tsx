@@ -1504,11 +1504,15 @@ function StaffPersonView({ person }: { person: StaffPersonDetail }) {
             <TabPanel active={tab === "assenze"}>
               <PersonAbsencesSection
                 personId={person.id}
-                onRecord={() =>
-                  router.push({
-                    pathname: "/(manager)/staff/assenza/new",
-                    params: { memberId: person.id },
-                  })
+                self={isMe ? (isOwner ? "owner" : "collaborator") : undefined}
+                onRecord={
+                  isMe && !isOwner
+                    ? undefined
+                    : () =>
+                        router.push({
+                          pathname: "/(manager)/staff/assenza/new",
+                          params: { memberId: person.id },
+                        })
                 }
               />
             </TabPanel>

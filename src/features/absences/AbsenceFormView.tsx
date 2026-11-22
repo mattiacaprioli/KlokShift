@@ -11,6 +11,7 @@ import { PickerField } from "@/components/form/ControlledPicker";
 import { cn } from "@/lib/cn";
 import { toDateString, toTimeString } from "@/lib/format";
 import type { AbsenceEmployer, AbsenceInput, AbsenceKind } from "./api";
+import type { RecordForOption } from "./recordFor";
 import { ABSENCE_KINDS, SICK_PRIVACY_HINT } from "./labels";
 
 function atTime(hours: number): Date {
@@ -27,6 +28,16 @@ type Props = {
   employers?: AbsenceEmployer[];
   /** Lato titolare: si registra un'assenza già decisa, non si «chiede». */
   recording?: boolean;
+  /**
+   * Dalla pagina Assenze la persona non è ancora scelta: «Per chi», con le
+   * opzioni di `recordAbsenceOptions`. Dalla scheda della persona non serve.
+   */
+  people?: {
+    options: RecordForOption[];
+    value: string | null;
+    onChange: (id: string) => void;
+    loading?: boolean;
+  };
   submitLabel: string;
   pending: boolean;
   onSubmit: (values: AbsenceInput & { workspaceId: string | null }) => void;
@@ -43,6 +54,7 @@ type Props = {
 export function AbsenceFormView({
   employers = [],
   recording,
+  people,
   submitLabel,
   pending,
   onSubmit,
@@ -68,7 +80,9 @@ export function AbsenceFormView({
   const timesValid =
     !isHourly || toTimeString(endTime) > toTimeString(startTime);
   const needsEmployer = employers.length > 1 && !workspaceId;
-  const canSubmit = !pending && rangeValid && timesValid && !needsEmployer;
+  const needsPerson = !!people && !people.value;
+  const canSubmit =
+    !pending && rangeValid && timesValid && !needsEmployer && !needsPerson;
 
   function onStartChange(d: Date) {
     setStart(d);
@@ -106,6 +120,30 @@ export function AbsenceFormView({
               Ogni azienda decide per sé: se lavori per più titolari, mandane
               una a ciascuno.
             </Text>
+          </View>
+        ) : null}
+
+        {people ? (
+          <View className="gap-2">
+            <Mono>Per chi</Mono>
+            {people.loading ? (
+              <Text className="text-sm text-t3">Caricamento del team…</Text>
+            ) : people.options.length > 0 ? (
+              <View className="flex-row flex-wrap gap-2">
+                {people.options.map((o) => (
+                  <SelectChip
+                    key={o.id}
+                    label={o.isMe ? `${o.name} (tu)` : o.name}
+                    active={people.value === o.id}
+                    onPress={() => people.onChange(o.id)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Text className="text-sm leading-5 text-t3">
+                Nel team non c’è nessuno per cui registrarla.
+              </Text>
+            )}
           </View>
         ) : null}
 

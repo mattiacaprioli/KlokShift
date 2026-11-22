@@ -20,9 +20,10 @@ import {
 import { userErrorMessage } from "@/lib/errors";
 import { todayString } from "@/lib/format";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
+import type { RecordForOption } from "@/features/absences/recordFor";
 import { cn } from "@/lib/cn";
 import { useToast } from "../ui/Toast";
-import { Button, Field, Input, Pill } from "../ui/primitives";
+import { Button, Field, Input, Pill, Select } from "../ui/primitives";
 import { AbsenceConflictsBlock } from "./AbsenceConflicts";
 import { ResolveAbsenceForm, absencePillTone } from "./ResolveAbsenceForm";
 import { AbsenceHourCredits } from "./AbsenceHourCredits";
@@ -33,7 +34,17 @@ import { AbsenceHourCredits } from "./AbsenceHourCredits";
  *
  * ⚠️ Gemello app in `src/features/absences/PersonAbsencesSection.tsx`.
  */
-export function AbsencesPanel({ memberId }: { memberId: string }) {
+export function AbsencesPanel({
+  memberId,
+  self,
+}: {
+  memberId: string;
+  /**
+   * La propria scheda. Il titolare le sue assenze le registra da sé; il
+   * collaboratore le chiede, e qui non ha il modulo (`is_restricted_self`).
+   */
+  self?: "owner" | "collaborator";
+}) {
   const {
     data,
     isPending,
@@ -45,7 +56,7 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <RecordAbsenceForm memberId={memberId} />
+      {self === "collaborator" ? null : <RecordAbsenceForm memberId={memberId} />}
       <section className="flex flex-col gap-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-t3">
           Assenze
@@ -54,7 +65,11 @@ export function AbsencesPanel({ memberId }: { memberId: string }) {
           <ListSkeleton rows={3} label="Caricamento assenze…" />
         ) : absences.length === 0 ? (
           <p className="text-sm text-t4">
-            Nessuna assenza. Ferie e permessi li chiede il dipendente dall’app.
+            {self === "owner"
+              ? "Nessuna assenza. Le tue ferie, i permessi e la malattia li registri qui sopra: risultano subito approvati."
+              : self === "collaborator"
+                ? "Nessuna assenza. Le tue ferie e i permessi li chiedi al titolare dall’app."
+                : "Nessuna assenza. Ferie e permessi li chiede il dipendente dall’app."}
           </p>
         ) : (
           <>
@@ -284,8 +299,26 @@ function ProtocolField({
   );
 }
 
-function RecordAbsenceForm({ memberId }: { memberId: string }) {
+/**
+ * Con `memberId` registra per quella persona (la sua scheda); con `people` la
+ * persona si sceglie qui («Per chi», dalla pagina Assenze).
+ */
+export function RecordAbsenceForm({
+  memberId,
+  people,
+  onDone,
+  bare,
+}: {
+  memberId?: string;
+  people?: { options: RecordForOption[]; loading?: boolean };
+  /** Dopo il salvataggio (la finestra della pagina Assenze si chiude). */
+  onDone?: () => void;
+  /** Senza titolo e testo d'apertura: li dice già la finestra. */
+  bare?: boolean;
+}) {
   const toast = useToast();
+  const [picked, setPicked] = useState("");
+  const target = memberId ?? picked;
   const record = useRecordAbsence();
   const today = todayString();
   const [kind, setKind] = useState<AbsenceKind>("ferie");
@@ -300,6 +333,7 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
   const sick = kind === "malattia";
   const isHourly = kind === "permesso" && hourly;
   const invalid =
+    !target ||
     !start ||
     (!isHourly && (!end || end < start)) ||
     (isHourly && (!startTime || !endTime || endTime <= startTime));
@@ -309,7 +343,7 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
     if (invalid) return;
     record.mutate(
       {
-        memberId,
+        memberId: target,
         kind,
         startDate: start,
         endDate: isHourly ? start : end,
@@ -323,6 +357,7 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
           toast.show("Assenza registrata");
           setNote("");
           setProtocol("");
+          onDone?.();
         },
         onError: (err) =>
           toast.show(userErrorMessage(err, "Salvataggio non riuscito"), "error"),
@@ -332,13 +367,41 @@ function RecordAbsenceForm({ memberId }: { memberId: string }) {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-t3">
-        Registra assenza
-      </h3>
-      <p className="text-xs text-t4">
-        Per la malattia comunicata a voce o le ferie già concordate: nasce
-        approvata, senza notifiche.
-      </p>
+      {bare ? null : (
+        <>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-t3">
+            Registra assenza
+          </h3>
+          <p className="text-xs text-t4">
+            Per la malattia comunicata a voce o le ferie già concordate: nasce
+            approvata, senza notifiche.
+          </p>
+        </>
+      )}
+      {people ? (
+        <Field label="Per chi">
+          {people.loading ? (
+            <p className="text-sm text-t3">Caricamento del team…</p>
+          ) : people.options.length === 0 ? (
+            <p className="text-sm text-t3">
+              Nel team non c’è nessuno per cui registrarla.
+            </p>
+          ) : (
+            <Select
+              aria-label="Per chi"
+              value={picked}
+              onChange={(e) => setPicked(e.target.value)}
+            >
+              <option value="">Scegli una persona</option>
+              {people.options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.isMe ? `${o.name} (tu)` : o.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+      ) : null}
       <div className="flex gap-1">
         {ABSENCE_KINDS.map((k) => (
           <Button

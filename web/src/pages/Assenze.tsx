@@ -18,6 +18,7 @@ import { useOwnerPeople } from "@/features/staff/hooks";
 import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { cn } from "@/lib/cn";
 import { AbsenceRow, AbsenceRows } from "../absences/AbsencesPanel";
+import { RecordAbsenceDialog } from "../absences/RecordAbsenceDialog";
 import { NoVenues } from "../venues/NoVenues";
 import {
   Button,
@@ -38,8 +39,10 @@ import { missingPermission } from "@/features/workspace/permissions";
  * ⚠️ Gemello app in `src/app/(manager)/assenze.tsx`.
  */
 export function AssenzePage() {
-  const { canAny, ownerId, venues, isMultiVenue } = useOwnerVenues();
+  const { canAny, ownerId, venues, isMultiVenue, canUseOperations } =
+    useOwnerVenues();
   const canStaff = canAny("can_manage_staff");
+  const [recording, setRecording] = useState(false);
   const query = useCompanyAbsences(canStaff);
   const [filters, setFilters] = useState<CompanyAbsenceFilters>(NO_ABSENCE_FILTERS);
   // Il team serve solo per il filtro per sede.
@@ -89,7 +92,22 @@ export function AssenzePage() {
 
   return (
     <>
-      <PageHeader title="Assenze" subtitle={subtitle} />
+      <PageHeader
+        title="Assenze"
+        subtitle={subtitle}
+        actions={
+          // Prima si registrava solo dalla scheda della persona, e il titolare
+          // non trovava dove mettere le proprie ferie.
+          canUseOperations ? (
+            <Button variant="gold" onClick={() => setRecording(true)}>
+              Registra assenza
+            </Button>
+          ) : undefined
+        }
+      />
+      {recording ? (
+        <RecordAbsenceDialog onClose={() => setRecording(false)} />
+      ) : null}
       {query.isPending ? (
         <ListSkeleton avatar label="Caricamento assenze…" className="max-w-7xl" />
       ) : query.isError ? (
@@ -97,7 +115,7 @@ export function AssenzePage() {
       ) : (rows ?? []).length === 0 ? (
         <Placeholder
           title="Nessuna assenza"
-          detail="Le richieste di ferie e permessi le mandano i dipendenti dall’app e compaiono qui. Una malattia comunicata a voce la registri dalla scheda della persona, in Team."
+          detail="Le richieste di ferie e permessi le mandano i dipendenti dall’app e compaiono qui. Una malattia comunicata a voce la registri con «Registra assenza»."
         />
       ) : (
         <div className="flex max-w-7xl flex-col gap-6">
