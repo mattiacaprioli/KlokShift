@@ -239,7 +239,13 @@ export function AbsenceFormView({
             onChangeText={setNote}
             placeholder={kind === "ferie" ? "Es. Matrimonio" : "Es. Visita"}
             maxLength={300}
+            // Come le altre note dell'app: un'area di tre righe col testo in
+            // alto. Alta una riga sola, su iOS il multilinea non centra il
+            // testo e il segnaposto sembrava spostato.
             multiline
+            numberOfLines={3}
+            className="h-24"
+            textAlignVertical="top"
           />
         )}
 
