@@ -58,6 +58,7 @@ export default function ManagerLayout() {
       />
       <Stack.Screen name="staff/assenza/new" options={{ headerShown: false }} />
       <Stack.Screen name="ore" options={{ headerShown: false }} />
+      <Stack.Screen name="ore-persona/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="codici-consulente" options={{ headerShown: false }} />
       <Stack.Screen name="maggiorazioni" options={{ headerShown: false }} />
       <Stack.Screen name="assenze" options={{ headerShown: false }} />

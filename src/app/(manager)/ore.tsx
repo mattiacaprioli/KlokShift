@@ -18,7 +18,6 @@ import { ChipRow, FilterChip } from "@/components/ui/FilterChip";
 import { PickerField } from "@/components/form/ControlledPicker";
 import {
   addMonthsToKey,
-  capitalize,
   formatHours,
   monthKey,
   toDateString,
@@ -51,6 +50,11 @@ import {
 } from "@/features/assignments/hoursToFix";
 import { groupHoursByPerson } from "@/features/assignments/hoursSummary";
 import {
+  NEEDS_CHECK_LABEL,
+  needsCheck,
+  periodToParams,
+} from "@/features/assignments/hoursPerson";
+import {
   type ExportCodes,
 } from "@/features/assignments/exportCodes";
 import {
@@ -71,11 +75,9 @@ import type { HourToFix } from "@/features/assignments/api";
 import type { AbsenceSummaryRow } from "@/features/absences/summary";
 import {
   missingContractWarning,
-  surchargeSummary,
   type SurchargeRow,
 } from "@/features/assignments/surcharges";
 import {
-  breakSummaryText,
   exportAvailability,
   monthlyReportRows,
 } from "@/features/assignments/monthlyReport";
@@ -94,7 +96,6 @@ import {
 } from "@/features/assignments/reportPeriod";
 import { useOwnerAbsenceSummary } from "@/features/absences/hooks";
 import {
-  ABSENCE_SUMMARY_NOTE,
   formatSummaryDays,
   missingCertificatesWarning,
 } from "@/features/absences/summary";
@@ -205,6 +206,7 @@ export default function VenueHoursScreen() {
     );
   }
   const [showAllToFix, setShowAllToFix] = useState(false);
+  const [showHowCounted, setShowHowCounted] = useState(false);
   const toFixShown = showAllToFix ? toFix : toFix.slice(0, TO_FIX_PREVIEW);
   const allRows = query.data ?? [];
   const allAbsences = absenceQuery.data ?? [];
@@ -229,7 +231,6 @@ export default function VenueHoursScreen() {
     canAny("can_view_hours") ? workspaceId : undefined,
     period
   ).data;
-  const surchargeRows = filterByPeople(surchargesData?.rows ?? [], selection);
   const contractWarning = surchargesData
     ? missingContractWarning(surchargesData.noContract, report.map((r) => r.person_id))
     : null;
@@ -593,60 +594,77 @@ export default function VenueHoursScreen() {
               <>
                 <Card className="rounded-3xl border-border-2 px-5 py-4">
                   <Mono>{selection ? "Riepilogo delle persone scelte" : "Riepilogo del periodo"}</Mono>
-                  <View className="mt-3 flex-row flex-wrap gap-4">
-                    <View><Text className="text-xs text-t3">Ore lavorate effettive</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalHours)}</Text></View>
-                    <View><Text className="text-xs text-t3">Ore di assenza giustificata</Text><Text className="text-xl font-sans-bold text-t1">{formatHours(totalJustified)}</Text></View>
-                    <View><Text className="text-xs text-t3">Totale ore coperte</Text><Text className="text-xl font-sans-bold text-gold">{formatHours(totalCoveredHours)}</Text></View>
-                  </View>
-                  <Text className="mt-2 text-xs text-t3">Senza timbratura, le ore del turno concluso entrano automaticamente e puoi correggerle dal turno. Con la timbratura serve che sia approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
-                  {totalConflicts > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
-                  {surchargeSummary(surchargeRows).map((r) => (
-                    <Text key={r.label} className="mt-1 text-xs text-t2">{r.label}: {formatHours(r.hours)}</Text>
-                  ))}
-                  {totalUntracked > 0 ? <Text className="mt-2 text-xs text-warning">{formatHours(totalUntracked)} registrate senza timbratura approvata, escluse dal lavorato effettivo: le trovi in «{HOURS_TO_FIX_TITLE}».</Text> : null}
-                  <Text className="text-xs text-t3">
+                  {/* Un numero grande e poco altro: il dettaglio di ognuno sta
+                      nella sua pagina (spec 2026-11-22-ore-mobile-leggibile). */}
+                  <Text className="mt-3 text-sm text-t3">Ore lavorate</Text>
+                  <Text className="text-4xl font-sans-bold text-t1">{formatHours(totalHours)}</Text>
+                  <Text className="mt-1 text-sm text-t3">
                     {totalShifts} {totalShifts === 1 ? "turno" : "turni"} · {report.length}{" "}
                     {report.length === 1 ? "persona" : "persone"}
                   </Text>
+                  {totalJustified > 0 ? (
+                    <View className="mt-3 gap-1">
+                      <Text className="text-base text-t2">Assenze riconosciute {formatHours(totalJustified)}</Text>
+                      <Text className="text-base font-sans-semibold text-gold">Totale ore coperte {formatHours(totalCoveredHours)}</Text>
+                    </View>
+                  ) : null}
+                  {totalConflicts > 0 ? <Text className="mt-2 text-sm text-warning">{formatHours(totalConflicts)} di assenza da verificare, escluse dal totale.</Text> : null}
+                  {totalUntracked > 0 ? <Text className="mt-2 text-sm text-warning">{formatHours(totalUntracked)} senza timbratura approvata, escluse: le trovi in «{HOURS_TO_FIX_TITLE}».</Text> : null}
+                  <Pressable
+                    onPress={() => setShowHowCounted((v) => !v)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: showHowCounted }}
+                    className="mt-3 self-start"
+                  >
+                    <Text className="text-sm font-sans-semibold text-gold">
+                      {showHowCounted ? "Chiudi" : "Come si contano?"}
+                    </Text>
+                  </Pressable>
+                  {showHowCounted ? (
+                    <Text className="mt-2 text-sm leading-5 text-t3">Senza timbratura, le ore del turno concluso entrano da sole e puoi correggerle dal turno. Con la timbratura contano quando è approvata. Il totale somma lavoro e assenze riconosciute; non determina la retribuzione.</Text>
+                  ) : null}
                 </Card>
 
-                <View className="gap-4">
+                <View className="gap-2">
                   {report.map((p) => (
-                    <View key={p.person_id} className="gap-2">
-                      <View className="flex-row items-center justify-between">
+                    <Pressable
+                      key={p.person_id}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(manager)/ore-persona/[id]",
+                          params: { id: p.person_id, ...periodToParams(period) },
+                        })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Ore di ${p.person_name}`}
+                      className="gap-2 rounded-2xl py-2.5"
+                    >
+                      <View className="flex-row items-center gap-3">
                         <View className="flex-1">
-                          <Text className="text-sm font-sans-semibold text-t1">
+                          <Text className="text-base font-sans-semibold text-t1" numberOfLines={1}>
                             {p.person_name}
                           </Text>
-                          <Text className="text-xs text-t3">
+                          <Text className="text-sm text-t3" numberOfLines={1}>
                             {/* Senza ruolo si dice solo il conto: «— · 10 turni»
                                 aveva un trattino appeso davanti. */}
                             {[p.roles, `${p.shifts_count} ${p.shifts_count === 1 ? "turno" : "turni"}`]
                               .filter(Boolean)
                               .join(" · ")}
                           </Text>
+                          {needsCheck(p) ? (
+                            <Text className="text-sm font-sans-semibold text-warning">
+                              {NEEDS_CHECK_LABEL}
+                            </Text>
+                          ) : null}
                         </View>
-                        <Text className="text-sm font-sans-bold text-gold">
+                        <Text className="text-lg font-sans-bold text-gold">
                           {formatHours(p.worked_hours)}
                         </Text>
+                        <Icon name="chevR" size={18} color={colors.t3} />
                       </View>
-                      {breakSummaryText(p, formatHours) ? (
-                        <Text className="text-xs text-t3">
-                          {capitalize(breakSummaryText(p, formatHours) ?? "")}
-                        </Text>
-                      ) : null}
-                      {surchargeSummary(surchargeRows, p.person_id).length > 0 ? (
-                        <Text className="text-xs text-t3">
-                          {surchargeSummary(surchargeRows, p.person_id)
-                            .map((r) => `${r.label}: ${formatHours(r.hours)}`)
-                            .join(" · ")}
-                        </Text>
-                      ) : null}
-                      <Text className="text-xs text-t3">Assenza giustificata {formatHours(p.justified_hours)} · Totale ore coperte {formatHours(p.covered_hours)}</Text>
-                      {p.conflict_hours > 0 ? <Text className="text-xs text-warning">Da verificare: {formatHours(p.conflict_hours)} di assenza</Text> : null}
-                      {p.untracked_hours > 0 ? <Text className="text-xs text-warning">Senza timbratura: {formatHours(p.untracked_hours)} escluse</Text> : null}
                       <ProgressBar progress={maxHours > 0 ? p.worked_hours / maxHours : 0} />
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </>
@@ -656,8 +674,8 @@ export default function VenueHoursScreen() {
               <View className="gap-3">
                 <View>
                   <Mono gold>Assenze del periodo</Mono>
-                  <Text className="mt-1 text-xs leading-4 text-t3">
-                    {ABSENCE_SUMMARY_NOTE}
+                  <Text className="mt-1 text-sm text-t3">
+                    In giorni di calendario. Il dettaglio è nella pagina di ogni persona.
                   </Text>
                 </View>
                 {absences.map((a) => (
