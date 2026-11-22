@@ -1,5 +1,5 @@
 -- Regole delle maggiorazioni (2026-11-04): versioni mensili dell'azienda,
--- scritte da chiunque abbia «Ore»; patrono della sede; festivi nazionali.
+-- scritte da chiunque abbia «Ore»; festivi nazionali (il patrono non c'è più, 20261122000000).
 begin;
 
 do $$
@@ -65,21 +65,11 @@ begin
   perform tests.raises(format('select public.get_surcharge_rules(%L)', w1), 'not_allowed', 'senza Ore niente lettura');
   perform tests.raises(format('select public.save_surcharge_rules(%L, %L, %L::jsonb)', w1, '2026-11-01', '{}'),
     'not_allowed', 'senza Ore niente scrittura');
-  perform tests.raises(format('select public.save_venue_patron(%L, 4, 10)', tests.id('V1')),
-    'not_allowed', 'senza Ore niente patrono');
 
-  -- Patrono della sede.
+  -- Il patrono non esiste più: le regole non lo restituiscono.
   perform tests.login('Ow');
-  perform public.save_venue_patron(tests.id('V1'), 4, 10);
   r := public.get_surcharge_rules(w1);
-  perform tests.ok(exists (select 1 from jsonb_array_elements(r -> 'patrons') p
-                            where p ->> 'venue_id' = tests.id('V1')::text
-                              and (p ->> 'day')::int = 4 and (p ->> 'month')::int = 10), 'patrono letto');
-  perform tests.raises(format('select public.save_venue_patron(%L, 31, 2)', tests.id('V1')),
-    'invalid_patron', 'data impossibile');
-  perform tests.raises(format('select public.save_venue_patron(%L, 4, 10)', gen_random_uuid()),
-    'not_allowed', 'sede che non esiste');
-  perform public.save_venue_patron(tests.id('V2'), 10, 11);
+  perform tests.ok(not (r ? 'patrons'), 'niente patroni nelle regole');
 
   -- Festivi.
   perform tests.logout();
@@ -91,8 +81,7 @@ begin
   perform tests.ok(private.italian_holiday('2026-06-02', tests.id('V2')), 'Festa della Repubblica');
   perform tests.ok(not private.italian_holiday('2025-10-04', tests.id('V2')), 'il 4 ottobre prima del 2026 no');
   perform tests.ok(not private.italian_holiday('2026-04-07', tests.id('V2')), 'un giorno qualunque no');
-  perform tests.ok(private.italian_holiday('2026-11-10', tests.id('V2')), 'il patrono di V2');
-  perform tests.ok(not private.italian_holiday('2026-11-10', tests.id('V1')), 'non è il patrono di V1');
+  perform tests.ok(not private.italian_holiday('2026-11-10', tests.id('V2')), 'un patrono locale non è festivo');
 
   -- I codici delle maggiorazioni.
   perform tests.login('Ow');

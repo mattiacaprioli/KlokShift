@@ -196,7 +196,7 @@ export const qk = {
       ["staff", "ownerHoursDaily", workspaceId, period] as const,
     /** Codici per il consulente e matricole (`get_export_codes`), per azienda. */
     exportCodes: (workspaceId: string) => ["staff", "exportCodes", workspaceId] as const,
-    /** Regole delle maggiorazioni e patroni (`get_surcharge_rules`), per azienda. */
+    /** Regole delle maggiorazioni (`get_surcharge_rules`), per azienda. */
     surchargeRules: (workspaceId: string) => ["staff", "surchargeRules", workspaceId] as const,
     /**
      * Le maggiorazioni del periodo (`get_workspace_surcharges`). Sotto `staff`

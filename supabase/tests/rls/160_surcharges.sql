@@ -44,7 +44,7 @@ begin
     -- 3 Ferragosto (sabato), parità notturno/festivi
     jsonb_build_object('venue_id', tests.id('V1'), 'title', 'Ferragosto', 'date', '2026-08-15',
       'start_time', '20:00', 'end_time', '00:00', 'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm))),
-    -- 4-5 patrono di V1 il 15/9: il titolare in V1, Enzo in V2
+    -- 4-5 il 15/9, giorno feriale (era il patrono di V1, tolto il 22/11): il titolare in V1, Enzo in V2
     jsonb_build_object('venue_id', tests.id('V1'), 'title', 'Patrono V1', 'date', '2026-09-15',
       'start_time', '10:00', 'end_time', '14:00', 'staff', jsonb_build_array(jsonb_build_object('venue_member_id', vm_ow))),
     jsonb_build_object('venue_id', tests.id('V2'), 'title', 'Patrono V2', 'date', '2026-09-15',
@@ -111,7 +111,6 @@ begin
   perform public.save_surcharge_rules(w1, '2026-08-01', '{"night_pct":20,"holiday_pct":20}'::jsonb);
   perform public.save_surcharge_rules(w1, '2026-09-01', '{"holiday_pct":50,"overtime_pct":25}'::jsonb);
   perform public.save_surcharge_rules(w1, '2026-10-01', '{"night_pct":20,"sunday_pct":30,"overtime_pct":25}'::jsonb);
-  perform public.save_venue_patron(tests.id('V1'), 15, 9);
 
   -- Un mese passato si accende salvandolo.
   perform tests.eq(pg_temp.sh('2026-05-01', '2026-06-01', 'M_Emp', '2026-05-12', 'night'), null::numeric, 'maggio ancora senza regole');
@@ -124,9 +123,9 @@ begin
   perform tests.eq(pg_temp.sh('2026-08-01', '2026-09-01', 'M_Emp', '2026-08-15', 'holiday'), 4.00, 'parità: vince festivi');
   perform tests.eq(pg_temp.sh('2026-08-01', '2026-09-01', 'M_Emp', '2026-08-15', 'night'), null::numeric, 'parità: niente notturno');
 
-  -- Patrono di V1, non di V2.
-  perform tests.eq(pg_temp.sh('2026-09-01', '2026-10-01', 'M_Ow', '2026-09-15', 'holiday'), 4.00, 'patrono in V1');
-  perform tests.eq(pg_temp.sh('2026-09-01', '2026-10-01', 'M_Emp2', '2026-09-15', 'holiday'), null::numeric, 'non in V2');
+  -- Il 15/9 non è festivo in nessuna sede: il patrono non c'è più.
+  perform tests.eq(pg_temp.sh('2026-09-01', '2026-10-01', 'M_Ow', '2026-09-15', 'holiday'), null::numeric, 'niente patrono in V1');
+  perform tests.eq(pg_temp.sh('2026-09-01', '2026-10-01', 'M_Emp2', '2026-09-15', 'holiday'), null::numeric, 'niente patrono in V2');
 
   -- Straordinario settimanale: 10 h a settimana.
   perform public.update_member(tests.id('M_Emp2'), '{"contract_hours":10,"contract_period":"week"}'::jsonb);

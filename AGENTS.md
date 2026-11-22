@@ -219,9 +219,10 @@ sulle stesse righe delle ore: è la sola fonte, letta da `get_workspace_surcharg
 (pagina Ore, CSV, PDF). Le regole sono **versioni mensili**
 (`workspace_surcharge_rules`, un mese usa l'ultima versione partita entro il
 suo primo giorno): cambiare una percentuale non riscrive i mesi passati. Le
-scrive **chiunque abbia «Ore»**, come i codici; il **patrono** è una colonna
-della sede, senza versioni (vale anche per il passato), festivi nazionali in
-`private.italian_holiday` (4 ottobre dal 2026). Una voce per minuto, **la più
+scrive **chiunque abbia «Ore»**, come i codici; i festivi sono solo quelli
+nazionali, in `private.italian_holiday` (4 ottobre dal 2026). Il **patrono**
+della sede è stato tolto il 2026-11-22 (`20261122000000`): un giorno l'anno che
+il consulente gestisce da sé, e senza versioni riscriveva i mesi già consegnati. Una voce per minuto, **la più
 alta** (a parità festivi > domenica > straordinario > notturno); le porzioni
 si riportano **in proporzione** alle ore che contano, perché la pausa non dice
 dove cade, e non superano mai le ore della riga. Lo straordinario sono le ore

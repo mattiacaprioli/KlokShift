@@ -150,7 +150,6 @@ export type SurchargeRulesInput = {
 
 export type SurchargeRules = {
   versions: (SurchargeRulesInput & { valid_from: string })[];
-  patrons: { venue_id: string; day: number; month: number }[];
 };
 
 const pctOrNull = (v: unknown): number | null => (v == null || v === "" ? null : Number(v));
@@ -169,12 +168,7 @@ export function toSurchargeRules(raw: unknown): SurchargeRules {
         overtime_pct: pctOrNull(v.overtime_pct),
       }))
     : [];
-  const patrons = Array.isArray(obj.patrons)
-    ? (obj.patrons as Record<string, unknown>[])
-        .filter((p) => typeof p.venue_id === "string")
-        .map((p) => ({ venue_id: p.venue_id as string, day: Number(p.day), month: Number(p.month) }))
-    : [];
-  return { versions, patrons };
+  return { versions };
 }
 
 /** Dal testo del campo ("20", "12,5", "") alla percentuale; le regole sono quelle del database. */
@@ -236,8 +230,6 @@ export function isQuarterTime(input: string): boolean {
 export const SURCHARGES_HELP =
   "Le percentuali le decide il contratto: scrivile come te le dà il consulente. Le ore lavorate non cambiano: le maggiorazioni dicono quante di quelle ore sono notturne, di domenica, festive o di straordinario.";
 export const OVERTIME_HELP = "Le ore oltre quelle da contratto della scheda, nel periodo del contratto.";
-export const PATRON_HELP =
-  "Il giorno del patrono della città di ogni sede conta come festivo. Vale anche per i mesi passati.";
 export const PCT_ERROR = "Un numero fra 0 e 300, con al massimo un decimale.";
 export const BAND_ERROR = "Orari al quarto d'ora (es. 22:00), diversi fra loro.";
 
@@ -273,22 +265,3 @@ export function rulesChangeNote(
   return `${changes}: da ${until} valgono le regole salvate per ${until}.`;
 }
 
-/**
- * Il patrono scritto nel modulo: giorno e mese interi e una data che esiste (il
- * 29 febbraio sì), oppure entrambi vuoti = nessun patrono. Come `save_venue_patron`.
- */
-export function parsePatron(
-  dayText: string,
-  monthText: string
-): { day: number | null; month: number | null } | "invalid" {
-  const d = dayText.trim();
-  const m = monthText.trim();
-  if (d === "" && m === "") return { day: null, month: null };
-  if (!/^\d{1,2}$/.test(d) || !/^\d{1,2}$/.test(m)) return "invalid";
-  const day = Number(d);
-  const month = Number(m);
-  if (month < 1 || month > 12 || day < 1) return "invalid";
-  const daysInMonth = new Date(2024, month, 0).getDate();
-  return day > daysInMonth ? "invalid" : { day, month };
-}
-export const PATRON_ERROR = "Giorno e mese di una data che esiste (es. 4 e 10), o entrambi vuoti.";

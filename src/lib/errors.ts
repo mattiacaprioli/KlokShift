@@ -29,7 +29,6 @@ const PATTERNS: { match: string[]; message: string }[] = [
   { match: ["matricola_taken"], message: "Questa matricola è già usata da un'altra persona dell'azienda." },
   { match: ["invalid_code"], message: "Il codice è troppo lungo." },
   { match: ["invalid_surcharge"], message: "Controlla le maggiorazioni: percentuali fra 0 e 300 con al massimo un decimale, fascia al quarto d'ora." },
-  { match: ["invalid_patron"], message: "Questa data del patrono non esiste." },
   { match: ["admin_not_allowed"], message: "L'accesso amministrativo non è autorizzato. Accedi con l'account abilitato." },
   { match: ["admin_mfa_required"], message: "Completa la verifica con il secondo fattore per accedere." },
   { match: ["admin_mfa_verification_failed"], message: "Verifica non riuscita. Controlla il codice e riprova." },

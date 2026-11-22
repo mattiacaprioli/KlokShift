@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   isQuarterTime,
-  parsePatron,
   rulesChangeNote,
   missingContractWarning,
   rulesForMonth,
@@ -81,7 +80,7 @@ describe("risposta della RPC", () => {
     expect([...out.noContract]).toEqual(["q"]);
   });
 
-  it("legge le regole e i patroni", () => {
+  it("legge le regole; i patroni di una risposta vecchia si ignorano", () => {
     const rules = toSurchargeRules({
       versions: [{ valid_from: "2026-11-01", night_pct: 20, night_start: "22:00", night_end: "06:00",
         sunday_pct: null, holiday_pct: 50, overtime_pct: null }],
@@ -89,8 +88,8 @@ describe("risposta della RPC", () => {
     });
     expect(rules.versions[0]).toEqual({ valid_from: "2026-11-01", night_pct: 20, night_start: "22:00",
       night_end: "06:00", sunday_pct: null, holiday_pct: 50, overtime_pct: null });
-    expect(rules.patrons).toEqual([{ venue_id: "v1", day: 4, month: 10 }]);
-    expect(toSurchargeRules(null)).toEqual({ versions: [], patrons: [] });
+    expect(rules).not.toHaveProperty("patrons");
+    expect(toSurchargeRules(null)).toEqual({ versions: [] });
   });
 });
 
@@ -173,16 +172,7 @@ describe("cosa cambia salvando le regole di un mese", () => {
   });
 });
 
-describe("patrono e mesi futuri", () => {
-  it("il patrono è giorno e mese insieme, o niente", () => {
-    expect(parsePatron("4", "10")).toEqual({ day: 4, month: 10 });
-    expect(parsePatron(" ", "")).toEqual({ day: null, month: null });
-    expect(parsePatron("29", "2")).toEqual({ day: 29, month: 2 });
-    for (const [d, m] of [["4a", ""], ["4", ""], ["", "10"], ["3.5", "10"], ["31", "2"], ["0", "1"], ["1", "13"]]) {
-      expect(parsePatron(d, m)).toBe("invalid");
-    }
-  });
-
+describe("mesi futuri", () => {
   it("un mese futuro dice da quando valgono", () => {
     const v = { valid_from: "2027-03-01", night_pct: 20, night_start: "22:00", night_end: "06:00",
       sunday_pct: null, holiday_pct: null, overtime_pct: null };

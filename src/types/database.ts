@@ -1598,8 +1598,6 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          patron_day: number | null
-          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -1620,8 +1618,6 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
-          patron_day?: number | null
-          patron_month?: number | null
           rest_days?: number[]
           staff_sees_planning?: boolean
           workspace_id: string
@@ -1642,8 +1638,6 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
-          patron_day?: number | null
-          patron_month?: number | null
           rest_days?: number[]
           staff_sees_planning?: boolean
           workspace_id?: string
@@ -3143,10 +3137,6 @@ export type Database = {
         }
         Returns: string
       }
-      save_venue_patron: {
-        Args: { p_day: number; p_month: number; p_venue: string }
-        Returns: undefined
-      }
       set_absence_hour_credit: {
         Args: { p_absence: string; p_date: string; p_minutes?: number }
         Returns: undefined
@@ -3273,8 +3263,6 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          patron_day: number | null
-          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3309,8 +3297,6 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          patron_day: number | null
-          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3340,8 +3326,6 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          patron_day: number | null
-          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3374,8 +3358,6 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          patron_day: number | null
-          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string
@@ -3409,8 +3391,6 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
-          patron_day: number | null
-          patron_month: number | null
           rest_days: number[]
           staff_sees_planning: boolean
           workspace_id: string

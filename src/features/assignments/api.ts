@@ -856,7 +856,7 @@ export async function getExportCodes(workspaceId: string): Promise<ExportCodes> 
   return toExportCodes(data);
 }
 
-/** Le regole delle maggiorazioni (versioni mensili) e i patroni delle sedi. */
+/** Le regole delle maggiorazioni (versioni mensili). */
 export async function getSurchargeRules(workspaceId: string): Promise<SurchargeRules> {
   const { data, error } = await supabase.rpc("get_surcharge_rules", { p_workspace: workspaceId });
   if (error) throw new Error(error.message);
@@ -873,20 +873,6 @@ export async function saveSurchargeRules(
     p_workspace: workspaceId,
     p_valid_from: validFrom,
     p_rules: rules,
-  });
-  if (error) throw new Error(error.message);
-}
-
-/** Il patrono della sede; `null` e `null` = nessuno. Vale anche per i mesi passati. */
-export async function saveVenuePatron(
-  venueId: string,
-  day: number | null,
-  month: number | null
-): Promise<void> {
-  const { error } = await supabase.rpc("save_venue_patron", {
-    p_venue: venueId,
-    p_day: day as number,
-    p_month: month as number,
   });
   if (error) throw new Error(error.message);
 }

@@ -3,7 +3,6 @@ import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
@@ -14,22 +13,17 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { operationsGate } from "@/features/workspace/access";
 import {
   useSaveSurchargeRules,
-  useSaveVenuePatron,
   useSurchargeRules,
 } from "@/features/assignments/hooks";
 import {
   BAND_ERROR,
   OVERTIME_HELP,
-  PATRON_HELP,
   PCT_ERROR,
   SURCHARGES_HELP,
-  PATRON_ERROR,
   isQuarterTime,
-  parsePatron,
   parseSurchargePct,
   rulesChangeNote,
   rulesForMonth,
-  type SurchargeRules,
   type SurchargeRulesInput,
 } from "@/features/assignments/surcharges";
 import { addMonthsToKey, formatMonthKey, monthKey } from "@/lib/format";
@@ -38,21 +32,20 @@ import { userErrorMessage } from "@/lib/errors";
 import { useColors } from "@/lib/theme";
 
 /**
- * Le regole delle maggiorazioni dell'azienda (versioni mensili) e il patrono
- * di ogni sede. Le scrive chi ha «Ore» (`save_surcharge_rules`,
- * `save_venue_patron`); le ore le calcola il database.
+ * Le regole delle maggiorazioni dell'azienda (versioni mensili). Le scrive
+ * chi ha «Ore» (`save_surcharge_rules`); le ore le calcola il database. Il
+ * patrono della sede non c'è più dal 22/11: lo gestisce il consulente.
  */
 export default function SurchargesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { workspaceId, venues, isOwner, can } = useOwnerVenues();
+  const { workspaceId } = useOwnerVenues();
   const query = useSurchargeRules(workspaceId);
   const current = monthKey();
   const [month, setMonth] = useState(current);
   const minMonth = addMonthsToKey(current, -12);
   // Fino a un anno avanti: un cambio di contratto già noto si programma.
   const maxMonth = addMonthsToKey(current, 12);
-  const hourVenues = venues.filter((v) => isOwner || can(v.id, "can_view_hours"));
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
@@ -115,13 +108,6 @@ export default function SurchargesScreen() {
                 month={month}
                 initial={rulesForMonth(query.data.versions, month)}
               />
-              {hourVenues.length > 0 ? (
-                <PatronsForm
-                  workspaceId={workspaceId}
-                  venues={hourVenues}
-                  patrons={query.data.patrons}
-                />
-              ) : null}
             </>
           )}
         </ScrollView>
@@ -216,89 +202,6 @@ function RulesForm({
       ) : (
         <Text className="text-sm leading-5 text-t3">{gate.reason}</Text>
       )}
-    </View>
-  );
-}
-
-function PatronsForm({
-  workspaceId,
-  venues,
-  patrons,
-}: {
-  workspaceId: string;
-  venues: { id: string; name: string }[];
-  patrons: SurchargeRules["patrons"];
-}) {
-  const toast = useToast();
-  const save = useSaveVenuePatron(workspaceId);
-  const { access, isOwner } = useOwnerVenues();
-  const gate = operationsGate(access, { isOwner });
-  const initial = (venueId: string) => patrons.find((p) => p.venue_id === venueId);
-  const [values, setValues] = useState<Record<string, { day: string; month: string }>>(() => {
-    const out: Record<string, { day: string; month: string }> = {};
-    for (const v of venues) {
-      const p = initial(v.id);
-      out[v.id] = { day: p ? String(p.day) : "", month: p ? String(p.month) : "" };
-    }
-    return out;
-  });
-
-  const parsed = Object.fromEntries(
-    venues.map((v) => [v.id, parsePatron(values[v.id]?.day ?? "", values[v.id]?.month ?? "")])
-  );
-  const invalid = Object.values(parsed).some((p) => p === "invalid");
-
-  async function onSave() {
-    if (invalid) return;
-    try {
-      for (const v of venues) {
-        const cur = parsed[v.id];
-        if (cur === "invalid") continue;
-        const p = initial(v.id);
-        if (cur.day === (p?.day ?? null) && cur.month === (p?.month ?? null)) continue;
-        await save.mutateAsync({ venueId: v.id, day: cur.day, month: cur.month });
-      }
-      toast.show("Patroni salvati");
-    } catch (e) {
-      toast.show(userErrorMessage(e), "error");
-    }
-  }
-
-  return (
-    <View className="gap-3">
-      <Mono>Santo patrono</Mono>
-      <Text className="text-xs leading-4 text-t3">{PATRON_HELP}</Text>
-      {venues.map((v) => (
-        <View key={v.id} className="gap-2">
-          <Text className="text-sm font-sans-semibold text-t1">{v.name}</Text>
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Input
-                label="Giorno"
-                value={values[v.id]?.day ?? ""}
-                onChangeText={(t) => setValues((prev) => ({ ...prev, [v.id]: { ...prev[v.id], day: t } }))}
-                keyboardType="number-pad"
-                maxLength={2}
-                editable={gate.allowed}
-              />
-            </View>
-            <View className="flex-1">
-              <Input
-                label="Mese"
-                value={values[v.id]?.month ?? ""}
-                onChangeText={(t) => setValues((prev) => ({ ...prev, [v.id]: { ...prev[v.id], month: t } }))}
-                keyboardType="number-pad"
-                maxLength={2}
-                editable={gate.allowed}
-              />
-            </View>
-          </View>
-          {parsed[v.id] === "invalid" ? <Text className="text-xs text-error">{PATRON_ERROR}</Text> : null}
-        </View>
-      ))}
-      {gate.allowed ? (
-        <GhostButton label="Salva i patroni" onPress={() => void onSave()} disabled={save.isPending || invalid} />
-      ) : null}
     </View>
   );
 }

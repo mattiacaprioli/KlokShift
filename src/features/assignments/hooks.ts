@@ -48,7 +48,6 @@ import {
   saveExportCodes,
   getSurchargeRules,
   saveSurchargeRules,
-  saveVenuePatron,
   getWorkspaceSurcharges,
   getHoursToFix,
   addShiftWorker,
@@ -92,7 +91,7 @@ export function useSaveExportCodes(workspaceId: string) {
   });
 }
 
-/** Regole delle maggiorazioni e patroni: il modulo delle regole e la pagina Ore. */
+/** Regole delle maggiorazioni: il modulo delle regole e la pagina Ore. */
 export function useSurchargeRules(workspaceId: string | undefined) {
   return useQuery({
     queryKey: qk.staff.surchargeRules(workspaceId ?? ""),
@@ -112,15 +111,6 @@ export function useSaveSurchargeRules(workspaceId: string) {
   return useMutation({
     mutationFn: ({ validFrom, rules }: { validFrom: string; rules: SurchargeRulesInput }) =>
       saveSurchargeRules(workspaceId, validFrom, rules),
-    onSuccess: () => invalidateSurcharges(qc, workspaceId),
-  });
-}
-
-export function useSaveVenuePatron(workspaceId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ venueId, day, month }: { venueId: string; day: number | null; month: number | null }) =>
-      saveVenuePatron(venueId, day, month),
     onSuccess: () => invalidateSurcharges(qc, workspaceId),
   });
 }

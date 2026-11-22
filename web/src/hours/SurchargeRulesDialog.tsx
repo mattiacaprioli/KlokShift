@@ -6,22 +6,17 @@ import { useOwnerVenues } from "@/features/venues/OwnerVenues";
 import { operationsGate } from "@/features/workspace/access";
 import {
   useSaveSurchargeRules,
-  useSaveVenuePatron,
   useSurchargeRules,
 } from "@/features/assignments/hooks";
 import {
   BAND_ERROR,
   OVERTIME_HELP,
-  PATRON_HELP,
   PCT_ERROR,
   SURCHARGES_HELP,
-  PATRON_ERROR,
   isQuarterTime,
-  parsePatron,
   parseSurchargePct,
   rulesChangeNote,
   rulesForMonth,
-  type SurchargeRules,
   type SurchargeRulesInput,
 } from "@/features/assignments/surcharges";
 import { Button, Field, Input } from "../ui/primitives";
@@ -29,8 +24,8 @@ import { useToast } from "../ui/Toast";
 
 /**
  * Le regole delle maggiorazioni (equivalente web di `(manager)/maggiorazioni`):
- * versioni mensili dell'azienda e patrono di ogni sede. Le ore le calcola il
- * database; qui si scrivono solo le regole.
+ * versioni mensili dell'azienda. Le ore le calcola il database; qui si
+ * scrivono solo le regole. Il patrono della sede non c'è più dal 22/11.
  */
 export function SurchargeRulesDialog({
   workspaceId,
@@ -40,13 +35,11 @@ export function SurchargeRulesDialog({
   onClose: () => void;
 }) {
   const query = useSurchargeRules(workspaceId);
-  const { venues, isOwner, can } = useOwnerVenues();
   const current = monthKey();
   const minMonth = addMonthsToKey(current, -12);
   // Fino a un anno avanti: un cambio di contratto già noto si programma.
   const maxMonth = addMonthsToKey(current, 12);
   const [month, setMonth] = useState(current);
-  const hourVenues = venues.filter((v) => isOwner || can(v.id, "can_view_hours"));
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -111,9 +104,6 @@ export function SurchargeRulesDialog({
               initial={rulesForMonth(query.data.versions, month)}
               onClose={onClose}
             />
-            {hourVenues.length > 0 ? (
-              <PatronsForm workspaceId={workspaceId} venues={hourVenues} patrons={query.data.patrons} />
-            ) : null}
           </>
         )}
       </div>
@@ -217,87 +207,5 @@ function RulesForm({
         <Button onClick={onClose}>Chiudi</Button>
       </div>
     </form>
-  );
-}
-
-function PatronsForm({
-  workspaceId,
-  venues,
-  patrons,
-}: {
-  workspaceId: string;
-  venues: { id: string; name: string }[];
-  patrons: SurchargeRules["patrons"];
-}) {
-  const toast = useToast();
-  const save = useSaveVenuePatron(workspaceId);
-  const { access, isOwner } = useOwnerVenues();
-  const gate = operationsGate(access, { isOwner });
-  const initial = (venueId: string) => patrons.find((p) => p.venue_id === venueId);
-  const [values, setValues] = useState<Record<string, { day: string; month: string }>>(() => {
-    const out: Record<string, { day: string; month: string }> = {};
-    for (const v of venues) {
-      const p = initial(v.id);
-      out[v.id] = { day: p ? String(p.day) : "", month: p ? String(p.month) : "" };
-    }
-    return out;
-  });
-
-  const parsed = Object.fromEntries(
-    venues.map((v) => [v.id, parsePatron(values[v.id]?.day ?? "", values[v.id]?.month ?? "")])
-  );
-  const invalid = Object.values(parsed).some((p) => p === "invalid");
-
-  async function onSave() {
-    if (invalid) return;
-    try {
-      for (const v of venues) {
-        const cur = parsed[v.id];
-        if (cur === "invalid") continue;
-        const p = initial(v.id);
-        if (cur.day === (p?.day ?? null) && cur.month === (p?.month ?? null)) continue;
-        await save.mutateAsync({ venueId: v.id, day: cur.day, month: cur.month });
-      }
-      toast.show("Patroni salvati");
-    } catch (e) {
-      toast.show(userErrorMessage(e), "error");
-    }
-  }
-
-  return (
-    <section className="mt-6 flex flex-col gap-3 border-t border-border-2 pt-5">
-      <h3 className="text-sm font-semibold text-t1">Santo patrono</h3>
-      <p className="text-xs text-t3">{PATRON_HELP}</p>
-      {venues.map((v) => (
-        <div key={v.id} className="grid grid-cols-[1fr_80px_80px] items-end gap-3">
-          <span className="pb-2 text-sm text-t1">{v.name}</span>
-          <Field label="Giorno">
-            <Input
-              value={values[v.id]?.day ?? ""}
-              inputMode="numeric"
-              maxLength={2}
-              disabled={!gate.allowed}
-              onChange={(e) => setValues((prev) => ({ ...prev, [v.id]: { ...prev[v.id], day: e.target.value } }))}
-            />
-          </Field>
-          <Field label="Mese" error={parsed[v.id] === "invalid" ? PATRON_ERROR : undefined}>
-            <Input
-              value={values[v.id]?.month ?? ""}
-              inputMode="numeric"
-              maxLength={2}
-              disabled={!gate.allowed}
-              onChange={(e) => setValues((prev) => ({ ...prev, [v.id]: { ...prev[v.id], month: e.target.value } }))}
-            />
-          </Field>
-        </div>
-      ))}
-      {gate.allowed ? (
-        <div>
-          <Button onClick={() => void onSave()} disabled={save.isPending || invalid}>
-            Salva i patroni
-          </Button>
-        </div>
-      ) : null}
-    </section>
   );
 }

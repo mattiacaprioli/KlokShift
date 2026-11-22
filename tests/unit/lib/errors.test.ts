@@ -19,11 +19,10 @@ describe("userErrorMessage", () => {
     );
   });
 
-  it("spiega le maggiorazioni e il patrono non validi", () => {
+  it("spiega le maggiorazioni non valide", () => {
     expect(userErrorMessage(new Error("invalid_surcharge"))).toBe(
       "Controlla le maggiorazioni: percentuali fra 0 e 300 con al massimo un decimale, fascia al quarto d'ora."
     );
-    expect(userErrorMessage(new Error("invalid_patron"))).toBe("Questa data del patrono non esiste.");
   });
 
   it("spiega perché un messaggio non si modifica o non si elimina", () => {
